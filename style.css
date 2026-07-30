@@ -1,0 +1,1039 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ==========================================
+   GLOBAL SELECTION PREVENT (DISABLES BLUE HIGHLIGHT)
+   ========================================== */
+body, #space-matrix, .constellation, .beast-container, img, video, svg, #spaceship-title-container {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Allow text highlighting inside input elements for typing */
+input, textarea {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+}
+
+body {
+    background-color: #000000;
+    color: #ffffff;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* ==========================================
+   AUTHENTICATION CORNER
+   ========================================== */
+#auth-corner {
+    position: fixed;
+    top: 30px;
+    right: 40px;
+    z-index: 1000;
+    display: flex;
+    gap: 15px;
+    transition: opacity 0.5s ease;
+}
+
+.auth-btn {
+    background: rgba(4, 9, 18, 0.7);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    color: #00f0ff;
+    padding: 10px 20px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(5px);
+}
+
+.auth-btn:hover {
+    background: #00f0ff;
+    color: #000;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+}
+
+.auth-btn.sign-up {
+    background: rgba(0, 240, 255, 0.1);
+    border-color: #00f0ff;
+}
+
+/* ==========================================
+   BACKGROUND MATRIX & SPACE LAYERS
+   ========================================== */
+#space-matrix {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    pointer-events: none;
+    transform: translateZ(0);
+}
+
+#blackboard-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0; 
+    pointer-events: none;
+}
+
+.stars {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-image: radial-gradient(1.5px 1.5px at 20px 30px, #fff, rgba(0,0,0,0)), radial-gradient(1.5px 1.5px at 80px 70px, rgba(255,255,255,0.8), rgba(0,0,0,0));
+    background-repeat: repeat;
+    background-size: 200px 200px;
+    opacity: 0.5;
+    z-index: 1;
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+.tactical-grid {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-image: linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+    background-size: 80px 80px;
+    z-index: 2;
+    transform: translateZ(0);
+}
+
+/* ==========================================
+   SPACESHIP TITLE DISPLAY
+   ========================================== */
+#spaceship-title-container {
+    position: fixed;
+    top: 40px;
+    left: 40px;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    pointer-events: none;
+    animation: mothership-hover 6s ease-in-out infinite alternate;
+}
+
+.mothership-svg {
+    width: 280px; 
+    height: auto;
+    filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.9));
+    transform: rotate(2deg);
+}
+
+.engine-flame {
+    transform-origin: 25px 50px;
+    animation: thruster-pulse 0.1s infinite alternate;
+    will-change: transform, opacity;
+}
+
+@keyframes thruster-pulse {
+    0% { transform: scaleX(1) scaleY(1); opacity: 0.8; }
+    100% { transform: scaleX(1.3) scaleY(1.1); opacity: 1; }
+}
+
+.tractor-beam-title {
+    position: relative;
+    padding: 15px 35px;
+    border-left: 5px dashed #00f0ff;
+    background: linear-gradient(90deg, rgba(0, 240, 255, 0.25) 0%, rgba(0, 240, 255, 0.05) 40%, transparent 100%);
+    border-radius: 4px;
+    box-shadow: -15px 0 35px rgba(0, 240, 255, 0.2);
+    overflow: hidden;
+}
+
+.tractor-beam-title::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 240, 255, 0.1) 3px, transparent 4px);
+    pointer-events: none;
+    animation: scanline 4s linear infinite;
+    will-change: transform;
+}
+
+@keyframes scanline {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+}
+
+.tractor-beam-title h1 {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 3rem;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 2px;
+    line-height: 1.1;
+    text-shadow: 0 0 10px #00f0ff, 0 0 25px rgba(0, 240, 255, 0.6);
+    margin: 0;
+    position: relative;
+    z-index: 2;
+}
+
+.tractor-beam-title h1 span {
+    display: block;
+    font-size: 2rem;
+    color: #00f0ff;
+    letter-spacing: 12px;
+    text-shadow: none;
+}
+
+@keyframes mothership-hover {
+    0% { transform: translateY(0px) rotate(0deg); }
+    100% { transform: translateY(-15px) rotate(1.5deg); }
+}
+
+/* ==========================================
+   CONSTELLATION BEASTS
+   ========================================== */
+.constellation {
+    --parallax-x: 0px;
+    --parallax-y: 0px;
+    position: absolute;
+    top: 50%;
+    transform: translate(calc(0px + var(--parallax-x)), calc(-50% + var(--parallax-y)));
+    opacity: 0.45;
+    transition: opacity 0.5s ease;
+    text-align: center;
+    z-index: 3;
+    mix-blend-mode: screen;
+    animation: breathe 8s infinite alternate ease-in-out;
+    will-change: transform, opacity;
+}
+
+@keyframes breathe { 0% { opacity: 0.3; } 100% { opacity: 0.6; } }
+
+.beast-container {
+    position: relative;
+    width: 60vmin;
+    height: 60vmin;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: transparent;
+}
+
+.beast-container::after {
+    content: '';
+    position: absolute;
+    width: 80%;
+    height: 80%;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    pointer-events: none;
+    z-index: -1;
+    transform: scale(0.8) translateZ(0);
+}
+
+.bull-constellation.highlight .beast-container::after {
+    opacity: 1;
+    transform: scale(1.2) translateZ(0);
+    background: radial-gradient(circle, rgba(0, 255, 102, 0.45) 0%, rgba(0, 255, 102, 0) 70%);
+}
+
+.bear-constellation.highlight .beast-container::after {
+    opacity: 1;
+    transform: scale(1.2) translateZ(0);
+    background: radial-gradient(circle, rgba(255, 0, 85, 0.45) 0%, rgba(255, 0, 85, 0) 70%);
+}
+
+.beast-img, .beast-vid {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    will-change: transform, opacity, filter;
+    transform: translateZ(0);
+}
+
+.beast-img {
+    opacity: 1;
+    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.6s ease, opacity 0.4s ease;
+}
+
+.beast-vid {
+    opacity: 0;
+    transform: scale(1) translateZ(0);
+    filter: contrast(180%) brightness(110%);
+    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.6s ease, opacity 0.4s ease;
+}
+
+.constellation.highlight { opacity: 1 !important; }
+.constellation.highlight .beast-img { opacity: 0; }
+.bull-constellation.highlight .beast-vid, .bear-constellation.highlight .beast-vid {
+    opacity: 1;
+    filter: contrast(180%) brightness(120%);
+    transform: scale(1.35) translateZ(0);
+}
+
+.bull-constellation { left: 0%; color: #00ff66; }
+.bear-constellation { right: 0%; color: #ff0055; }
+
+body.warping .constellation, 
+body.warping .tactical-grid, 
+body.warping #blackboard-bg,
+body.warping #spaceship-title-container {
+    opacity: 0 !important;
+    transition: opacity 0.5s ease;
+}
+
+/* ==========================================
+   CAMERA VIEWPORT & SOLAR SYSTEM
+   ========================================== */
+#spaceship-viewport {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transform-origin: center center;
+    will-change: transform;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+#solar-system {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    will-change: transform;
+    transform: translate3d(0, 0, 0);
+}
+
+.btc-sun {
+    position: absolute;
+    width: 13vmin;
+    height: 13vmin;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 50%;
+    z-index: 50;
+    cursor: pointer;
+    filter: drop-shadow(0 0 18px rgba(255, 215, 0, 0.4));
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease;
+    will-change: transform, filter;
+    transform: translate3d(0,0,0);
+}
+
+.btc-sun:hover {
+    transform: scale(1.12) translate3d(0,0,0);
+    filter: drop-shadow(0 0 25px rgba(255, 215, 0, 0.95)) drop-shadow(0 0 50px rgba(255, 140, 0, 0.7));
+}
+
+.orbit {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    pointer-events: none;
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+.orbit-1 { width: 30vmin; height: 30vmin; }
+.orbit-2 { width: 45vmin; height: 45vmin; }
+.orbit-3 { width: 60vmin; height: 60vmin; }
+.orbit-4 { width: 75vmin; height: 75vmin; }
+.orbit-5 { width: 90vmin; height: 90vmin; }
+
+.planet {
+    position: absolute;
+    top: -5vmin;
+    left: 50%;
+    width: 10vmin;
+    height: 10vmin;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    cursor: pointer;
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transform: translateX(-50%) translate3d(0, 0, 0);
+    will-change: transform;
+    backface-visibility: hidden;
+}
+
+.planet::before {
+    content: '';
+    position: absolute;
+    top: -15px;
+    left: -15px;
+    right: -15px;
+    bottom: -15px;
+    border-radius: 50%;
+}
+
+.target-reticle {
+    position: absolute;
+    width: 140%;
+    height: 140%;
+    border: 2px dashed #00f0ff;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    animation: spin-reticle 10s linear infinite;
+    pointer-events: none;
+    will-change: transform, opacity;
+}
+
+.planet:hover .target-reticle { 
+    opacity: 1; 
+    transform: scale(1.05) translateZ(0); 
+}
+
+@keyframes spin-reticle { 
+    100% { transform: rotate(360deg) translateZ(0); } 
+}
+
+.planet-label {
+    position: absolute;
+    top: 125%;
+    left: 50%;
+    transform: translateX(-50%) translateZ(0);
+    background: #040912;
+    border: 1px solid rgba(0, 240, 255, 0.4);
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    white-space: nowrap;
+    font-family: 'Share Tech Mono', monospace;
+    color: #ffffff;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+    will-change: opacity, transform;
+}
+
+.planet:hover .planet-label {
+    opacity: 1;
+    border: 2px solid #00f0ff;
+    box-shadow: 0 0 15px rgba(0,240,255,0.6);
+    background: #000;
+}
+
+#solar-system.show-labels .planet-label { opacity: 1; border-color: rgba(0,240,255,0.5); }
+.planet.active .target-reticle, .planet.active .planet-label {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* ==========================================
+   HUD MODULE OVERLAY
+   ========================================== */
+#cinematic-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 600;
+    display: flex;
+    align-items: center;
+}
+
+.module-details {
+    position: absolute;
+    right: -60%;
+    width: 40%;
+    max-width: 550px;
+    background: rgba(4, 9, 18, 0.95);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    border-left: 4px solid #00f0ff;
+    padding: 40px;
+    opacity: 0;
+    transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+    will-change: transform, opacity;
+}
+
+.corner-bracket { position: absolute; width: 8px; height: 8px; border: 2px solid #00f0ff; }
+.top-left { top: -2px; left: -2px; border-right: none; border-bottom: none; }
+.top-right { top: -2px; right: -2px; border-left: none; border-bottom: none; }
+.bottom-left { bottom: -2px; left: -2px; border-right: none; border-top: none; }
+.bottom-right { bottom: -2px; right: -2px; border-left: none; border-top: none; }
+
+.module-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    color: #00f0ff;
+    letter-spacing: 2px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.module-details h2 { font-size: 2.5rem; margin-bottom: 15px; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; }
+.module-details p { font-size: 0.95rem; line-height: 1.7; margin-bottom: 25px; color: #a3b8cc; }
+
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px; }
+.stat-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace;
+}
+
+.stat-title { font-size: 0.65rem; color: rgba(255, 255, 255, 0.4); display: block; margin-bottom: 4px; }
+.stat-value { font-size: 1.1rem; font-weight: bold; color: #fff; }
+
+#return-btn {
+    position: absolute;
+    top: 70px;
+    left: 40px;
+    background: rgba(4, 9, 18, 0.95);
+    color: #00f0ff;
+    border: 1px solid #00f0ff;
+    padding: 12px 24px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 2px;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.4s ease;
+    will-change: opacity;
+}
+
+#return-btn:hover {
+    background: #00f0ff;
+    color: #000;
+    box-shadow: 0 0 20px rgba(0,240,255,0.6);
+}
+
+.action-btn {
+    width: 100%;
+    padding: 15px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: transparent;
+    color: #fff;
+    border: 1px solid #00f0ff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.action-btn:hover {
+    background: #00f0ff;
+    color: #000;
+    box-shadow: 0 0 25px rgba(0,240,255,0.6);
+}
+
+body.landed #cinematic-overlay { pointer-events: all; }
+body.landed #return-btn { opacity: 1; }
+body.landed .module-details { right: 8%; opacity: 1; }
+
+/* ==========================================
+   GAS GIANT ATMOSPHERE (BACKTEST FORM)
+   ========================================== */
+#gas-giant-atmosphere {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.8s ease-in-out !important;
+    background: rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+#gas-giant-atmosphere.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.submission-console {
+    position: relative;
+    z-index: 10;
+    background: rgba(4, 9, 18, 0.98) !important;
+    border: 1px solid rgba(0, 255, 102, 0.4);
+    border-top: 4px solid #00ff66;
+    padding: 40px;
+    width: 90%;
+    max-width: 700px;
+    border-radius: 6px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.8) !important;
+    transform: translateY(50px) scale(0.95);
+    transition: transform 0.4s ease-out, opacity 0.4s ease-out !important;
+    will-change: transform;
+}
+
+#gas-giant-atmosphere.active .submission-console {
+    transform: translateY(0) scale(1);
+}
+
+#abort-console-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: transparent;
+    color: #ff0055;
+    border: 1px solid #ff0055;
+    padding: 6px 12px;
+    font-family: 'Share Tech Mono', monospace;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+#abort-console-btn:hover { background: #ff0055; color: #fff; box-shadow: 0 0 15px rgba(255,0,85,0.5); }
+
+.console-header h2 {
+    font-family: 'Share Tech Mono', monospace;
+    color: #00ff66;
+    font-size: 2rem;
+    margin-bottom: 15px;
+    letter-spacing: 1px;
+}
+
+.console-header p {
+    color: #a3b8cc;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 30px;
+}
+
+.input-group { margin-bottom: 20px; text-align: left; }
+.input-group label {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    color: #00ff66;
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+}
+
+.input-group input, .input-group textarea {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(0, 255, 102, 0.3);
+    color: #fff;
+    padding: 12px 15px;
+    font-family: 'Inter', sans-serif;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.input-group input:focus, .input-group textarea:focus {
+    border-color: #00ff66;
+    box-shadow: 0 0 15px rgba(0,255,102,0.2);
+}
+
+.submit-system-btn {
+    width: 100%;
+    background: rgba(0, 255, 102, 0.1);
+    color: #00ff66;
+    border: 1px solid #00ff66;
+    padding: 15px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    cursor: pointer;
+    margin-top: 10px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.submit-system-btn:hover {
+    background: #00ff66;
+    color: #000;
+    box-shadow: 0 0 25px rgba(0,255,102,0.6);
+}
+
+/* ==========================================
+   TACTICAL UPLINK MODAL STYLES
+   ========================================== */
+#tactical-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(2, 6, 12, 0.88);
+    backdrop-filter: blur(12px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+}
+
+#tactical-modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.tactical-modal-card {
+    position: relative;
+    width: 90%;
+    max-width: 480px;
+    background: rgba(6, 16, 26, 0.95);
+    border: 1px solid rgba(0, 255, 102, 0.4);
+    box-shadow: 0 0 35px rgba(0, 255, 102, 0.25), inset 0 0 15px rgba(0, 255, 102, 0.1);
+    padding: 40px 30px;
+    text-align: center;
+    transform: scale(0.85);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#tactical-modal-overlay.active .tactical-modal-card {
+    transform: scale(1);
+}
+
+.launch-stage {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.rocket-svg {
+    width: 70px;
+    height: 70px;
+    filter: drop-shadow(0 0 10px #00ff66);
+    transform: translateY(0);
+}
+
+#tactical-modal-overlay.active .rocket-svg {
+    animation: launchAscent 2.5s infinite ease-in-out;
+}
+
+@keyframes launchAscent {
+    0% { transform: translateY(5px) scale(0.98); }
+    50% { transform: translateY(-12px) scale(1.02); }
+    100% { transform: translateY(5px) scale(0.98); }
+}
+
+.rocket-flame {
+    animation: pulseFlame 0.15s infinite alternate;
+}
+
+@keyframes pulseFlame {
+    0% { transform: scaleY(0.8); opacity: 0.7; }
+    100% { transform: scaleY(1.3); opacity: 1; }
+}
+
+.hyper-rings {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.hyper-rings span {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 1px solid #00f0ff;
+    border-radius: 50%;
+    animation: expandRing 2s infinite linear;
+    opacity: 0;
+}
+
+.hyper-rings span:nth-child(1) { animation-delay: 0s; }
+.hyper-rings span:nth-child(2) { animation-delay: 0.6s; }
+.hyper-rings span:nth-child(3) { animation-delay: 1.2s; }
+
+@keyframes expandRing {
+    0% { width: 10px; height: 10px; opacity: 1; }
+    100% { width: 120px; height: 120px; opacity: 0; }
+}
+
+.modal-status-tag {
+    font-family: 'Share Tech Mono', monospace;
+    color: #00ff66;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+}
+
+.tactical-modal-card h2 {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.8rem;
+    color: #ffffff;
+    margin: 0 0 12px 0;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.tactical-modal-card p {
+    font-family: 'Inter', sans-serif;
+    color: #a0aec0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 25px;
+}
+
+.telemetry-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    background: rgba(0, 240, 255, 0.05);
+    border: 1px solid rgba(0, 240, 255, 0.2);
+    padding: 10px;
+    margin-bottom: 25px;
+}
+
+.telemetry-item span {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: #718096;
+}
+
+.telemetry-item b {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    color: #00f0ff;
+}
+
+.modal-action-btn {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid #00ff66;
+    color: #00ff66;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.95rem;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-action-btn:hover {
+    background: #00ff66;
+    color: #040912;
+    box-shadow: 0 0 20px rgba(0, 255, 102, 0.6);
+}
+
+/* ==========================================
+   AUTHENTICATION HUD MODAL & OAUTH
+   ========================================== */
+#auth-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(2, 6, 12, 0.88);
+    backdrop-filter: blur(12px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9998;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+}
+
+#auth-modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.auth-modal-card {
+    position: relative;
+    width: 90%;
+    max-width: 440px;
+    background: rgba(6, 16, 26, 0.95);
+    border: 1px solid rgba(0, 240, 255, 0.4);
+    box-shadow: 0 0 35px rgba(0, 240, 255, 0.25);
+    padding: 35px 30px;
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+
+#auth-modal-overlay.active .auth-modal-card {
+    transform: scale(1);
+}
+
+.auth-tabs {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+    border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+    padding-bottom: 10px;
+}
+
+.auth-tab {
+    background: transparent;
+    border: none;
+    color: #718096;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.1rem;
+    cursor: pointer;
+    letter-spacing: 1px;
+    padding: 5px 10px;
+    transition: all 0.3s ease;
+}
+
+.auth-tab.active {
+    color: #00f0ff;
+    border-bottom: 2px solid #00f0ff;
+    text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+}
+
+.abort-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: transparent;
+    border: none;
+    color: #ff0055;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.abort-btn:hover {
+    transform: scale(1.2);
+}
+
+.user-badge {
+    font-family: 'Share Tech Mono', monospace;
+    color: #00ff66;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    padding: 8px 15px;
+    background: rgba(0, 255, 102, 0.1);
+    border: 1px solid rgba(0, 255, 102, 0.3);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* OAuth Divider & Social Buttons */
+.oauth-divider {
+    position: relative;
+    text-align: center;
+    margin: 25px 0 18px;
+}
+
+.oauth-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: rgba(0, 240, 255, 0.2);
+    z-index: 1;
+}
+
+.oauth-divider span {
+    position: relative;
+    z-index: 2;
+    background: #06101a;
+    padding: 0 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: #718096;
+    letter-spacing: 1px;
+}
+
+.oauth-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.oauth-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    padding: 10px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.oauth-btn:hover {
+    border-color: #00f0ff;
+    color: #00f0ff;
+    background: rgba(0, 240, 255, 0.1);
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+}
+
+/* ==========================================
+   PERFORMANCE OVERRIDES
+   ========================================== */
+body.landed .orbit,
+body.landed .constellation {
+    animation-play-state: paused !important;
+}
+
+.gas-clouds,
+.lightning-flash {
+    display: none !important;
+}
+
+body.warping * {
+    animation: none !important;
+}
