@@ -309,7 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const rulesInput = document.getElementById('system-rules');
     const closeModalBtn = document.getElementById('close-modal-btn');
 
-    // FIXED CLOSE MODAL LOGIC (Does NOT trigger empty side HUD)
+    // FIXED CLOSE MODAL LOGIC (Prevents camera freeze/stocking)
     if (closeModalBtn) {
         closeModalBtn.addEventListener('click', () => {
             const modalOverlay = document.getElementById('tactical-modal-overlay');
@@ -317,12 +317,18 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
             if (gasAtmosphere) gasAtmosphere.classList.remove('active');
+            
             isHyperZoomed = false;
 
-            const titleContainer = document.getElementById('spaceship-title-container');
-            const authCorner = document.getElementById('auth-corner');
-            if (titleContainer) titleContainer.style.opacity = '1';
-            if (authCorner) authCorner.style.opacity = '1';
+            setTimeout(() => {
+                if (activePlanetData) {
+                    document.body.classList.add('landed');
+                }
+                const titleContainer = document.getElementById('spaceship-title-container');
+                const authCorner = document.getElementById('auth-corner');
+                if (titleContainer) titleContainer.style.opacity = '1';
+                if (authCorner) authCorner.style.opacity = '1';
+            }, 400);
         });
     }
 
