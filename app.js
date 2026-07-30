@@ -392,7 +392,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const usernameGroup = document.getElementById('username-group');
     const authCorner = document.getElementById('auth-corner');
     const googleBtn = document.getElementById('google-auth-btn');
-    const appleBtn = document.getElementById('apple-auth-btn');
 
     // Tab Switching Logic
     function setAuthMode(mode) {
@@ -501,7 +500,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (googleBtn) googleBtn.addEventListener('click', () => handleOAuth('google'));
-    if (appleBtn) appleBtn.addEventListener('click', () => handleOAuth('apple'));
 
     // Monitor Auth State & Email Confirmation Redirects
     if (supabaseClient) {
