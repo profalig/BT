@@ -1,3 +1,6 @@
+// ==========================================
+// PLANET DATA & ORBIT ENGINE CONFIGURATION
+// ==========================================
 const planetData = {
     backtest: {
         tag: "ENGINE // SEC-01", title: "Backtest Machine", color: "#00ff66",
@@ -295,7 +298,10 @@ function showTacticalModal(title, message, isSuccess = true) {
 // USER REPORTS FETCH & RENDER ENGINE
 // ==========================================
 async function openUserReportsModal() {
-    if (!supabaseClient) return;
+    if (!supabaseClient) {
+        showTacticalModal('SYSTEM ERROR', 'Supabase client is not initialized.', false);
+        return;
+    }
 
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session || !session.user) {
@@ -303,19 +309,27 @@ async function openUserReportsModal() {
         return;
     }
 
+    const activeUserId = session.user.id;
+    console.log("[DEBUG] Active User Session ID:", activeUserId);
+
     try {
         const { data: submissions, error } = await supabaseClient
             .from('submissions')
             .select('*')
-            .eq('user_id', session.user.id)
+            .eq('user_id', activeUserId)
             .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        console.log("[DEBUG] Query Results:", submissions);
+
+        if (error) {
+            console.error("[DEBUG] Database Error:", error);
+            throw error;
+        }
 
         if (!submissions || submissions.length === 0) {
             showTacticalModal(
                 'TACTICAL LOG // EMPTY',
-                'No system backtests submitted yet. Access the Backtest Machine to launch your first transmission.',
+                `No system backtests linked to User ID: <code style="color:#00ffff; font-size:0.85em;">${activeUserId}</code>.<br><br>If you updated the row manually, verify that the <b>user_id</b> in Supabase matches this exact string.`,
                 true
             );
             return;
@@ -323,24 +337,24 @@ async function openUserReportsModal() {
 
         let reportRowsHtml = submissions.map(sub => {
             const dateStr = sub.created_at ? new Date(sub.created_at).toLocaleDateString() : 'RECENT';
-            const isCompleted = sub.status === 'completed' && sub.report_url;
+            const isCompleted = sub.status?.toLowerCase().trim() === 'completed' && sub.report_url;
             
             const statusBadge = isCompleted 
                 ? `<span style="color:#00ff66; font-weight:bold;">[ COMPLETED ]</span>`
                 : `<span style="color:#ffd700; font-weight:bold;">[ PROCESSING ]</span>`;
 
             const downloadBtn = isCompleted 
-                ? `<a href="${sub.report_url}" target="_blank" style="color:#00f0ff; text-decoration:underline; font-weight:bold;"><i class="fa-solid fa-file-pdf"></i> DOWNLOAD PDF</a>`
-                : `<span style="color:#888;">Analyzing Tick Data...</span>`;
+                ? `<a href="${sub.report_url}" target="_blank" download style="color:#00f0ff; text-decoration:underline; font-weight:bold;"><i class="fa-solid fa-file-pdf"></i> DOWNLOAD PDF REPORT</a>`
+                : `<span style="color:#888;"><i class="fa-solid fa-spinner fa-spin"></i> Analyzing Tick Data...</span>`;
 
             return `
-                <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(0,255,255,0.2); margin-bottom: 10px; padding: 12px; border-radius: 4px; text-align: left;">
+                <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(0,255,255,0.25); margin-bottom: 12px; padding: 14px; border-radius: 6px; text-align: left;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <strong style="color: #00ffff; font-size: 1.1em;">${sub.system_name}</strong>
+                        <strong style="color: #00ffff; font-size: 1.1em; letter-spacing: 0.5px;">${sub.system_name}</strong>
                         ${statusBadge}
                     </div>
-                    <div style="font-size: 0.85em; color: #aaa; margin: 4px 0;">DATE: ${dateStr}</div>
-                    <div style="margin-top: 8px;">${downloadBtn}</div>
+                    <div style="font-size: 0.85em; color: #aaa; margin: 6px 0;">SUBMITTED: ${dateStr}</div>
+                    <div style="margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px;">${downloadBtn}</div>
                 </div>
             `;
         }).join('');
