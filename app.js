@@ -337,20 +337,30 @@ async function openUserReportsModal() {
 
         let reportRowsHtml = submissions.map(sub => {
             const dateStr = sub.created_at ? new Date(sub.created_at).toLocaleDateString() : 'RECENT';
-            const isCompleted = sub.status?.toLowerCase().trim() === 'completed' && sub.report_url;
             
-            const statusBadge = isCompleted 
-                ? `<span style="color:#00ff66; font-weight:bold;">[ COMPLETED ]</span>`
-                : `<span style="color:#ffd700; font-weight:bold;">[ PROCESSING ]</span>`;
+            // Flexibly find URL column even if key variation exists
+            const reportUrl = (sub.report_url || sub.pdf_url || sub.report_link || sub.file_url || sub.url || '').trim();
+            const rawStatus = String(sub.status || '').toLowerCase().trim();
 
-            const downloadBtn = isCompleted 
-                ? `<a href="${sub.report_url}" target="_blank" download style="color:#00f0ff; text-decoration:underline; font-weight:bold;"><i class="fa-solid fa-file-pdf"></i> DOWNLOAD PDF REPORT</a>`
-                : `<span style="color:#888;"><i class="fa-solid fa-spinner fa-spin"></i> Analyzing Tick Data...</span>`;
+            let statusBadge;
+            let downloadBtn;
+
+            // If a download URL is present, auto-enable completed state
+            if (reportUrl) {
+                statusBadge = `<span style="color:#00ff66; font-weight:bold;">[ COMPLETED ]</span>`;
+                downloadBtn = `<a href="${reportUrl}" target="_blank" download style="color:#00f0ff; text-decoration:underline; font-weight:bold;"><i class="fa-solid fa-file-pdf"></i> DOWNLOAD PDF REPORT</a>`;
+            } else if (['completed', 'complete', 'done', 'success'].includes(rawStatus)) {
+                statusBadge = `<span style="color:#00ff66; font-weight:bold;">[ COMPLETED ]</span>`;
+                downloadBtn = `<span style="color:#ffd700;"><i class="fa-solid fa-triangle-exclamation"></i> Link pending in database (report_url cell is empty)</span>`;
+            } else {
+                statusBadge = `<span style="color:#ffd700; font-weight:bold;">[ PROCESSING ]</span>`;
+                downloadBtn = `<span style="color:#888;"><i class="fa-solid fa-spinner fa-spin"></i> Analyzing Tick Data...</span>`;
+            }
 
             return `
                 <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(0,255,255,0.25); margin-bottom: 12px; padding: 14px; border-radius: 6px; text-align: left;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <strong style="color: #00ffff; font-size: 1.1em; letter-spacing: 0.5px;">${sub.system_name}</strong>
+                        <strong style="color: #00ffff; font-size: 1.1em; letter-spacing: 0.5px;">${sub.system_name || 'UNTITLED SYSTEM'}</strong>
                         ${statusBadge}
                     </div>
                     <div style="font-size: 0.85em; color: #aaa; margin: 6px 0;">SUBMITTED: ${dateStr}</div>
