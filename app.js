@@ -295,7 +295,7 @@ function showTacticalModal(title, message, isSuccess = true) {
 }
 
 // ==========================================
-// USER REPORTS FETCH & RENDER ENGINE
+// AGENT PROFILE & PERMANENT HISTORY ENGINE
 // ==========================================
 async function openUserReportsModal() {
     if (!supabaseClient) {
@@ -310,7 +310,8 @@ async function openUserReportsModal() {
     }
 
     const activeUserId = session.user.id;
-    console.log("[DEBUG] Active User Session ID:", activeUserId);
+    const userEmail = session.user.email;
+    const callsign = (session.user.user_metadata?.display_name || userEmail.split('@')[0]).toUpperCase();
 
     try {
         const { data: submissions, error } = await supabaseClient
@@ -319,33 +320,78 @@ async function openUserReportsModal() {
             .eq('user_id', activeUserId)
             .order('created_at', { ascending: false });
 
-        console.log("[DEBUG] Query Results:", submissions);
-
         if (error) {
             console.error("[DEBUG] Database Error:", error);
             throw error;
         }
 
-        if (!submissions || submissions.length === 0) {
-            showTacticalModal(
-                'TACTICAL LOG // EMPTY',
-                `No system backtests linked to User ID: <code style="color:#00ffff; font-size:0.85em;">${activeUserId}</code>.<br><br>If you updated the row manually, verify that the <b>user_id</b> in Supabase matches this exact string.`,
-                true
-            );
+        const historyList = submissions || [];
+        
+        // Calculate Profile Metrics
+        const totalSubmissions = historyList.length;
+        const completedCount = historyList.filter(s => {
+            const hasUrl = (s.report_url || s.pdf_url || s.report_link || s.file_url || s.url || '').trim();
+            const rawStatus = String(s.status || '').toLowerCase().trim();
+            return hasUrl || ['completed', 'complete', 'done', 'success'].includes(rawStatus);
+        }).length;
+        const pendingCount = totalSubmissions - completedCount;
+
+        // Build Agent Profile Header
+        const profileHeaderHtml = `
+            <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 10px; margin-bottom: 12px;">
+                    <div>
+                        <div style="font-size: 0.75em; color: #888; letter-spacing: 1px;">// CLEARANCE LEVEL: AGENT</div>
+                        <div style="font-size: 1.3em; font-weight: bold; color: #00ffff; letter-spacing: 1px;">
+                            <i class="fa-solid fa-id-badge"></i> ${callsign}
+                        </div>
+                    </div>
+                    <div style="text-align: right; font-size: 0.85em; color: #aaa;">
+                        <div><i class="fa-solid fa-envelope"></i> ${userEmail}</div>
+                        <div style="color: #00ff66; margin-top: 2px;">● COMM-LINK ACTIVE</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;">
+                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
+                        <div style="font-size: 0.7em; color: #888;">TOTAL RUNS</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #ffffff;">${totalSubmissions}</div>
+                    </div>
+                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(0, 255, 102, 0.15);">
+                        <div style="font-size: 0.7em; color: #888;">COMPLETED</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #00ff66;">${completedCount}</div>
+                    </div>
+                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255, 215, 0, 0.15);">
+                        <div style="font-size: 0.7em; color: #888;">IN QUEUE</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #ffd700;">${pendingCount}</div>
+                    </div>
+                </div>
+            </div>
+            <div style="font-size: 0.8em; color: #888; text-align: left; margin-bottom: 10px; letter-spacing: 1px;">
+                // TRANSMISSION HISTORY LOG (${totalSubmissions} ARCHIVED)
+            </div>
+        `;
+
+        if (totalSubmissions === 0) {
+            const emptyContent = profileHeaderHtml + `
+                <div style="padding: 20px; text-align: center; color: #aaa; border: 1px dashed rgba(255,255,255,0.15); border-radius: 6px;">
+                    No backtest transmissions recorded for this account.<br>
+                    Initialize a backtest in <b>SEC-01: Backtest Machine</b> to generate your first intelligence report.
+                </div>
+            `;
+            showTacticalModal('AGENT PROFILE // COMMAND CENTER', emptyContent, true);
             return;
         }
 
-        let reportRowsHtml = submissions.map(sub => {
+        // Build Scrollable Permanent History Cards
+        const reportRowsHtml = historyList.map(sub => {
             const dateStr = sub.created_at ? new Date(sub.created_at).toLocaleDateString() : 'RECENT';
-            
-            // Flexibly find URL column even if key variation exists
             const reportUrl = (sub.report_url || sub.pdf_url || sub.report_link || sub.file_url || sub.url || '').trim();
             const rawStatus = String(sub.status || '').toLowerCase().trim();
 
             let statusBadge;
             let downloadBtn;
 
-            // If a download URL is present, auto-enable completed state
             if (reportUrl) {
                 statusBadge = `<span style="color:#00ff66; font-weight:bold;">[ COMPLETED ]</span>`;
                 downloadBtn = `<a href="${reportUrl}" target="_blank" download style="color:#00f0ff; text-decoration:underline; font-weight:bold;"><i class="fa-solid fa-file-pdf"></i> DOWNLOAD PDF REPORT</a>`;
@@ -358,18 +404,25 @@ async function openUserReportsModal() {
             }
 
             return `
-                <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(0,255,255,0.25); margin-bottom: 12px; padding: 14px; border-radius: 6px; text-align: left;">
+                <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(0,255,255,0.2); margin-bottom: 10px; padding: 12px 14px; border-radius: 6px; text-align: left;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <strong style="color: #00ffff; font-size: 1.1em; letter-spacing: 0.5px;">${sub.system_name || 'UNTITLED SYSTEM'}</strong>
+                        <strong style="color: #00ffff; font-size: 1.05em; letter-spacing: 0.5px;">${sub.system_name || 'UNTITLED SYSTEM'}</strong>
                         ${statusBadge}
                     </div>
-                    <div style="font-size: 0.85em; color: #aaa; margin: 6px 0;">SUBMITTED: ${dateStr}</div>
-                    <div style="margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px;">${downloadBtn}</div>
+                    <div style="font-size: 0.8em; color: #aaa; margin: 4px 0;">SUBMITTED: ${dateStr}</div>
+                    <div style="margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; font-size: 0.9em;">${downloadBtn}</div>
                 </div>
             `;
         }).join('');
 
-        showTacticalModal('MY BACKTEST REPORTS', reportRowsHtml, true);
+        const finalModalHtml = `
+            ${profileHeaderHtml}
+            <div style="max-height: 320px; overflow-y: auto; padding-right: 4px;">
+                ${reportRowsHtml}
+            </div>
+        `;
+
+        showTacticalModal('AGENT PROFILE // COMMAND CENTER', finalModalHtml, true);
     } catch (err) {
         showTacticalModal('FETCH ERROR', err.message, false);
     }
