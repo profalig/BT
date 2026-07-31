@@ -276,7 +276,7 @@ function showTacticalModal(title, message, isSuccess = true) {
     const card = document.querySelector('.tactical-modal-card');
 
     if (heading) heading.innerText = title;
-    if (msg) msg.innerText = message;
+    if (msg) msg.innerHTML = message;
 
     if (!isSuccess) {
         if (statusTag) statusTag.innerText = '// TRANSMISSION STATUS: ERROR';
@@ -289,6 +289,66 @@ function showTacticalModal(title, message, isSuccess = true) {
     }
 
     if (modalOverlay) modalOverlay.classList.add('active');
+}
+
+// ==========================================
+// USER REPORTS FETCH & RENDER ENGINE
+// ==========================================
+async function openUserReportsModal() {
+    if (!supabaseClient) return;
+
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session || !session.user) {
+        showTacticalModal('ACCESS DENIED', 'Please authenticate to view your transmission log.', false);
+        return;
+    }
+
+    try {
+        const { data: submissions, error } = await supabaseClient
+            .from('submissions')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!submissions || submissions.length === 0) {
+            showTacticalModal(
+                'TACTICAL LOG // EMPTY',
+                'No system backtests submitted yet. Access the Backtest Machine to launch your first transmission.',
+                true
+            );
+            return;
+        }
+
+        let reportRowsHtml = submissions.map(sub => {
+            const dateStr = sub.created_at ? new Date(sub.created_at).toLocaleDateString() : 'RECENT';
+            const isCompleted = sub.status === 'completed' && sub.report_url;
+            
+            const statusBadge = isCompleted 
+                ? `<span style="color:#00ff66; font-weight:bold;">[ COMPLETED ]</span>`
+                : `<span style="color:#ffd700; font-weight:bold;">[ PROCESSING ]</span>`;
+
+            const downloadBtn = isCompleted 
+                ? `<a href="${sub.report_url}" target="_blank" style="color:#00f0ff; text-decoration:underline; font-weight:bold;"><i class="fa-solid fa-file-pdf"></i> DOWNLOAD PDF</a>`
+                : `<span style="color:#888;">Analyzing Tick Data...</span>`;
+
+            return `
+                <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(0,255,255,0.2); margin-bottom: 10px; padding: 12px; border-radius: 4px; text-align: left;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong style="color: #00ffff; font-size: 1.1em;">${sub.system_name}</strong>
+                        ${statusBadge}
+                    </div>
+                    <div style="font-size: 0.85em; color: #aaa; margin: 4px 0;">DATE: ${dateStr}</div>
+                    <div style="margin-top: 8px;">${downloadBtn}</div>
+                </div>
+            `;
+        }).join('');
+
+        showTacticalModal('MY BACKTEST REPORTS', reportRowsHtml, true);
+    } catch (err) {
+        showTacticalModal('FETCH ERROR', err.message, false);
+    }
 }
 
 // ==========================================
@@ -332,7 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // BACKTEST SUBMISSION WITH AUTHENTICATED USER LINKING
+    // BACKTEST SUBMISSION WITH USER LINKING
     if (submitBtn) {
         submitBtn.addEventListener('click', async (e) => {
             e.preventDefault();
@@ -356,7 +416,6 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled = true;
 
             try {
-                // Fetch current user session ID if logged in
                 const { data: { session } } = await supabaseClient.auth.getSession();
                 const userId = session?.user?.id || null;
 
@@ -376,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 systemNameInput.value = '';
                 rulesInput.value = '';
-                if (!userId) emailInput.value = ''; // Retain email for logged-in users
+                if (!userId) emailInput.value = '';
             } catch (err) {
                 console.error('Submission Error:', err.message);
                 showTacticalModal('UPLINK FAILED', err.message, false);
@@ -404,7 +463,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const authCorner = document.getElementById('auth-corner');
     const googleBtn = document.getElementById('google-auth-btn');
 
-    // Tab Switching Logic
     function setAuthMode(mode) {
         authMode = mode;
         if (mode === 'signin') {
@@ -429,7 +487,6 @@ document.addEventListener('DOMContentLoaded', () => {
         closeAuthBtn.addEventListener('click', () => authModal.classList.remove('active'));
     }
 
-    // Form Submission Logic
     if (authForm) {
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -494,15 +551,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // OAuth Handlers
     async function handleOAuth(provider) {
         if (!supabaseClient) return;
         try {
             const { data, error } = await supabaseClient.auth.signInWithOAuth({
                 provider: provider,
-                options: {
-                    redirectTo: window.location.origin
-                }
+                options: { redirectTo: window.location.origin }
             });
             if (error) throw error;
         } catch (err) {
@@ -512,7 +566,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (googleBtn) googleBtn.addEventListener('click', () => handleOAuth('google'));
 
-    // Monitor Auth State & Auto-fill User Information
     if (supabaseClient) {
         const hashStr = window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash;
         const hashParams = new URLSearchParams(hashStr);
@@ -539,16 +592,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (session && session.user) {
                 const displayName = session.user.user_metadata?.display_name || session.user.email.split('@')[0];
                 
-                // Auto-fill backtest contact email input for authenticated agents
                 const contactEmailInput = document.getElementById('contact-email');
                 if (contactEmailInput) {
                     contactEmailInput.value = session.user.email;
                 }
 
+                // Inject MY REPORTS button when user is logged in
                 authCorner.innerHTML = `
                     <div class="user-badge"><i class="fa-solid fa-shield-halved"></i> AGENT: ${displayName.toUpperCase()}</div>
+                    <button id="my-reports-btn" class="auth-btn"><i class="fa-solid fa-folder-open"></i> MY REPORTS</button>
                     <button id="signout-btn" class="auth-btn"><i class="fa-solid fa-power-off"></i> LOGOUT</button>
                 `;
+
+                document.getElementById('my-reports-btn').addEventListener('click', openUserReportsModal);
 
                 document.getElementById('signout-btn').addEventListener('click', async () => {
                     await supabaseClient.auth.signOut();
