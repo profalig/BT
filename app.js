@@ -469,7 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // BACKTEST SUBMISSION WITH USER LINKING
+    // BACKTEST SUBMISSION WITH USER LINKING & AUTOMATIC WORKER WAKE-UP
     if (submitBtn) {
         submitBtn.addEventListener('click', async (e) => {
             e.preventDefault();
@@ -491,6 +491,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalBtnText = submitBtn.innerHTML;
             submitBtn.innerText = 'UPLINKING TO CORE...';
             submitBtn.disabled = true;
+
+            // ⚡ WAKE UP RENDER WORKER INSTANTLY ⚡
+            fetch("https://backtest-worker-fs1a.onrender.com", { mode: "no-cors" }).catch(() => {});
 
             try {
                 const { data: { session } } = await supabaseClient.auth.getSession();
