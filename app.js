@@ -510,6 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const urlError = hashParams.get('error') || queryParams.get('error');
         const urlErrorDesc = hashParams.get('error_description') || queryParams.get('error_description');
+        const authType = hashParams.get('type') || queryParams.get('type');
 
         if (urlError || urlErrorDesc) {
             const formattedMsg = urlErrorDesc 
@@ -517,8 +518,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 : 'Verification link is invalid or has expired.';
             showTacticalModal('LINK EXPIRED', formattedMsg, false);
             window.history.replaceState(null, null, window.location.pathname);
-        } else if (window.location.hash.includes('access_token') || window.location.search.includes('code')) {
+        } else if (authType === 'signup' || authType === 'email_confirmation') {
+            // ONLY show "EMAIL VERIFIED" when explicitly returning from an email verification link
             showTacticalModal('EMAIL VERIFIED', 'Access Clearance Confirmed. Tactical Link Established.', true);
+            window.history.replaceState(null, null, window.location.pathname);
+        } else if (window.location.hash.includes('access_token') || window.location.search.includes('code')) {
+            // Silently clean up OAuth URL parameters (e.g., after Google Login) without popping up "EMAIL VERIFIED"
             window.history.replaceState(null, null, window.location.pathname);
         }
 
