@@ -309,7 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const rulesInput = document.getElementById('system-rules');
     const closeModalBtn = document.getElementById('close-modal-btn');
 
-    // FIXED CLOSE MODAL LOGIC (Prevents camera freeze/stocking)
+    // CLOSE MODAL LOGIC
     if (closeModalBtn) {
         closeModalBtn.addEventListener('click', () => {
             const modalOverlay = document.getElementById('tactical-modal-overlay');
@@ -332,6 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // BACKTEST SUBMISSION WITH AUTHENTICATED USER LINKING
     if (submitBtn) {
         submitBtn.addEventListener('click', async (e) => {
             e.preventDefault();
@@ -355,17 +356,27 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled = true;
 
             try {
+                // Fetch current user session ID if logged in
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                const userId = session?.user?.id || null;
+
                 const { data, error } = await supabaseClient
                     .from('submissions')
-                    .insert([{ system_name: systemName, email: email, rules: rules, status: 'pending' }]);
+                    .insert([{ 
+                        system_name: systemName, 
+                        email: email, 
+                        rules: rules, 
+                        status: 'pending',
+                        user_id: userId
+                    }]);
 
                 if (error) throw error;
 
                 showTacticalModal('UPLINK SECURED', 'System parameters received. Our engineering team will conduct a multi-threaded data analysis and compile your report shortly.', true);
 
                 systemNameInput.value = '';
-                emailInput.value = '';
                 rulesInput.value = '';
+                if (!userId) emailInput.value = ''; // Retain email for logged-in users
             } catch (err) {
                 console.error('Submission Error:', err.message);
                 showTacticalModal('UPLINK FAILED', err.message, false);
@@ -501,9 +512,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (googleBtn) googleBtn.addEventListener('click', () => handleOAuth('google'));
 
-    // Monitor Auth State & Email Confirmation Redirects
+    // Monitor Auth State & Auto-fill User Information
     if (supabaseClient) {
-        // Parse URL parameters for Auth errors (like expired links)
         const hashStr = window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash;
         const hashParams = new URLSearchParams(hashStr);
         const queryParams = new URLSearchParams(window.location.search);
@@ -519,11 +529,9 @@ document.addEventListener('DOMContentLoaded', () => {
             showTacticalModal('LINK EXPIRED', formattedMsg, false);
             window.history.replaceState(null, null, window.location.pathname);
         } else if (authType === 'signup' || authType === 'email_confirmation') {
-            // ONLY show "EMAIL VERIFIED" when explicitly returning from an email verification link
             showTacticalModal('EMAIL VERIFIED', 'Access Clearance Confirmed. Tactical Link Established.', true);
             window.history.replaceState(null, null, window.location.pathname);
         } else if (window.location.hash.includes('access_token') || window.location.search.includes('code')) {
-            // Silently clean up OAuth URL parameters (e.g., after Google Login) without popping up "EMAIL VERIFIED"
             window.history.replaceState(null, null, window.location.pathname);
         }
 
@@ -531,6 +539,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (session && session.user) {
                 const displayName = session.user.user_metadata?.display_name || session.user.email.split('@')[0];
                 
+                // Auto-fill backtest contact email input for authenticated agents
+                const contactEmailInput = document.getElementById('contact-email');
+                if (contactEmailInput) {
+                    contactEmailInput.value = session.user.email;
+                }
+
                 authCorner.innerHTML = `
                     <div class="user-badge"><i class="fa-solid fa-shield-halved"></i> AGENT: ${displayName.toUpperCase()}</div>
                     <button id="signout-btn" class="auth-btn"><i class="fa-solid fa-power-off"></i> LOGOUT</button>
