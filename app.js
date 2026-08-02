@@ -45,7 +45,7 @@ const orbits = orbitConfig.map(c => ({
     radius: 0
 }));
 
-function updateOrbitRadii() { orbits.forEach(o => o.radius = o.orbitEl.offsetWidth / 2); }
+function updateOrbitRadii() { orbits.forEach(o => { if (o.orbitEl) o.radius = o.orbitEl.offsetWidth / 2; }); }
 updateOrbitRadii();
 window.addEventListener('resize', updateOrbitRadii);
 
@@ -62,6 +62,7 @@ let targetCam = { x: 0, y: 0, scale: 1 };
 
 function renderEngine(time) {
     orbits.forEach(o => {
+        if (!o.orbitEl || !o.planetEl) return;
         const progress = (time / (o.duration * 1000)) % 1;
         o.currentAngle = progress * 360;
         if (o.reverse) o.currentAngle = -o.currentAngle;
@@ -95,18 +96,19 @@ function renderEngine(time) {
     cam.y += (targetCam.y - cam.y) * lerpSpeed;
     cam.scale += (targetCam.scale - cam.scale) * lerpSpeed;
 
-    viewport.style.transform = `scale(${cam.scale}) translate(${cam.x}px, ${cam.y}px)`;
-    spaceMatrix.style.transform = `translate(${cam.x * 0.15}px, ${cam.y * 0.15}px)`;
+    if (viewport) viewport.style.transform = `scale(${cam.scale}) translate(${cam.x}px, ${cam.y}px)`;
+    if (spaceMatrix) spaceMatrix.style.transform = `translate(${cam.x * 0.15}px, ${cam.y * 0.15}px)`;
 
     requestAnimationFrame(renderEngine);
 }
 requestAnimationFrame(renderEngine);
 
 orbits.forEach(o => {
+    if (!o.planetEl) return;
     o.planetEl.addEventListener('click', () => {
         if (document.body.classList.contains('warping') || isHyperZoomed) return;
 
-        orbits.forEach(orbit => orbit.planetEl.classList.remove('active'));
+        orbits.forEach(orbit => orbit.planetEl && orbit.planetEl.classList.remove('active'));
         
         activePlanetData = o;
         o.planetEl.classList.add('active'); 
@@ -131,7 +133,7 @@ orbits.forEach(o => {
             </div>
         `).join('');
 
-        if(o.id === 'contact' || o.id === 'about') {
+        if (o.id === 'contact' || o.id === 'about') {
             actionBtn.style.display = 'none';
         } else {
             actionBtn.style.display = 'flex';
@@ -143,36 +145,51 @@ orbits.forEach(o => {
 
 returnBtn.addEventListener('click', () => {
     document.body.classList.remove('landed');
-    if (activePlanetData) activePlanetData.planetEl.classList.remove('active');
+    if (activePlanetData && activePlanetData.planetEl) activePlanetData.planetEl.classList.remove('active');
     activePlanetData = null; 
     setTimeout(() => { document.body.classList.remove('warping'); }, 800);
 });
 
-// INITIALIZE MODULE BUTTON LOGIC (THE ZOOM)
+// INITIALIZE MODULE BUTTON LOGIC (THE ZOOM & ACTIONS)
 actionBtn.addEventListener('click', () => {
-    if (activePlanetData && activePlanetData.id === 'backtest') {
+    if (!activePlanetData) return;
+
+    if (activePlanetData.id === 'backtest') {
         isHyperZoomed = true;
         document.body.classList.remove('landed');
-        document.getElementById('spaceship-title-container').style.opacity = '0';
-        document.getElementById('auth-corner').style.opacity = '0';
+        const titleContainer = document.getElementById('spaceship-title-container');
+        const authCorner = document.getElementById('auth-corner');
+        if (titleContainer) titleContainer.style.opacity = '0';
+        if (authCorner) authCorner.style.opacity = '0';
         
         setTimeout(() => {
-            document.getElementById('gas-giant-atmosphere').classList.add('active');
+            const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
+            if (gasAtmosphere) gasAtmosphere.classList.add('active');
         }, 800);
+    } else if (activePlanetData.id === 'databank') {
+        showTacticalModal('SYSTEM DATABANK', 'The System Databank is currently under active development. High-edge quantitative strategy models will be released soon.', true);
+    } else if (activePlanetData.id === 'campus') {
+        showTacticalModal('BACKTESTING CAMPUS', 'Enrolling now for the upcoming Quantitative Engineering cohort. Contact our engineering desk via SEC-04 to apply.', true);
     }
 });
 
 // ABORT CONSOLE BUTTON (ZOOM OUT)
-document.getElementById('abort-console-btn').addEventListener('click', () => {
-    document.getElementById('gas-giant-atmosphere').classList.remove('active');
-    isHyperZoomed = false;
-    
-    setTimeout(() => {
-        document.body.classList.add('landed');
-        document.getElementById('spaceship-title-container').style.opacity = '1';
-        document.getElementById('auth-corner').style.opacity = '1';
-    }, 600);
-});
+const abortConsoleBtn = document.getElementById('abort-console-btn');
+if (abortConsoleBtn) {
+    abortConsoleBtn.addEventListener('click', () => {
+        const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
+        if (gasAtmosphere) gasAtmosphere.classList.remove('active');
+        isHyperZoomed = false;
+        
+        setTimeout(() => {
+            document.body.classList.add('landed');
+            const titleContainer = document.getElementById('spaceship-title-container');
+            const authCorner = document.getElementById('auth-corner');
+            if (titleContainer) titleContainer.style.opacity = '1';
+            if (authCorner) authCorner.style.opacity = '1';
+        }, 600);
+    });
+}
 
 // ==========================================
 // CONSTELLATION PARALLAX & VIDEO HOVER ENGINE
@@ -192,16 +209,18 @@ document.addEventListener('mousemove', (e) => {
 });
 
 const triggerAttack = (constellation) => {
+    if (!constellation) return;
     constellation.classList.add('highlight');
     const vid = constellation.querySelector('.beast-vid');
     if (vid) {
         if (vid.pauseTimeout) { clearTimeout(vid.pauseTimeout); vid.pauseTimeout = null; }
         vid.currentTime = 0; 
-        vid.play().catch(e => console.log("Autoplay blocked")); 
+        vid.play().catch(() => {}); 
     }
 };
 
 const resetAttack = (constellation) => {
+    if (!constellation) return;
     constellation.classList.remove('highlight');
     const vid = constellation.querySelector('.beast-vid');
     if (vid) {
@@ -211,6 +230,7 @@ const resetAttack = (constellation) => {
 };
 
 orbits.forEach(o => {
+    if (!o.planetEl) return;
     o.planetEl.addEventListener('mouseenter', () => {
         if (['backtest', 'campus'].includes(o.id)) triggerAttack(bullConstellation);
         else if (['databank', 'contact'].includes(o.id)) triggerAttack(bearConstellation);
@@ -221,14 +241,16 @@ orbits.forEach(o => {
 
 const btcSun = document.getElementById('sun');
 const solarSystem = document.getElementById('solar-system');
-btcSun.addEventListener('mouseenter', () => {
-    solarSystem.classList.add('show-labels');
-    triggerAttack(bullConstellation); triggerAttack(bearConstellation);
-});
-btcSun.addEventListener('mouseleave', () => {
-    solarSystem.classList.remove('show-labels');
-    resetAttack(bullConstellation); resetAttack(bearConstellation);
-});
+if (btcSun && solarSystem) {
+    btcSun.addEventListener('mouseenter', () => {
+        solarSystem.classList.add('show-labels');
+        triggerAttack(bullConstellation); triggerAttack(bearConstellation);
+    });
+    btcSun.addEventListener('mouseleave', () => {
+        solarSystem.classList.remove('show-labels');
+        resetAttack(bullConstellation); resetAttack(bearConstellation);
+    });
+}
 
 // ==========================================
 // DENSE BLACKBOARD GENERATOR ENGINE
@@ -282,12 +304,10 @@ function showTacticalModal(title, message, isSuccess = true) {
     if (msg) msg.innerHTML = message;
 
     if (!isSuccess) {
-        if (statusTag) statusTag.innerText = '// TRANSMISSION STATUS: ERROR';
-        if (statusTag) statusTag.style.color = '#ff0055';
+        if (statusTag) { statusTag.innerText = '// TRANSMISSION STATUS: ERROR'; statusTag.style.color = '#ff0055'; }
         if (card) card.style.borderColor = 'rgba(255, 0, 85, 0.5)';
     } else {
-        if (statusTag) statusTag.innerText = '// TRANSMISSION STATUS: SECURED';
-        if (statusTag) statusTag.style.color = '#00ff66';
+        if (statusTag) { statusTag.innerText = '// TRANSMISSION STATUS: SECURED'; statusTag.style.color = '#00ff66'; }
         if (card) card.style.borderColor = 'rgba(0, 255, 102, 0.4)';
     }
 
@@ -327,7 +347,6 @@ async function openUserReportsModal() {
 
         const historyList = submissions || [];
         
-        // Calculate Profile Metrics
         const totalSubmissions = historyList.length;
         const completedCount = historyList.filter(s => {
             const hasUrl = (s.report_url || s.pdf_url || s.report_link || s.file_url || s.url || '').trim();
@@ -336,7 +355,6 @@ async function openUserReportsModal() {
         }).length;
         const pendingCount = totalSubmissions - completedCount;
 
-        // Build Agent Profile Header
         const profileHeaderHtml = `
             <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 10px; margin-bottom: 12px;">
@@ -383,7 +401,6 @@ async function openUserReportsModal() {
             return;
         }
 
-        // Build Scrollable Permanent History Cards
         const reportRowsHtml = historyList.map(sub => {
             const dateStr = sub.created_at ? new Date(sub.created_at).toLocaleDateString() : 'RECENT';
             const reportUrl = (sub.report_url || sub.pdf_url || sub.report_link || sub.file_url || sub.url || '').trim();
@@ -397,7 +414,10 @@ async function openUserReportsModal() {
                 downloadBtn = `<a href="${reportUrl}" target="_blank" download style="color:#00f0ff; text-decoration:underline; font-weight:bold;"><i class="fa-solid fa-file-pdf"></i> DOWNLOAD PDF REPORT</a>`;
             } else if (['completed', 'complete', 'done', 'success'].includes(rawStatus)) {
                 statusBadge = `<span style="color:#00ff66; font-weight:bold;">[ COMPLETED ]</span>`;
-                downloadBtn = `<span style="color:#ffd700;"><i class="fa-solid fa-triangle-exclamation"></i> Link pending in database (report_url cell is empty)</span>`;
+                downloadBtn = `<span style="color:#ffd700;"><i class="fa-solid fa-triangle-exclamation"></i> Link pending in database</span>`;
+            } else if (['failed', 'error', 'rejected'].includes(rawStatus)) {
+                statusBadge = `<span style="color:#ff0055; font-weight:bold;">[ FAILED ]</span>`;
+                downloadBtn = `<span style="color:#ff0055;"><i class="fa-solid fa-circle-xmark"></i> Execution Error</span>`;
             } else {
                 statusBadge = `<span style="color:#ffd700; font-weight:bold;">[ PROCESSING ]</span>`;
                 downloadBtn = `<span style="color:#888;"><i class="fa-solid fa-spinner fa-spin"></i> Analyzing Tick Data...</span>`;
@@ -439,12 +459,28 @@ if (window.supabase) {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
+// ==========================================
+// APPLICATION INITIALIZATION & AUTHENTICATION ENGINE
+// ==========================================
+let authMode = 'signin';
+
 document.addEventListener('DOMContentLoaded', () => {
-    const submitBtn = document.getElementById('submit-btn');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const systemSubmitForm = document.getElementById('system-submit-form');
     const systemNameInput = document.getElementById('system-name');
     const emailInput = document.getElementById('contact-email');
     const rulesInput = document.getElementById('system-rules');
-    const closeModalBtn = document.getElementById('close-modal-btn');
+    const submitBtn = document.getElementById('submit-btn');
+
+    const authModal = document.getElementById('auth-modal-overlay');
+    const closeAuthBtn = document.getElementById('close-auth-btn');
+    const tabSignIn = document.getElementById('tab-signin');
+    const tabSignUp = document.getElementById('tab-signup');
+    const authForm = document.getElementById('auth-form');
+    const authSubmitBtn = document.getElementById('auth-submit-btn');
+    const usernameGroup = document.getElementById('username-group');
+    const authCorner = document.getElementById('auth-corner');
+    const googleBtn = document.getElementById('google-auth-btn');
 
     // CLOSE MODAL LOGIC
     if (closeModalBtn) {
@@ -462,16 +498,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.body.classList.add('landed');
                 }
                 const titleContainer = document.getElementById('spaceship-title-container');
-                const authCorner = document.getElementById('auth-corner');
-                if (titleContainer) titleContainer.style.opacity = '1';
                 if (authCorner) authCorner.style.opacity = '1';
+                if (titleContainer) titleContainer.style.opacity = '1';
             }, 400);
         });
     }
 
-    // BACKTEST SUBMISSION WITH USER LINKING & AUTOMATIC WORKER WAKE-UP
-    if (submitBtn) {
-        submitBtn.addEventListener('click', async (e) => {
+    // BACKTEST SUBMISSION WITH USER LINKING & WORKER WAKE-UP
+    if (systemSubmitForm) {
+        systemSubmitForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             if (!supabaseClient) {
@@ -492,14 +527,14 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.innerText = 'UPLINKING TO CORE...';
             submitBtn.disabled = true;
 
-            // ⚡ WAKE UP RENDER WORKER INSTANTLY ⚡
+            // Wake up Render Worker instantly
             fetch("https://backtest-worker-fs1a.onrender.com", { mode: "no-cors" }).catch(() => {});
 
             try {
                 const { data: { session } } = await supabaseClient.auth.getSession();
                 const userId = session?.user?.id || null;
 
-                const { data, error } = await supabaseClient
+                const { error } = await supabaseClient
                     .from('submissions')
                     .insert([{ 
                         system_name: systemName, 
@@ -525,36 +560,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-});
 
-// ==========================================
-// AUTHENTICATION ENGINE
-// ==========================================
-let authMode = 'signin';
-
-document.addEventListener('DOMContentLoaded', () => {
-    const authModal = document.getElementById('auth-modal-overlay');
-    const closeAuthBtn = document.getElementById('close-auth-btn');
-    const tabSignIn = document.getElementById('tab-signin');
-    const tabSignUp = document.getElementById('tab-signup');
-    const authForm = document.getElementById('auth-form');
-    const authSubmitBtn = document.getElementById('auth-submit-btn');
-    const usernameGroup = document.getElementById('username-group');
-    const authCorner = document.getElementById('auth-corner');
-    const googleBtn = document.getElementById('google-auth-btn');
-
+    // AUTH MODE SWITCHING
     function setAuthMode(mode) {
         authMode = mode;
         if (mode === 'signin') {
-            tabSignIn.classList.add('active');
-            tabSignUp.classList.remove('active');
+            if (tabSignIn) tabSignIn.classList.add('active');
+            if (tabSignUp) tabSignUp.classList.remove('active');
             if (usernameGroup) usernameGroup.style.display = 'none';
-            authSubmitBtn.innerHTML = 'AUTHENTICATE <i class="fa-solid fa-key"></i>';
+            if (authSubmitBtn) authSubmitBtn.innerHTML = 'AUTHENTICATE <i class="fa-solid fa-key"></i>';
         } else {
-            tabSignUp.classList.add('active');
-            tabSignIn.classList.remove('active');
+            if (tabSignUp) tabSignUp.classList.add('active');
+            if (tabSignIn) tabSignIn.classList.remove('active');
             if (usernameGroup) usernameGroup.style.display = 'block';
-            authSubmitBtn.innerHTML = 'CREATE CLEARANCE <i class="fa-solid fa-user-plus"></i>';
+            if (authSubmitBtn) authSubmitBtn.innerHTML = 'CREATE CLEARANCE <i class="fa-solid fa-user-plus"></i>';
         }
     }
 
@@ -563,10 +582,11 @@ document.addEventListener('DOMContentLoaded', () => {
         tabSignUp.addEventListener('click', () => setAuthMode('signup'));
     }
 
-    if (closeAuthBtn) {
+    if (closeAuthBtn && authModal) {
         closeAuthBtn.addEventListener('click', () => authModal.classList.remove('active'));
     }
 
+    // AUTH FORM SUBMISSION
     if (authForm) {
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -578,7 +598,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const email = document.getElementById('auth-email').value.trim();
             const password = document.getElementById('auth-password').value;
-            const username = document.getElementById('auth-username').value.trim();
+            const usernameInput = document.getElementById('auth-username');
+            const username = usernameInput ? usernameInput.value.trim() : '';
 
             if (!email || !password) {
                 showTacticalModal('ACCESS DENIED', 'Please input both Access ID and Security Password.', false);
@@ -597,7 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
 
-                    const { data, error } = await supabaseClient.auth.signUp({ 
+                    const { error } = await supabaseClient.auth.signUp({ 
                         email, 
                         password,
                         options: {
@@ -631,10 +652,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // OAUTH AUTHENTICATION
     async function handleOAuth(provider) {
         if (!supabaseClient) return;
         try {
-            const { data, error } = await supabaseClient.auth.signInWithOAuth({
+            const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: provider,
                 options: { redirectTo: window.location.origin }
             });
@@ -646,6 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (googleBtn) googleBtn.addEventListener('click', () => handleOAuth('google'));
 
+    // AUTH STATE LISTENER & SESSION BINDING
     if (supabaseClient) {
         const hashStr = window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash;
         const hashParams = new URLSearchParams(hashStr);
@@ -677,32 +700,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     contactEmailInput.value = session.user.email;
                 }
 
-                // Inject MY REPORTS button when user is logged in
-                authCorner.innerHTML = `
-                    <div class="user-badge"><i class="fa-solid fa-shield-halved"></i> AGENT: ${displayName.toUpperCase()}</div>
-                    <button id="my-reports-btn" class="auth-btn"><i class="fa-solid fa-folder-open"></i> MY REPORTS</button>
-                    <button id="signout-btn" class="auth-btn"><i class="fa-solid fa-power-off"></i> LOGOUT</button>
-                `;
+                if (authCorner) {
+                    authCorner.innerHTML = `
+                        <div class="user-badge"><i class="fa-solid fa-shield-halved"></i> AGENT: ${displayName.toUpperCase()}</div>
+                        <button id="my-reports-btn" class="auth-btn"><i class="fa-solid fa-folder-open"></i> MY REPORTS</button>
+                        <button id="signout-btn" class="auth-btn"><i class="fa-solid fa-power-off"></i> LOGOUT</button>
+                    `;
 
-                document.getElementById('my-reports-btn').addEventListener('click', openUserReportsModal);
+                    document.getElementById('my-reports-btn')?.addEventListener('click', openUserReportsModal);
 
-                document.getElementById('signout-btn').addEventListener('click', async () => {
-                    await supabaseClient.auth.signOut();
-                    window.location.reload();
-                });
+                    document.getElementById('signout-btn')?.addEventListener('click', async () => {
+                        await supabaseClient.auth.signOut();
+                        window.location.reload();
+                    });
+                }
             } else {
-                authCorner.innerHTML = `
-                    <button class="auth-btn sign-in"><i class="fa-solid fa-user"></i> SIGN IN</button>
-                    <button class="auth-btn sign-up"><i class="fa-solid fa-user-plus"></i> SIGN UP</button>
-                `;
-                document.querySelector('.auth-btn.sign-in')?.addEventListener('click', () => {
-                    setAuthMode('signin');
-                    authModal.classList.add('active');
-                });
-                document.querySelector('.auth-btn.sign-up')?.addEventListener('click', () => {
-                    setAuthMode('signup');
-                    authModal.classList.add('active');
-                });
+                if (authCorner) {
+                    authCorner.innerHTML = `
+                        <button class="auth-btn sign-in"><i class="fa-solid fa-user"></i> SIGN IN</button>
+                        <button class="auth-btn sign-up"><i class="fa-solid fa-user-plus"></i> SIGN UP</button>
+                    `;
+                    document.querySelector('.auth-btn.sign-in')?.addEventListener('click', () => {
+                        setAuthMode('signin');
+                        if (authModal) authModal.classList.add('active');
+                    });
+                    document.querySelector('.auth-btn.sign-up')?.addEventListener('click', () => {
+                        setAuthMode('signup');
+                        if (authModal) authModal.classList.add('active');
+                    });
+                }
             }
         });
     }

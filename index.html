@@ -116,7 +116,7 @@
                 <p>Deploy your system architecture to our core. Our engineering team will conduct a highly accurate, multi-threaded data analysis and return a comprehensive intelligence report. Discover your absolute win/loss rates, maximum drawdown stress-tests, full trade logs, and statistical reliability across multiple market regimes.</p>
             </div>
 
-            <form id="system-submit-form" onsubmit="event.preventDefault();">
+            <form id="system-submit-form">
                 <div class="input-group">
                     <label>SYSTEM DESIGNATION</label>
                     <input type="text" id="system-name" placeholder="e.g., Mean Reversion Alpha v2" required>
@@ -134,7 +134,7 @@
         </div>
     </div>
 
-    <!-- TACTICAL UPLINK SUCCESS HUD MODAL -->
+    <!-- TACTICAL UPLINK SUCCESS / REPORT HUD MODAL -->
     <div id="tactical-modal-overlay">
         <div class="tactical-modal-card">
             <div class="corner-bracket top-left"></div>
@@ -157,13 +157,7 @@
 
             <div class="modal-status-tag">// TRANSMISSION STATUS: SECURED</div>
             <h2 id="modal-heading">UPLINK SUCCESSFUL</h2>
-            <p id="modal-message">System architecture dispatches into the quantitative core. Engineering task group assigned.</p>
-
-            <div class="telemetry-bar">
-                <div class="telemetry-item"><span>PACKETS</span><b>100% SENT</b></div>
-                <div class="telemetry-item"><span>LATENCY</span><b>12ms</b></div>
-                <div class="telemetry-item"><span>QUEUE</span><b>ACTIVE</b></div>
-            </div>
+            <div id="modal-message">System architecture dispatches into the quantitative core. Engineering task group assigned.</div>
 
             <button id="close-modal-btn" class="modal-action-btn">RETURN TO COMMAND <i class="fa-solid fa-chevron-right"></i></button>
         </div>
@@ -183,8 +177,7 @@
                 <button type="button" class="auth-tab" id="tab-signup">SIGN UP</button>
             </div>
 
-            <form id="auth-form" onsubmit="event.preventDefault();">
-                <!-- USERNAME FIELD (DISPLAYED ONLY ON SIGN-UP) -->
+            <form id="auth-form">
                 <div class="input-group" id="username-group" style="display: none;">
                     <label>CALLSIGN (Username)</label>
                     <input type="text" id="auth-username" placeholder="e.g. QuantTrader_99">
@@ -201,7 +194,6 @@
                 <button type="submit" id="auth-submit-btn" class="submit-system-btn">AUTHENTICATE <i class="fa-solid fa-key"></i></button>
             </form>
 
-            <!-- SOCIAL AUTHENTICATION DIVIDER & BUTTONS -->
             <div class="oauth-divider"><span>OR UPLINK WITH</span></div>
             <div class="oauth-buttons">
                 <button type="button" id="google-auth-btn" class="oauth-btn google"><i class="fa-brands fa-google"></i> SIGN IN WITH GOOGLE</button>
