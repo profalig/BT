@@ -13,8 +13,9 @@
 </head>
 <body>
 
-    <!-- AUTHENTICATION CORNER -->
+    <!-- AUTHENTICATION & SUBSCRIPTION CORNER -->
     <div id="auth-corner">
+        <button id="nav-subscription-btn" class="auth-btn sub-nav-btn"><i class="fa-solid fa-gem"></i> SUBSCRIPTIONS</button>
         <button class="auth-btn sign-in"><i class="fa-solid fa-user"></i> SIGN IN</button>
         <button class="auth-btn sign-up"><i class="fa-solid fa-user-plus"></i> SIGN UP</button>
     </div>
@@ -113,7 +114,7 @@
             <button id="abort-console-btn"><i class="fa-solid fa-xmark"></i> ABORT UPLINK</button>
             <div class="console-header">
                 <h2>SYSTEM SUBMISSION PROTOCOL</h2>
-                <p>Deploy your system architecture to our core. Our engineering team will conduct a highly accurate, multi-threaded data analysis and return a comprehensive intelligence report. Discover your absolute win/loss rates, maximum drawdown stress-tests, full trade logs, and statistical reliability across multiple market regimes.</p>
+                <p>Deploy your system architecture to our core. Our engineering team will conduct a highly accurate, multi-threaded data analysis and return a comprehensive intelligence report.</p>
             </div>
 
             <form id="system-submit-form">
@@ -160,6 +161,68 @@
             <div id="modal-message">System architecture dispatches into the quantitative core. Engineering task group assigned.</div>
 
             <button id="close-modal-btn" class="modal-action-btn">RETURN TO COMMAND <i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+    </div>
+
+    <!-- SUBSCRIPTION & PAYMENT HUD MODAL -->
+    <div id="subscription-modal-overlay">
+        <div class="subscription-modal-card">
+            <button id="close-sub-btn" class="abort-btn"><i class="fa-solid fa-xmark"></i></button>
+            <div class="corner-bracket top-left"></div>
+            <div class="corner-bracket top-right"></div>
+            <div class="corner-bracket bottom-left"></div>
+            <div class="corner-bracket bottom-right"></div>
+
+            <div class="sub-header">
+                <div class="modal-status-tag">// CLEARANCE MATRIX & POWER SUBSCRIPTIONS</div>
+                <h2>QUANTITATIVE ACCESS TIERS</h2>
+                <p>Select your operational tier to unlock hyper-threaded compute clusters, priority backtests, and deep tick data metrics.</p>
+            </div>
+
+            <div class="pricing-grid">
+                <!-- TIER 1 -->
+                <div class="tier-card">
+                    <div class="tier-name">STARTER CLEARANCE</div>
+                    <div class="tier-price">$0 <span>/ mo</span></div>
+                    <p class="tier-desc">Standard queue compute for beginner quants.</p>
+                    <ul class="tier-features">
+                        <li><i class="fa-solid fa-check"></i> Standard Queue Priority</li>
+                        <li><i class="fa-solid fa-check"></i> 1 Backtest Run / Week</li>
+                        <li><i class="fa-solid fa-check"></i> Basic Metrics Log</li>
+                        <li><i class="fa-solid fa-xmark unavailable"></i> Tick-level Deep Analysis</li>
+                    </ul>
+                    <button class="tier-btn select-tier-btn" data-plan="Free">ACTIVE PLAN</button>
+                </div>
+
+                <!-- TIER 2 (FEATURED) -->
+                <div class="tier-card featured">
+                    <div class="popular-badge">MOST POPULAR</div>
+                    <div class="tier-name" style="color: #00f0ff;">QUANT PRO</div>
+                    <div class="tier-price" style="color: #00f0ff;">$49 <span>/ mo</span></div>
+                    <p class="tier-desc">High-performance engine for serious system traders.</p>
+                    <ul class="tier-features">
+                        <li><i class="fa-solid fa-check"></i> Express Priority Queue</li>
+                        <li><i class="fa-solid fa-check"></i> Unlimited Backtest Runs</li>
+                        <li><i class="fa-solid fa-check"></i> 99.9% Tick Data Accuracy</li>
+                        <li><i class="fa-solid fa-check"></i> PDF Report Data Export</li>
+                    </ul>
+                    <button class="tier-btn featured-btn select-tier-btn" data-plan="Quant Pro"><i class="fa-solid fa-bolt"></i> UPGRADE TO PRO</button>
+                </div>
+
+                <!-- TIER 3 -->
+                <div class="tier-card">
+                    <div class="tier-name" style="color: #ffd700;">INSTITUTIONAL</div>
+                    <div class="tier-price" style="color: #ffd700;">$199 <span>/ mo</span></div>
+                    <p class="tier-desc">Dedicated multi-threaded cluster for funds & engineers.</p>
+                    <ul class="tier-features">
+                        <li><i class="fa-solid fa-check"></i> Dedicated Compute Node</li>
+                        <li><i class="fa-solid fa-check"></i> Custom Python Strategy Coding</li>
+                        <li><i class="fa-solid fa-check"></i> 1-on-1 Quant Desk Support</li>
+                        <li><i class="fa-solid fa-check"></i> Databank Full Access</li>
+                    </ul>
+                    <button class="tier-btn select-tier-btn" data-plan="Institutional" style="border-color:#ffd700; color:#ffd700;"><i class="fa-solid fa-crown"></i> UNLOCK INSTITUTIONAL</button>
+                </div>
+            </div>
         </div>
     </div>
 

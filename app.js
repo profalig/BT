@@ -315,6 +315,19 @@ function showTacticalModal(title, message, isSuccess = true) {
 }
 
 // ==========================================
+// SUBSCRIPTION MODAL TRIGGER
+// ==========================================
+function openSubscriptionModal() {
+    const subModal = document.getElementById('subscription-modal-overlay');
+    if (subModal) subModal.classList.add('active');
+}
+
+function closeSubscriptionModal() {
+    const subModal = document.getElementById('subscription-modal-overlay');
+    if (subModal) subModal.classList.remove('active');
+}
+
+// ==========================================
 // AGENT PROFILE & PERMANENT HISTORY ENGINE
 // ==========================================
 async function openUserReportsModal() {
@@ -466,6 +479,8 @@ let authMode = 'signin';
 
 document.addEventListener('DOMContentLoaded', () => {
     const closeModalBtn = document.getElementById('close-modal-btn');
+    const closeSubBtn = document.getElementById('close-sub-btn');
+    const navSubBtn = document.getElementById('nav-subscription-btn');
     const systemSubmitForm = document.getElementById('system-submit-form');
     const systemNameInput = document.getElementById('system-name');
     const emailInput = document.getElementById('contact-email');
@@ -481,6 +496,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const usernameGroup = document.getElementById('username-group');
     const authCorner = document.getElementById('auth-corner');
     const googleBtn = document.getElementById('google-auth-btn');
+
+    // SUBSCRIPTION NAV BINDINGS
+    if (navSubBtn) navSubBtn.addEventListener('click', openSubscriptionModal);
+    if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
+
+    // TIER SELECTION / PAYMENT UPLINK HANDLERS
+    document.querySelectorAll('.select-tier-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const planName = e.target.getAttribute('data-plan') || 'Plan';
+            closeSubscriptionModal();
+            showTacticalModal(
+                'PAYMENT UPLINK INITIALIZED', 
+                `Your request for <b>${planName} Tier Clearance</b> has been registered. Connecting to secure gateway payment link...`, 
+                true
+            );
+        });
+    });
 
     // CLOSE MODAL LOGIC
     if (closeModalBtn) {
@@ -703,10 +735,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (authCorner) {
                     authCorner.innerHTML = `
                         <div class="user-badge"><i class="fa-solid fa-shield-halved"></i> AGENT: ${displayName.toUpperCase()}</div>
+                        <button id="my-sub-btn" class="auth-btn sub-nav-btn"><i class="fa-solid fa-gem"></i> SUBSCRIPTIONS</button>
                         <button id="my-reports-btn" class="auth-btn"><i class="fa-solid fa-folder-open"></i> MY REPORTS</button>
                         <button id="signout-btn" class="auth-btn"><i class="fa-solid fa-power-off"></i> LOGOUT</button>
                     `;
 
+                    document.getElementById('my-sub-btn')?.addEventListener('click', openSubscriptionModal);
                     document.getElementById('my-reports-btn')?.addEventListener('click', openUserReportsModal);
 
                     document.getElementById('signout-btn')?.addEventListener('click', async () => {
@@ -717,9 +751,11 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 if (authCorner) {
                     authCorner.innerHTML = `
+                        <button id="nav-subscription-btn" class="auth-btn sub-nav-btn"><i class="fa-solid fa-gem"></i> SUBSCRIPTIONS</button>
                         <button class="auth-btn sign-in"><i class="fa-solid fa-user"></i> SIGN IN</button>
                         <button class="auth-btn sign-up"><i class="fa-solid fa-user-plus"></i> SIGN UP</button>
                     `;
+                    document.getElementById('nav-subscription-btn')?.addEventListener('click', openSubscriptionModal);
                     document.querySelector('.auth-btn.sign-in')?.addEventListener('click', () => {
                         setAuthMode('signin');
                         if (authModal) authModal.classList.add('active');
