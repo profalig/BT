@@ -504,25 +504,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // TIER SELECTION / PAYMENT UPLINK HANDLERS
     const PRICING_PACKS = {
         'starter': {
-            name: 'Starter Pack',
-            price: '$29',
-            type: 'One-Time',
-            backtests: '3 Backtests',
-            details: 'Includes 3 deep-dive strategy backtest runs.'
+            name: 'Starter Clearance',
+            price: '$0/mo',
+            type: 'Free Active Plan',
+            backtests: '1 Backtest / Week',
+            details: 'Standard queue compute for beginner quants with basic metrics logs.'
         },
         'pro': {
-            name: 'Pro Pack',
-            price: '$79',
-            type: 'One-Time',
-            backtests: '10 Backtests',
-            details: 'Includes 10 deep-dive strategy backtest runs.'
+            name: 'Quant Pro',
+            price: '$49/mo',
+            type: 'Monthly Subscription',
+            backtests: 'Unlimited Backtest Runs',
+            details: 'High-performance engine with express priority queue, 99.9% tick accuracy, and PDF exports.'
         },
         'institutional': {
-            name: 'Quant Institutional Pack',
+            name: 'Institutional',
             price: '$199/mo',
             type: 'Monthly Subscription',
-            backtests: 'Max 40 Backtests/mo',
-            details: 'Full Access plan capped at 40 backtest runs per month.'
+            backtests: 'Dedicated Multi-Threaded Cluster',
+            details: 'Dedicated compute node, custom Python strategy coding, 1-on-1 quant desk support, and full Databank access.'
         }
     };
 
