@@ -502,13 +502,49 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
 
     // TIER SELECTION / PAYMENT UPLINK HANDLERS
+    const PRICING_PACKS = {
+        'starter': {
+            name: 'Starter Pack',
+            price: '$29',
+            type: 'One-Time',
+            backtests: '3 Backtests',
+            details: 'Includes 3 deep-dive strategy backtest runs.'
+        },
+        'pro': {
+            name: 'Pro Pack',
+            price: '$79',
+            type: 'One-Time',
+            backtests: '10 Backtests',
+            details: 'Includes 10 deep-dive strategy backtest runs.'
+        },
+        'institutional': {
+            name: 'Quant Institutional Pack',
+            price: '$199/mo',
+            type: 'Monthly Subscription',
+            backtests: 'Max 40 Backtests/mo',
+            details: 'Full Access plan capped at 40 backtest runs per month.'
+        }
+    };
+
     document.querySelectorAll('.select-tier-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const planName = e.target.getAttribute('data-plan') || 'Plan';
+            const rawPlanKey = (e.target.getAttribute('data-plan') || '').toLowerCase().trim();
+            const pack = PRICING_PACKS[rawPlanKey] || {
+                name: e.target.getAttribute('data-plan') || 'Custom Clearance',
+                price: 'Custom',
+                type: 'Uplink',
+                backtests: 'Standard Allocation',
+                details: 'Connecting to payment gateway...'
+            };
+
             closeSubscriptionModal();
             showTacticalModal(
                 'PAYMENT UPLINK INITIALIZED', 
-                `Your request for <b>${planName} Tier Clearance</b> has been registered. Connecting to secure gateway payment link...`, 
+                `<b>Selected Tier:</b> ${pack.name}<br>` +
+                `<b>Price:</b> <span style="color:#00ff66; font-weight:bold;">${pack.price}</span> (${pack.type})<br>` +
+                `<b>Allocation:</b> <span style="color:#00ffff; font-weight:bold;">${pack.backtests}</span><br><br>` +
+                `${pack.details}<br><br>` +
+                `<i>Connecting to secure gateway payment link...</i>`, 
                 true
             );
         });
