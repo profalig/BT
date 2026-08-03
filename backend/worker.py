@@ -122,8 +122,18 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
             # Process completed checkout session
             if event["type"] == "checkout.session.completed":
                 session = event["data"]["object"]
-                user_id = session.get("client_reference_id")
-                credits_purchased = int(session.get("metadata", {}).get("credits", "0"))
+                
+                # Safely extract attributes using getattr for StripeObjects
+                user_id = getattr(session, "client_reference_id", None)
+                metadata = getattr(session, "metadata", {})
+                
+                credits_str = "0"
+                if isinstance(metadata, dict):
+                    credits_str = metadata.get("credits", "0")
+                else:
+                    credits_str = getattr(metadata, "credits", "0")
+                    
+                credits_purchased = int(credits_str)
 
                 if user_id and credits_purchased > 0:
                     try:
