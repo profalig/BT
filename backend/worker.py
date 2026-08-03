@@ -64,11 +64,10 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                 price_id = data.get("priceId")
                 user_id = data.get("userId")
                 credits_to_add = data.get("creditsToAdd", 0)
-                checkout_mode = data.get("mode", "payment")  # 'payment' or 'subscription'
+                checkout_mode = data.get("mode", "payment")
 
                 origin = self.headers.get("Origin", "https://your-frontend-domain.com")
 
-                # Stripe Managed Payments handles payment_method_types automatically
                 session = stripe.checkout.Session.create(
                     line_items=[{
                         "price": price_id,
@@ -121,19 +120,21 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
 
             # Process completed checkout session
             if event["type"] == "checkout.session.completed":
-                session = event["data"]["object"]
+                session_obj = event["data"]["object"]
                 
-                # Safely extract attributes using getattr for StripeObjects
-                user_id = getattr(session, "client_reference_id", None)
-                metadata = getattr(session, "metadata", {})
+                # Foolproof extraction handling both Dictionaries and StripeObjects
+                user_id = session_obj.get("client_reference_id") if hasattr(session_obj, "get") else getattr(session_obj, "client_reference_id", None)
+                metadata = session_obj.get("metadata", {}) if hasattr(session_obj, "get") else getattr(session_obj, "metadata", {})
                 
-                credits_str = "0"
-                if isinstance(metadata, dict):
-                    credits_str = metadata.get("credits", "0")
-                else:
-                    credits_str = getattr(metadata, "credits", "0")
-                    
-                credits_purchased = int(credits_str)
+                credits_str = metadata.get("credits", "0") if hasattr(metadata, "get") else getattr(metadata, "credits", "0")
+                
+                try:
+                    credits_purchased = int(credits_str)
+                except ValueError:
+                    credits_purchased = 0
+
+                # DIAGNOSTIC LOGGING
+                print(f"🔍 WEBHOOK DIAGNOSTIC - User ID: {user_id} | Credits to add: {credits_purchased}")
 
                 if user_id and credits_purchased > 0:
                     try:
@@ -152,6 +153,8 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
 
                     except Exception as e:
                         print(f"❌ Supabase Credit Update Failed: {e}")
+                else:
+                    print("⚠️ SKIPPED DATABASE UPDATE: Either User ID is missing or Credits equals 0.")
 
             self.send_response(200)
             self._set_cors_headers()
