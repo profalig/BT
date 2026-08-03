@@ -548,7 +548,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
 
     // ==========================================
-    // OPTION B: STRIPE CHECKOUT INTEGRATION LOGIC
+    // STRIPE CHECKOUT INTEGRATION LOGIC
     // ==========================================
     document.querySelectorAll('.select-tier-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -557,11 +557,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const creditsToAdd = button.getAttribute('data-credits') || '0';
             const mode = button.getAttribute('data-mode') || 'subscription';
             const planName = button.getAttribute('data-plan') || 'Plan';
-
-            if (planName === 'Free') {
-                showTacticalModal('STARTER CLEARANCE', 'You are currently on the Starter Clearance tier with free default access.', true);
-                return;
-            }
 
             if (!priceId || priceId.includes('ID_HERE')) {
                 showTacticalModal('CONFIGURATION NOTICE', `Stripe Price ID for ${planName} is missing. Update the <code>data-price-id</code> attribute in index.html.`, false);

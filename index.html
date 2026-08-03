@@ -180,43 +180,48 @@
             </div>
 
             <div class="pricing-grid">
-                <!-- TIER 1 -->
+                <!-- TIER 1 (STARTER CLEARANCE - $29/mo) -->
                 <div class="tier-card">
                     <div class="tier-name">STARTER CLEARANCE</div>
-                    <div class="tier-price">$0 <span>/ mo</span></div>
-                    <p class="tier-desc">Includes 1 free credit upon initial sign up.</p>
+                    <div class="tier-price">$29 <span>/ mo</span></div>
+                    <p class="tier-desc">Essential toolkit for emerging quantitative strategy development.</p>
                     <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> 1 Free Backtest Credit</li>
+                        <li><i class="fa-solid fa-check"></i> 3 Backtest Credits / mo</li>
                         <li><i class="fa-solid fa-check"></i> Standard Queue Priority</li>
                         <li><i class="fa-solid fa-check"></i> Basic Metrics Log</li>
                         <li><i class="fa-solid fa-xmark unavailable"></i> Tick-level Deep Analysis</li>
                     </ul>
-                    <button class="tier-btn select-tier-btn" data-plan="Free">ACTIVE PLAN</button>
+                    <button class="tier-btn select-tier-btn" 
+                            data-plan="Starter Clearance" 
+                            data-price-id="price_1STARTER_CLEARANCE_ID_HERE" 
+                            data-credits="3" 
+                            data-mode="subscription">
+                        UPGRADE TO STARTER
+                    </button>
                 </div>
 
-                <!-- TIER 2 (FEATURED - QUANT PRO) -->
+                <!-- TIER 2 (FEATURED - QUANT PRO - $79/mo) -->
                 <div class="tier-card featured">
                     <div class="popular-badge">MOST POPULAR</div>
                     <div class="tier-name" style="color: #00f0ff;">QUANT PRO</div>
-                    <div class="tier-price" style="color: #00f0ff;">$49 <span>/ mo</span></div>
+                    <div class="tier-price" style="color: #00f0ff;">$79 <span>/ mo</span></div>
                     <p class="tier-desc">High-performance engine for serious system traders.</p>
                     <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> 10 Backtest Credits / mo</li>
+                        <li><i class="fa-solid fa-check"></i> 15 Backtest Credits / mo</li>
                         <li><i class="fa-solid fa-check"></i> Express Priority Queue</li>
                         <li><i class="fa-solid fa-check"></i> 99.9% Tick Data Accuracy</li>
                         <li><i class="fa-solid fa-check"></i> PDF Report Data Export</li>
                     </ul>
-                    <!-- Replace data-price-id with your real Stripe Price ID (e.g., price_1N...) -->
                     <button class="tier-btn featured-btn select-tier-btn" 
                             data-plan="Quant Pro" 
                             data-price-id="price_1QUANT_PRO_ID_HERE" 
-                            data-credits="10" 
+                            data-credits="15" 
                             data-mode="subscription">
                         <i class="fa-solid fa-bolt"></i> UPGRADE TO PRO
                     </button>
                 </div>
 
-                <!-- TIER 3 (INSTITUTIONAL) -->
+                <!-- TIER 3 (INSTITUTIONAL - $199/mo) -->
                 <div class="tier-card">
                     <div class="tier-name" style="color: #ffd700;">INSTITUTIONAL</div>
                     <div class="tier-price" style="color: #ffd700;">$199 <span>/ mo</span></div>
@@ -227,7 +232,6 @@
                         <li><i class="fa-solid fa-check"></i> 1-on-1 Quant Desk Support</li>
                         <li><i class="fa-solid fa-check"></i> Databank Full Access</li>
                     </ul>
-                    <!-- Replace data-price-id with your real Stripe Price ID -->
                     <button class="tier-btn select-tier-btn" 
                             data-plan="Institutional" 
                             data-price-id="price_1INSTITUTIONAL_ID_HERE" 
