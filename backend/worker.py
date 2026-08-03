@@ -68,8 +68,8 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
 
                 origin = self.headers.get("Origin", "https://your-frontend-domain.com")
 
+                # Stripe Managed Payments handles payment_method_types automatically
                 session = stripe.checkout.Session.create(
-                    payment_method_types=["card"],
                     line_items=[{
                         "price": price_id,
                         "quantity": 1,
