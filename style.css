@@ -68,6 +68,11 @@ body {
     box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
 }
 
+.auth-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .auth-btn.sub-nav-btn {
     background: rgba(255, 215, 0, 0.1);
     border-color: #ffd700;
@@ -1062,6 +1067,11 @@ body.landed .module-details { right: 8%; opacity: 1; }
 .tier-btn:hover {
     background: rgba(255, 255, 255, 0.1);
     border-color: #ffffff;
+}
+
+.tier-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .tier-btn.featured-btn {

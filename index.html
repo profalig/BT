@@ -194,7 +194,7 @@
                     <button class="tier-btn select-tier-btn" data-plan="Free">ACTIVE PLAN</button>
                 </div>
 
-                <!-- TIER 2 (FEATURED) -->
+                <!-- TIER 2 (FEATURED - QUANT PRO) -->
                 <div class="tier-card featured">
                     <div class="popular-badge">MOST POPULAR</div>
                     <div class="tier-name" style="color: #00f0ff;">QUANT PRO</div>
@@ -206,21 +206,36 @@
                         <li><i class="fa-solid fa-check"></i> 99.9% Tick Data Accuracy</li>
                         <li><i class="fa-solid fa-check"></i> PDF Report Data Export</li>
                     </ul>
-                    <button class="tier-btn featured-btn select-tier-btn" data-plan="Quant Pro"><i class="fa-solid fa-bolt"></i> UPGRADE TO PRO</button>
+                    <!-- Replace data-price-id with your real Stripe Price ID (e.g., price_1N...) -->
+                    <button class="tier-btn featured-btn select-tier-btn" 
+                            data-plan="Quant Pro" 
+                            data-price-id="price_1QUANT_PRO_ID_HERE" 
+                            data-credits="10" 
+                            data-mode="subscription">
+                        <i class="fa-solid fa-bolt"></i> UPGRADE TO PRO
+                    </button>
                 </div>
 
-                <!-- TIER 3 -->
+                <!-- TIER 3 (INSTITUTIONAL) -->
                 <div class="tier-card">
                     <div class="tier-name" style="color: #ffd700;">INSTITUTIONAL</div>
                     <div class="tier-price" style="color: #ffd700;">$199 <span>/ mo</span></div>
                     <p class="tier-desc">Dedicated multi-threaded cluster for funds & engineers.</p>
                     <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> Unlimited Backtest Credits</li>
+                        <li><i class="fa-solid fa-check"></i> 50 Backtest Credits / mo</li>
                         <li><i class="fa-solid fa-check"></i> Custom Python Strategy Coding</li>
                         <li><i class="fa-solid fa-check"></i> 1-on-1 Quant Desk Support</li>
                         <li><i class="fa-solid fa-check"></i> Databank Full Access</li>
                     </ul>
-                    <button class="tier-btn select-tier-btn" data-plan="Institutional" style="border-color:#ffd700; color:#ffd700;"><i class="fa-solid fa-crown"></i> UNLOCK INSTITUTIONAL</button>
+                    <!-- Replace data-price-id with your real Stripe Price ID -->
+                    <button class="tier-btn select-tier-btn" 
+                            data-plan="Institutional" 
+                            data-price-id="price_1INSTITUTIONAL_ID_HERE" 
+                            data-credits="50" 
+                            data-mode="subscription" 
+                            style="border-color:#ffd700; color:#ffd700;">
+                        <i class="fa-solid fa-crown"></i> UNLOCK INSTITUTIONAL
+                    </button>
                 </div>
             </div>
         </div>

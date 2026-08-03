@@ -345,14 +345,12 @@ async function fetchOrCreateUserProfile(user) {
     if (!supabaseClient || !user) return null;
 
     try {
-        // 1. Fetch user profile from user_profiles table
         let { data: profile, error } = await supabaseClient
             .from('user_profiles')
             .select('*')
             .eq('id', user.id)
             .maybeSingle();
 
-        // 2. If profile doesn't exist, create it with 1 FREE CREDIT!
         if (!profile) {
             console.log("Creating new user profile with 1 Free Credit for User:", user.id);
             const { data: newProfile, error: createError } = await supabaseClient
@@ -549,16 +547,75 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navSubBtn) navSubBtn.addEventListener('click', openSubscriptionModal);
     if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
 
-    // TIER SELECTION / PAYMENT UPLINK HANDLERS
+    // ==========================================
+    // OPTION B: STRIPE CHECKOUT INTEGRATION LOGIC
+    // ==========================================
     document.querySelectorAll('.select-tier-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const planName = e.target.getAttribute('data-plan') || 'Plan';
-            closeSubscriptionModal();
-            showTacticalModal(
-                'PAYMENT UPLINK INITIALIZED', 
-                `Your request for <b>${planName} Tier Clearance</b> has been registered. Connecting to secure gateway payment link...`, 
-                true
-            );
+        btn.addEventListener('click', async (e) => {
+            const button = e.currentTarget;
+            const priceId = button.getAttribute('data-price-id');
+            const creditsToAdd = button.getAttribute('data-credits') || '0';
+            const mode = button.getAttribute('data-mode') || 'subscription';
+            const planName = button.getAttribute('data-plan') || 'Plan';
+
+            if (planName === 'Free') {
+                showTacticalModal('STARTER CLEARANCE', 'You are currently on the Starter Clearance tier with free default access.', true);
+                return;
+            }
+
+            if (!priceId || priceId.includes('ID_HERE')) {
+                showTacticalModal('CONFIGURATION NOTICE', `Stripe Price ID for ${planName} is missing. Update the <code>data-price-id</code> attribute in index.html.`, false);
+                return;
+            }
+
+            if (!supabaseClient) {
+                showTacticalModal('SYSTEM ERROR', 'Supabase authentication client is unavailable.', false);
+                return;
+            }
+
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session || !session.user) {
+                closeSubscriptionModal();
+                showTacticalModal('AUTHENTICATION REQUIRED', 'Please sign in or register an account before proceeding to Stripe Checkout.', false);
+                setAuthMode('signin');
+                if (authModal) authModal.classList.add('active');
+                return;
+            }
+
+            const originalBtnHtml = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> UPLINKING TO STRIPE...';
+
+            try {
+                const backendServerUrl = 'https://backtest-worker-fs1a.onrender.com';
+                const response = await fetch(`${backendServerUrl}/create-checkout-session`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        priceId: priceId,
+                        userId: session.user.id,
+                        creditsToAdd: parseInt(creditsToAdd, 10),
+                        mode: mode
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || 'Failed to initialize Stripe Checkout session.');
+                }
+
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    throw new Error('No checkout URL returned from server gateway.');
+                }
+            } catch (err) {
+                console.error('Stripe Uplink Error:', err);
+                showTacticalModal('GATEWAY ERROR', err.message, false);
+                button.disabled = false;
+                button.innerHTML = originalBtnHtml;
+            }
         });
     });
 
@@ -813,8 +870,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const urlError = hashParams.get('error') || queryParams.get('error');
         const urlErrorDesc = hashParams.get('error_description') || queryParams.get('error_description');
         const authType = hashParams.get('type') || queryParams.get('type');
+        const paymentStatus = queryParams.get('payment');
 
-        if (urlError || urlErrorDesc) {
+        if (paymentStatus === 'success') {
+            showTacticalModal('PAYMENT SUCCESSFUL', 'Transaction complete! Your subscription credits have been assigned to your profile.', true);
+            window.history.replaceState(null, null, window.location.pathname);
+        } else if (paymentStatus === 'cancelled') {
+            showTacticalModal('PAYMENT CANCELLED', 'Stripe checkout session was cancelled. No charges were made.', false);
+            window.history.replaceState(null, null, window.location.pathname);
+        } else if (urlError || urlErrorDesc) {
             const formattedMsg = urlErrorDesc 
                 ? decodeURIComponent(urlErrorDesc).replace(/\+/g, ' ') 
                 : 'Verification link is invalid or has expired.';
@@ -831,7 +895,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (session && session.user) {
                 const displayName = session.user.user_metadata?.display_name || session.user.email.split('@')[0];
                 
-                // Ensure profile with 1 Free credit is created/retrieved
                 const profile = await fetchOrCreateUserProfile(session.user);
                 const userCredits = profile ? profile.credits : 0;
 
