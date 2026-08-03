@@ -7,7 +7,7 @@
 }
 
 /* ==========================================
-   GLOBAL SELECTION PREVENT (DISABLES BLUE HIGHLIGHT)
+   GLOBAL SELECTION PREVENT
    ========================================== */
 body, #space-matrix, .constellation, .beast-container, img, video, svg, #spaceship-title-container {
     -webkit-user-select: none;
@@ -40,6 +40,7 @@ body {
     right: 40px;
     z-index: 1000;
     display: flex;
+    align-items: center;
     gap: 12px;
     transition: opacity 0.5s ease;
 }
@@ -82,6 +83,35 @@ body {
 .auth-btn.sign-up {
     background: rgba(0, 240, 255, 0.1);
     border-color: #00f0ff;
+}
+
+.user-badge {
+    font-family: 'Share Tech Mono', monospace;
+    color: #00ff66;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    padding: 8px 15px;
+    background: rgba(0, 255, 102, 0.1);
+    border: 1px solid rgba(0, 255, 102, 0.3);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.credit-badge {
+    font-family: 'Share Tech Mono', monospace;
+    color: #ffd700;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    padding: 8px 15px;
+    background: rgba(255, 215, 0, 0.12);
+    border: 1px solid rgba(255, 215, 0, 0.4);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
 }
 
 /* ==========================================
@@ -1127,20 +1157,6 @@ body.landed .module-details { right: 8%; opacity: 1; }
 
 .abort-btn:hover {
     transform: scale(1.2);
-}
-
-.user-badge {
-    font-family: 'Share Tech Mono', monospace;
-    color: #00ff66;
-    font-size: 0.85rem;
-    letter-spacing: 1px;
-    padding: 8px 15px;
-    background: rgba(0, 255, 102, 0.1);
-    border: 1px solid rgba(0, 255, 102, 0.3);
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
 }
 
 .oauth-divider {

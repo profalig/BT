@@ -328,6 +328,58 @@ function closeSubscriptionModal() {
 }
 
 // ==========================================
+// SUPABASE CLIENT INITIALIZATION
+// ==========================================
+const SUPABASE_URL = 'https://woxswhiayrkecspebuwb.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndveHN3aGlheXJrZWNzcGVidXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTc5ODYsImV4cCI6MjEwMDk5Mzk4Nn0.faEmt5_tw6dN9Cs-pKJHa9D0yyEBbAl4oT0Y9QWYuFg';
+
+let supabaseClient = null;
+if (window.supabase) {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+// ==========================================
+// USER PROFILE & FREE CREDIT ENGINE
+// ==========================================
+async function fetchOrCreateUserProfile(user) {
+    if (!supabaseClient || !user) return null;
+
+    try {
+        // 1. Fetch user profile from user_profiles table
+        let { data: profile, error } = await supabaseClient
+            .from('user_profiles')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        // 2. If profile doesn't exist, create it with 1 FREE CREDIT!
+        if (!profile) {
+            console.log("Creating new user profile with 1 Free Credit for User:", user.id);
+            const { data: newProfile, error: createError } = await supabaseClient
+                .from('user_profiles')
+                .insert([{ 
+                    id: user.id, 
+                    email: user.email, 
+                    credits: 1 
+                }])
+                .select()
+                .single();
+
+            if (createError) {
+                console.error("Error creating user profile:", createError);
+                return null;
+            }
+            return newProfile;
+        }
+
+        return profile;
+    } catch (err) {
+        console.error("User Profile Error:", err);
+        return null;
+    }
+}
+
+// ==========================================
 // AGENT PROFILE & PERMANENT HISTORY ENGINE
 // ==========================================
 async function openUserReportsModal() {
@@ -347,6 +399,9 @@ async function openUserReportsModal() {
     const callsign = (session.user.user_metadata?.display_name || userEmail.split('@')[0]).toUpperCase();
 
     try {
+        const userProfile = await fetchOrCreateUserProfile(session.user);
+        const availableCredits = userProfile ? userProfile.credits : 0;
+
         const { data: submissions, error } = await supabaseClient
             .from('submissions')
             .select('*')
@@ -383,7 +438,11 @@ async function openUserReportsModal() {
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center;">
+                    <div style="background: rgba(255, 215, 0, 0.1); padding: 8px; border-radius: 4px; border: 1px solid rgba(255, 215, 0, 0.3);">
+                        <div style="font-size: 0.7em; color: #ffd700;">CREDITS</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #ffd700;">${availableCredits}</div>
+                    </div>
                     <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
                         <div style="font-size: 0.7em; color: #888;">TOTAL RUNS</div>
                         <div style="font-size: 1.2em; font-weight: bold; color: #ffffff;">${totalSubmissions}</div>
@@ -392,9 +451,9 @@ async function openUserReportsModal() {
                         <div style="font-size: 0.7em; color: #888;">COMPLETED</div>
                         <div style="font-size: 1.2em; font-weight: bold; color: #00ff66;">${completedCount}</div>
                     </div>
-                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255, 215, 0, 0.15);">
+                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(0, 240, 255, 0.15);">
                         <div style="font-size: 0.7em; color: #888;">IN QUEUE</div>
-                        <div style="font-size: 1.2em; font-weight: bold; color: #ffd700;">${pendingCount}</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #00f0ff;">${pendingCount}</div>
                     </div>
                 </div>
             </div>
@@ -462,17 +521,6 @@ async function openUserReportsModal() {
 }
 
 // ==========================================
-// SUPABASE CLIENT INITIALIZATION
-// ==========================================
-const SUPABASE_URL = 'https://woxswhiayrkecspebuwb.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndveHN3aGlheXJrZWNzcGVidXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTc5ODYsImV4cCI6MjEwMDk5Mzk4Nn0.faEmt5_tw6dN9Cs-pKJHa9D0yyEBbAl4oT0Y9QWYuFg';
-
-let supabaseClient = null;
-if (window.supabase) {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
-
-// ==========================================
 // APPLICATION INITIALIZATION & AUTHENTICATION ENGINE
 // ==========================================
 let authMode = 'signin';
@@ -502,49 +550,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
 
     // TIER SELECTION / PAYMENT UPLINK HANDLERS
-    const PRICING_PACKS = {
-        'starter': {
-            name: 'Starter Clearance',
-            price: '$0/mo',
-            type: 'Free Active Plan',
-            backtests: '1 Backtest / Week',
-            details: 'Standard queue compute for beginner quants with basic metrics logs.'
-        },
-        'pro': {
-            name: 'Quant Pro',
-            price: '$49/mo',
-            type: 'Monthly Subscription',
-            backtests: 'Unlimited Backtest Runs',
-            details: 'High-performance engine with express priority queue, 99.9% tick accuracy, and PDF exports.'
-        },
-        'institutional': {
-            name: 'Institutional',
-            price: '$199/mo',
-            type: 'Monthly Subscription',
-            backtests: 'Dedicated Multi-Threaded Cluster',
-            details: 'Dedicated compute node, custom Python strategy coding, 1-on-1 quant desk support, and full Databank access.'
-        }
-    };
-
     document.querySelectorAll('.select-tier-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const rawPlanKey = (e.target.getAttribute('data-plan') || '').toLowerCase().trim();
-            const pack = PRICING_PACKS[rawPlanKey] || {
-                name: e.target.getAttribute('data-plan') || 'Custom Clearance',
-                price: 'Custom',
-                type: 'Uplink',
-                backtests: 'Standard Allocation',
-                details: 'Connecting to payment gateway...'
-            };
-
+            const planName = e.target.getAttribute('data-plan') || 'Plan';
             closeSubscriptionModal();
             showTacticalModal(
                 'PAYMENT UPLINK INITIALIZED', 
-                `<b>Selected Tier:</b> ${pack.name}<br>` +
-                `<b>Price:</b> <span style="color:#00ff66; font-weight:bold;">${pack.price}</span> (${pack.type})<br>` +
-                `<b>Allocation:</b> <span style="color:#00ffff; font-weight:bold;">${pack.backtests}</span><br><br>` +
-                `${pack.details}<br><br>` +
-                `<i>Connecting to secure gateway payment link...</i>`, 
+                `Your request for <b>${planName} Tier Clearance</b> has been registered. Connecting to secure gateway payment link...`, 
                 true
             );
         });
@@ -572,7 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // BACKTEST SUBMISSION WITH USER LINKING & WORKER WAKE-UP
+    // BACKTEST SUBMISSION WITH CREDIT VERIFICATION & DEDUCTION
     if (systemSubmitForm) {
         systemSubmitForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -582,6 +594,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            
+            // 1. REQUIRE AUTHENTICATION
+            if (!session || !session.user) {
+                showTacticalModal('AUTHENTICATION REQUIRED', 'Please sign in or create an account to run backtests with your free credit.', false);
+                setAuthMode('signin');
+                if (authModal) authModal.classList.add('active');
+                return;
+            }
+
+            const userId = session.user.id;
             const systemName = systemNameInput.value.trim();
             const email = emailInput.value.trim();
             const rules = rulesInput.value.trim();
@@ -591,18 +614,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // 2. CHECK USER CREDIT BALANCE
+            const profile = await fetchOrCreateUserProfile(session.user);
+            const currentCredits = profile ? profile.credits : 0;
+
+            if (currentCredits < 1) {
+                showTacticalModal(
+                    'INSUFFICIENT CREDITS', 
+                    'You have 0 Backtest Credits remaining. Please upgrade your operational tier to unlock additional backtests.', 
+                    false
+                );
+                openSubscriptionModal();
+                return;
+            }
+
             const originalBtnText = submitBtn.innerHTML;
             submitBtn.innerText = 'UPLINKING TO CORE...';
             submitBtn.disabled = true;
 
-            // Wake up Render Worker instantly
+            // Wake up Render Worker
             fetch("https://backtest-worker-fs1a.onrender.com", { mode: "no-cors" }).catch(() => {});
 
             try {
-                const { data: { session } } = await supabaseClient.auth.getSession();
-                const userId = session?.user?.id || null;
-
-                const { error } = await supabaseClient
+                // 3. INSERT BACKTEST SUBMISSION
+                const { error: subError } = await supabaseClient
                     .from('submissions')
                     .insert([{ 
                         system_name: systemName, 
@@ -612,13 +647,30 @@ document.addEventListener('DOMContentLoaded', () => {
                         user_id: userId
                     }]);
 
-                if (error) throw error;
+                if (subError) throw subError;
 
-                showTacticalModal('UPLINK SECURED', 'System parameters received. Our engineering team will conduct a multi-threaded data analysis and compile your report shortly.', true);
+                // 4. DEDUCT 1 CREDIT FROM USER PROFILE
+                const newCredits = currentCredits - 1;
+                const { error: profileUpdateError } = await supabaseClient
+                    .from('user_profiles')
+                    .update({ credits: newCredits })
+                    .eq('id', userId);
+
+                if (profileUpdateError) {
+                    console.error("Credit deduction error:", profileUpdateError);
+                }
+
+                // 5. UPDATE HUD BADGES
+                updateCreditBadgeUI(newCredits);
+
+                showTacticalModal(
+                    'UPLINK SECURED', 
+                    `System parameters received! 1 Backtest Credit used. <b>${newCredits} credit(s) remaining</b>.<br><br>Our engineering team will conduct a multi-threaded data analysis and compile your report shortly.`, 
+                    true
+                );
 
                 systemNameInput.value = '';
                 rulesInput.value = '';
-                if (!userId) emailInput.value = '';
             } catch (err) {
                 console.error('Submission Error:', err.message);
                 showTacticalModal('UPLINK FAILED', err.message, false);
@@ -627,6 +679,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.disabled = false;
             }
         });
+    }
+
+    // UPDATE UI CREDIT BADGE
+    function updateCreditBadgeUI(credits) {
+        const badgeEl = document.getElementById('user-credits-badge');
+        if (badgeEl) {
+            badgeEl.innerHTML = `<i class="fa-solid fa-coins"></i> CREDITS: ${credits}`;
+        }
     }
 
     // AUTH MODE SWITCHING
@@ -641,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabSignUp) tabSignUp.classList.add('active');
             if (tabSignIn) tabSignIn.classList.remove('active');
             if (usernameGroup) usernameGroup.style.display = 'block';
-            if (authSubmitBtn) authSubmitBtn.innerHTML = 'CREATE CLEARANCE <i class="fa-solid fa-user-plus"></i>';
+            if (authSubmitBtn) authSubmitBtn.innerHTML = 'CREATE CLEARANCE (1 FREE CREDIT) <i class="fa-solid fa-user-plus"></i>';
         }
     }
 
@@ -686,7 +746,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
 
-                    const { error } = await supabaseClient.auth.signUp({ 
+                    const { data, error } = await supabaseClient.auth.signUp({ 
                         email, 
                         password,
                         options: {
@@ -697,15 +757,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (error) throw error;
 
+                    if (data?.user) {
+                        await fetchOrCreateUserProfile(data.user);
+                    }
+
                     authModal.classList.remove('active');
                     showTacticalModal(
                         'CLEARANCE CREATED', 
-                        'Check your email comm-link to verify your clearance parameters.', 
+                        'Check your email comm-link to verify your account. Your <b>1 Free Credit</b> has been assigned!', 
                         true
                     );
                 } else {
                     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
                     if (error) throw error;
+
+                    if (data?.user) {
+                        await fetchOrCreateUserProfile(data.user);
+                    }
 
                     authModal.classList.remove('active');
                     const displayName = data.user.user_metadata?.display_name || data.user.email.split('@')[0];
@@ -753,16 +821,20 @@ document.addEventListener('DOMContentLoaded', () => {
             showTacticalModal('LINK EXPIRED', formattedMsg, false);
             window.history.replaceState(null, null, window.location.pathname);
         } else if (authType === 'signup' || authType === 'email_confirmation') {
-            showTacticalModal('EMAIL VERIFIED', 'Access Clearance Confirmed. Tactical Link Established.', true);
+            showTacticalModal('EMAIL VERIFIED', 'Access Clearance Confirmed. 1 Free Credit Provisioned.', true);
             window.history.replaceState(null, null, window.location.pathname);
         } else if (window.location.hash.includes('access_token') || window.location.search.includes('code')) {
             window.history.replaceState(null, null, window.location.pathname);
         }
 
-        supabaseClient.auth.onAuthStateChange((event, session) => {
+        supabaseClient.auth.onAuthStateChange(async (event, session) => {
             if (session && session.user) {
                 const displayName = session.user.user_metadata?.display_name || session.user.email.split('@')[0];
                 
+                // Ensure profile with 1 Free credit is created/retrieved
+                const profile = await fetchOrCreateUserProfile(session.user);
+                const userCredits = profile ? profile.credits : 0;
+
                 const contactEmailInput = document.getElementById('contact-email');
                 if (contactEmailInput) {
                     contactEmailInput.value = session.user.email;
@@ -771,6 +843,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (authCorner) {
                     authCorner.innerHTML = `
                         <div class="user-badge"><i class="fa-solid fa-shield-halved"></i> AGENT: ${displayName.toUpperCase()}</div>
+                        <div class="credit-badge" id="user-credits-badge"><i class="fa-solid fa-coins"></i> CREDITS: ${userCredits}</div>
                         <button id="my-sub-btn" class="auth-btn sub-nav-btn"><i class="fa-solid fa-gem"></i> SUBSCRIPTIONS</button>
                         <button id="my-reports-btn" class="auth-btn"><i class="fa-solid fa-folder-open"></i> MY REPORTS</button>
                         <button id="signout-btn" class="auth-btn"><i class="fa-solid fa-power-off"></i> LOGOUT</button>
