@@ -1,293 +1,313 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System & Backtest Factory</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    
-    <!-- Supabase JS Client SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyberpunk HUD Nav - Candlestick & Piano Keys Menu</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    /* Reset & Base Canvas */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background-color: #030712;
+      background-image: 
+        radial-gradient(circle at 50% 30%, rgba(0, 240, 255, 0.08), transparent 70%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 30px 30px, 30px 30px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 60px;
+      font-family: 'Share Tech Mono', monospace;
+      color: #fff;
+    }
+
+    /* Main HUD Container Frame */
+    .hud-bar {
+      position: relative;
+      background: rgba(3, 11, 20, 0.92);
+      border: 1px solid #00f0ff;
+      border-radius: 10px;
+      padding: 6px 8px;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.3), inset 0 0 10px rgba(0, 240, 255, 0.1);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Individual Nav Item Slot */
+    .nav-item {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    /* Color Variable Themes per Section */
+    .nav-item.agent { --theme-color: #00ff88; --glow: rgba(0, 255, 136, 0.35); }
+    .nav-item.credits { --theme-color: #facc15; --glow: rgba(250, 204, 21, 0.35); }
+    .nav-item.subs { --theme-color: #eab308; --glow: rgba(234, 179, 8, 0.35); }
+    .nav-item.reports { --theme-color: #38bdf8; --glow: rgba(56, 189, 248, 0.35); }
+    .nav-item.logout { --theme-color: #f43f5e; --glow: rgba(244, 63, 94, 0.35); }
+
+    /* Button Base Styling */
+    .hud-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      background: rgba(6, 18, 32, 0.85);
+      border: 1px solid var(--theme-color);
+      color: var(--theme-color);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      text-decoration: none;
+      user-select: none;
+    }
+
+    .hud-btn:hover, .nav-item:hover .hud-btn {
+      background: rgba(12, 32, 54, 0.95);
+      box-shadow: 0 0 14px var(--glow), inset 0 0 8px var(--glow);
+      text-shadow: 0 0 8px var(--theme-color);
+      transform: translateY(-1px);
+    }
+
+    /* Status Indicator LED */
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      background-color: #00ff88;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #00ff88;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    /* SVG Icon Container */
+    .icon {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    /* Real-time Candlestick Chart Display */
+    .candlestick-chart {
+      display: inline-flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 16px;
+      margin-left: 4px;
+    }
+
+    .candle {
+      width: 3px;
+      position: relative;
+      border-radius: 1px;
+    }
+
+    .candle::before, .candle::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1px;
+      background: currentColor;
+    }
+
+    .candle.green {
+      background: #00ff88;
+      color: #00ff88;
+    }
+    .candle.red {
+      background: #f43f5e;
+      color: #f43f5e;
+    }
+
+    .c-1 { height: 9px; } .c-1::before { top: -2px; height: 2px; } .c-1::after { bottom: -2px; height: 2px; }
+    .c-2 { height: 13px; } .c-2::before { top: -1px; height: 1px; } .c-2::after { bottom: -3px; height: 3px; }
+    .c-3 { height: 7px; } .c-3::before { top: -3px; height: 3px; } .c-3::after { bottom: -1px; height: 1px; }
+    .c-4 { height: 15px; } .c-4::before { top: -1px; height: 1px; } .c-4::after { bottom: -2px; height: 2px; }
+
+    /* Piano Key Pop-out / Accordion Submenu */
+    .piano-dropdown {
+      position: absolute;
+      top: calc(100% + 10px);
+      left: 0;
+      width: 100%;
+      min-width: 190px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      pointer-events: none;
+      perspective: 800px;
+      z-index: 100;
+    }
+
+    /* Piano Key Individual Option Buttons */
+    .piano-key {
+      background: rgba(4, 14, 26, 0.95);
+      border: 1px solid var(--theme-color);
+      border-left: 4px solid var(--theme-color);
+      color: #e2e8f0;
+      padding: 9px 12px;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      text-decoration: none;
+      opacity: 0;
+      transform: translateY(-12px) rotateX(-25deg) scale(0.92);
+      transform-origin: top center;
+      transition: all 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+    }
+
+    /* Trigger Popout on Parent Hover */
+    .nav-item:hover .piano-dropdown {
+      pointer-events: auto;
+    }
+
+    .nav-item:hover .piano-key {
+      opacity: 1;
+      transform: translateY(0) rotateX(0deg) scale(1);
+    }
+
+    /* Piano Key Staggered Animations */
+    .piano-key:nth-child(1) { transition-delay: 0.03s; }
+    .piano-key:nth-child(2) { transition-delay: 0.07s; }
+    .piano-key:nth-child(3) { transition-delay: 0.11s; }
+    .piano-key:nth-child(4) { transition-delay: 0.15s; }
+
+    /* Key Press / Hover Interactive Piano Effect */
+    .piano-key:hover {
+      background: var(--theme-color);
+      color: #030712;
+      font-weight: bold;
+      box-shadow: 0 0 14px var(--theme-color);
+      transform: translateX(5px) scale(1.03);
+    }
+
+    .piano-key .badge {
+      font-size: 10px;
+      padding: 2px 5px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .piano-key:hover .badge {
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+    }
+  </style>
 </head>
 <body>
 
-    <!-- AUTHENTICATION & SUBSCRIPTION CORNER (HUD DOCK) -->
-    <div id="auth-corner">
-        <div class="dock-bracket top-left"></div>
-        <div class="dock-bracket bottom-right"></div>
-        <div class="dock-content">
-            <button id="nav-subscription-btn" class="auth-btn sub-nav-btn"><i class="fa-solid fa-gem"></i> <span>SUBSCRIPTIONS</span></button>
-            <div class="dock-divider"></div>
-            <button class="auth-btn sign-in"><i class="fa-solid fa-user"></i> <span>SIGN IN</span></button>
-            <button class="auth-btn sign-up cta-btn"><i class="fa-solid fa-user-plus"></i> <span>SIGN UP</span></button>
-        </div>
+  <!-- Cyberpunk Navigation HUD -->
+  <div class="hud-bar">
+    
+    <!-- 1. Agent Profile -->
+    <div class="nav-item agent">
+      <button class="hud-btn">
+        <span class="status-dot"></span>
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8s0 .01 0 .01z"/></svg>
+        <span>AGENT: DR.ALI.G</span>
+      </button>
+      
+      <!-- Piano Keys Dropdown -->
+      <div class="piano-dropdown">
+        <a href="#" class="piano-key"><span>01. AGENT PROFILE</span> <span class="badge">ACTIVE</span></a>
+        <a href="#" class="piano-key"><span>02. NEURAL SPECS</span> <span class="badge">v4.8</span></a>
+        <a href="#" class="piano-key"><span>03. SECURITY KEYS</span> <span class="badge">2FA</span></a>
+      </div>
     </div>
 
-    <!-- SPACE BACKGROUND MATRIX -->
-    <div id="space-matrix">
-        <canvas id="blackboard-bg"></canvas>
-        <div class="tactical-grid"></div>
-        <div class="stars"></div>
-
-        <div class="constellation bull-constellation">
-            <div class="beast-container">
-                <img src="images/bull-pattern.png" alt="Taurus" class="beast-img">
-                <video muted playsinline class="beast-vid">
-                    <source src="images/bull-animated.webm" type="video/webm">
-                    <source src="images/bull-animated.mp4" type="video/mp4">
-                </video>
-            </div>
-        </div>
+    <!-- 2. Credits + Candlestick Chart -->
+    <div class="nav-item credits">
+      <button class="hud-btn">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+        <span>CREDITS: 83</span>
         
-        <div class="constellation bear-constellation">
-            <div class="beast-container">
-                <img src="images/bear-pattern.png" alt="Ursa" class="beast-img">
-                <video muted playsinline class="beast-vid">
-                    <source src="images/bear-animated.webm" type="video/webm">
-                    <source src="images/bear-animated.mp4" type="video/mp4">
-                </video>
-            </div>
+        <!-- Integrated Candlestick Graphic -->
+        <div class="candlestick-chart">
+          <div class="candle green c-1"></div>
+          <div class="candle red c-2"></div>
+          <div class="candle green c-3"></div>
+          <div class="candle green c-4"></div>
         </div>
+      </button>
+
+      <div class="piano-dropdown">
+        <a href="#" class="piano-key"><span>RECHARGE BALANCE</span> <span class="badge">+100</span></a>
+        <a href="#" class="piano-key"><span>TRANSACTION HISTORY</span> <span class="badge">LOGS</span></a>
+        <a href="#" class="piano-key"><span>USAGE ANALYTICS</span>
+          <div class="candlestick-chart">
+            <div class="candle green c-1"></div>
+            <div class="candle green c-2"></div>
+          </div>
+        </a>
+      </div>
     </div>
 
-    <!-- MOTHERSHIP TITLE DISPLAY -->
-    <div id="spaceship-title-container">
-        <svg class="mothership-svg" viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <linearGradient id="shipHull" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#040912" />
-                    <stop offset="50%" stop-color="#121e2d" />
-                    <stop offset="100%" stop-color="#040912" />
-                </linearGradient>
-                <filter id="cyanGlow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation="4" result="blur" />
-                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                </filter>
-                <filter id="magentaGlow" x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur stdDeviation="6" result="blur" />
-                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                </filter>
-            </defs>
-            <polygon class="engine-flame" points="25,43 -10,50 25,57" fill="#ff0055" filter="url(#magentaGlow)"/>
-            <path d="M45,35 L15,10 L75,38 Z" fill="#040912" stroke="#00f0ff" stroke-width="1.5" />
-            <path d="M45,65 L15,90 L75,62 Z" fill="#040912" stroke="#00f0ff" stroke-width="1.5" />
-            <path d="M25,30 L160,45 L185,50 L160,55 L25,70 L50,50 Z" fill="url(#shipHull)" stroke="#00f0ff" stroke-width="2" />
-            <polygon points="100,43 140,47 140,53 100,57" fill="#00f0ff" filter="url(#cyanGlow)" />
-            <circle cx="185" cy="50" r="4" fill="#ffffff" filter="url(#cyanGlow)" />
-            <path d="M165,35 L175,45 L165,48 Z" fill="#ff0055" opacity="0.8" />
-            <path d="M165,65 L175,55 L165,52 Z" fill="#ff0055" opacity="0.8" />
-        </svg>
-        <div class="tractor-beam-title">
-            <h1>SYSTEM & BACKTEST<br><span>FACTORY</span></h1>
-        </div>
+    <!-- 3. Subscriptions -->
+    <div class="nav-item subs">
+      <button class="hud-btn">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        <span>SUBSCRIPTIONS</span>
+      </button>
+
+      <div class="piano-dropdown">
+        <a href="#" class="piano-key"><span>QUANT TRADER TIER</span> <span class="badge">PRO</span></a>
+        <a href="#" class="piano-key"><span>NEURAL NETWORK PRO</span> <span class="badge">AUTO</span></a>
+        <a href="#" class="piano-key"><span>UPGRADE PLAN</span> <span class="badge">VIP</span></a>
+      </div>
     </div>
 
-    <!-- CAMERA VIEWPORT -->
-    <div id="spaceship-viewport">
-        <section id="solar-system">
-            <div class="btc-sun" id="sun" style="background-image: url('images/btc-coin.png');"></div>
-            <div class="orbit orbit-1"><div class="planet" data-id="backtest" style="background-image: url('images/planet1.png');"><div class="target-reticle"></div><span class="planet-label">Backtest Machine</span></div></div>
-            <div class="orbit orbit-2"><div class="planet" data-id="databank" style="background-image: url('images/planet2.png');"><div class="target-reticle"></div><span class="planet-label">System Databank</span></div></div>
-            <div class="orbit orbit-3"><div class="planet" data-id="about" style="background-image: url('images/planet3.png');"><div class="target-reticle"></div><span class="planet-label">About Us</span></div></div>
-            <div class="orbit orbit-4"><div class="planet" data-id="contact" style="background-image: url('images/planet4.png');"><div class="target-reticle"></div><span class="planet-label">Contact Us</span></div></div>
-            <div class="orbit orbit-5"><div class="planet" data-id="campus" style="background-image: url('images/planet5.png');"><div class="target-reticle"></div><span class="planet-label">Backtesting Campus</span></div></div>
-        </section>
+    <!-- 4. My Reports -->
+    <div class="nav-item reports">
+      <button class="hud-btn">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+        <span>MY REPORTS</span>
+      </button>
+
+      <div class="piano-dropdown">
+        <a href="#" class="piano-key"><span>DAILY METRICS</span> <span class="badge">PDF</span></a>
+        <a href="#" class="piano-key"><span>ALGO BACKTESTS</span> <span class="badge">CSV</span></a>
+        <a href="#" class="piano-key"><span>PORTFOLIO RISK</span> <span class="badge">LIVE</span></a>
+      </div>
     </div>
 
-    <!-- HUD MODULE OVERLAY -->
-    <div id="cinematic-overlay">
-        <button id="return-btn"><i class="fa-solid fa-plane-departure"></i> DISENGAGE TRACKING</button>
-        <div class="module-details">
-            <div class="corner-bracket top-left"></div><div class="corner-bracket top-right"></div>
-            <div class="corner-bracket bottom-left"></div><div class="corner-bracket bottom-right"></div>
-            <span class="module-tag" id="module-tag"></span>
-            <h2 id="module-title"></h2>
-            <p id="module-desc"></p>
-            <div class="stats-grid" id="stats-grid"></div>
-            <button class="action-btn" id="module-action-btn">INITIALIZE MODULE <i class="fa-solid fa-chevron-right"></i></button>
-        </div>
+    <!-- 5. Logout -->
+    <div class="nav-item logout">
+      <button class="hud-btn">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+        <span>LOGOUT</span>
+      </button>
+
+      <div class="piano-dropdown">
+        <a href="#" class="piano-key"><span>CONFIRM LOGOUT</span> <span class="badge">EXIT</span></a>
+      </div>
     </div>
 
-    <!-- GAS GIANT FORM ATMOSPHERE -->
-    <div id="gas-giant-atmosphere">
-        <div class="gas-clouds"></div>
-        <div class="lightning-flash"></div>
-        
-        <div class="submission-console">
-            <button id="abort-console-btn"><i class="fa-solid fa-xmark"></i> ABORT UPLINK</button>
-            <div class="console-header">
-                <h2>SYSTEM SUBMISSION PROTOCOL</h2>
-                <p>Deploy your system architecture to our core. Submitting consumes <b>1 Backtest Credit</b> from your account.</p>
-            </div>
+  </div>
 
-            <form id="system-submit-form">
-                <div class="input-group">
-                    <label>SYSTEM DESIGNATION</label>
-                    <input type="text" id="system-name" placeholder="e.g., Mean Reversion Alpha v2" required>
-                </div>
-                <div class="input-group">
-                    <label>CONTACT COMM-LINK (Email)</label>
-                    <input type="email" id="contact-email" placeholder="Where should we send the data analysis?" required>
-                </div>
-                <div class="input-group">
-                    <label>SYSTEM ARCHITECTURE & RULES</label>
-                    <textarea id="system-rules" placeholder="Define your logic. Include entry/exit criteria, timeframes, asset classes, and risk management parameters..." rows="6" required></textarea>
-                </div>
-                <button type="submit" id="submit-btn" class="submit-system-btn">INITIATE DEEP BACKTEST (1 CREDIT) <i class="fa-solid fa-bolt"></i></button>
-            </form>
-        </div>
-    </div>
-
-    <!-- TACTICAL UPLINK SUCCESS / REPORT HUD MODAL -->
-    <div id="tactical-modal-overlay">
-        <div class="tactical-modal-card">
-            <div class="corner-bracket top-left"></div>
-            <div class="corner-bracket top-right"></div>
-            <div class="corner-bracket bottom-left"></div>
-            <div class="corner-bracket bottom-right"></div>
-            
-            <div class="launch-stage">
-                <svg class="rocket-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M50,10 C55,30 65,55 65,75 C65,85 58,90 50,90 C42,90 35,85 35,75 C35,55 45,30 50,10 Z" fill="#040912" stroke="#00ff66" stroke-width="2"/>
-                    <polygon points="35,65 20,82 35,80" fill="#00ff66" />
-                    <polygon points="65,65 80,82 65,80" fill="#00ff66" />
-                    <polygon points="50,90 42,105 50,98 58,105" fill="#ff0055" class="rocket-flame" />
-                    <circle cx="50" cy="45" r="4" fill="#00f0ff" />
-                </svg>
-                <div class="hyper-rings">
-                    <span></span><span></span><span></span>
-                </div>
-            </div>
-
-            <div class="modal-status-tag">// TRANSMISSION STATUS: SECURED</div>
-            <h2 id="modal-heading">UPLINK SUCCESSFUL</h2>
-            <div id="modal-message">System architecture dispatches into the quantitative core. Engineering task group assigned.</div>
-
-            <button id="close-modal-btn" class="modal-action-btn">RETURN TO COMMAND <i class="fa-solid fa-chevron-right"></i></button>
-        </div>
-    </div>
-
-    <!-- SUBSCRIPTION & PAYMENT HUD MODAL -->
-    <div id="subscription-modal-overlay">
-        <div class="subscription-modal-card">
-            <button id="close-sub-btn" class="abort-btn"><i class="fa-solid fa-xmark"></i></button>
-            <div class="corner-bracket top-left"></div>
-            <div class="corner-bracket top-right"></div>
-            <div class="corner-bracket bottom-left"></div>
-            <div class="corner-bracket bottom-right"></div>
-
-            <div class="sub-header">
-                <div class="modal-status-tag">// CLEARANCE MATRIX & POWER SUBSCRIPTIONS</div>
-                <h2>QUANTITATIVE ACCESS TIERS</h2>
-                <p>Select your operational tier to unlock hyper-threaded compute clusters, priority backtests, and deep tick data metrics.</p>
-            </div>
-
-            <div class="pricing-grid">
-                <!-- TIER 1: START PACK ($29) -->
-                <div class="tier-card">
-                    <div class="tier-name">START PACK</div>
-                    <div class="tier-price">$29</div>
-                    <p class="tier-desc">Essential pack for emerging quantitative strategy development.</p>
-                    <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> Pack of 3 Backtests</li>
-                        <li><i class="fa-solid fa-check"></i> Standard Queue Priority</li>
-                        <li><i class="fa-solid fa-check"></i> Basic Metrics Log</li>
-                        <li><i class="fa-solid fa-xmark unavailable"></i> Tick-level Deep Analysis</li>
-                    </ul>
-                    <button class="tier-btn select-tier-btn" 
-                            data-plan="Start Pack" 
-                            data-price-id="price_1TzyOFCmZGVreuRmIgmTkt3l" 
-                            data-credits="3" 
-                            data-mode="payment">
-                        GET START PACK
-                    </button>
-                </div>
-
-                <!-- TIER 2: PRO PACK ($79) -->
-                <div class="tier-card featured">
-                    <div class="popular-badge">MOST POPULAR</div>
-                    <div class="tier-name" style="color: #00f0ff;">PRO PACK</div>
-                    <div class="tier-price" style="color: #00f0ff;">$79</div>
-                    <p class="tier-desc">High-performance engine pack for serious system traders.</p>
-                    <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> Pack of 10 Backtests</li>
-                        <li><i class="fa-solid fa-check"></i> Express Priority Queue</li>
-                        <li><i class="fa-solid fa-check"></i> 99.9% Tick Data Accuracy</li>
-                        <li><i class="fa-solid fa-check"></i> PDF Report Data Export</li>
-                    </ul>
-                    <button class="tier-btn featured-btn select-tier-btn" 
-                            data-plan="Pro Pack" 
-                            data-price-id="price_1TzyXcCmZGVreuRmGZaJOD6w" 
-                            data-credits="10" 
-                            data-mode="payment">
-                        <i class="fa-solid fa-bolt"></i> GET PRO PACK
-                    </button>
-                </div>
-
-                <!-- TIER 3: QUANT MONTHLY PASS ($199/mo) -->
-                <div class="tier-card">
-                    <div class="tier-name" style="color: #ffd700;">QUANT MONTHLY PASS</div>
-                    <div class="tier-price" style="color: #ffd700;">$199 <span>/ mo</span></div>
-                    <p class="tier-desc">Full access monthly pass for dedicated quant engineers & funds.</p>
-                    <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> Maximum 40 Backtests</li>
-                        <li><i class="fa-solid fa-check"></i> Full Access to Engine</li>
-                        <li><i class="fa-solid fa-check"></i> 1-on-1 Quant Desk Support</li>
-                        <li><i class="fa-solid fa-check"></i> Databank Priority Access</li>
-                    </ul>
-                    <button class="tier-btn select-tier-btn" 
-                            data-plan="Quant Monthly Pass" 
-                            data-price-id="price_1TzyYaCmZGVreuRm9Po6DQCk" 
-                            data-credits="40" 
-                            data-mode="subscription" 
-                            style="border-color:#ffd700; color:#ffd700;">
-                        <i class="fa-solid fa-crown"></i> UNLOCK MONTHLY PASS
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- AUTHENTICATION HUD MODAL -->
-    <div id="auth-modal-overlay">
-        <div class="auth-modal-card">
-            <button id="close-auth-btn" class="abort-btn"><i class="fa-solid fa-xmark"></i></button>
-            <div class="corner-bracket top-left"></div>
-            <div class="corner-bracket top-right"></div>
-            <div class="corner-bracket bottom-left"></div>
-            <div class="corner-bracket bottom-right"></div>
-
-            <div class="auth-tabs">
-                <button type="button" class="auth-tab active" id="tab-signin">SIGN IN</button>
-                <button type="button" class="auth-tab" id="tab-signup">SIGN UP</button>
-            </div>
-
-            <form id="auth-form">
-                <div class="input-group" id="username-group" style="display: none;">
-                    <label>CALLSIGN (Username)</label>
-                    <input type="text" id="auth-username" placeholder="e.g. QuantTrader_99">
-                </div>
-
-                <div class="input-group">
-                    <label>ACCESS ID (Email)</label>
-                    <input type="email" id="auth-email" placeholder="agent@quant.io" required>
-                </div>
-                <div class="input-group">
-                    <label>SECURITY CLEARANCE (Password)</label>
-                    <input type="password" id="auth-password" placeholder="••••••••••••" required>
-                </div>
-                <button type="submit" id="auth-submit-btn" class="submit-system-btn">AUTHENTICATE <i class="fa-solid fa-key"></i></button>
-            </form>
-
-            <div class="oauth-divider"><span>OR UPLINK WITH</span></div>
-            <div class="oauth-buttons">
-                <button type="button" id="google-auth-btn" class="oauth-btn google"><i class="fa-brands fa-google"></i> SIGN IN WITH GOOGLE</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="app.js"></script>
 </body>
 </html>
