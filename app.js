@@ -103,6 +103,7 @@ function renderEngine(time) {
 }
 requestAnimationFrame(renderEngine);
 
+// PLANET CLICK & CAMERA ZOOM LOGIC
 orbits.forEach(o => {
     if (!o.planetEl) return;
     o.planetEl.addEventListener('click', () => {
@@ -122,9 +123,11 @@ orbits.forEach(o => {
         document.getElementById('module-title').style.color = data.color;
         document.getElementById('module-desc').innerHTML = data.desc; 
         
-        moduleDetails.style.borderLeftColor = data.color;
-        actionBtn.style.borderColor = data.color;
-        actionBtn.style.color = data.color;
+        if (moduleDetails) moduleDetails.style.borderLeftColor = data.color;
+        if (actionBtn) {
+            actionBtn.style.borderColor = data.color;
+            actionBtn.style.color = data.color;
+        }
 
         document.getElementById('stats-grid').innerHTML = data.stats.map(s => `
             <div class="stat-card">
@@ -133,47 +136,53 @@ orbits.forEach(o => {
             </div>
         `).join('');
 
-        if (o.id === 'contact' || o.id === 'about') {
-            actionBtn.style.display = 'none';
-        } else {
-            actionBtn.style.display = 'flex';
+        if (actionBtn) {
+            if (o.id === 'contact' || o.id === 'about') {
+                actionBtn.style.display = 'none';
+            } else {
+                actionBtn.style.display = 'flex';
+            }
         }
 
         setTimeout(() => document.body.classList.add('landed'), 500);
     });
 });
 
-returnBtn.addEventListener('click', () => {
-    document.body.classList.remove('landed');
-    if (activePlanetData && activePlanetData.planetEl) activePlanetData.planetEl.classList.remove('active');
-    activePlanetData = null; 
-    setTimeout(() => { document.body.classList.remove('warping'); }, 800);
-});
-
-// INITIALIZE MODULE BUTTON LOGIC (THE ZOOM & ACTIONS)
-actionBtn.addEventListener('click', () => {
-    if (!activePlanetData) return;
-
-    if (activePlanetData.id === 'backtest') {
-        isHyperZoomed = true;
+if (returnBtn) {
+    returnBtn.addEventListener('click', () => {
         document.body.classList.remove('landed');
-        const titleContainer = document.getElementById('spaceship-title-container');
-        const authCorner = document.getElementById('auth-corner');
-        if (titleContainer) titleContainer.style.opacity = '0';
-        if (authCorner) authCorner.style.opacity = '0';
-        
-        setTimeout(() => {
-            const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
-            if (gasAtmosphere) gasAtmosphere.classList.add('active');
-        }, 800);
-    } else if (activePlanetData.id === 'databank') {
-        showTacticalModal('SYSTEM DATABANK', 'The System Databank is currently under active development. High-edge quantitative strategy models will be released soon.', true);
-    } else if (activePlanetData.id === 'campus') {
-        showTacticalModal('BACKTESTING CAMPUS', 'Enrolling now for the upcoming Quantitative Engineering cohort. Contact our engineering desk via SEC-04 to apply.', true);
-    }
-});
+        if (activePlanetData && activePlanetData.planetEl) activePlanetData.planetEl.classList.remove('active');
+        activePlanetData = null; 
+        setTimeout(() => { document.body.classList.remove('warping'); }, 800);
+    });
+}
 
-// ABORT CONSOLE BUTTON (ZOOM OUT)
+// MODULE ACTION LOGIC (FORM/MODAL TRIGGERS)
+if (actionBtn) {
+    actionBtn.addEventListener('click', () => {
+        if (!activePlanetData) return;
+
+        if (activePlanetData.id === 'backtest') {
+            isHyperZoomed = true;
+            document.body.classList.remove('landed');
+            const titleContainer = document.getElementById('spaceship-title-container');
+            const authCorner = document.getElementById('auth-corner');
+            if (titleContainer) titleContainer.style.opacity = '0';
+            if (authCorner) authCorner.style.opacity = '0';
+            
+            setTimeout(() => {
+                const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
+                if (gasAtmosphere) gasAtmosphere.classList.add('active');
+            }, 800);
+        } else if (activePlanetData.id === 'databank') {
+            showTacticalModal('SYSTEM DATABANK', 'The System Databank is currently under active development. High-edge quantitative strategy models will be released soon.', true);
+        } else if (activePlanetData.id === 'campus') {
+            showTacticalModal('BACKTESTING CAMPUS', 'Enrolling now for the upcoming Quantitative Engineering cohort. Contact our engineering desk via SEC-04 to apply.', true);
+        }
+    });
+}
+
+// ABORT BACKTEST CONSOLE (ZOOM OUT)
 const abortConsoleBtn = document.getElementById('abort-console-btn');
 if (abortConsoleBtn) {
     abortConsoleBtn.addEventListener('click', () => {
@@ -314,21 +323,88 @@ function showTacticalModal(title, message, isSuccess = true) {
     if (modalOverlay) modalOverlay.classList.add('active');
 }
 
+const closeModalBtn = document.getElementById('close-modal-btn');
+if (closeModalBtn) {
+    closeModalBtn.addEventListener('click', () => {
+        document.getElementById('tactical-modal-overlay').classList.remove('active');
+    });
+}
+
 // ==========================================
 // SUBSCRIPTION MODAL TRIGGER
 // ==========================================
-function openSubscriptionModal() {
-    const subModal = document.getElementById('subscription-modal-overlay');
-    if (subModal) subModal.classList.add('active');
+const subBtn = document.getElementById('nav-subscription-btn');
+const closeSubBtn = document.getElementById('close-sub-btn');
+const subModal = document.getElementById('subscription-modal-overlay');
+
+if (subBtn) subBtn.addEventListener('click', () => subModal.classList.add('active'));
+if (closeSubBtn) closeSubBtn.addEventListener('click', () => subModal.classList.remove('active'));
+
+// ==========================================
+// AUTHENTICATION MODAL LOGIC
+// ==========================================
+const signInBtn = document.querySelector('.auth-btn.sign-in');
+const signUpBtn = document.querySelector('.auth-btn.sign-up');
+const authModal = document.getElementById('auth-modal-overlay');
+const closeAuthBtn = document.getElementById('close-auth-btn');
+
+const tabSignIn = document.getElementById('tab-signin');
+const tabSignUp = document.getElementById('tab-signup');
+const usernameGroup = document.getElementById('username-group');
+
+function toggleAuth(isSignUp) {
+    if (isSignUp) {
+        tabSignUp.classList.add('active');
+        tabSignIn.classList.remove('active');
+        usernameGroup.style.display = 'block';
+    } else {
+        tabSignIn.classList.add('active');
+        tabSignUp.classList.remove('active');
+        usernameGroup.style.display = 'none';
+    }
 }
 
-function closeSubscriptionModal() {
-    const subModal = document.getElementById('subscription-modal-overlay');
-    if (subModal) subModal.classList.remove('active');
+if (signInBtn) signInBtn.addEventListener('click', () => { authModal.classList.add('active'); toggleAuth(false); });
+if (signUpBtn) signUpBtn.addEventListener('click', () => { authModal.classList.add('active'); toggleAuth(true); });
+if (closeAuthBtn) closeAuthBtn.addEventListener('click', () => authModal.classList.remove('active'));
+
+if (tabSignIn) tabSignIn.addEventListener('click', () => toggleAuth(false));
+if (tabSignUp) tabSignUp.addEventListener('click', () => toggleAuth(true));
+
+// ==========================================
+// FORM SUBMISSIONS OVERRIDE (PREVENT RELOADS)
+// ==========================================
+const authForm = document.getElementById('auth-form');
+if (authForm) {
+    authForm.addEventListener('submit', (e) => {
+        e.preventDefault(); 
+        authModal.classList.remove('active');
+        showTacticalModal('AUTHENTICATION SECURED', 'Welcome to the core network, Agent.', true);
+    });
+}
+
+const systemSubmitForm = document.getElementById('system-submit-form');
+if (systemSubmitForm) {
+    systemSubmitForm.addEventListener('submit', (e) => {
+        e.preventDefault(); 
+        
+        const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
+        if (gasAtmosphere) gasAtmosphere.classList.remove('active');
+        isHyperZoomed = false;
+        
+        setTimeout(() => {
+            document.body.classList.add('landed');
+            document.getElementById('spaceship-title-container').style.opacity = '1';
+            document.getElementById('auth-corner').style.opacity = '1';
+            
+            showTacticalModal('UPLINK SUCCESSFUL', 'System architecture dispatched into the quantitative core. Engineering task group assigned.', true);
+            systemSubmitForm.reset(); 
+        }, 600);
+    });
 }
 
 // ==========================================
-// SUPABASE CLIENT INITIALIZATION
+// SUPABASE CLIENT & PROFILES
 // ==========================================
 const SUPABASE_URL = 'https://woxswhiayrkecspebuwb.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndveHN3aGlheXJrZWNzcGVidXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTc5ODYsImV4cCI6MjEwMDk5Mzk4Nn0.faEmt5_tw6dN9Cs-pKJHa9D0yyEBbAl4oT0Y9QWYuFg';
@@ -338,109 +414,15 @@ if (window.supabase) {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
-// ==========================================
-// USER PROFILE & FREE CREDIT ENGINE
-// ==========================================
 async function fetchOrCreateUserProfile(user) {
     if (!supabaseClient || !user) return null;
-
     try {
-        let { data: profile, error } = await supabaseClient
-            .from('user_profiles')
-            .select('*')
-            .eq('id', user.id)
-            .maybeSingle();
-
+        let { data: profile, error } = await supabaseClient.from('user_profiles').select('*').eq('id', user.id).maybeSingle();
         if (!profile) {
-            console.log("Creating new user profile with 1 Free Credit for User:", user.id);
-            const { data: newProfile, error: createError } = await supabaseClient
-                .from('user_profiles')
-                .insert([{ 
-                    id: user.id, 
-                    email: user.email, 
-                    credits: 1 
-                }])
-                .select()
-                .single();
-
-            if (createError) {
-                console.error("Error creating user profile:", createError);
-                return null;
-            }
+            const { data: newProfile, error: createError } = await supabaseClient.from('user_profiles').insert([{ id: user.id, email: user.email, credits: 1 }]).select().single();
+            if (createError) return null;
             return newProfile;
         }
-
         return profile;
-    } catch (err) {
-        console.error("User Profile Error:", err);
-        return null;
-    }
-}
-
-// ==========================================
-// AGENT PROFILE & PERMANENT HISTORY ENGINE
-// ==========================================
-async function openUserReportsModal() {
-    if (!supabaseClient) {
-        showTacticalModal('SYSTEM ERROR', 'Supabase client is not initialized.', false);
-        return;
-    }
-
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session || !session.user) {
-        showTacticalModal('ACCESS DENIED', 'Please authenticate to view your transmission log.', false);
-        return;
-    }
-
-    const activeUserId = session.user.id;
-    const userEmail = session.user.email;
-    const callsign = (session.user.user_metadata?.display_name || userEmail.split('@')[0]).toUpperCase();
-
-    try {
-        const userProfile = await fetchOrCreateUserProfile(session.user);
-        const availableCredits = userProfile ? userProfile.credits : 0;
-
-        const { data: submissions, error } = await supabaseClient
-            .from('submissions')
-            .select('*')
-            .eq('user_id', activeUserId)
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error("[DEBUG] Database Error:", error);
-            throw error;
-        }
-
-        const historyList = submissions || [];
-        
-        const totalSubmissions = historyList.length;
-        const completedCount = historyList.filter(s => {
-            const hasUrl = (s.report_url || s.pdf_url || s.report_link || s.file_url || s.url || '').trim();
-            const rawStatus = String(s.status || '').toLowerCase().trim();
-            return hasUrl || ['completed', 'complete', 'done', 'success'].includes(rawStatus);
-        }).length;
-
-        const profileHeaderHtml = `
-            <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 10px; margin-bottom: 12px;">
-                    <div>
-                        <div style="font-size: 0.75em; color: #888; letter-spacing: 1px;">// CLEARANCE LEVEL: AGENT</div>
-                        <div style="font-size: 1.3em; font-weight: bold; color: #00ffff; letter-spacing: 1px;">${callsign}</div>
-                    </div>
-                    <div>
-                        <div style="font-size: 0.75em; color: #888; text-align: right;">CREDITS REMAINING</div>
-                        <div style="font-size: 1.2em; font-weight: bold; color: #00ff66; text-align: right;">${availableCredits}</div>
-                    </div>
-                </div>
-                <div style="display: flex; justify-content: space-around; margin-top: 10px; font-size: 0.85em;">
-                    <div>TOTAL SUBMISSIONS: <strong style="color: #00f0ff;">${totalSubmissions}</strong></div>
-                    <div>COMPLETED: <strong style="color: #00ff66;">${completedCount}</strong></div>
-                </div>
-            </div>`;
-
-        showTacticalModal('AGENT PROFILE', profileHeaderHtml, true);
-    } catch (err) {
-        console.error("User Reports Error:", err);
-        showTacticalModal('DATABASE ERROR', 'Failed to retrieve transmission logs.', false);
-    }
+    } catch (err) { return null; }
 }
