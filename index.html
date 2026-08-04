@@ -317,7 +317,7 @@
                 <img src="images/bull-pattern.png" alt="Taurus" class="beast-img">
                 <video muted playsinline class="beast-vid">
                     <source src="images/bull-animated.webm" type="video/webm">
-                    <source src="images/bull-animated.mp4" type="video/mp4">
+                    <source src="images/bear-animated.mp4" type="video/mp4">
                 </video>
             </div>
         </div>
@@ -548,6 +548,47 @@
 
     <script src="app.js"></script>
     <script>
+        // ========================================================
+        // ABOUT US DATA OVERRIDE & INJECTION PROTOCOL
+        // ========================================================
+        window.aboutUsCustomData = {
+            tag: "// QUANTITATIVE ARCHITECTURE & PROOF",
+            title: "ABOUT THE FACTORY",
+            desc: "We are professional quantitative backtesters delivering relentless, institutional-grade market data across multi-year historical cycles (2023, 2024, 2025, 2026 and beyond). Our numbers don't just come out of thin air—we give you itemized, trade-by-trade logs for every single buy and sell order, including wins, losses, and exact execution times. Since deep historical lower-timeframe charts are nearly impossible to pull manually, we bring complete transparency to your screen. We calculate exact monthly and annual profits, proving how an initial $1,000 balance with 2% risk scales over 1, 2, or 4 years ($1,800+). From maximum drawdown charts and win/loss ratios to consecutive loss streaks, we expose every dimension of your strategy so you know with 100% mathematical certainty that your system is truly profitable.",
+            stats: [
+                { val: "2023-2026", lbl: "Historical Data" },
+                { val: "100%", lbl: "Detailed Trade Logs" },
+                { val: "$1k → $1.8k+", lbl: "2% Risk Projections" },
+                { val: "Max DD", lbl: "Drawdown Analytics" }
+            ]
+        };
+
+        // Listen for planet clicks and inject the custom About Us content into the HUD
+        document.addEventListener('click', (e) => {
+            const planet = e.target.closest('.planet[data-id="about"]');
+            if (planet) {
+                setTimeout(() => {
+                    const tagEl = document.getElementById('module-tag');
+                    const titleEl = document.getElementById('module-title');
+                    const descEl = document.getElementById('module-desc');
+                    const statsGrid = document.getElementById('stats-grid');
+
+                    if (tagEl) tagEl.innerText = window.aboutUsCustomData.tag;
+                    if (titleEl) titleEl.innerText = window.aboutUsCustomData.title;
+                    if (descEl) descEl.innerText = window.aboutUsCustomData.desc;
+                    
+                    if (statsGrid) {
+                        statsGrid.innerHTML = window.aboutUsCustomData.stats.map(s => `
+                            <div class="stat-card">
+                                <span class="stat-val">${s.val}</span>
+                                <span class="stat-lbl">${s.lbl}</span>
+                            </div>
+                        `).join('');
+                    }
+                }, 50);
+            }
+        });
+
         // ========================================================
         // ELEGANT "INVISIBLE PEN" SMOOTH WRITING ENGINE
         // ========================================================
