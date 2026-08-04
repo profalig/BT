@@ -3,10 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cyberpunk HUD Nav - Candlestick & Piano Keys Menu</title>
+  <title>Cyberpunk HUD - Candlestick Expansion</title>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
-    /* Reset & Base Canvas */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -17,106 +16,63 @@
       min-height: 100vh;
       background-color: #030712;
       background-image: 
-        radial-gradient(circle at 50% 30%, rgba(0, 240, 255, 0.08), transparent 70%),
-        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-      background-size: 100% 100%, 30px 30px, 30px 30px;
+        linear-gradient(to right, rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+      background-size: 30px 30px;
       display: flex;
       justify-content: center;
-      align-items: flex-start;
-      padding-top: 60px;
+      align-items: center;
       font-family: 'Share Tech Mono', monospace;
       color: #fff;
     }
 
-    /* Main HUD Container Frame */
+    /* Outer HUD Container (Original Design Frame) */
     .hud-bar {
-      position: relative;
-      background: rgba(3, 11, 20, 0.92);
-      border: 1px solid #00f0ff;
-      border-radius: 10px;
-      padding: 6px 8px;
-      box-shadow: 0 0 20px rgba(0, 240, 255, 0.3), inset 0 0 10px rgba(0, 240, 255, 0.1);
-      backdrop-filter: blur(10px);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    /* Individual Nav Item Slot */
-    .nav-item {
-      position: relative;
-      display: flex;
-      align-items: center;
-    }
-
-    /* Color Variable Themes per Section */
-    .nav-item.agent { --theme-color: #00ff88; --glow: rgba(0, 255, 136, 0.35); }
-    .nav-item.credits { --theme-color: #facc15; --glow: rgba(250, 204, 21, 0.35); }
-    .nav-item.subs { --theme-color: #eab308; --glow: rgba(234, 179, 8, 0.35); }
-    .nav-item.reports { --theme-color: #38bdf8; --glow: rgba(56, 189, 248, 0.35); }
-    .nav-item.logout { --theme-color: #f43f5e; --glow: rgba(244, 63, 94, 0.35); }
-
-    /* Button Base Styling */
-    .hud-btn {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 14px;
+      padding: 6px 10px;
+      background: rgba(4, 12, 20, 0.95);
+      border: 1px solid #00f0ff;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.25), inset 0 0 10px rgba(0, 240, 255, 0.1);
+    }
+
+    /* Navigation Slot / Item Wrapper */
+    .hud-slot {
+      position: relative;
+      display: flex;
+      align-items: center;
+      height: 40px;
       border-radius: 6px;
-      background: rgba(6, 18, 32, 0.85);
+      background: rgba(6, 18, 30, 0.85);
       border: 1px solid var(--theme-color);
-      color: var(--theme-color);
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
+      overflow: hidden;
       cursor: pointer;
-      transition: all 0.25s ease;
-      text-decoration: none;
-      user-select: none;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .hud-btn:hover, .nav-item:hover .hud-btn {
-      background: rgba(12, 32, 54, 0.95);
-      box-shadow: 0 0 14px var(--glow), inset 0 0 8px var(--glow);
-      text-shadow: 0 0 8px var(--theme-color);
-      transform: translateY(-1px);
-    }
+    /* Color Definitions matching original panel */
+    .hud-slot.agent    { --theme-color: #00ff88; --glow: rgba(0, 255, 136, 0.4); }
+    .hud-slot.credits  { --theme-color: #facc15; --glow: rgba(250, 204, 21, 0.4); }
+    .hud-slot.subs     { --theme-color: #eab308; --glow: rgba(234, 179, 8, 0.4); }
+    .hud-slot.reports  { --theme-color: #38bdf8; --glow: rgba(56, 189, 248, 0.4); }
+    .hud-slot.logout   { --theme-color: #f43f5e; --glow: rgba(244, 63, 94, 0.4); }
 
-    /* Status Indicator LED */
-    .status-dot {
-      width: 7px;
-      height: 7px;
-      background-color: #00ff88;
-      border-radius: 50%;
-      box-shadow: 0 0 8px #00ff88;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.8); }
-    }
-
-    /* SVG Icon Container */
-    .icon {
-      width: 16px;
-      height: 16px;
-      fill: currentColor;
-    }
-
-    /* Real-time Candlestick Chart Display */
-    .candlestick-chart {
-      display: inline-flex;
-      align-items: flex-end;
+    /* Default (Idle): Candlestick Trigger Display */
+    .candle-trigger {
+      display: flex;
+      align-items: center;
+      justify-content: center;
       gap: 3px;
-      height: 16px;
-      margin-left: 4px;
+      min-width: 44px;
+      height: 100%;
+      padding: 0 10px;
+      transition: opacity 0.2s ease;
     }
 
     .candle {
-      width: 3px;
+      width: 4px;
       position: relative;
       border-radius: 1px;
     }
@@ -130,180 +86,130 @@
       background: currentColor;
     }
 
-    .candle.green {
-      background: #00ff88;
-      color: #00ff88;
-    }
-    .candle.red {
-      background: #f43f5e;
-      color: #f43f5e;
-    }
+    .candle.green { background: #00ff88; color: #00ff88; }
+    .candle.red   { background: #f43f5e; color: #f43f5e; }
 
-    .c-1 { height: 9px; } .c-1::before { top: -2px; height: 2px; } .c-1::after { bottom: -2px; height: 2px; }
-    .c-2 { height: 13px; } .c-2::before { top: -1px; height: 1px; } .c-2::after { bottom: -3px; height: 3px; }
-    .c-3 { height: 7px; } .c-3::before { top: -3px; height: 3px; } .c-3::after { bottom: -1px; height: 1px; }
-    .c-4 { height: 15px; } .c-4::before { top: -1px; height: 1px; } .c-4::after { bottom: -2px; height: 2px; }
+    .c-sm { height: 10px; } .c-sm::before { top: -2px; height: 2px; } .c-sm::after { bottom: -2px; height: 2px; }
+    .c-md { height: 16px; } .c-md::before { top: -3px; height: 3px; } .c-md::after { bottom: -2px; height: 2px; }
+    .c-lg { height: 22px; } .c-lg::before { top: -2px; height: 2px; } .c-lg::after { bottom: -3px; height: 3px; }
 
-    /* Piano Key Pop-out / Accordion Submenu */
-    .piano-dropdown {
-      position: absolute;
-      top: calc(100% + 10px);
-      left: 0;
-      width: 100%;
-      min-width: 190px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      pointer-events: none;
-      perspective: 800px;
-      z-index: 100;
-    }
-
-    /* Piano Key Individual Option Buttons */
-    .piano-key {
-      background: rgba(4, 14, 26, 0.95);
-      border: 1px solid var(--theme-color);
-      border-left: 4px solid var(--theme-color);
-      color: #e2e8f0;
-      padding: 9px 12px;
-      font-size: 12px;
-      letter-spacing: 0.5px;
-      border-radius: 4px;
+    /* Hidden Text Panel Content */
+    .panel-content {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      text-decoration: none;
+      gap: 8px;
+      white-space: nowrap;
       opacity: 0;
-      transform: translateY(-12px) rotateX(-25deg) scale(0.92);
-      transform-origin: top center;
-      transition: all 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(8px);
+      max-width: 0;
+      padding-right: 0;
+      color: var(--theme-color);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* Trigger Popout on Parent Hover */
-    .nav-item:hover .piano-dropdown {
-      pointer-events: auto;
+    /* Status Dot & Icons */
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      background-color: #00ff88;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #00ff88;
+      flex-shrink: 0;
     }
 
-    .nav-item:hover .piano-key {
+    .icon {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      flex-shrink: 0;
+    }
+
+    /* HOVER EFFECT: Expand Candlestick into Original Panel Button */
+    .hud-slot:hover {
+      box-shadow: 0 0 15px var(--glow), inset 0 0 8px var(--glow);
+      background: rgba(10, 30, 48, 0.95);
+    }
+
+    .hud-slot:hover .candle-trigger {
+      opacity: 0.4;
+    }
+
+    .hud-slot:hover .panel-content {
       opacity: 1;
-      transform: translateY(0) rotateX(0deg) scale(1);
-    }
-
-    /* Piano Key Staggered Animations */
-    .piano-key:nth-child(1) { transition-delay: 0.03s; }
-    .piano-key:nth-child(2) { transition-delay: 0.07s; }
-    .piano-key:nth-child(3) { transition-delay: 0.11s; }
-    .piano-key:nth-child(4) { transition-delay: 0.15s; }
-
-    /* Key Press / Hover Interactive Piano Effect */
-    .piano-key:hover {
-      background: var(--theme-color);
-      color: #030712;
-      font-weight: bold;
-      box-shadow: 0 0 14px var(--theme-color);
-      transform: translateX(5px) scale(1.03);
-    }
-
-    .piano-key .badge {
-      font-size: 10px;
-      padding: 2px 5px;
-      border-radius: 3px;
-      background: rgba(255, 255, 255, 0.15);
-    }
-
-    .piano-key:hover .badge {
-      background: rgba(0, 0, 0, 0.3);
-      color: #fff;
+      max-width: 200px;
+      padding-right: 14px;
     }
   </style>
 </head>
 <body>
 
-  <!-- Cyberpunk Navigation HUD -->
+  <!-- Cyberpunk HUD Bar -->
   <div class="hud-bar">
     
-    <!-- 1. Agent Profile -->
-    <div class="nav-item agent">
-      <button class="hud-btn">
+    <!-- 1. AGENT -->
+    <div class="hud-slot agent">
+      <div class="candle-trigger">
+        <div class="candle green c-sm"></div>
+        <div class="candle green c-lg"></div>
+        <div class="candle red c-md"></div>
+      </div>
+      <div class="panel-content">
         <span class="status-dot"></span>
         <svg class="icon" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8s0 .01 0 .01z"/></svg>
         <span>AGENT: DR.ALI.G</span>
-      </button>
-      
-      <!-- Piano Keys Dropdown -->
-      <div class="piano-dropdown">
-        <a href="#" class="piano-key"><span>01. AGENT PROFILE</span> <span class="badge">ACTIVE</span></a>
-        <a href="#" class="piano-key"><span>02. NEURAL SPECS</span> <span class="badge">v4.8</span></a>
-        <a href="#" class="piano-key"><span>03. SECURITY KEYS</span> <span class="badge">2FA</span></a>
       </div>
     </div>
 
-    <!-- 2. Credits + Candlestick Chart -->
-    <div class="nav-item credits">
-      <button class="hud-btn">
+    <!-- 2. CREDITS -->
+    <div class="hud-slot credits">
+      <div class="candle-trigger">
+        <div class="candle green c-lg"></div>
+        <div class="candle red c-sm"></div>
+        <div class="candle green c-md"></div>
+      </div>
+      <div class="panel-content">
         <svg class="icon" viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
         <span>CREDITS: 83</span>
-        
-        <!-- Integrated Candlestick Graphic -->
-        <div class="candlestick-chart">
-          <div class="candle green c-1"></div>
-          <div class="candle red c-2"></div>
-          <div class="candle green c-3"></div>
-          <div class="candle green c-4"></div>
-        </div>
-      </button>
-
-      <div class="piano-dropdown">
-        <a href="#" class="piano-key"><span>RECHARGE BALANCE</span> <span class="badge">+100</span></a>
-        <a href="#" class="piano-key"><span>TRANSACTION HISTORY</span> <span class="badge">LOGS</span></a>
-        <a href="#" class="piano-key"><span>USAGE ANALYTICS</span>
-          <div class="candlestick-chart">
-            <div class="candle green c-1"></div>
-            <div class="candle green c-2"></div>
-          </div>
-        </a>
       </div>
     </div>
 
-    <!-- 3. Subscriptions -->
-    <div class="nav-item subs">
-      <button class="hud-btn">
+    <!-- 3. SUBSCRIPTIONS -->
+    <div class="hud-slot subs">
+      <div class="candle-trigger">
+        <div class="candle red c-md"></div>
+        <div class="candle green c-sm"></div>
+        <div class="candle green c-lg"></div>
+      </div>
+      <div class="panel-content">
         <svg class="icon" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
         <span>SUBSCRIPTIONS</span>
-      </button>
-
-      <div class="piano-dropdown">
-        <a href="#" class="piano-key"><span>QUANT TRADER TIER</span> <span class="badge">PRO</span></a>
-        <a href="#" class="piano-key"><span>NEURAL NETWORK PRO</span> <span class="badge">AUTO</span></a>
-        <a href="#" class="piano-key"><span>UPGRADE PLAN</span> <span class="badge">VIP</span></a>
       </div>
     </div>
 
-    <!-- 4. My Reports -->
-    <div class="nav-item reports">
-      <button class="hud-btn">
+    <!-- 4. MY REPORTS -->
+    <div class="hud-slot reports">
+      <div class="candle-trigger">
+        <div class="candle green c-md"></div>
+        <div class="candle green c-lg"></div>
+        <div class="candle red c-sm"></div>
+      </div>
+      <div class="panel-content">
         <svg class="icon" viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
         <span>MY REPORTS</span>
-      </button>
-
-      <div class="piano-dropdown">
-        <a href="#" class="piano-key"><span>DAILY METRICS</span> <span class="badge">PDF</span></a>
-        <a href="#" class="piano-key"><span>ALGO BACKTESTS</span> <span class="badge">CSV</span></a>
-        <a href="#" class="piano-key"><span>PORTFOLIO RISK</span> <span class="badge">LIVE</span></a>
       </div>
     </div>
 
-    <!-- 5. Logout -->
-    <div class="nav-item logout">
-      <button class="hud-btn">
+    <!-- 5. LOGOUT -->
+    <div class="hud-slot logout">
+      <div class="candle-trigger">
+        <div class="candle red c-lg"></div>
+        <div class="candle red c-sm"></div>
+      </div>
+      <div class="panel-content">
         <svg class="icon" viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
         <span>LOGOUT</span>
-      </button>
-
-      <div class="piano-dropdown">
-        <a href="#" class="piano-key"><span>CONFIRM LOGOUT</span> <span class="badge">EXIT</span></a>
       </div>
     </div>
 
