@@ -6,7 +6,8 @@
     <title>System & Backtest Factory</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;600;800&family=Mr+Dafoe&display=swap" rel="stylesheet">
+    <!-- Swapped to 'Damion' for the elegant, thick signature script -->
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;600;800&family=Damion&display=swap" rel="stylesheet">
     
     <!-- Supabase JS Client SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -152,54 +153,61 @@
         }
 
         /* ===================================================
-           VICE CITY NEON HANDWRITING (NO BOXES + WRITE/ERASE)
+           ELEGANT NEON HANDWRITING (SMOOTH REVEAL ANIMATION)
            =================================================== */
         .vice-text-container {
             position: fixed;
             z-index: 999;
             pointer-events: none;
             user-select: none;
-            font-family: 'Mr Dafoe', cursive;
             display: flex;
             flex-direction: column;
         }
 
         /* Bottom Right Container */
         .vice-text-container.vice-right {
-            bottom: 30px;
-            right: 40px;
+            bottom: 40px;
+            right: 50px;
             align-items: flex-end;
             text-align: right;
         }
 
         /* Bottom Left Container */
         .vice-text-container.vice-left {
-            bottom: 30px;
-            left: 40px;
+            bottom: 40px;
+            left: 50px;
             align-items: flex-start;
             text-align: left;
-            max-width: 480px;
+            max-width: 550px;
         }
 
         .vice-line {
-            font-size: 2.3rem;
-            letter-spacing: 1.5px;
-            line-height: 1.35;
-            min-height: 2.7rem;
+            font-family: 'Damion', cursive;
+            font-size: 3.2rem; /* Adjusted for elegant proportions */
+            letter-spacing: 1px;
+            line-height: 1.15;
             white-space: nowrap;
+            /* Expanded bounding box padding so the neon glow isn't cut off by the clip-path */
+            padding-right: 40px;
+            padding-bottom: 20px;
+            padding-top: 10px;
+            margin-bottom: -15px; 
+            
+            /* Default hidden state for the custom JS clip-path reveal */
+            opacity: 0;
+            clip-path: inset(-40px 100% -40px -40px);
         }
 
         .vice-left .vice-line {
-            font-size: 1.85rem;
-            white-space: normal;
-            min-height: auto;
+            font-size: 2.6rem;
+            padding-right: 40px;
         }
 
-        /* Neon Color Lights & Glow Effects */
+        /* Vibrant Neon Color Lights & Glow Effects */
         .vice-line.cyan {
             color: #00f0ff;
             text-shadow: 
-                0 0 4px #fff,
+                0 0 2px #fff,
                 0 0 10px #00f0ff,
                 0 0 20px #00f0ff,
                 0 0 40px #00a8ff;
@@ -208,35 +216,19 @@
         .vice-line.pink {
             color: #ff007f;
             text-shadow: 
-                0 0 4px #fff,
+                0 0 2px #fff,
                 0 0 10px #ff007f,
                 0 0 20px #ff007f,
-                0 0 40px #ff0055;
+                0 0 35px #ff0055;
         }
 
         .vice-line.yellow {
             color: #ffe600;
             text-shadow: 
-                0 0 4px #fff,
+                0 0 2px #fff,
                 0 0 10px #ffe600,
                 0 0 20px #ffe600,
-                0 0 40px #ff9900;
-        }
-
-        /* Animated Neon Writing Cursor */
-        .neon-cursor {
-            display: inline-block;
-            width: 3px;
-            height: 0.8em;
-            margin-left: 4px;
-            background-color: currentColor;
-            vertical-align: baseline;
-            animation: neonCursorBlink 0.6s infinite alternate;
-        }
-
-        @keyframes neonCursorBlink {
-            0% { opacity: 1; filter: drop-shadow(0 0 5px currentColor); }
-            100% { opacity: 0.1; }
+                0 0 35px #ff9900;
         }
     </style>
 </head>
@@ -245,7 +237,6 @@
     <!-- AUTHENTICATION & SUBSCRIPTION CORNER (HUD DOCK) -->
     <div id="auth-corner">
         <div class="hud-bar">
-            
             <!-- 1. AGENT / SIGN IN -->
             <div class="hud-slot agent" id="nav-agent-btn">
                 <div class="hud-icon-box">
@@ -296,20 +287,20 @@
                     <span>LOGOUT</span>
                 </div>
             </div>
-
         </div>
     </div>
 
-    <!-- VICE CITY HANDWRITING NEON TEXT (BOTTOM RIGHT - NO BOX) -->
+    <!-- ELEGANT WRITING NEON TEXT (BOTTOM RIGHT) -->
     <div class="vice-text-container vice-right">
         <div class="vice-line cyan" id="vice-right-1"></div>
         <div class="vice-line pink" id="vice-right-2"></div>
         <div class="vice-line yellow" id="vice-right-3"></div>
     </div>
 
-    <!-- VICE CITY HANDWRITING NEON TEXT (BOTTOM LEFT - NO BOX) -->
+    <!-- ELEGANT WRITING NEON TEXT (BOTTOM LEFT) -->
     <div class="vice-text-container vice-left">
         <div class="vice-line pink" id="vice-left-1"></div>
+        <div class="vice-line pink" id="vice-left-2"></div>
     </div>
 
     <!-- SPACE BACKGROUND MATRIX -->
@@ -472,7 +463,6 @@
             </div>
 
             <div class="pricing-grid">
-                <!-- TIER 1: START PACK ($29) -->
                 <div class="tier-card">
                     <div class="tier-name">START PACK</div>
                     <div class="tier-price">$29</div>
@@ -483,16 +473,9 @@
                         <li><i class="fa-solid fa-check"></i> Basic Metrics Log</li>
                         <li><i class="fa-solid fa-xmark unavailable"></i> Tick-level Deep Analysis</li>
                     </ul>
-                    <button class="tier-btn select-tier-btn" 
-                            data-plan="Start Pack" 
-                            data-price-id="price_1TzyOFCmZGVreuRmIgmTkt3l" 
-                            data-credits="3" 
-                            data-mode="payment">
-                        GET START PACK
-                    </button>
+                    <button class="tier-btn select-tier-btn" data-plan="Start Pack" data-price-id="price_1TzyOFCmZGVreuRmIgmTkt3l" data-credits="3" data-mode="payment">GET START PACK</button>
                 </div>
 
-                <!-- TIER 2: PRO PACK ($79) -->
                 <div class="tier-card featured">
                     <div class="popular-badge">MOST POPULAR</div>
                     <div class="tier-name" style="color: #00f0ff;">PRO PACK</div>
@@ -504,16 +487,9 @@
                         <li><i class="fa-solid fa-check"></i> 99.9% Tick Data Accuracy</li>
                         <li><i class="fa-solid fa-check"></i> PDF Report Data Export</li>
                     </ul>
-                    <button class="tier-btn featured-btn select-tier-btn" 
-                            data-plan="Pro Pack" 
-                            data-price-id="price_1TzyXcCmZGVreuRmGZaJOD6w" 
-                            data-credits="10" 
-                            data-mode="payment">
-                        <i class="fa-solid fa-bolt"></i> GET PRO PACK
-                    </button>
+                    <button class="tier-btn featured-btn select-tier-btn" data-plan="Pro Pack" data-price-id="price_1TzyXcCmZGVreuRmGZaJOD6w" data-credits="10" data-mode="payment"><i class="fa-solid fa-bolt"></i> GET PRO PACK</button>
                 </div>
 
-                <!-- TIER 3: QUANT MONTHLY PASS ($199/mo) -->
                 <div class="tier-card">
                     <div class="tier-name" style="color: #ffd700;">QUANT MONTHLY PASS</div>
                     <div class="tier-price" style="color: #ffd700;">$199 <span>/ mo</span></div>
@@ -524,14 +500,7 @@
                         <li><i class="fa-solid fa-check"></i> 1-on-1 Quant Desk Support</li>
                         <li><i class="fa-solid fa-check"></i> Databank Priority Access</li>
                     </ul>
-                    <button class="tier-btn select-tier-btn" 
-                            data-plan="Quant Monthly Pass" 
-                            data-price-id="price_1TzyYaCmZGVreuRm9Po6DQCk" 
-                            data-credits="40" 
-                            data-mode="subscription" 
-                            style="border-color:#ffd700; color:#ffd700;">
-                        <i class="fa-solid fa-crown"></i> UNLOCK MONTHLY PASS
-                    </button>
+                    <button class="tier-btn select-tier-btn" data-plan="Quant Monthly Pass" data-price-id="price_1TzyYaCmZGVreuRm9Po6DQCk" data-credits="40" data-mode="subscription" style="border-color:#ffd700; color:#ffd700;"><i class="fa-solid fa-crown"></i> UNLOCK MONTHLY PASS</button>
                 </div>
             </div>
         </div>
@@ -556,7 +525,6 @@
                     <label>CALLSIGN (Username)</label>
                     <input type="text" id="auth-username" placeholder="e.g. QuantTrader_99">
                 </div>
-
                 <div class="input-group">
                     <label>ACCESS ID (Email)</label>
                     <input type="email" id="auth-email" placeholder="agent@quant.io" required>
@@ -577,56 +545,67 @@
 
     <script src="app.js"></script>
     <script>
-        // UPDATE ABOUT US DATA IN PLANET ENGINE WITH VIBE & DETAILED TRADES LOGIC
-        if (typeof planetData !== 'undefined' && planetData.about) {
-            planetData.about.tag = "IDENTITY // SEC-03";
-            planetData.about.title = "About Us";
-            planetData.about.color = "#ff007f";
-            planetData.about.desc = "We are professional backtesters delivering deep, institutional-grade data across <b>2023, 2024, 2025, and 2026</b>.<br><br>This data isn't pulled out of thin air—we supply fully detailed trade logs, breaking down every winning and losing position so you can verify execution precision (even on historical charts you can no longer access).<br><br>We map out exact annual and monthly performance profiles—showing how a starting $1,000 balance at 2% risk compounds over 1, 2, or 4 years into $1,800+ and beyond. You get full visibility on max drawdown charts, win/loss rates, trade durations, and statistical edges. Your strategy, tested your way.";
-            planetData.about.stats = [
-                { label: "DATA RANGE", val: "2023 - 2026" },
-                { label: "REPORT TYPE", val: "Trade Logs" },
-                { label: "VERIFICATION", val: "In-Detail" },
-                { label: "METRICS", val: "Profits & DD" }
-            ];
-        }
+        // ========================================================
+        // ELEGANT "INVISIBLE PEN" SMOOTH WRITING ENGINE
+        // ========================================================
+        
+        async function runBlockWriting(elements, holdTime = 3200, fadeTime = 800) {
+            // Initialize HTML content & find elements
+            const els = elements.map(item => {
+                const el = document.getElementById(item.id);
+                if(el) el.innerHTML = item.text;
+                return { el, ...item };
+            }).filter(item => item.el);
 
-        // ========================================================
-        // VICE CITY HANDWRITING TYPEWRITER & ERASE INFINITE ENGINE
-        // ========================================================
-        async function runNeonTypewriter(elementId, text, typeSpeed = 75, eraseSpeed = 40, holdDelay = 2600) {
-            const el = document.getElementById(elementId);
-            if (!el) return;
+            if(els.length === 0) return;
 
             while (true) {
-                // 1. TYPE FORWARD
-                for (let i = 0; i <= text.length; i++) {
-                    el.innerHTML = text.substring(0, i) + '<span class="neon-cursor"></span>';
-                    await new Promise(res => setTimeout(res, typeSpeed + (Math.random() * 25)));
+                // 1. Instantly reset all text blocks to be hidden (but keeping the glow bounds)
+                for (const item of els) {
+                    item.el.style.transition = 'none';
+                    item.el.style.opacity = '1';
+                    item.el.style.clipPath = 'inset(-40px 100% -40px -40px)';
+                }
+                
+                // Force a browser repaint so the reset applies before animating
+                void els[0].el.offsetWidth;
+
+                // 2. Write each line sequentially using a smooth, organic reveal speed
+                for (const item of els) {
+                    item.el.style.transition = `clip-path ${item.duration}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`;
+                    item.el.style.clipPath = 'inset(-40px -40px -40px -40px)';
+                    
+                    // Wait for line to finish writing plus a tiny pause before the next line
+                    await new Promise(res => setTimeout(res, item.duration + 150));
                 }
 
-                // 2. HOLD FULL TEXT
-                await new Promise(res => setTimeout(res, holdDelay));
+                // 3. Hold the entire block so it can be read
+                await new Promise(res => setTimeout(res, holdTime));
 
-                // 3. ERASE BACKWARD
-                for (let i = text.length; i >= 0; i--) {
-                    el.innerHTML = text.substring(0, i) + '<span class="neon-cursor"></span>';
-                    await new Promise(res => setTimeout(res, eraseSpeed));
+                // 4. Elegantly fade out the whole block at once
+                for (const item of els) {
+                    item.el.style.transition = `opacity ${fadeTime}ms ease-out`;
+                    item.el.style.opacity = '0';
                 }
 
-                // 4. BRIEF PAUSE BEFORE RE-WRITING
-                await new Promise(res => setTimeout(res, 800));
+                // Wait for the fade out to finish plus a gap before looping
+                await new Promise(res => setTimeout(res, fadeTime + 600));
             }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Right side phrases
-            runNeonTypewriter('vice-right-1', 'Deep Backtest', 80, 45, 2500);
-            setTimeout(() => runNeonTypewriter('vice-right-2', 'In detail report', 80, 45, 2500), 500);
-            setTimeout(() => runNeonTypewriter('vice-right-3', 'Crush it G 🚀', 80, 45, 2500), 1000);
+            // Right Side Sequence
+            runBlockWriting([
+                { id: 'vice-right-1', text: 'Deep Backtest', duration: 1100 },
+                { id: 'vice-right-2', text: 'In detail report', duration: 1300 },
+                { id: 'vice-right-3', text: 'Crush it G 🚀', duration: 1000 }
+            ], 3500, 1000);
 
-            // Left side sentence
-            runNeonTypewriter('vice-left-1', 'Test the reliability of your system with us and become a millionair', 60, 30, 3200);
+            // Left Side Sequence (broken nicely across two lines like the original)
+            runBlockWriting([
+                { id: 'vice-left-1', text: 'Test the reliability of your', duration: 1600 },
+                { id: 'vice-left-2', text: 'system with us and become a millionaire', duration: 2400 }
+            ], 4500, 1000);
         });
     </script>
 </body>
