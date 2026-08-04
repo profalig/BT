@@ -6,7 +6,7 @@
     <title>System & Backtest Factory</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;600;800&family=Mr+Dafoe&display=swap" rel="stylesheet">
     
     <!-- Supabase JS Client SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -151,96 +151,92 @@
                         letter-spacing 0.4s ease 0.2s;
         }
 
-        /* ==========================================
-           VICE CITY NEON KEYWORDS HUD (BOTTOM RIGHT)
-           ========================================== */
-        .vice-city-hud {
+        /* ===================================================
+           VICE CITY NEON HANDWRITING (NO BOXES + WRITE/ERASE)
+           =================================================== */
+        .vice-text-container {
             position: fixed;
-            bottom: 25px;
-            right: 25px;
             z-index: 999;
-            background: rgba(18, 6, 32, 0.88);
-            border: 2px solid #ff007f;
-            border-radius: 12px;
-            padding: 12px 18px;
-            box-shadow: 0 0 20px rgba(255, 0, 127, 0.45), inset 0 0 12px rgba(0, 240, 255, 0.25);
-            backdrop-filter: blur(8px);
-            font-family: 'Share Tech Mono', monospace;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            pointer-events: auto;
-            transform: perspective(600px) rotateY(-6deg) rotateX(2deg);
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
             user-select: none;
-        }
-
-        .vice-city-hud:hover {
-            transform: perspective(600px) rotateY(0deg) rotateX(0deg) scale(1.05);
-            box-shadow: 0 0 35px rgba(255, 0, 127, 0.8), 0 0 20px rgba(0, 240, 255, 0.6);
-            border-color: #00f0ff;
-        }
-
-        .vice-header {
-            font-size: 0.65rem;
-            color: #00f0ff;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            text-shadow: 0 0 5px #00f0ff;
-            border-bottom: 1px dashed rgba(255, 0, 127, 0.3);
-            padding-bottom: 4px;
-            margin-bottom: 2px;
-        }
-
-        .vice-header .dot {
-            width: 7px;
-            height: 7px;
-            background-color: #ff007f;
-            border-radius: 50%;
-            box-shadow: 0 0 8px #ff007f;
-            animation: vicePulse 1.2s infinite alternate;
-        }
-
-        @keyframes vicePulse {
-            0% { opacity: 0.4; transform: scale(0.8); }
-            100% { opacity: 1; transform: scale(1.3); }
-        }
-
-        .vice-keywords {
+            font-family: 'Mr Dafoe', cursive;
             display: flex;
             flex-direction: column;
-            gap: 4px;
         }
 
-        .vice-tag {
-            font-size: 0.85rem;
-            font-weight: 800;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            background: linear-gradient(90deg, #ff007f, #00f0ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 10px rgba(255, 0, 127, 0.5);
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        /* Bottom Right Container */
+        .vice-text-container.vice-right {
+            bottom: 30px;
+            right: 40px;
+            align-items: flex-end;
+            text-align: right;
         }
 
-        .vice-tag i {
-            font-size: 0.8rem;
+        /* Bottom Left Container */
+        .vice-text-container.vice-left {
+            bottom: 30px;
+            left: 40px;
+            align-items: flex-start;
+            text-align: left;
+            max-width: 480px;
         }
 
-        .vice-tag.highlight {
-            font-size: 0.95rem;
-            background: linear-gradient(90deg, #ffe600, #ff007f);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 12px rgba(255, 230, 0, 0.7);
-            margin-top: 2px;
+        .vice-line {
+            font-size: 2.3rem;
+            letter-spacing: 1.5px;
+            line-height: 1.35;
+            min-height: 2.7rem;
+            white-space: nowrap;
+        }
+
+        .vice-left .vice-line {
+            font-size: 1.85rem;
+            white-space: normal;
+            min-height: auto;
+        }
+
+        /* Neon Color Lights & Glow Effects */
+        .vice-line.cyan {
+            color: #00f0ff;
+            text-shadow: 
+                0 0 4px #fff,
+                0 0 10px #00f0ff,
+                0 0 20px #00f0ff,
+                0 0 40px #00a8ff;
+        }
+
+        .vice-line.pink {
+            color: #ff007f;
+            text-shadow: 
+                0 0 4px #fff,
+                0 0 10px #ff007f,
+                0 0 20px #ff007f,
+                0 0 40px #ff0055;
+        }
+
+        .vice-line.yellow {
+            color: #ffe600;
+            text-shadow: 
+                0 0 4px #fff,
+                0 0 10px #ffe600,
+                0 0 20px #ffe600,
+                0 0 40px #ff9900;
+        }
+
+        /* Animated Neon Writing Cursor */
+        .neon-cursor {
+            display: inline-block;
+            width: 3px;
+            height: 0.8em;
+            margin-left: 4px;
+            background-color: currentColor;
+            vertical-align: baseline;
+            animation: neonCursorBlink 0.6s infinite alternate;
+        }
+
+        @keyframes neonCursorBlink {
+            0% { opacity: 1; filter: drop-shadow(0 0 5px currentColor); }
+            100% { opacity: 0.1; }
         }
     </style>
 </head>
@@ -304,18 +300,16 @@
         </div>
     </div>
 
-    <!-- VICE CITY KEYWORDS HUD (BOTTOM RIGHT) -->
-    <div class="vice-city-hud">
-        <div class="vice-header">
-            <span class="dot"></span>
-            <span>// QUANT OVERDRIVE ENGINE</span>
-        </div>
-        <div class="vice-keywords">
-            <div class="vice-tag"><i class="fa-solid fa-chart-line" style="-webkit-text-fill-color: #00f0ff;"></i> DEEP BACKTEST</div>
-            <div class="vice-tag"><i class="fa-solid fa-sliders" style="-webkit-text-fill-color: #ff007f;"></i> YOUR WAY, YOUR SYSTEM</div>
-            <div class="vice-tag"><i class="fa-solid fa-file-contract" style="-webkit-text-fill-color: #00f0ff;"></i> IN DETAIL REPORT</div>
-            <div class="vice-tag highlight"><i class="fa-solid fa-fire-flame-curved" style="-webkit-text-fill-color: #ffe600;"></i> CRUSH IT G 🚀</div>
-        </div>
+    <!-- VICE CITY HANDWRITING NEON TEXT (BOTTOM RIGHT - NO BOX) -->
+    <div class="vice-text-container vice-right">
+        <div class="vice-line cyan" id="vice-right-1"></div>
+        <div class="vice-line pink" id="vice-right-2"></div>
+        <div class="vice-line yellow" id="vice-right-3"></div>
+    </div>
+
+    <!-- VICE CITY HANDWRITING NEON TEXT (BOTTOM LEFT - NO BOX) -->
+    <div class="vice-text-container vice-left">
+        <div class="vice-line pink" id="vice-left-1"></div>
     </div>
 
     <!-- SPACE BACKGROUND MATRIX -->
@@ -596,6 +590,44 @@
                 { label: "METRICS", val: "Profits & DD" }
             ];
         }
+
+        // ========================================================
+        // VICE CITY HANDWRITING TYPEWRITER & ERASE INFINITE ENGINE
+        // ========================================================
+        async function runNeonTypewriter(elementId, text, typeSpeed = 75, eraseSpeed = 40, holdDelay = 2600) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+
+            while (true) {
+                // 1. TYPE FORWARD
+                for (let i = 0; i <= text.length; i++) {
+                    el.innerHTML = text.substring(0, i) + '<span class="neon-cursor"></span>';
+                    await new Promise(res => setTimeout(res, typeSpeed + (Math.random() * 25)));
+                }
+
+                // 2. HOLD FULL TEXT
+                await new Promise(res => setTimeout(res, holdDelay));
+
+                // 3. ERASE BACKWARD
+                for (let i = text.length; i >= 0; i--) {
+                    el.innerHTML = text.substring(0, i) + '<span class="neon-cursor"></span>';
+                    await new Promise(res => setTimeout(res, eraseSpeed));
+                }
+
+                // 4. BRIEF PAUSE BEFORE RE-WRITING
+                await new Promise(res => setTimeout(res, 800));
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Right side phrases
+            runNeonTypewriter('vice-right-1', 'Deep Backtest', 80, 45, 2500);
+            setTimeout(() => runNeonTypewriter('vice-right-2', 'In detail report', 80, 45, 2500), 500);
+            setTimeout(() => runNeonTypewriter('vice-right-3', 'Crush it G 🚀', 80, 45, 2500), 1000);
+
+            // Left side sentence
+            runNeonTypewriter('vice-left-1', 'Test the reliability of your system with us and become a millionair', 60, 30, 3200);
+        });
     </script>
 </body>
 </html>
