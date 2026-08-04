@@ -419,23 +419,28 @@ async function openUserReportsModal() {
             const rawStatus = String(s.status || '').toLowerCase().trim();
             return hasUrl || ['completed', 'complete', 'done', 'success'].includes(rawStatus);
         }).length;
-        const pendingCount = totalSubmissions - completedCount;
 
         const profileHeaderHtml = `
             <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 10px; margin-bottom: 12px;">
                     <div>
                         <div style="font-size: 0.75em; color: #888; letter-spacing: 1px;">// CLEARANCE LEVEL: AGENT</div>
-                        <div style="font-size: 1.3em; font-weight: bold; color: #00ffff; letter-spacing: 1px;">
-I completely understand the fear of breaking a complex website! Looking at your code, you have a beautifully intricate system with orbital animations, Supabase authentication, and Stripe payment integrations[cite: 1]. Being cautious before modifying it is exactly the right approach.
+                        <div style="font-size: 1.3em; font-weight: bold; color: #00ffff; letter-spacing: 1px;">${callsign}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75em; color: #888; text-align: right;">CREDITS REMAINING</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #00ff66; text-align: right;">${availableCredits}</div>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-around; margin-top: 10px; font-size: 0.85em;">
+                    <div>TOTAL SUBMISSIONS: <strong style="color: #00f0ff;">${totalSubmissions}</strong></div>
+                    <div>COMPLETED: <strong style="color: #00ff66;">${completedCount}</strong></div>
+                </div>
+            </div>`;
 
-However, it looks like you forgot to include the actual code or describe the specific section you want me to add! 
-
-### How We Can Update It Safely
-
-Once you share the missing piece, I will help you integrate it without breaking your current build. I will:
-*   Analyze where the new logic best fits within your existing event listeners, such as your authentication state changes or your orbital rendering engine[cite: 1].
-*   Ensure it doesn't conflict with your active `supabaseClient` or break any of the UI modal triggers[cite: 1].
-*   Show you exactly which lines to insert the new code between.
-
-What specific code snippet or feature are you trying to add to this script?
+        showTacticalModal('AGENT PROFILE', profileHeaderHtml, true);
+    } catch (err) {
+        console.error("User Reports Error:", err);
+        showTacticalModal('DATABASE ERROR', 'Failed to retrieve transmission logs.', false);
+    }
+}

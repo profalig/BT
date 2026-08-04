@@ -1,4 +1,42 @@
 /* ==========================================
+   GLOBAL RESET & DARK SPACE THEME
+   ========================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #02060c;
+    color: #ffffff;
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
+#space-matrix {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, #06101e 0%, #02060c 100%);
+    z-index: 1;
+}
+
+#blackboard-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+/* ==========================================
    AUTHENTICATION & SUBSCRIPTION CORNER (NEW CYBER-HUD)
    ========================================== */
 #auth-corner {
