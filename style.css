@@ -45,32 +45,6 @@ body {
     transition: opacity 0.5s ease;
 }
 
-/* Sci-Fi / Cyberpunk Button Styling */
-.top-nav-btn {
-    background: rgba(10, 10, 15, 0.8);
-    color: #ffffff;
-    font-weight: bold;
-    text-transform: uppercase;
-    padding: 12px 24px;
-    
-    /* Chamfered (angled) edges */
-    clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
-    border: 1px solid rgba(0, 255, 255, 0.4);
-    transition: all 0.3s ease-in-out;
-    cursor: pointer;
-}
-
-/* Neon Glow Hover State */
-.top-nav-btn:hover {
-    background: rgba(0, 255, 255, 0.1);
-    /* Cyan and Pink mixed neon shadow matching the logo */
-    box-shadow: 
-        0 0 10px rgba(0, 255, 255, 0.6), 
-        0 0 20px rgba(255, 20, 147, 0.4) inset;
-    border-color: rgba(255, 20, 147, 0.8);
-    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
-}
-
 .auth-btn {
     background: rgba(4, 9, 18, 0.75);
     border: 1px solid rgba(0, 240, 255, 0.3);
@@ -490,43 +464,33 @@ body.warping #spaceship-title-container {
     100% { transform: rotate(360deg) translateZ(0); } 
 }
 
-/* Glassmorphism for planet label containers */
 .planet-label {
     position: absolute;
     top: 125%;
     left: 50%;
+    transform: translateX(-50%) translateZ(0);
+    background: #040912;
+    border: 1px solid rgba(0, 240, 255, 0.4);
     padding: 5px 14px;
+    border-radius: 6px;
     font-size: 0.75rem;
     font-weight: bold;
     text-transform: uppercase;
     white-space: nowrap;
     font-family: 'Share Tech Mono', monospace;
     color: #ffffff;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
     box-shadow: 0 4px 15px rgba(0,0,0,0.8);
     will-change: opacity, transform;
-
-    /* Glassmorphism settings */
-    background: rgba(0, 255, 255, 0.05); /* Very low opacity cyan */
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(0, 255, 255, 0.15);
-    border-radius: 6px;
-    
-    /* Starting state for expanding reveal (Centering maintained) */
-    opacity: 0;
-    transform: translateX(-50%) scale(0.85) translateY(10px);
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    pointer-events: none; /* Prevents flickering on hover */
 }
 
-/* Hover trigger on the parent planet */
 .planet:hover .planet-label {
     opacity: 1;
-    transform: translateX(-50%) scale(1) translateY(0);
-    text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
-    background: rgba(0, 255, 255, 0.1);
     border: 2px solid #00f0ff;
     box-shadow: 0 0 15px rgba(0,240,255,0.6);
+    background: #000;
 }
 
 #solar-system.show-labels .planet-label { opacity: 1; border-color: rgba(0,240,255,0.5); }
