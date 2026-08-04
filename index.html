@@ -6,7 +6,6 @@
     <title>System & Backtest Factory</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Swapped to 'Damion' for the elegant, thick signature script -->
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;600;800&family=Damion&display=swap" rel="stylesheet">
     
     <!-- Supabase JS Client SDK -->
@@ -183,10 +182,12 @@
 
         .vice-line {
             font-family: 'Damion', cursive;
-            font-size: 3.2rem; /* Adjusted for elegant proportions */
+            font-size: 2.6rem; /* Scaled down for elegance */
             letter-spacing: 1px;
             line-height: 1.15;
             white-space: nowrap;
+            /* Added a crisp border stroke to make the letters perfectly visible */
+            -webkit-text-stroke: 0.8px rgba(255, 255, 255, 0.7);
             /* Expanded bounding box padding so the neon glow isn't cut off by the clip-path */
             padding-right: 40px;
             padding-bottom: 20px;
@@ -199,36 +200,33 @@
         }
 
         .vice-left .vice-line {
-            font-size: 2.6rem;
+            font-size: 2.1rem; /* Scaled down proportionally */
             padding-right: 40px;
         }
 
-        /* Vibrant Neon Color Lights & Glow Effects */
+        /* Lowered Neon Light Effects for a softer, more refined glow */
         .vice-line.cyan {
             color: #00f0ff;
             text-shadow: 
                 0 0 2px #fff,
-                0 0 10px #00f0ff,
-                0 0 20px #00f0ff,
-                0 0 40px #00a8ff;
+                0 0 8px #00f0ff,
+                0 0 15px #00a8ff;
         }
 
         .vice-line.pink {
             color: #ff007f;
             text-shadow: 
                 0 0 2px #fff,
-                0 0 10px #ff007f,
-                0 0 20px #ff007f,
-                0 0 35px #ff0055;
+                0 0 8px #ff007f,
+                0 0 15px #ff0055;
         }
 
         .vice-line.yellow {
             color: #ffe600;
             text-shadow: 
                 0 0 2px #fff,
-                0 0 10px #ffe600,
-                0 0 20px #ffe600,
-                0 0 35px #ff9900;
+                0 0 8px #ffe600,
+                0 0 15px #ff9900;
         }
     </style>
 </head>
@@ -601,7 +599,7 @@
                 { id: 'vice-right-3', text: 'Crush it G 🚀', duration: 1000 }
             ], 3500, 1000);
 
-            // Left Side Sequence (broken nicely across two lines like the original)
+            // Left Side Sequence
             runBlockWriting([
                 { id: 'vice-left-1', text: 'Test the reliability of your', duration: 1600 },
                 { id: 'vice-left-2', text: 'system with us and become a millionaire', duration: 2400 }
