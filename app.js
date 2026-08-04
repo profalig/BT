@@ -735,9 +735,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // UPDATE UI CREDIT BADGE
     function updateCreditBadgeUI(credits) {
-        const badgeEl = document.getElementById('user-credits-badge');
+        const badgeEl = document.getElementById('nav-credits-label');
         if (badgeEl) {
-            badgeEl.innerHTML = `<i class="fa-solid fa-coins"></i> CREDITS: ${credits}`;
+            badgeEl.innerHTML = `CREDITS: ${credits}`;
         }
     }
 
@@ -900,20 +900,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (authCorner) {
                     authCorner.innerHTML = `
-                        <div class="dock-bracket top-left"></div>
-                        <div class="dock-bracket bottom-right"></div>
-                        <div class="dock-content">
-                            <div class="user-badge">
-                                <span class="user-status-dot"></span>
-                                <i class="fa-solid fa-shield-halved"></i> AGENT: ${displayName.toUpperCase()}
+                        <div class="hud-bar">
+                            <div class="hud-slot agent" id="nav-agent-btn">
+                                <div class="hud-icon-box">
+                                    <span class="status-dot"></span>
+                                    <i class="fa-solid fa-user-shield"></i>
+                                </div>
+                                <div class="hud-label-box">
+                                    <span id="nav-user-label">AGENT: ${displayName.toUpperCase()}</span>
+                                </div>
                             </div>
-                            <div class="credit-badge" id="user-credits-badge">
-                                <i class="fa-solid fa-coins"></i> CREDITS: ${userCredits}
+                            <div class="hud-slot credits" id="nav-credits-btn">
+                                <div class="hud-icon-box">
+                                    <i class="fa-solid fa-coins"></i>
+                                </div>
+                                <div class="hud-label-box">
+                                    <span id="nav-credits-label">CREDITS: ${userCredits}</span>
+                                </div>
                             </div>
-                            <div class="dock-divider"></div>
-                            <button id="my-sub-btn" class="auth-btn sub-nav-btn"><i class="fa-solid fa-gem"></i> SUBSCRIPTIONS</button>
-                            <button id="my-reports-btn" class="auth-btn"><i class="fa-solid fa-folder-open"></i> MY REPORTS</button>
-                            <button id="signout-btn" class="auth-btn logout-btn"><i class="fa-solid fa-power-off"></i> LOGOUT</button>
+                            <div class="hud-slot subs" id="my-sub-btn">
+                                <div class="hud-icon-box">
+                                    <i class="fa-solid fa-gem"></i>
+                                </div>
+                                <div class="hud-label-box">
+                                    <span>SUBSCRIPTIONS</span>
+                                </div>
+                            </div>
+                            <div class="hud-slot reports" id="my-reports-btn">
+                                <div class="hud-icon-box">
+                                    <i class="fa-solid fa-folder-open"></i>
+                                </div>
+                                <div class="hud-label-box">
+                                    <span>MY REPORTS</span>
+                                </div>
+                            </div>
+                            <div class="hud-slot logout" id="signout-btn">
+                                <div class="hud-icon-box">
+                                    <i class="fa-solid fa-power-off"></i>
+                                </div>
+                                <div class="hud-label-box">
+                                    <span>LOGOUT</span>
+                                </div>
+                            </div>
                         </div>
                     `;
 
@@ -928,21 +956,27 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 if (authCorner) {
                     authCorner.innerHTML = `
-                        <div class="dock-bracket top-left"></div>
-                        <div class="dock-bracket bottom-right"></div>
-                        <div class="dock-content">
-                            <button id="nav-subscription-btn" class="auth-btn sub-nav-btn"><i class="fa-solid fa-gem"></i> <span>SUBSCRIPTIONS</span></button>
-                            <div class="dock-divider"></div>
-                            <button class="auth-btn sign-in"><i class="fa-solid fa-user"></i> <span>SIGN IN</span></button>
-                            <button class="auth-btn sign-up cta-btn"><i class="fa-solid fa-user-plus"></i> <span>SIGN UP</span></button>
+                        <div class="hud-bar">
+                            <div class="hud-slot subs" id="nav-subscription-btn">
+                                <div class="hud-icon-box"><i class="fa-solid fa-gem"></i></div>
+                                <div class="hud-label-box"><span>SUBSCRIPTIONS</span></div>
+                            </div>
+                            <div class="hud-slot agent sign-in">
+                                <div class="hud-icon-box"><i class="fa-solid fa-user"></i></div>
+                                <div class="hud-label-box"><span>SIGN IN</span></div>
+                            </div>
+                            <div class="hud-slot credits sign-up">
+                                <div class="hud-icon-box"><i class="fa-solid fa-user-plus"></i></div>
+                                <div class="hud-label-box"><span>SIGN UP</span></div>
+                            </div>
                         </div>
                     `;
                     document.getElementById('nav-subscription-btn')?.addEventListener('click', openSubscriptionModal);
-                    document.querySelector('.auth-btn.sign-in')?.addEventListener('click', () => {
+                    document.querySelector('.sign-in')?.addEventListener('click', () => {
                         setAuthMode('signin');
                         if (authModal) authModal.classList.add('active');
                     });
-                    document.querySelector('.auth-btn.sign-up')?.addEventListener('click', () => {
+                    document.querySelector('.sign-up')?.addEventListener('click', () => {
                         setAuthMode('signup');
                         if (authModal) authModal.classList.add('active');
                     });
