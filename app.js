@@ -96,14 +96,13 @@ function renderEngine(time) {
     cam.y += (targetCam.y - cam.y) * lerpSpeed;
     cam.scale += (targetCam.scale - cam.scale) * lerpSpeed;
 
-    if (viewport) viewport.style.transform = `scale(${cam.scale}) translate(${cam.x}px,${cam.y}px)`;
-    if (spaceMatrix) spaceMatrix.style.transform = `translate(${cam.x * 0.15}px,${cam.y * 0.15}px)`;
+    if (viewport) viewport.style.transform = `scale(${cam.scale}) translate(${cam.x}px, ${cam.y}px)`;
+    if (spaceMatrix) spaceMatrix.style.transform = `translate(${cam.x * 0.15}px, ${cam.y * 0.15}px)`;
 
     requestAnimationFrame(renderEngine);
 }
 requestAnimationFrame(renderEngine);
 
-// PLANET CLICK & CAMERA ZOOM LOGIC
 orbits.forEach(o => {
     if (!o.planetEl) return;
     o.planetEl.addEventListener('click', () => {
@@ -123,11 +122,9 @@ orbits.forEach(o => {
         document.getElementById('module-title').style.color = data.color;
         document.getElementById('module-desc').innerHTML = data.desc; 
         
-        if (moduleDetails) moduleDetails.style.borderLeftColor = data.color;
-        if (actionBtn) {
-            actionBtn.style.borderColor = data.color;
-            actionBtn.style.color = data.color;
-        }
+        moduleDetails.style.borderLeftColor = data.color;
+        actionBtn.style.borderColor = data.color;
+        actionBtn.style.color = data.color;
 
         document.getElementById('stats-grid').innerHTML = data.stats.map(s => `
             <div class="stat-card">
@@ -136,53 +133,47 @@ orbits.forEach(o => {
             </div>
         `).join('');
 
-        if (actionBtn) {
-            if (o.id === 'contact' || o.id === 'about') {
-                actionBtn.style.display = 'none';
-            } else {
-                actionBtn.style.display = 'flex';
-            }
+        if (o.id === 'contact' || o.id === 'about') {
+            actionBtn.style.display = 'none';
+        } else {
+            actionBtn.style.display = 'flex';
         }
 
         setTimeout(() => document.body.classList.add('landed'), 500);
     });
 });
 
-if (returnBtn) {
-    returnBtn.addEventListener('click', () => {
+returnBtn.addEventListener('click', () => {
+    document.body.classList.remove('landed');
+    if (activePlanetData && activePlanetData.planetEl) activePlanetData.planetEl.classList.remove('active');
+    activePlanetData = null; 
+    setTimeout(() => { document.body.classList.remove('warping'); }, 800);
+});
+
+// INITIALIZE MODULE BUTTON LOGIC (THE ZOOM & ACTIONS)
+actionBtn.addEventListener('click', () => {
+    if (!activePlanetData) return;
+
+    if (activePlanetData.id === 'backtest') {
+        isHyperZoomed = true;
         document.body.classList.remove('landed');
-        if (activePlanetData && activePlanetData.planetEl) activePlanetData.planetEl.classList.remove('active');
-        activePlanetData = null; 
-        setTimeout(() => { document.body.classList.remove('warping'); }, 800);
-    });
-}
+        const titleContainer = document.getElementById('spaceship-title-container');
+        const authCorner = document.getElementById('auth-corner');
+        if (titleContainer) titleContainer.style.opacity = '0';
+        if (authCorner) authCorner.style.opacity = '0';
+        
+        setTimeout(() => {
+            const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
+            if (gasAtmosphere) gasAtmosphere.classList.add('active');
+        }, 800);
+    } else if (activePlanetData.id === 'databank') {
+        showTacticalModal('SYSTEM DATABANK', 'The System Databank is currently under active development. High-edge quantitative strategy models will be released soon.', true);
+    } else if (activePlanetData.id === 'campus') {
+        showTacticalModal('BACKTESTING CAMPUS', 'Enrolling now for the upcoming Quantitative Engineering cohort. Contact our engineering desk via SEC-04 to apply.', true);
+    }
+});
 
-// MODULE ACTION LOGIC (FORM/MODAL TRIGGERS)
-if (actionBtn) {
-    actionBtn.addEventListener('click', () => {
-        if (!activePlanetData) return;
-
-        if (activePlanetData.id === 'backtest') {
-            isHyperZoomed = true;
-            document.body.classList.remove('landed');
-            const titleContainer = document.getElementById('spaceship-title-container');
-            const authCorner = document.getElementById('auth-corner');
-            if (titleContainer) titleContainer.style.opacity = '0';
-            if (authCorner) authCorner.style.opacity = '0';
-            
-            setTimeout(() => {
-                const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
-                if (gasAtmosphere) gasAtmosphere.classList.add('active');
-            }, 800);
-        } else if (activePlanetData.id === 'databank') {
-            showTacticalModal('SYSTEM DATABANK', 'The System Databank is currently under active development. High-edge quantitative strategy models will be released soon.', true);
-        } else if (activePlanetData.id === 'campus') {
-            showTacticalModal('BACKTESTING CAMPUS', 'Enrolling now for the upcoming Quantitative Engineering cohort. Contact our engineering desk via SEC-04 to apply.', true);
-        }
-    });
-}
-
-// ABORT BACKTEST CONSOLE (ZOOM OUT)
+// ABORT CONSOLE BUTTON (ZOOM OUT)
 const abortConsoleBtn = document.getElementById('abort-console-btn');
 if (abortConsoleBtn) {
     abortConsoleBtn.addEventListener('click', () => {
@@ -323,88 +314,21 @@ function showTacticalModal(title, message, isSuccess = true) {
     if (modalOverlay) modalOverlay.classList.add('active');
 }
 
-const closeModalBtn = document.getElementById('close-modal-btn');
-if (closeModalBtn) {
-    closeModalBtn.addEventListener('click', () => {
-        document.getElementById('tactical-modal-overlay').classList.remove('active');
-    });
-}
-
 // ==========================================
 // SUBSCRIPTION MODAL TRIGGER
 // ==========================================
-const subBtn = document.getElementById('nav-subscription-btn');
-const closeSubBtn = document.getElementById('close-sub-btn');
-const subModal = document.getElementById('subscription-modal-overlay');
-
-if (subBtn) subBtn.addEventListener('click', () => subModal.classList.add('active'));
-if (closeSubBtn) closeSubBtn.addEventListener('click', () => subModal.classList.remove('active'));
-
-// ==========================================
-// AUTHENTICATION MODAL LOGIC
-// ==========================================
-const signInBtn = document.querySelector('.auth-btn.sign-in');
-const signUpBtn = document.querySelector('.auth-btn.sign-up');
-const authModal = document.getElementById('auth-modal-overlay');
-const closeAuthBtn = document.getElementById('close-auth-btn');
-
-const tabSignIn = document.getElementById('tab-signin');
-const tabSignUp = document.getElementById('tab-signup');
-const usernameGroup = document.getElementById('username-group');
-
-function toggleAuth(isSignUp) {
-    if (isSignUp) {
-        tabSignUp.classList.add('active');
-        tabSignIn.classList.remove('active');
-        usernameGroup.style.display = 'block';
-    } else {
-        tabSignIn.classList.add('active');
-        tabSignUp.classList.remove('active');
-        usernameGroup.style.display = 'none';
-    }
+function openSubscriptionModal() {
+    const subModal = document.getElementById('subscription-modal-overlay');
+    if (subModal) subModal.classList.add('active');
 }
 
-if (signInBtn) signInBtn.addEventListener('click', () => { authModal.classList.add('active'); toggleAuth(false); });
-if (signUpBtn) signUpBtn.addEventListener('click', () => { authModal.classList.add('active'); toggleAuth(true); });
-if (closeAuthBtn) closeAuthBtn.addEventListener('click', () => authModal.classList.remove('active'));
-
-if (tabSignIn) tabSignIn.addEventListener('click', () => toggleAuth(false));
-if (tabSignUp) tabSignUp.addEventListener('click', () => toggleAuth(true));
-
-// ==========================================
-// FORM SUBMISSIONS OVERRIDE (PREVENT RELOADS)
-// ==========================================
-const authForm = document.getElementById('auth-form');
-if (authForm) {
-    authForm.addEventListener('submit', (e) => {
-        e.preventDefault(); 
-        authModal.classList.remove('active');
-        showTacticalModal('AUTHENTICATION SECURED', 'Welcome to the core network, Agent.', true);
-    });
-}
-
-const systemSubmitForm = document.getElementById('system-submit-form');
-if (systemSubmitForm) {
-    systemSubmitForm.addEventListener('submit', (e) => {
-        e.preventDefault(); 
-        
-        const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
-        if (gasAtmosphere) gasAtmosphere.classList.remove('active');
-        isHyperZoomed = false;
-        
-        setTimeout(() => {
-            document.body.classList.add('landed');
-            document.getElementById('spaceship-title-container').style.opacity = '1';
-            document.getElementById('auth-corner').style.opacity = '1';
-            
-            showTacticalModal('UPLINK SUCCESSFUL', 'System architecture dispatched into the quantitative core. Engineering task group assigned.', true);
-            systemSubmitForm.reset(); 
-        }, 600);
-    });
+function closeSubscriptionModal() {
+    const subModal = document.getElementById('subscription-modal-overlay');
+    if (subModal) subModal.classList.remove('active');
 }
 
 // ==========================================
-// SUPABASE CLIENT & PROFILES
+// SUPABASE CLIENT INITIALIZATION
 // ==========================================
 const SUPABASE_URL = 'https://woxswhiayrkecspebuwb.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndveHN3aGlheXJrZWNzcGVidXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTc5ODYsImV4cCI6MjEwMDk5Mzk4Nn0.faEmt5_tw6dN9Cs-pKJHa9D0yyEBbAl4oT0Y9QWYuFg';
@@ -414,15 +338,616 @@ if (window.supabase) {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
+// ==========================================
+// USER PROFILE & FREE CREDIT ENGINE
+// ==========================================
 async function fetchOrCreateUserProfile(user) {
     if (!supabaseClient || !user) return null;
+
     try {
-        let { data: profile, error } = await supabaseClient.from('user_profiles').select('*').eq('id', user.id).maybeSingle();
+        let { data: profile, error } = await supabaseClient
+            .from('user_profiles')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle();
+
         if (!profile) {
-            const { data: newProfile, error: createError } = await supabaseClient.from('user_profiles').insert([{ id: user.id, email: user.email, credits: 1 }]).select().single();
-            if (createError) return null;
+            console.log("Creating new user profile with 1 Free Credit for User:", user.id);
+            const { data: newProfile, error: createError } = await supabaseClient
+                .from('user_profiles')
+                .insert([{ 
+                    id: user.id, 
+                    email: user.email, 
+                    credits: 1 
+                }])
+                .select()
+                .single();
+
+            if (createError) {
+                console.error("Error creating user profile:", createError);
+                return null;
+            }
             return newProfile;
         }
+
         return profile;
-    } catch (err) { return null; }
+    } catch (err) {
+        console.error("User Profile Error:", err);
+        return null;
+    }
 }
+
+// ==========================================
+// AGENT PROFILE & PERMANENT HISTORY ENGINE
+// ==========================================
+async function openUserReportsModal() {
+    if (!supabaseClient) {
+        showTacticalModal('SYSTEM ERROR', 'Supabase client is not initialized.', false);
+        return;
+    }
+
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session || !session.user) {
+        showTacticalModal('ACCESS DENIED', 'Please authenticate to view your transmission log.', false);
+        return;
+    }
+
+    const activeUserId = session.user.id;
+    const userEmail = session.user.email;
+    const callsign = (session.user.user_metadata?.display_name || userEmail.split('@')[0]).toUpperCase();
+
+    try {
+        const userProfile = await fetchOrCreateUserProfile(session.user);
+        const availableCredits = userProfile ? userProfile.credits : 0;
+
+        const { data: submissions, error } = await supabaseClient
+            .from('submissions')
+            .select('*')
+            .eq('user_id', activeUserId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("[DEBUG] Database Error:", error);
+            throw error;
+        }
+
+        const historyList = submissions || [];
+        
+        const totalSubmissions = historyList.length;
+        const completedCount = historyList.filter(s => {
+            const hasUrl = (s.report_url || s.pdf_url || s.report_link || s.file_url || s.url || '').trim();
+            const rawStatus = String(s.status || '').toLowerCase().trim();
+            return hasUrl || ['completed', 'complete', 'done', 'success'].includes(rawStatus);
+        }).length;
+        const pendingCount = totalSubmissions - completedCount;
+
+        const profileHeaderHtml = `
+            <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 10px; margin-bottom: 12px;">
+                    <div>
+                        <div style="font-size: 0.75em; color: #888; letter-spacing: 1px;">// CLEARANCE LEVEL: AGENT</div>
+                        <div style="font-size: 1.3em; font-weight: bold; color: #00ffff; letter-spacing: 1px;">
+                            <i class="fa-solid fa-id-badge"></i> ${callsign}
+                        </div>
+                    </div>
+                    <div style="text-align: right; font-size: 0.85em; color: #aaa;">
+                        <div><i class="fa-solid fa-envelope"></i> ${userEmail}</div>
+                        <div style="color: #00ff66; margin-top: 2px;">● COMM-LINK ACTIVE</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center;">
+                    <div style="background: rgba(255, 215, 0, 0.1); padding: 8px; border-radius: 4px; border: 1px solid rgba(255, 215, 0, 0.3);">
+                        <div style="font-size: 0.7em; color: #ffd700;">CREDITS</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #ffd700;">${availableCredits}</div>
+                    </div>
+                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
+                        <div style="font-size: 0.7em; color: #888;">TOTAL RUNS</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #ffffff;">${totalSubmissions}</div>
+                    </div>
+                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(0, 255, 102, 0.15);">
+                        <div style="font-size: 0.7em; color: #888;">COMPLETED</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #00ff66;">${completedCount}</div>
+                    </div>
+                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(0, 240, 255, 0.15);">
+                        <div style="font-size: 0.7em; color: #888;">IN QUEUE</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #00f0ff;">${pendingCount}</div>
+                    </div>
+                </div>
+            </div>
+            <div style="font-size: 0.8em; color: #888; text-align: left; margin-bottom: 10px; letter-spacing: 1px;">
+                // TRANSMISSION HISTORY LOG (${totalSubmissions} ARCHIVED)
+            </div>
+        `;
+
+        if (totalSubmissions === 0) {
+            const emptyContent = profileHeaderHtml + `
+                <div style="padding: 20px; text-align: center; color: #aaa; border: 1px dashed rgba(255,255,255,0.15); border-radius: 6px;">
+                    No backtest transmissions recorded for this account.<br>
+                    Initialize a backtest in <b>SEC-01: Backtest Machine</b> to generate your first intelligence report.
+                </div>
+            `;
+            showTacticalModal('AGENT PROFILE // COMMAND CENTER', emptyContent, true);
+            return;
+        }
+
+        const reportRowsHtml = historyList.map(sub => {
+            const dateStr = sub.created_at ? new Date(sub.created_at).toLocaleDateString() : 'RECENT';
+            const reportUrl = (sub.report_url || sub.pdf_url || sub.report_link || sub.file_url || sub.url || '').trim();
+            const rawStatus = String(sub.status || '').toLowerCase().trim();
+
+            let statusBadge;
+            let downloadBtn;
+
+            if (reportUrl) {
+                statusBadge = `<span style="color:#00ff66; font-weight:bold;">[ COMPLETED ]</span>`;
+                downloadBtn = `<a href="${reportUrl}" target="_blank" download style="color:#00f0ff; text-decoration:underline; font-weight:bold;"><i class="fa-solid fa-file-pdf"></i> DOWNLOAD PDF REPORT</a>`;
+            } else if (['completed', 'complete', 'done', 'success'].includes(rawStatus)) {
+                statusBadge = `<span style="color:#00ff66; font-weight:bold;">[ COMPLETED ]</span>`;
+                downloadBtn = `<span style="color:#ffd700;"><i class="fa-solid fa-triangle-exclamation"></i> Link pending in database</span>`;
+            } else if (['failed', 'error', 'rejected'].includes(rawStatus)) {
+                statusBadge = `<span style="color:#ff0055; font-weight:bold;">[ FAILED ]</span>`;
+                downloadBtn = `<span style="color:#ff0055;"><i class="fa-solid fa-circle-xmark"></i> Execution Error</span>`;
+            } else {
+                statusBadge = `<span style="color:#ffd700; font-weight:bold;">[ PROCESSING ]</span>`;
+                downloadBtn = `<span style="color:#888;"><i class="fa-solid fa-spinner fa-spin"></i> Analyzing Tick Data...</span>`;
+            }
+
+            return `
+                <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(0,255,255,0.2); margin-bottom: 10px; padding: 12px 14px; border-radius: 6px; text-align: left;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong style="color: #00ffff; font-size: 1.05em; letter-spacing: 0.5px;">${sub.system_name || 'UNTITLED SYSTEM'}</strong>
+                        ${statusBadge}
+                    </div>
+                    <div style="font-size: 0.8em; color: #aaa; margin: 4px 0;">SUBMITTED: ${dateStr}</div>
+                    <div style="margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; font-size: 0.9em;">${downloadBtn}</div>
+                </div>
+            `;
+        }).join('');
+
+        const finalModalHtml = `
+            ${profileHeaderHtml}
+            <div style="max-height: 320px; overflow-y: auto; padding-right: 4px;">
+                ${reportRowsHtml}
+            </div>
+        `;
+
+        showTacticalModal('AGENT PROFILE // COMMAND CENTER', finalModalHtml, true);
+    } catch (err) {
+        showTacticalModal('FETCH ERROR', err.message, false);
+    }
+}
+
+// ==========================================
+// APPLICATION INITIALIZATION & AUTHENTICATION ENGINE
+// ==========================================
+let authMode = 'signin';
+
+document.addEventListener('DOMContentLoaded', () => {
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const closeSubBtn = document.getElementById('close-sub-btn');
+    const navSubBtn = document.getElementById('nav-subscription-btn');
+    const systemSubmitForm = document.getElementById('system-submit-form');
+    const systemNameInput = document.getElementById('system-name');
+    const emailInput = document.getElementById('contact-email');
+    const rulesInput = document.getElementById('system-rules');
+    const submitBtn = document.getElementById('submit-btn');
+
+    const authModal = document.getElementById('auth-modal-overlay');
+    const closeAuthBtn = document.getElementById('close-auth-btn');
+    const tabSignIn = document.getElementById('tab-signin');
+    const tabSignUp = document.getElementById('tab-signup');
+    const authForm = document.getElementById('auth-form');
+    const authSubmitBtn = document.getElementById('auth-submit-btn');
+    const usernameGroup = document.getElementById('username-group');
+    const authCorner = document.getElementById('auth-corner');
+    const googleBtn = document.getElementById('google-auth-btn');
+
+    // SUBSCRIPTION NAV BINDINGS
+    if (navSubBtn) navSubBtn.addEventListener('click', openSubscriptionModal);
+    if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
+
+    // ==========================================
+    // STRIPE CHECKOUT INTEGRATION LOGIC
+    // ==========================================
+    document.querySelectorAll('.select-tier-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const button = e.currentTarget;
+            const priceId = button.getAttribute('data-price-id');
+            const creditsToAdd = button.getAttribute('data-credits') || '0';
+            const mode = button.getAttribute('data-mode') || 'subscription';
+            const planName = button.getAttribute('data-plan') || 'Plan';
+
+            if (!priceId || priceId.includes('ID_HERE')) {
+                showTacticalModal('CONFIGURATION NOTICE', `Stripe Price ID for ${planName} is missing. Update the <code>data-price-id</code> attribute in index.html.`, false);
+                return;
+            }
+
+            if (!supabaseClient) {
+                showTacticalModal('SYSTEM ERROR', 'Supabase authentication client is unavailable.', false);
+                return;
+            }
+
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session || !session.user) {
+                closeSubscriptionModal();
+                showTacticalModal('AUTHENTICATION REQUIRED', 'Please sign in or register an account before proceeding to Stripe Checkout.', false);
+                setAuthMode('signin');
+                if (authModal) authModal.classList.add('active');
+                return;
+            }
+
+            const originalBtnHtml = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> UPLINKING TO STRIPE...';
+
+            try {
+                const backendServerUrl = 'https://backtest-worker-fs1a.onrender.com';
+                const response = await fetch(`${backendServerUrl}/create-checkout-session`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        priceId: priceId,
+                        userId: session.user.id,
+                        creditsToAdd: parseInt(creditsToAdd, 10),
+                        mode: mode
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || 'Failed to initialize Stripe Checkout session.');
+                }
+
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    throw new Error('No checkout URL returned from server gateway.');
+                }
+            } catch (err) {
+                console.error('Stripe Uplink Error:', err);
+                showTacticalModal('GATEWAY ERROR', err.message, false);
+                button.disabled = false;
+                button.innerHTML = originalBtnHtml;
+            }
+        });
+    });
+
+    // CLOSE MODAL LOGIC
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', () => {
+            const modalOverlay = document.getElementById('tactical-modal-overlay');
+            if (modalOverlay) modalOverlay.classList.remove('active');
+            
+            const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
+            if (gasAtmosphere) gasAtmosphere.classList.remove('active');
+            
+            isHyperZoomed = false;
+
+            setTimeout(() => {
+                if (activePlanetData) {
+                    document.body.classList.add('landed');
+                }
+                const titleContainer = document.getElementById('spaceship-title-container');
+                if (authCorner) authCorner.style.opacity = '1';
+                if (titleContainer) titleContainer.style.opacity = '1';
+            }, 400);
+        });
+    }
+
+    // BACKTEST SUBMISSION WITH CREDIT VERIFICATION & DEDUCTION
+    if (systemSubmitForm) {
+        systemSubmitForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!supabaseClient) {
+                showTacticalModal('SYSTEM ERROR', 'Supabase client failed to load.', false);
+                return;
+            }
+
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            
+            // 1. REQUIRE AUTHENTICATION
+            if (!session || !session.user) {
+                showTacticalModal('AUTHENTICATION REQUIRED', 'Please sign in or create an account to run backtests with your free credit.', false);
+                setAuthMode('signin');
+                if (authModal) authModal.classList.add('active');
+                return;
+            }
+
+            const userId = session.user.id;
+            const systemName = systemNameInput.value.trim();
+            const email = emailInput.value.trim();
+            const rules = rulesInput.value.trim();
+
+            if (!systemName || !email || !rules) {
+                showTacticalModal('MISSING PARAMETERS', 'Please fill out all transmission parameters.', false);
+                return;
+            }
+
+            // 2. CHECK USER CREDIT BALANCE
+            const profile = await fetchOrCreateUserProfile(session.user);
+            const currentCredits = profile ? profile.credits : 0;
+
+            if (currentCredits < 1) {
+                showTacticalModal(
+                    'INSUFFICIENT CREDITS', 
+                    'You have 0 Backtest Credits remaining. Please upgrade your operational tier to unlock additional backtests.', 
+                    false
+                );
+                openSubscriptionModal();
+                return;
+            }
+
+            const originalBtnText = submitBtn.innerHTML;
+            submitBtn.innerText = 'UPLINKING TO CORE...';
+            submitBtn.disabled = true;
+
+            // Wake up Render Worker
+            fetch("https://backtest-worker-fs1a.onrender.com", { mode: "no-cors" }).catch(() => {});
+
+            try {
+                // 3. INSERT BACKTEST SUBMISSION
+                const { error: subError } = await supabaseClient
+                    .from('submissions')
+                    .insert([{ 
+                        system_name: systemName, 
+                        email: email, 
+                        rules: rules, 
+                        status: 'pending',
+                        user_id: userId
+                    }]);
+
+                if (subError) throw subError;
+
+                // 4. DEDUCT 1 CREDIT FROM USER PROFILE
+                const newCredits = currentCredits - 1;
+                const { error: profileUpdateError } = await supabaseClient
+                    .from('user_profiles')
+                    .update({ credits: newCredits })
+                    .eq('id', userId);
+
+                if (profileUpdateError) {
+                    console.error("Credit deduction error:", profileUpdateError);
+                }
+
+                // 5. UPDATE HUD BADGES
+                updateCreditBadgeUI(newCredits);
+
+                showTacticalModal(
+                    'UPLINK SECURED', 
+                    `System parameters received! 1 Backtest Credit used. <b>${newCredits} credit(s) remaining</b>.<br><br>Our engineering team will conduct a multi-threaded data analysis and compile your report shortly.`, 
+                    true
+                );
+
+                systemNameInput.value = '';
+                rulesInput.value = '';
+            } catch (err) {
+                console.error('Submission Error:', err.message);
+                showTacticalModal('UPLINK FAILED', err.message, false);
+            } finally {
+                submitBtn.innerHTML = originalBtnText;
+                submitBtn.disabled = false;
+            }
+        });
+    }
+
+    // UPDATE UI CREDIT BADGE
+    function updateCreditBadgeUI(credits) {
+        const badgeEl = document.getElementById('user-credits-badge');
+        if (badgeEl) {
+            badgeEl.innerHTML = `<i class="fa-solid fa-coins"></i> CREDITS: ${credits}`;
+        }
+    }
+
+    // AUTH MODE SWITCHING
+    function setAuthMode(mode) {
+        authMode = mode;
+        if (mode === 'signin') {
+            if (tabSignIn) tabSignIn.classList.add('active');
+            if (tabSignUp) tabSignUp.classList.remove('active');
+            if (usernameGroup) usernameGroup.style.display = 'none';
+            if (authSubmitBtn) authSubmitBtn.innerHTML = 'AUTHENTICATE <i class="fa-solid fa-key"></i>';
+        } else {
+            if (tabSignUp) tabSignUp.classList.add('active');
+            if (tabSignIn) tabSignIn.classList.remove('active');
+            if (usernameGroup) usernameGroup.style.display = 'block';
+            if (authSubmitBtn) authSubmitBtn.innerHTML = 'CREATE CLEARANCE (1 FREE CREDIT) <i class="fa-solid fa-user-plus"></i>';
+        }
+    }
+
+    if (tabSignIn && tabSignUp) {
+        tabSignIn.addEventListener('click', () => setAuthMode('signin'));
+        tabSignUp.addEventListener('click', () => setAuthMode('signup'));
+    }
+
+    if (closeAuthBtn && authModal) {
+        closeAuthBtn.addEventListener('click', () => authModal.classList.remove('active'));
+    }
+
+    // AUTH FORM SUBMISSION
+    if (authForm) {
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!supabaseClient) {
+                showTacticalModal('AUTHENTICATION ERROR', 'Supabase client is offline.', false);
+                return;
+            }
+
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+            const usernameInput = document.getElementById('auth-username');
+            const username = usernameInput ? usernameInput.value.trim() : '';
+
+            if (!email || !password) {
+                showTacticalModal('ACCESS DENIED', 'Please input both Access ID and Security Password.', false);
+                return;
+            }
+
+            authSubmitBtn.innerText = 'PROCESSING CLEARANCE...';
+            authSubmitBtn.disabled = true;
+
+            try {
+                if (authMode === 'signup') {
+                    if (!username) {
+                        showTacticalModal('CALLSIGN REQUIRED', 'Please specify a Callsign / Username for sign-up.', false);
+                        authSubmitBtn.disabled = false;
+                        setAuthMode('signup');
+                        return;
+                    }
+
+                    const { data, error } = await supabaseClient.auth.signUp({ 
+                        email, 
+                        password,
+                        options: {
+                            data: { display_name: username },
+                            emailRedirectTo: window.location.origin
+                        }
+                    });
+
+                    if (error) throw error;
+
+                    if (data?.user) {
+                        await fetchOrCreateUserProfile(data.user);
+                    }
+
+                    authModal.classList.remove('active');
+                    showTacticalModal(
+                        'CLEARANCE CREATED', 
+                        'Check your email comm-link to verify your account. Your <b>1 Free Credit</b> has been assigned!', 
+                        true
+                    );
+                } else {
+                    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                    if (error) throw error;
+
+                    if (data?.user) {
+                        await fetchOrCreateUserProfile(data.user);
+                    }
+
+                    authModal.classList.remove('active');
+                    const displayName = data.user.user_metadata?.display_name || data.user.email.split('@')[0];
+                    showTacticalModal('ACCESS GRANTED', `Authenticated as AGENT: ${displayName}`, true);
+                }
+            } catch (err) {
+                showTacticalModal('AUTHENTICATION FAILED', err.message, false);
+            } finally {
+                setAuthMode(authMode);
+                authSubmitBtn.disabled = false;
+            }
+        });
+    }
+
+    // OAUTH AUTHENTICATION
+    async function handleOAuth(provider) {
+        if (!supabaseClient) return;
+        try {
+            const { error } = await supabaseClient.auth.signInWithOAuth({
+                provider: provider,
+                options: { redirectTo: window.location.origin }
+            });
+            if (error) throw error;
+        } catch (err) {
+            showTacticalModal('OAUTH FAILED', err.message, false);
+        }
+    }
+
+    if (googleBtn) googleBtn.addEventListener('click', () => handleOAuth('google'));
+
+    // AUTH STATE LISTENER & SESSION BINDING
+    if (supabaseClient) {
+        const hashStr = window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash;
+        const hashParams = new URLSearchParams(hashStr);
+        const queryParams = new URLSearchParams(window.location.search);
+
+        const urlError = hashParams.get('error') || queryParams.get('error');
+        const urlErrorDesc = hashParams.get('error_description') || queryParams.get('error_description');
+        const authType = hashParams.get('type') || queryParams.get('type');
+        const paymentStatus = queryParams.get('payment');
+
+        if (paymentStatus === 'success') {
+            showTacticalModal('PAYMENT SUCCESSFUL', 'Transaction complete! Your subscription credits have been assigned to your profile.', true);
+            window.history.replaceState(null, null, window.location.pathname);
+        } else if (paymentStatus === 'cancelled') {
+            showTacticalModal('PAYMENT CANCELLED', 'Stripe checkout session was cancelled. No charges were made.', false);
+            window.history.replaceState(null, null, window.location.pathname);
+        } else if (urlError || urlErrorDesc) {
+            const formattedMsg = urlErrorDesc 
+                ? decodeURIComponent(urlErrorDesc).replace(/\+/g, ' ') 
+                : 'Verification link is invalid or has expired.';
+            showTacticalModal('LINK EXPIRED', formattedMsg, false);
+            window.history.replaceState(null, null, window.location.pathname);
+        } else if (authType === 'signup' || authType === 'email_confirmation') {
+            showTacticalModal('EMAIL VERIFIED', 'Access Clearance Confirmed. 1 Free Credit Provisioned.', true);
+            window.history.replaceState(null, null, window.location.pathname);
+        } else if (window.location.hash.includes('access_token') || window.location.search.includes('code')) {
+            window.history.replaceState(null, null, window.location.pathname);
+        }
+
+        supabaseClient.auth.onAuthStateChange(async (event, session) => {
+            if (session && session.user) {
+                const displayName = session.user.user_metadata?.display_name || session.user.email.split('@')[0];
+                
+                const profile = await fetchOrCreateUserProfile(session.user);
+                const userCredits = profile ? profile.credits : 0;
+
+                const contactEmailInput = document.getElementById('contact-email');
+                if (contactEmailInput) {
+                    contactEmailInput.value = session.user.email;
+                }
+
+                if (authCorner) {
+                    authCorner.innerHTML = `
+                        <div class="dock-bracket top-left"></div>
+                        <div class="dock-bracket bottom-right"></div>
+                        <div class="dock-content">
+                            <div class="user-badge">
+                                <span class="user-status-dot"></span>
+                                <i class="fa-solid fa-shield-halved"></i> AGENT: ${displayName.toUpperCase()}
+                            </div>
+                            <div class="credit-badge" id="user-credits-badge">
+                                <i class="fa-solid fa-coins"></i> CREDITS: ${userCredits}
+                            </div>
+                            <div class="dock-divider"></div>
+                            <button id="my-sub-btn" class="auth-btn sub-nav-btn"><i class="fa-solid fa-gem"></i> SUBSCRIPTIONS</button>
+                            <button id="my-reports-btn" class="auth-btn"><i class="fa-solid fa-folder-open"></i> MY REPORTS</button>
+                            <button id="signout-btn" class="auth-btn logout-btn"><i class="fa-solid fa-power-off"></i> LOGOUT</button>
+                        </div>
+                    `;
+
+                    document.getElementById('my-sub-btn')?.addEventListener('click', openSubscriptionModal);
+                    document.getElementById('my-reports-btn')?.addEventListener('click', openUserReportsModal);
+
+                    document.getElementById('signout-btn')?.addEventListener('click', async () => {
+                        await supabaseClient.auth.signOut();
+                        window.location.reload();
+                    });
+                }
+            } else {
+                if (authCorner) {
+                    authCorner.innerHTML = `
+                        <div class="dock-bracket top-left"></div>
+                        <div class="dock-bracket bottom-right"></div>
+                        <div class="dock-content">
+                            <button id="nav-subscription-btn" class="auth-btn sub-nav-btn"><i class="fa-solid fa-gem"></i> <span>SUBSCRIPTIONS</span></button>
+                            <div class="dock-divider"></div>
+                            <button class="auth-btn sign-in"><i class="fa-solid fa-user"></i> <span>SIGN IN</span></button>
+                            <button class="auth-btn sign-up cta-btn"><i class="fa-solid fa-user-plus"></i> <span>SIGN UP</span></button>
+                        </div>
+                    `;
+                    document.getElementById('nav-subscription-btn')?.addEventListener('click', openSubscriptionModal);
+                    document.querySelector('.auth-btn.sign-in')?.addEventListener('click', () => {
+                        setAuthMode('signin');
+                        if (authModal) authModal.classList.add('active');
+                    });
+                    document.querySelector('.auth-btn.sign-up')?.addEventListener('click', () => {
+                        setAuthMode('signup');
+                        if (authModal) authModal.classList.add('active');
+                    });
+                }
+            }
+        });
+    }
+});

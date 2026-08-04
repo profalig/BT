@@ -13,11 +13,16 @@
 </head>
 <body>
 
-    <!-- AUTHENTICATION & SUBSCRIPTION CORNER -->
+    <!-- AUTHENTICATION & SUBSCRIPTION CORNER (HUD DOCK) -->
     <div id="auth-corner">
-        <button id="nav-subscription-btn" class="auth-btn sub-nav-btn"><i class="fa-solid fa-gem"></i> SUBSCRIPTIONS</button>
-        <button class="auth-btn sign-in"><i class="fa-solid fa-user"></i> SIGN IN</button>
-        <button class="auth-btn sign-up"><i class="fa-solid fa-user-plus"></i> SIGN UP</button>
+        <div class="dock-bracket top-left"></div>
+        <div class="dock-bracket bottom-right"></div>
+        <div class="dock-content">
+            <button id="nav-subscription-btn" class="auth-btn sub-nav-btn"><i class="fa-solid fa-gem"></i> <span>SUBSCRIPTIONS</span></button>
+            <div class="dock-divider"></div>
+            <button class="auth-btn sign-in"><i class="fa-solid fa-user"></i> <span>SIGN IN</span></button>
+            <button class="auth-btn sign-up cta-btn"><i class="fa-solid fa-user-plus"></i> <span>SIGN UP</span></button>
+        </div>
     </div>
 
     <!-- SPACE BACKGROUND MATRIX -->
