@@ -5,7 +5,12 @@ const planetData = {
     backtest: {
         tag: "ENGINE // SEC-01", title: "Backtest Machine", color: "#00ff66",
         desc: "Submit your system architecture to our core. We conduct a highly accurate, multi-threaded data analysis and return a comprehensive intelligence report.<br><br>Understand your system's edge across multiple market regimes with precise metrics: absolute win/loss rates, maximum drawdown stress-tests, full trade logs, and deep statistical reliability checks.",
-        stats: [{ label: "TICK ACCURACY", val: "99.9%" }, { label: "METRICS", val: "30+ Stats" }, { label: "STRESS TEST", val: "Regime Based" }, { label: "REPORTS", val: "Deep Data" }]
+        stats: [
+            { label: "DELIVERABLE 01", val: "Detailed Report" },
+            { label: "DELIVERABLE 02", val: "Trade Log" },
+            { label: "DELIVERABLE 03", val: "Historical Backtest" },
+            { label: "DELIVERABLE 04", val: "Compounding Analysis" }
+        ]
     },
     databank: {
         tag: "VAULT // SEC-02", title: "System Databank", color: "#00ffff",
@@ -524,6 +529,18 @@ async function openUserReportsModal() {
 let authMode = 'signin';
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize Neon Vice Text Overlay (Risk % Preserved, 1000$ & 1800+ Removed)
+    const viceLeft1 = document.getElementById('vice-left-1');
+    const viceLeft2 = document.getElementById('vice-left-2');
+    if (viceLeft1) {
+        viceLeft1.innerText = 'Risk: 1% per trade';
+        viceLeft1.style.opacity = '1';
+        viceLeft1.style.clipPath = 'none';
+    }
+    if (viceLeft2) {
+        viceLeft2.style.display = 'none';
+    }
+
     const closeModalBtn = document.getElementById('close-modal-btn');
     const closeSubBtn = document.getElementById('close-sub-btn');
     const navSubBtn = document.getElementById('nav-subscription-btn');
