@@ -171,13 +171,13 @@
             text-align: right;
         }
 
-        /* Bottom Left Container */
+        /* Bottom Left Container - Expanded for larger text */
         .vice-text-container.vice-left {
             bottom: 40px;
             left: 50px;
             align-items: flex-start;
             text-align: left;
-            max-width: 550px;
+            max-width: 700px;
         }
 
         .vice-line {
@@ -199,8 +199,13 @@
             clip-path: inset(-40px 100% -40px -40px);
         }
 
+        /* Adjusted left text for sharper readability */
         .vice-left .vice-line {
-            font-size: 1.05rem; /* Scaled down exactly in half from 2.1rem */
+            font-size: 1.45rem;
+            letter-spacing: 1.2px;
+            line-height: 1.3;
+            -webkit-text-stroke: 0.3px rgba(255, 255, 255, 0.9);
+            margin-bottom: 2px;
             padding-right: 40px;
         }
 
@@ -599,10 +604,10 @@
                 { id: 'vice-right-3', text: 'Crush it G 🚀', duration: 1000 }
             ], 3500, 1000);
 
-            // Left Side Sequence
+            // Left Side Sequence (UPDATED)
             runBlockWriting([
-                { id: 'vice-left-1', text: 'Test the reliability of your', duration: 1600 },
-                { id: 'vice-left-2', text: 'system with us and become a millionaire', duration: 2400 }
+                { id: 'vice-left-1', text: 'Test The Reliability of Your System', duration: 1600 },
+                { id: 'vice-left-2', text: 'Become a Systematic Millionair Trader', duration: 2200 }
             ], 4500, 1000);
         });
     </script>
