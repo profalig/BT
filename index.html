@@ -44,15 +44,19 @@
             overflow: hidden;
             cursor: pointer;
             color: var(--theme-color);
+            
+            /* INSTANT COLLAPSE ON MOUSE LEAVE */
             transition: all 0.25s ease-out 0s;
         }
 
+        /* Color Themes for Slots */
         .hud-slot.agent    { --theme-color: #00ff88; --glow: rgba(0, 255, 136, 0.4); }
         .hud-slot.credits  { --theme-color: #facc15; --glow: rgba(250, 204, 21, 0.4); }
         .hud-slot.subs     { --theme-color: #eab308; --glow: rgba(234, 179, 8, 0.4); }
         .hud-slot.reports  { --theme-color: #38bdf8; --glow: rgba(56, 189, 248, 0.4); }
         .hud-slot.logout   { --theme-color: #f43f5e; --glow: rgba(244, 63, 94, 0.4); }
 
+        /* Sci-Fi Sweeping Light Flare */
         .hud-slot::after {
             content: '';
             position: absolute;
@@ -66,6 +70,7 @@
             transition: none;
         }
 
+        /* Permanent Visible Icon & Indicator (Compact View) */
         .hud-icon-box {
             display: flex;
             align-items: center;
@@ -77,6 +82,7 @@
         }
 
         .hud-icon-box i {
+            /* Instant reset on mouse leave */
             transition: transform 0.2s ease-out 0s;
         }
 
@@ -89,11 +95,12 @@
             flex-shrink: 0;
         }
 
+        /* Fancy Expandable Text Label */
         .hud-label-box {
             display: block;
             white-space: nowrap;
             opacity: 0;
-            max-width: 0;
+            max-width: 0; /* Fully closed by default */
             overflow: hidden;
             font-size: 13px;
             font-weight: 700;
@@ -101,6 +108,8 @@
             transform: scale(0.9);
             margin-left: 0;
             z-index: 2;
+            
+            /* INSTANT COLLAPSE ON MOUSE LEAVE */
             transition: max-width 0.25s ease-out 0s,
                         opacity 0.2s ease-out 0s,
                         margin-left 0.2s ease-out 0s,
@@ -108,9 +117,11 @@
                         letter-spacing 0.2s ease-out 0s;
         }
 
+        /* HOVER TRIGGER: Delayed Activation & Spring Reveal */
         .hud-slot:hover {
             box-shadow: 0 0 18px var(--glow), inset 0 0 10px var(--glow);
             background: rgba(8, 28, 44, 0.95);
+            /* Wait 0.2s before applying hover background */
             transition: all 0.3s ease 0.2s;
         }
 
@@ -121,6 +132,7 @@
 
         .hud-slot:hover .hud-icon-box i {
             transform: scale(1.15) rotate(-5deg);
+            /* Wait 0.2s before tilting icon */
             transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s;
         }
 
@@ -130,6 +142,8 @@
             margin-left: 8px;
             letter-spacing: 0.8px;
             transform: scale(1);
+            
+            /* Wait 0.2s, then spring open */
             transition: max-width 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s,
                         opacity 0.3s ease 0.2s,
                         margin-left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s,
@@ -137,6 +151,9 @@
                         letter-spacing 0.4s ease 0.2s;
         }
 
+        /* ===================================================
+           ELEGANT NEON HANDWRITING (SMOOTH REVEAL ANIMATION)
+           =================================================== */
         .vice-text-container {
             position: fixed;
             z-index: 999;
@@ -146,6 +163,7 @@
             flex-direction: column;
         }
 
+        /* Bottom Right Container */
         .vice-text-container.vice-right {
             bottom: 40px;
             right: 50px;
@@ -153,6 +171,7 @@
             text-align: right;
         }
 
+        /* Bottom Left Container - Expanded for larger text */
         .vice-text-container.vice-left {
             bottom: 40px;
             left: 50px;
@@ -163,19 +182,24 @@
 
         .vice-line {
             font-family: 'Damion', cursive;
-            font-size: 1.3rem;
+            font-size: 1.3rem; /* Scaled down exactly in half from 2.6rem */
             letter-spacing: 1px;
             line-height: 1.15;
             white-space: nowrap;
+            /* Added a crisp border stroke to make the letters perfectly visible */
             -webkit-text-stroke: 0.8px rgba(255, 255, 255, 0.7);
+            /* Expanded bounding box padding so the neon glow isn't cut off by the clip-path */
             padding-right: 40px;
             padding-bottom: 20px;
             padding-top: 10px;
             margin-bottom: -15px; 
+            
+            /* Default hidden state for the custom JS clip-path reveal */
             opacity: 0;
             clip-path: inset(-40px 100% -40px -40px);
         }
 
+        /* Adjusted left text for sharper readability */
         .vice-left .vice-line {
             font-size: 1.45rem;
             letter-spacing: 1.2px;
@@ -185,19 +209,29 @@
             padding-right: 40px;
         }
 
+        /* Lowered Neon Light Effects for a softer, more refined glow */
         .vice-line.cyan {
             color: #00f0ff;
-            text-shadow: 0 0 2px #fff, 0 0 8px #00f0ff, 0 0 15px #00a8ff;
+            text-shadow: 
+                0 0 2px #fff,
+                0 0 8px #00f0ff,
+                0 0 15px #00a8ff;
         }
 
         .vice-line.pink {
             color: #ff007f;
-            text-shadow: 0 0 2px #fff, 0 0 8px #ff007f, 0 0 15px #ff0055;
+            text-shadow: 
+                0 0 2px #fff,
+                0 0 8px #ff007f,
+                0 0 15px #ff0055;
         }
 
         .vice-line.yellow {
             color: #ffe600;
-            text-shadow: 0 0 2px #fff, 0 0 8px #ffe600, 0 0 15px #ff9900;
+            text-shadow: 
+                0 0 2px #fff,
+                0 0 8px #ffe600,
+                0 0 15px #ff9900;
         }
     </style>
 </head>
@@ -206,25 +240,28 @@
     <!-- AUTHENTICATION & SUBSCRIPTION CORNER (HUD DOCK) -->
     <div id="auth-corner">
         <div class="hud-bar">
+            <!-- 1. AGENT / SIGN IN -->
             <div class="hud-slot agent" id="nav-agent-btn">
                 <div class="hud-icon-box">
                     <span class="status-dot"></span>
                     <i class="fa-solid fa-user-shield"></i>
                 </div>
                 <div class="hud-label-box">
-                    <span id="nav-user-label">AGENT: GUEST</span>
+                    <span id="nav-user-label">AGENT: DR.ALI.G</span>
                 </div>
             </div>
 
+            <!-- 2. CREDITS -->
             <div class="hud-slot credits" id="nav-credits-btn">
                 <div class="hud-icon-box">
                     <i class="fa-solid fa-coins"></i>
                 </div>
                 <div class="hud-label-box">
-                    <span id="nav-credits-label">CREDITS: 0</span>
+                    <span id="nav-credits-label">CREDITS: 83</span>
                 </div>
             </div>
 
+            <!-- 3. SUBSCRIPTIONS -->
             <div class="hud-slot subs" id="nav-subscription-btn">
                 <div class="hud-icon-box">
                     <i class="fa-solid fa-gem"></i>
@@ -234,6 +271,7 @@
                 </div>
             </div>
 
+            <!-- 4. MY REPORTS -->
             <div class="hud-slot reports" id="nav-reports-btn">
                 <div class="hud-icon-box">
                     <i class="fa-solid fa-folder-open"></i>
@@ -243,6 +281,7 @@
                 </div>
             </div>
 
+            <!-- 5. LOGOUT -->
             <div class="hud-slot logout" id="nav-logout-btn">
                 <div class="hud-icon-box">
                     <i class="fa-solid fa-power-off"></i>
@@ -344,107 +383,106 @@
         <div class="module-details">
             <div class="corner-bracket top-left"></div><div class="corner-bracket top-right"></div>
             <div class="corner-bracket bottom-left"></div><div class="corner-bracket bottom-right"></div>
-            <span class="module-tag" id="module-tag">ENGINE // SEC-01</span>
-            <h2 id="module-title">Backtest Machine</h2>
-            <p id="module-desc">Submit your system architecture to our core...</p>
+            <span class="module-tag" id="module-tag"></span>
+            <h2 id="module-title"></h2>
+            <p id="module-desc"></p>
             <div class="stats-grid" id="stats-grid"></div>
-            <button class="action-btn" id="module-action-btn">INITIALIZE CORE UPLINK <i class="fa-solid fa-arrow-right"></i></button>
+            <button class="action-btn" id="module-action-btn">INITIALIZE MODULE <i class="fa-solid fa-chevron-right"></i></button>
         </div>
     </div>
 
-    <!-- GAS GIANT ATMOSPHERE (BACKTEST FORM CONSOLE) -->
+    <!-- GAS GIANT FORM ATMOSPHERE -->
     <div id="gas-giant-atmosphere">
+        <div class="gas-clouds"></div>
+        <div class="lightning-flash"></div>
+        
         <div class="submission-console">
-            <button id="abort-console-btn"><i class="fa-solid fa-xmark"></i> ABORT</button>
+            <button id="abort-console-btn"><i class="fa-solid fa-xmark"></i> ABORT UPLINK</button>
             <div class="console-header">
-                <h2><i class="fa-solid fa-terminal"></i> SEC-01 // BACKTEST ENGINE</h2>
-                <p>Input your trading system parameters, risk rules, and strategy logic. Our core engine will run high-frequency simulations across historic market cycles.</p>
+                <h2>SYSTEM SUBMISSION PROTOCOL</h2>
+                <p>Deploy your system architecture to our core. Submitting consumes <b>1 Backtest Credit</b> from your account.</p>
             </div>
+
             <form id="system-submit-form">
                 <div class="input-group">
-                    <label for="system-name">// SYSTEM NAME / CALLSIGN</label>
-                    <input type="text" id="system-name" placeholder="e.g., Alpha-Grid V2" required>
+                    <label>SYSTEM DESIGNATION</label>
+                    <input type="text" id="system-name" placeholder="e.g., Mean Reversion Alpha v2" required>
                 </div>
                 <div class="input-group">
-                    <label for="contact-email">// COMM-LINK EMAIL</label>
-                    <input type="email" id="contact-email" placeholder="agent@domain.com" required>
+                    <label>CONTACT COMM-LINK (Email)</label>
+                    <input type="email" id="contact-email" placeholder="Where should we send the data analysis?" required>
                 </div>
                 <div class="input-group">
-                    <label for="system-rules">// SYSTEM RULES & SPECIFICATIONS</label>
-                    <textarea id="system-rules" rows="5" placeholder="Define entry/exit rules, timeframe, risk per trade, stop loss, take profit..." required></textarea>
+                    <label>SYSTEM ARCHITECTURE & RULES</label>
+                    <textarea id="system-rules" placeholder="Define your logic. Include entry/exit criteria, timeframes, asset classes, and risk management parameters..." rows="6" required></textarea>
                 </div>
-                <button type="submit" class="submit-system-btn" id="submit-btn">TRANSMIT TO CORE <i class="fa-solid fa-paper-plane"></i></button>
+                <button type="submit" id="submit-btn" class="submit-system-btn">INITIATE DEEP BACKTEST (1 CREDIT) <i class="fa-solid fa-bolt"></i></button>
             </form>
         </div>
     </div>
 
-    <!-- TACTICAL UPLINK MODAL -->
+    <!-- TACTICAL UPLINK SUCCESS / REPORT HUD MODAL -->
     <div id="tactical-modal-overlay">
         <div class="tactical-modal-card">
+            <div class="corner-bracket top-left"></div>
+            <div class="corner-bracket top-right"></div>
+            <div class="corner-bracket bottom-left"></div>
+            <div class="corner-bracket bottom-right"></div>
+            
             <div class="launch-stage">
+                <svg class="rocket-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Fully repaired rocket body and flames -->
+                    <path d="M50,10 C65,30 70,55 75,80 L25,80 C30,55 35,30 50,10 Z" fill="#040912" stroke="#00ff66" stroke-width="2"/>
+                    <polygon class="rocket-flame" points="35,80 65,80 50,100" fill="#00ff66" opacity="0.8"/>
+                </svg>
                 <div class="hyper-rings">
                     <span></span><span></span><span></span>
                 </div>
-                <svg class="rocket-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M50 10 C35 30 35 60 35 80 L65 80 C65 60 65 30 50 10 Z" fill="#040912" stroke="#00ff66" stroke-width="2"/>
-                    <path d="M35 60 L15 85 L35 80 Z" fill="#00ff66"/>
-                    <path d="M65 60 L85 85 L65 80 Z" fill="#00ff66"/>
-                    <circle cx="50" cy="40" r="8" fill="#00f0ff"/>
-                    <polygon class="rocket-flame" points="42,80 50,98 58,80" fill="#ff0055"/>
-                </svg>
             </div>
-            <div class="modal-status-tag">// TRANSMISSION STATUS: SECURED</div>
-            <h2 id="modal-heading">UPLINK SECURED</h2>
-            <div id="modal-message">System parameters received. Our core engine will process your request.</div>
-            <button class="modal-action-btn" id="close-modal-btn">ACKNOWLEDGE & CLOSE</button>
+            
+            <div class="modal-status-tag">// TRANSMISSION STATUS: PENDING</div>
+            <h2 id="modal-heading">STATUS</h2>
+            <p id="modal-message">Message content.</p>
+            <button id="close-modal-btn" class="modal-action-btn">ACKNOWLEDGE <i class="fa-solid fa-check"></i></button>
         </div>
     </div>
 
-    <!-- SUBSCRIPTION MODAL -->
+    <!-- SUBSCRIPTION MODAL & PRICING TIERS -->
     <div id="subscription-modal-overlay">
         <div class="subscription-modal-card">
-            <button class="abort-btn" id="close-sub-btn"><i class="fa-solid fa-xmark"></i></button>
+            <button id="close-sub-btn" class="abort-btn"><i class="fa-solid fa-xmark"></i></button>
             <div class="sub-header">
-                <h2>CLEARANCE & PRICING TIERS</h2>
-                <p>Unlock high-frequency backtesting capabilities and institutional data analytics.</p>
+                <h2>OPERATIONAL TIERS</h2>
+                <p>Upgrade your clearance level to unlock additional backtests and intelligence reports.</p>
             </div>
             <div class="pricing-grid">
                 <div class="tier-card">
-                    <div class="tier-name">SCOUT TIER</div>
-                    <div class="tier-price">$29 <span>/ month</span></div>
-                    <div class="tier-desc">Ideal for individual quantitative traders testing initial strategies.</div>
+                    <div class="tier-name">BASIC ENTRY</div>
+                    <div class="tier-price">$19<span>/mo</span></div>
+                    <div class="tier-desc">Light quantitative analysis.</div>
                     <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> 5 Backtests / month</li>
-                        <li><i class="fa-solid fa-check"></i> Basic Metrics & Win Rate</li>
-                        <li><i class="fa-solid fa-check"></i> PDF Intelligence Summary</li>
-                        <li><i class="fa-solid fa-xmark unavailable"></i> Full Trade Log Export</li>
+                        <li><i class="fa-solid fa-check"></i> 5 Backtest Credits</li>
                     </ul>
-                    <button class="tier-btn select-tier-btn" data-price-id="price_scout_id" data-credits="5" data-plan="Scout Tier" data-mode="subscription">SELECT SCOUT</button>
+                    <button class="tier-btn select-tier-btn" data-price-id="price_1" data-credits="5">SELECT TIER</button>
                 </div>
                 <div class="tier-card featured">
-                    <div class="popular-badge">MOST POPULAR</div>
-                    <div class="tier-name">COMMANDER TIER</div>
-                    <div class="tier-price">$79 <span>/ month</span></div>
-                    <div class="tier-desc">For serious quants requiring deep regime analysis and itemized logs.</div>
+                    <div class="popular-badge">RECOMMENDED</div>
+                    <div class="tier-name">STANDARD OPS</div>
+                    <div class="tier-price">$49<span>/mo</span></div>
+                    <div class="tier-desc">Deep historical data metrics.</div>
                     <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> 20 Backtests / month</li>
-                        <li><i class="fa-solid fa-check"></i> 30+ Advanced Statistical Stats</li>
-                        <li><i class="fa-solid fa-check"></i> Detailed Trade-by-Trade Logs</li>
-                        <li><i class="fa-solid fa-check"></i> Priority Processing Queue</li>
+                        <li><i class="fa-solid fa-check"></i> 20 Backtest Credits</li>
                     </ul>
-                    <button class="tier-btn featured-btn select-tier-btn" data-price-id="price_commander_id" data-credits="20" data-plan="Commander Tier" data-mode="subscription">SELECT COMMANDER</button>
+                    <button class="tier-btn featured-btn select-tier-btn" data-price-id="price_2" data-credits="20">SELECT TIER</button>
                 </div>
                 <div class="tier-card">
                     <div class="tier-name">INSTITUTIONAL</div>
-                    <div class="tier-price">$199 <span>/ month</span></div>
-                    <div class="tier-desc">Full suite access with dedicated compute core allocation.</div>
+                    <div class="tier-price">$99<span>/mo</span></div>
+                    <div class="tier-desc">Unlimited architecture limits.</div>
                     <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> Unlimited Backtest Credits</li>
-                        <li><i class="fa-solid fa-check"></i> Multi-Timeframe Stress Testing</li>
-                        <li><i class="fa-solid fa-check"></i> Raw CSV/JSON Data Exports</li>
-                        <li><i class="fa-solid fa-check"></i> Direct Engineer Uplink</li>
+                        <li><i class="fa-solid fa-check"></i> 60 Backtest Credits</li>
                     </ul>
-                    <button class="tier-btn select-tier-btn" data-price-id="price_institutional_id" data-credits="999" data-plan="Institutional Tier" data-mode="subscription">SELECT INSTITUTIONAL</button>
+                    <button class="tier-btn select-tier-btn" data-price-id="price_3" data-credits="60">SELECT TIER</button>
                 </div>
             </div>
         </div>
@@ -453,39 +491,34 @@
     <!-- AUTHENTICATION HUD MODAL -->
     <div id="auth-modal-overlay">
         <div class="auth-modal-card">
-            <button class="abort-btn" id="close-auth-btn"><i class="fa-solid fa-xmark"></i></button>
+            <button id="close-auth-btn" class="abort-btn"><i class="fa-solid fa-xmark"></i></button>
             <div class="auth-tabs">
                 <button class="auth-tab active" id="tab-signin">SIGN IN</button>
                 <button class="auth-tab" id="tab-signup">SIGN UP</button>
             </div>
             <form id="auth-form">
                 <div class="input-group" id="username-group" style="display: none;">
-                    <label for="auth-username">// CALLSIGN / USERNAME</label>
-                    <input type="text" id="auth-username" placeholder="e.g. Agent_Zero">
+                    <label>CALLSIGN</label>
+                    <input type="text" id="auth-username" placeholder="Agent Name">
                 </div>
                 <div class="input-group">
-                    <label for="auth-email">// ACCESS ID (EMAIL)</label>
-                    <input type="email" id="auth-email" placeholder="agent@domain.com" required>
+                    <label>ACCESS ID (EMAIL)</label>
+                    <input type="email" id="auth-email" required placeholder="agent@factory.com">
                 </div>
                 <div class="input-group">
-                    <label for="auth-password">// SECURITY PASSWORD</label>
-                    <input type="password" id="auth-password" placeholder="••••••••" required>
+                    <label>SECURITY PASSWORD</label>
+                    <input type="password" id="auth-password" required placeholder="••••••••">
                 </div>
-                <button type="submit" class="submit-system-btn" id="auth-submit-btn">AUTHENTICATE <i class="fa-solid fa-key"></i></button>
+                <button type="submit" id="auth-submit-btn" class="submit-system-btn">AUTHENTICATE <i class="fa-solid fa-key"></i></button>
             </form>
-
-            <div class="oauth-divider">
-                <span>OR AUTHENTICATE VIA OAUTH</span>
-            </div>
-
+            <div class="oauth-divider"><span>OR UPLINK VIA</span></div>
             <div class="oauth-buttons">
-                <button class="oauth-btn" id="google-auth-btn">
-                    <i class="fa-brands fa-google"></i> CONTINUE WITH GOOGLE
-                </button>
+                <button class="oauth-btn" id="google-auth-btn"><i class="fa-brands fa-google"></i> GOOGLE SECURE LOGIN</button>
             </div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+<!-- Connect to your JavaScript file -->
+<script src="script.js"></script>
 </body>
 </html>
