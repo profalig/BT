@@ -186,12 +186,15 @@
             letter-spacing: 1px;
             line-height: 1.15;
             white-space: nowrap;
+            /* Added a crisp border stroke to make the letters perfectly visible */
             -webkit-text-stroke: 0.8px rgba(255, 255, 255, 0.7);
+            /* Expanded bounding box padding so the neon glow isn't cut off by the clip-path */
             padding-right: 40px;
             padding-bottom: 20px;
             padding-top: 10px;
             margin-bottom: -15px; 
             
+            /* Default hidden state for the custom JS clip-path reveal */
             opacity: 0;
             clip-path: inset(-40px 100% -40px -40px);
         }
@@ -206,7 +209,7 @@
             padding-right: 40px;
         }
 
-        /* Neon Light Effects */
+        /* Lowered Neon Light Effects for a softer, more refined glow */
         .vice-line.cyan {
             color: #00f0ff;
             text-shadow: 
@@ -229,94 +232,6 @@
                 0 0 2px #fff,
                 0 0 8px #ffe600,
                 0 0 15px #ff9900;
-        }
-
-        /* ===================================================
-           ABOUT US HUD SECTION / MODAL STYLES
-           =================================================== */
-        #about-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(2, 6, 12, 0.85);
-            backdrop-filter: blur(8px);
-            z-index: 2000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-        }
-
-        #about-modal-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .about-modal-card {
-            position: relative;
-            background: rgba(6, 14, 24, 0.95);
-            border: 1px solid rgba(0, 240, 255, 0.3);
-            border-radius: 12px;
-            padding: 40px;
-            max-width: 680px;
-            width: 90%;
-            box-shadow: 0 0 35px rgba(0, 240, 255, 0.15);
-            font-family: 'Inter', sans-serif;
-            color: #d1d5db;
-        }
-
-        .about-header .modal-status-tag {
-            color: #ff007f;
-            font-family: 'Share Tech Mono', monospace;
-            font-size: 0.85rem;
-            letter-spacing: 2px;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-        }
-
-        .about-header h2 {
-            font-family: 'Inter', sans-serif;
-            font-size: 2.2rem;
-            font-weight: 800;
-            color: #e024e5;
-            letter-spacing: 1px;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-        }
-
-        .about-description {
-            font-size: 0.95rem;
-            line-height: 1.6;
-            color: #9ca3af;
-            margin-bottom: 28px;
-        }
-
-        .about-rectangles-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
-        }
-
-        .about-rect-card {
-            background: rgba(15, 23, 42, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 8px;
-            padding: 16px 20px;
-            color: #ffffff;
-            font-weight: 600;
-            font-size: 0.95rem;
-            text-align: left;
-            transition: all 0.2s ease;
-        }
-
-        .about-rect-card:hover {
-            border-color: #00f0ff;
-            box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
-            background: rgba(15, 23, 42, 0.95);
         }
     </style>
 </head>
@@ -473,33 +388,6 @@
             <p id="module-desc"></p>
             <div class="stats-grid" id="stats-grid"></div>
             <button class="action-btn" id="module-action-btn">INITIALIZE MODULE <i class="fa-solid fa-chevron-right"></i></button>
-        </div>
-    </div>
-
-    <!-- ABOUT US HUD MODAL / OVERLAY -->
-    <div id="about-modal-overlay">
-        <div class="about-modal-card">
-            <button id="close-about-btn" class="abort-btn" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: #ff007f; font-size: 1.2rem; cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
-            <div class="corner-bracket top-left"></div>
-            <div class="corner-bracket top-right"></div>
-            <div class="corner-bracket bottom-left"></div>
-            <div class="corner-bracket bottom-right"></div>
-
-            <div class="about-header">
-                <div class="modal-status-tag">// QUANTITATIVE ARCHITECTURE & PROOF</div>
-                <h2>ABOUT THE FACTORY</h2>
-            </div>
-
-            <p class="about-description">
-                We are professional quantitative backtesters delivering relentless, institutional-grade market data across multi-year historical cycles (2023, 2024, 2025, 2026 and beyond). Our numbers don't just come out of thin air—we give you itemized, trade-by-trade logs for every single buy and sell order, including wins, losses, and exact execution times. Since deep historical lower-timeframe charts are nearly impossible to pull manually, we bring complete transparency to your screen. We calculate exact monthly and annual profits, proving how an initial balance with 2% risk scales over 1, 2, or 4 years. From maximum drawdown charts and win/loss ratios to consecutive loss streaks, we expose every dimension of your strategy so you know with 100% mathematical certainty that your system is truly profitable.
-            </p>
-
-            <div class="about-rectangles-grid">
-                <div class="about-rect-card">Detailed Report</div>
-                <div class="about-rect-card">Trade Log</div>
-                <div class="about-rect-card">Historical Backtest</div>
-                <div class="about-rect-card">Compounding Analysis</div>
-            </div>
         </div>
     </div>
 
@@ -665,6 +553,7 @@
         // ========================================================
         
         async function runBlockWriting(elements, holdTime = 3200, fadeTime = 800) {
+            // Initialize HTML content & find elements
             const els = elements.map(item => {
                 const el = document.getElementById(item.id);
                 if(el) el.innerHTML = item.text;
@@ -674,28 +563,35 @@
             if(els.length === 0) return;
 
             while (true) {
+                // 1. Instantly reset all text blocks to be hidden (but keeping the glow bounds)
                 for (const item of els) {
                     item.el.style.transition = 'none';
                     item.el.style.opacity = '1';
                     item.el.style.clipPath = 'inset(-40px 100% -40px -40px)';
                 }
                 
+                // Force a browser repaint so the reset applies before animating
                 void els[0].el.offsetWidth;
 
+                // 2. Write each line sequentially using a smooth, organic reveal speed
                 for (const item of els) {
                     item.el.style.transition = `clip-path ${item.duration}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`;
                     item.el.style.clipPath = 'inset(-40px -40px -40px -40px)';
                     
+                    // Wait for line to finish writing plus a tiny pause before the next line
                     await new Promise(res => setTimeout(res, item.duration + 150));
                 }
 
+                // 3. Hold the entire block so it can be read
                 await new Promise(res => setTimeout(res, holdTime));
 
+                // 4. Elegantly fade out the whole block at once
                 for (const item of els) {
                     item.el.style.transition = `opacity ${fadeTime}ms ease-out`;
                     item.el.style.opacity = '0';
                 }
 
+                // Wait for the fade out to finish plus a gap before looping
                 await new Promise(res => setTimeout(res, fadeTime + 600));
             }
         }
@@ -708,21 +604,11 @@
                 { id: 'vice-right-3', text: 'Crush it G 🚀', duration: 1000 }
             ], 3500, 1000);
 
-            // Left Side Sequence
+            // Left Side Sequence (UPDATED)
             runBlockWriting([
                 { id: 'vice-left-1', text: 'Test The Reliability of Your System', duration: 1600 },
                 { id: 'vice-left-2', text: 'Become a Systematic Millionair Trader', duration: 2200 }
             ], 4500, 1000);
-
-            // About Us modal toggle bindings
-            const aboutModal = document.getElementById('about-modal-overlay');
-            const closeAboutBtn = document.getElementById('close-about-btn');
-
-            if (closeAboutBtn && aboutModal) {
-                closeAboutBtn.addEventListener('click', () => {
-                    aboutModal.classList.remove('active');
-                });
-            }
         });
     </script>
 </body>

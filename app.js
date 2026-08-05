@@ -13,9 +13,9 @@ const planetData = {
         stats: [{ label: "STATUS", val: "Under Dev" }, { label: "SYSTEMS", val: "Curating" }, { label: "VALIDATION", val: "Required" }, { label: "POTENTIAL", val: "High" }]
     },
     about: {
-        tag: "IDENTITY // SEC-03", title: "About Us", color: "#b700ff",
-        desc: "I am Ali Sadeghi, CEO and founder of System & Backtest Factory. With a PhD in Structural Engineering and years of experience coding in Python and data analysis, I bring a real-world, rigorous engineering mindset to the chaotic financial markets.<br><br>Based in Rome, Europe, I have always been obsessed with trading and building algorithmic systems. My true passion lies in going deep into data analysis to uncover the mathematical capabilities and statistics of trading systems. I am a professional backtester dedicated to finding, testing, and validating new edges.",
-        stats: [{ label: "CEO & FOUNDER", val: "Ali Sadeghi" }, { label: "LOCATION", val: "Rome, EU" }, { label: "BACKGROUND", val: "PhD Struct. Eng" }, { label: "CORE SKILL", val: "Python / Data" }]
+        tag: "IDENTITY // SEC-03", title: "About The Factory", color: "#b700ff",
+        desc: "We are professional quantitative backtesters delivering relentless, institutional-grade market data across multi-year historical cycles (2023, 2024, 2025, 2026 and beyond). Our numbers don't just come out of thin air—we give you itemized, trade-by-trade logs for every single buy and sell order, including wins, losses, and exact execution times.<br><br>Since deep historical lower-timeframe charts are nearly impossible to pull manually, we bring complete transparency to your screen. We calculate exact monthly and annual profits, proving how an initial balance with 2% risk scales over 1, 2, or 4 years. From maximum drawdown charts and win/loss ratios to consecutive loss streaks, we expose every dimension of your strategy so you know with 100% mathematical certainty that your system is truly profitable.",
+        stats: [{ label: "OUTPUT", val: "Detailed Report" }, { label: "RECORDS", val: "Trade Log" }, { label: "DATA", val: "Historical Backtest" }, { label: "METRICS", val: "Compounding Analysis" }]
     },
     contact: {
         tag: "COMMS // SEC-04", title: "Contact Us", color: "#ff0055",
@@ -240,6 +240,12 @@ orbits.forEach(o => {
 });
 
 const btcSun = document.getElementById('sun');
+if (btcSun) {
+    // Hardware acceleration fix to prevent the sun from blurring when the viewport scales
+    btcSun.style.transform = 'translateZ(0)';
+    btcSun.style.backfaceVisibility = 'hidden';
+    btcSun.style.willChange = 'transform';
+}
 const solarSystem = document.getElementById('solar-system');
 if (btcSun && solarSystem) {
     btcSun.addEventListener('mouseenter', () => {
