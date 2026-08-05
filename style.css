@@ -486,7 +486,8 @@ body.warping #spaceship-title-container {
     border-radius: 50%;
     z-index: 50;
     cursor: pointer;
-    filter: drop-shadow(0 0 18px rgba(255, 215, 0, 0.4));
+    /* BLUR MODIFICATION APPLIED HERE */
+    filter: blur(5px) drop-shadow(0 0 18px rgba(255, 215, 0, 0.4));
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease;
     will-change: transform, filter;
     transform: translate3d(0,0,0);
@@ -494,7 +495,8 @@ body.warping #spaceship-title-container {
 
 .btc-sun:hover {
     transform: scale(1.12) translate3d(0,0,0);
-    filter: drop-shadow(0 0 25px rgba(255, 215, 0, 0.95)) drop-shadow(0 0 50px rgba(255, 140, 0, 0.7));
+    /* BLUR MODIFICATION APPLIED HERE */
+    filter: blur(5px) drop-shadow(0 0 25px rgba(255, 215, 0, 0.95)) drop-shadow(0 0 50px rgba(255, 140, 0, 0.7));
 }
 
 .orbit {
