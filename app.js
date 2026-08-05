@@ -240,27 +240,6 @@ orbits.forEach(o => {
 });
 
 const btcSun = document.getElementById('sun');
-if (btcSun) {
-    // REMOVE hardware acceleration that locks the 1x raster resolution
-    // We want the browser to natively repaint this element during the scale
-    btcSun.style.transform = 'none';
-    btcSun.style.backfaceVisibility = 'visible';
-    btcSun.style.perspective = 'none';
-    btcSun.style.willChange = 'auto';
-    btcSun.style.filter = 'none';
-    
-    // Allow the browser to handle standard scaling anti-aliasing
-    btcSun.style.imageRendering = 'auto'; 
-    
-    // Clean the child image tag as well
-    const sunImg = btcSun.querySelector('img');
-    if (sunImg) {
-        sunImg.style.transform = 'none';
-        sunImg.style.backfaceVisibility = 'visible';
-        sunImg.style.willChange = 'auto';
-        sunImg.style.imageRendering = 'auto';
-    }
-}
 
 const solarSystem = document.getElementById('solar-system');
 if (btcSun && solarSystem) {
