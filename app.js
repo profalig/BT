@@ -13,9 +13,9 @@ const planetData = {
         stats: [{ label: "STATUS", val: "Under Dev" }, { label: "SYSTEMS", val: "Curating" }, { label: "VALIDATION", val: "Required" }, { label: "POTENTIAL", val: "High" }]
     },
     about: {
-        tag: "IDENTITY // SEC-03", title: "About The Factory", color: "#b700ff",
-        desc: "We are professional quantitative backtesters delivering relentless, institutional-grade market data across multi-year historical cycles (2023, 2024, 2025, 2026 and beyond). Our numbers don't just come out of thin air—we give you itemized, trade-by-trade logs for every single buy and sell order, including wins, losses, and exact execution times.<br><br>Since deep historical lower-timeframe charts are nearly impossible to pull manually, we bring complete transparency to your screen. We calculate exact monthly and annual profits, proving how an initial balance with 2% risk scales over 1, 2, or 4 years. From maximum drawdown charts and win/loss ratios to consecutive loss streaks, we expose every dimension of your strategy so you know with 100% mathematical certainty that your system is truly profitable.",
-        stats: [{ label: "OUTPUT", val: "Detailed Report" }, { label: "RECORDS", val: "Trade Log" }, { label: "DATA", val: "Historical Backtest" }, { label: "METRICS", val: "Compounding Analysis" }]
+        tag: "IDENTITY // SEC-03", title: "About Us", color: "#b700ff",
+        desc: "I am Ali Sadeghi, CEO and founder of System & Backtest Factory. With a PhD in Structural Engineering and years of experience coding in Python and data analysis, I bring a real-world, rigorous engineering mindset to the chaotic financial markets.<br><br>Based in Rome, Europe, I have always been obsessed with trading and building algorithmic systems. My true passion lies in going deep into data analysis to uncover the mathematical capabilities and statistics of trading systems. I am a professional backtester dedicated to finding, testing, and validating new edges.",
+        stats: [{ label: "CEO & FOUNDER", val: "Ali Sadeghi" }, { label: "LOCATION", val: "Rome, EU" }, { label: "BACKGROUND", val: "PhD Struct. Eng" }, { label: "CORE SKILL", val: "Python / Data" }]
     },
     contact: {
         tag: "COMMS // SEC-04", title: "Contact Us", color: "#ff0055",
@@ -240,7 +240,6 @@ orbits.forEach(o => {
 });
 
 const btcSun = document.getElementById('sun');
-
 const solarSystem = document.getElementById('solar-system');
 if (btcSun && solarSystem) {
     btcSun.addEventListener('mouseenter', () => {
@@ -329,56 +328,6 @@ function closeSubscriptionModal() {
 }
 
 // ==========================================
-// SUPABASE CLIENT INITIALIZATION
-// ==========================================
-const SUPABASE_URL = 'https://woxswhiayrkecspebuwb.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndveHN3aGlheXJrZWNzcGVidXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTc5ODYsImV4cCI6MjEwMDk5Mzk4Nn0.faEmt5_tw6dN9Cs-pKJHa9D0yyEBbAl4oT0Y9QWYuFg';
-
-let supabaseClient = null;
-if (window.supabase) {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
-
-// ==========================================
-// USER PROFILE & FREE CREDIT ENGINE
-// ==========================================
-async function fetchOrCreateUserProfile(user) {
-    if (!supabaseClient || !user) return null;
-
-    try {
-        let { data: profile, error } = await supabaseClient
-            .from('user_profiles')
-            .select('*')
-            .eq('id', user.id)
-            .maybeSingle();
-
-        if (!profile) {
-            console.log("Creating new user profile with 1 Free Credit for User:", user.id);
-            const { data: newProfile, error: createError } = await supabaseClient
-                .from('user_profiles')
-                .insert([{ 
-                    id: user.id, 
-                    email: user.email, 
-                    credits: 1 
-                }])
-                .select()
-                .single();
-
-            if (createError) {
-                console.error("Error creating user profile:", createError);
-                return null;
-            }
-            return newProfile;
-        }
-
-        return profile;
-    } catch (err) {
-        console.error("User Profile Error:", err);
-        return null;
-    }
-}
-
-// ==========================================
 // AGENT PROFILE & PERMANENT HISTORY ENGINE
 // ==========================================
 async function openUserReportsModal() {
@@ -398,9 +347,6 @@ async function openUserReportsModal() {
     const callsign = (session.user.user_metadata?.display_name || userEmail.split('@')[0]).toUpperCase();
 
     try {
-        const userProfile = await fetchOrCreateUserProfile(session.user);
-        const availableCredits = userProfile ? userProfile.credits : 0;
-
         const { data: submissions, error } = await supabaseClient
             .from('submissions')
             .select('*')
@@ -437,11 +383,7 @@ async function openUserReportsModal() {
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center;">
-                    <div style="background: rgba(255, 215, 0, 0.1); padding: 8px; border-radius: 4px; border: 1px solid rgba(255, 215, 0, 0.3);">
-                        <div style="font-size: 0.7em; color: #ffd700;">CREDITS</div>
-                        <div style="font-size: 1.2em; font-weight: bold; color: #ffd700;">${availableCredits}</div>
-                    </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;">
                     <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
                         <div style="font-size: 0.7em; color: #888;">TOTAL RUNS</div>
                         <div style="font-size: 1.2em; font-weight: bold; color: #ffffff;">${totalSubmissions}</div>
@@ -450,9 +392,9 @@ async function openUserReportsModal() {
                         <div style="font-size: 0.7em; color: #888;">COMPLETED</div>
                         <div style="font-size: 1.2em; font-weight: bold; color: #00ff66;">${completedCount}</div>
                     </div>
-                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(0, 240, 255, 0.15);">
+                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255, 215, 0, 0.15);">
                         <div style="font-size: 0.7em; color: #888;">IN QUEUE</div>
-                        <div style="font-size: 1.2em; font-weight: bold; color: #00f0ff;">${pendingCount}</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #ffd700;">${pendingCount}</div>
                     </div>
                 </div>
             </div>
@@ -520,6 +462,17 @@ async function openUserReportsModal() {
 }
 
 // ==========================================
+// SUPABASE CLIENT INITIALIZATION
+// ==========================================
+const SUPABASE_URL = 'https://woxswhiayrkecspebuwb.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndveHN3aGlheXJrZWNzcGVidXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTc5ODYsImV4cCI6MjEwMDk5Mzk4Nn0.faEmt5_tw6dN9Cs-pKJHa9D0yyEBbAl4oT0Y9QWYuFg';
+
+let supabaseClient = null;
+if (window.supabase) {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+// ==========================================
 // APPLICATION INITIALIZATION & AUTHENTICATION ENGINE
 // ==========================================
 let authMode = 'signin';
@@ -548,70 +501,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navSubBtn) navSubBtn.addEventListener('click', openSubscriptionModal);
     if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
 
-    // ==========================================
-    // STRIPE CHECKOUT INTEGRATION LOGIC
-    // ==========================================
+    // TIER SELECTION / PAYMENT UPLINK HANDLERS
     document.querySelectorAll('.select-tier-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            const button = e.currentTarget;
-            const priceId = button.getAttribute('data-price-id');
-            const creditsToAdd = button.getAttribute('data-credits') || '0';
-            const mode = button.getAttribute('data-mode') || 'subscription';
-            const planName = button.getAttribute('data-plan') || 'Plan';
-
-            if (!priceId || priceId.includes('ID_HERE')) {
-                showTacticalModal('CONFIGURATION NOTICE', `Stripe Price ID for ${planName} is missing. Update the <code>data-price-id</code> attribute in index.html.`, false);
-                return;
-            }
-
-            if (!supabaseClient) {
-                showTacticalModal('SYSTEM ERROR', 'Supabase authentication client is unavailable.', false);
-                return;
-            }
-
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (!session || !session.user) {
-                closeSubscriptionModal();
-                showTacticalModal('AUTHENTICATION REQUIRED', 'Please sign in or register an account before proceeding to Stripe Checkout.', false);
-                setAuthMode('signin');
-                if (authModal) authModal.classList.add('active');
-                return;
-            }
-
-            const originalBtnHtml = button.innerHTML;
-            button.disabled = true;
-            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> UPLINKING TO STRIPE...';
-
-            try {
-                const backendServerUrl = 'https://backtest-worker-fs1a.onrender.com';
-                const response = await fetch(`${backendServerUrl}/create-checkout-session`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        priceId: priceId,
-                        userId: session.user.id,
-                        creditsToAdd: parseInt(creditsToAdd, 10),
-                        mode: mode
-                    })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok || data.error) {
-                    throw new Error(data.error || 'Failed to initialize Stripe Checkout session.');
-                }
-
-                if (data.url) {
-                    window.location.href = data.url;
-                } else {
-                    throw new Error('No checkout URL returned from server gateway.');
-                }
-            } catch (err) {
-                console.error('Stripe Uplink Error:', err);
-                showTacticalModal('GATEWAY ERROR', err.message, false);
-                button.disabled = false;
-                button.innerHTML = originalBtnHtml;
-            }
+        btn.addEventListener('click', (e) => {
+            const planName = e.target.getAttribute('data-plan') || 'Plan';
+            closeSubscriptionModal();
+            showTacticalModal(
+                'PAYMENT UPLINK INITIALIZED', 
+                `Your request for <b>${planName} Tier Clearance</b> has been registered. Connecting to secure gateway payment link...`, 
+                true
+            );
         });
     });
 
@@ -637,7 +536,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // BACKTEST SUBMISSION WITH CREDIT VERIFICATION & DEDUCTION
+    // BACKTEST SUBMISSION WITH USER LINKING & WORKER WAKE-UP
     if (systemSubmitForm) {
         systemSubmitForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -647,17 +546,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            
-            // 1. REQUIRE AUTHENTICATION
-            if (!session || !session.user) {
-                showTacticalModal('AUTHENTICATION REQUIRED', 'Please sign in or create an account to run backtests with your free credit.', false);
-                setAuthMode('signin');
-                if (authModal) authModal.classList.add('active');
-                return;
-            }
-
-            const userId = session.user.id;
             const systemName = systemNameInput.value.trim();
             const email = emailInput.value.trim();
             const rules = rulesInput.value.trim();
@@ -667,30 +555,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // 2. CHECK USER CREDIT BALANCE
-            const profile = await fetchOrCreateUserProfile(session.user);
-            const currentCredits = profile ? profile.credits : 0;
-
-            if (currentCredits < 1) {
-                showTacticalModal(
-                    'INSUFFICIENT CREDITS', 
-                    'You have 0 Backtest Credits remaining. Please upgrade your operational tier to unlock additional backtests.', 
-                    false
-                );
-                openSubscriptionModal();
-                return;
-            }
-
             const originalBtnText = submitBtn.innerHTML;
             submitBtn.innerText = 'UPLINKING TO CORE...';
             submitBtn.disabled = true;
 
-            // Wake up Render Worker
+            // Wake up Render Worker instantly
             fetch("https://backtest-worker-fs1a.onrender.com", { mode: "no-cors" }).catch(() => {});
 
             try {
-                // 3. INSERT BACKTEST SUBMISSION
-                const { error: subError } = await supabaseClient
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                const userId = session?.user?.id || null;
+
+                const { error } = await supabaseClient
                     .from('submissions')
                     .insert([{ 
                         system_name: systemName, 
@@ -700,30 +576,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         user_id: userId
                     }]);
 
-                if (subError) throw subError;
+                if (error) throw error;
 
-                // 4. DEDUCT 1 CREDIT FROM USER PROFILE
-                const newCredits = currentCredits - 1;
-                const { error: profileUpdateError } = await supabaseClient
-                    .from('user_profiles')
-                    .update({ credits: newCredits })
-                    .eq('id', userId);
-
-                if (profileUpdateError) {
-                    console.error("Credit deduction error:", profileUpdateError);
-                }
-
-                // 5. UPDATE HUD BADGES
-                updateCreditBadgeUI(newCredits);
-
-                showTacticalModal(
-                    'UPLINK SECURED', 
-                    `System parameters received! 1 Backtest Credit used. <b>${newCredits} credit(s) remaining</b>.<br><br>Our engineering team will conduct a multi-threaded data analysis and compile your report shortly.`, 
-                    true
-                );
+                showTacticalModal('UPLINK SECURED', 'System parameters received. Our engineering team will conduct a multi-threaded data analysis and compile your report shortly.', true);
 
                 systemNameInput.value = '';
                 rulesInput.value = '';
+                if (!userId) emailInput.value = '';
             } catch (err) {
                 console.error('Submission Error:', err.message);
                 showTacticalModal('UPLINK FAILED', err.message, false);
@@ -732,14 +591,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.disabled = false;
             }
         });
-    }
-
-    // UPDATE UI CREDIT BADGE
-    function updateCreditBadgeUI(credits) {
-        const badgeEl = document.getElementById('nav-credits-label');
-        if (badgeEl) {
-            badgeEl.innerHTML = `CREDITS: ${credits}`;
-        }
     }
 
     // AUTH MODE SWITCHING
@@ -754,7 +605,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabSignUp) tabSignUp.classList.add('active');
             if (tabSignIn) tabSignIn.classList.remove('active');
             if (usernameGroup) usernameGroup.style.display = 'block';
-            if (authSubmitBtn) authSubmitBtn.innerHTML = 'CREATE CLEARANCE (1 FREE CREDIT) <i class="fa-solid fa-user-plus"></i>';
+            if (authSubmitBtn) authSubmitBtn.innerHTML = 'CREATE CLEARANCE <i class="fa-solid fa-user-plus"></i>';
         }
     }
 
@@ -799,7 +650,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
 
-                    const { data, error } = await supabaseClient.auth.signUp({ 
+                    const { error } = await supabaseClient.auth.signUp({ 
                         email, 
                         password,
                         options: {
@@ -810,23 +661,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (error) throw error;
 
-                    if (data?.user) {
-                        await fetchOrCreateUserProfile(data.user);
-                    }
-
                     authModal.classList.remove('active');
                     showTacticalModal(
                         'CLEARANCE CREATED', 
-                        'Check your email comm-link to verify your account. Your <b>1 Free Credit</b> has been assigned!', 
+                        'Check your email comm-link to verify your clearance parameters.', 
                         true
                     );
                 } else {
                     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
                     if (error) throw error;
-
-                    if (data?.user) {
-                        await fetchOrCreateUserProfile(data.user);
-                    }
 
                     authModal.classList.remove('active');
                     const displayName = data.user.user_metadata?.display_name || data.user.email.split('@')[0];
@@ -866,34 +709,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const urlError = hashParams.get('error') || queryParams.get('error');
         const urlErrorDesc = hashParams.get('error_description') || queryParams.get('error_description');
         const authType = hashParams.get('type') || queryParams.get('type');
-        const paymentStatus = queryParams.get('payment');
 
-        if (paymentStatus === 'success') {
-            showTacticalModal('PAYMENT SUCCESSFUL', 'Transaction complete! Your subscription credits have been assigned to your profile.', true);
-            window.history.replaceState(null, null, window.location.pathname);
-        } else if (paymentStatus === 'cancelled') {
-            showTacticalModal('PAYMENT CANCELLED', 'Stripe checkout session was cancelled. No charges were made.', false);
-            window.history.replaceState(null, null, window.location.pathname);
-        } else if (urlError || urlErrorDesc) {
+        if (urlError || urlErrorDesc) {
             const formattedMsg = urlErrorDesc 
                 ? decodeURIComponent(urlErrorDesc).replace(/\+/g, ' ') 
                 : 'Verification link is invalid or has expired.';
             showTacticalModal('LINK EXPIRED', formattedMsg, false);
             window.history.replaceState(null, null, window.location.pathname);
         } else if (authType === 'signup' || authType === 'email_confirmation') {
-            showTacticalModal('EMAIL VERIFIED', 'Access Clearance Confirmed. 1 Free Credit Provisioned.', true);
+            showTacticalModal('EMAIL VERIFIED', 'Access Clearance Confirmed. Tactical Link Established.', true);
             window.history.replaceState(null, null, window.location.pathname);
         } else if (window.location.hash.includes('access_token') || window.location.search.includes('code')) {
             window.history.replaceState(null, null, window.location.pathname);
         }
 
-        supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        supabaseClient.auth.onAuthStateChange((event, session) => {
             if (session && session.user) {
                 const displayName = session.user.user_metadata?.display_name || session.user.email.split('@')[0];
                 
-                const profile = await fetchOrCreateUserProfile(session.user);
-                const userCredits = profile ? profile.credits : 0;
-
                 const contactEmailInput = document.getElementById('contact-email');
                 if (contactEmailInput) {
                     contactEmailInput.value = session.user.email;
@@ -901,49 +734,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (authCorner) {
                     authCorner.innerHTML = `
-                        <div class="hud-bar">
-                            <div class="hud-slot agent" id="nav-agent-btn">
-                                <div class="hud-icon-box">
-                                    <span class="status-dot"></span>
-                                    <i class="fa-solid fa-user-shield"></i>
-                                </div>
-                                <div class="hud-label-box">
-                                    <span id="nav-user-label">AGENT: ${displayName.toUpperCase()}</span>
-                                </div>
-                            </div>
-                            <div class="hud-slot credits" id="nav-credits-btn">
-                                <div class="hud-icon-box">
-                                    <i class="fa-solid fa-coins"></i>
-                                </div>
-                                <div class="hud-label-box">
-                                    <span id="nav-credits-label">CREDITS: ${userCredits}</span>
-                                </div>
-                            </div>
-                            <div class="hud-slot subs" id="my-sub-btn">
-                                <div class="hud-icon-box">
-                                    <i class="fa-solid fa-gem"></i>
-                                </div>
-                                <div class="hud-label-box">
-                                    <span>SUBSCRIPTIONS</span>
-                                </div>
-                            </div>
-                            <div class="hud-slot reports" id="my-reports-btn">
-                                <div class="hud-icon-box">
-                                    <i class="fa-solid fa-folder-open"></i>
-                                </div>
-                                <div class="hud-label-box">
-                                    <span>MY REPORTS</span>
-                                </div>
-                            </div>
-                            <div class="hud-slot logout" id="signout-btn">
-                                <div class="hud-icon-box">
-                                    <i class="fa-solid fa-power-off"></i>
-                                </div>
-                                <div class="hud-label-box">
-                                    <span>LOGOUT</span>
-                                </div>
-                            </div>
-                        </div>
+                        <div class="user-badge"><i class="fa-solid fa-shield-halved"></i> AGENT: ${displayName.toUpperCase()}</div>
+                        <button id="my-sub-btn" class="auth-btn sub-nav-btn"><i class="fa-solid fa-gem"></i> SUBSCRIPTIONS</button>
+                        <button id="my-reports-btn" class="auth-btn"><i class="fa-solid fa-folder-open"></i> MY REPORTS</button>
+                        <button id="signout-btn" class="auth-btn"><i class="fa-solid fa-power-off"></i> LOGOUT</button>
                     `;
 
                     document.getElementById('my-sub-btn')?.addEventListener('click', openSubscriptionModal);
@@ -957,27 +751,16 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 if (authCorner) {
                     authCorner.innerHTML = `
-                        <div class="hud-bar">
-                            <div class="hud-slot subs" id="nav-subscription-btn">
-                                <div class="hud-icon-box"><i class="fa-solid fa-gem"></i></div>
-                                <div class="hud-label-box"><span>SUBSCRIPTIONS</span></div>
-                            </div>
-                            <div class="hud-slot agent sign-in">
-                                <div class="hud-icon-box"><i class="fa-solid fa-user"></i></div>
-                                <div class="hud-label-box"><span>SIGN IN</span></div>
-                            </div>
-                            <div class="hud-slot credits sign-up">
-                                <div class="hud-icon-box"><i class="fa-solid fa-user-plus"></i></div>
-                                <div class="hud-label-box"><span>SIGN UP</span></div>
-                            </div>
-                        </div>
+                        <button id="nav-subscription-btn" class="auth-btn sub-nav-btn"><i class="fa-solid fa-gem"></i> SUBSCRIPTIONS</button>
+                        <button class="auth-btn sign-in"><i class="fa-solid fa-user"></i> SIGN IN</button>
+                        <button class="auth-btn sign-up"><i class="fa-solid fa-user-plus"></i> SIGN UP</button>
                     `;
                     document.getElementById('nav-subscription-btn')?.addEventListener('click', openSubscriptionModal);
-                    document.querySelector('.sign-in')?.addEventListener('click', () => {
+                    document.querySelector('.auth-btn.sign-in')?.addEventListener('click', () => {
                         setAuthMode('signin');
                         if (authModal) authModal.classList.add('active');
                     });
-                    document.querySelector('.sign-up')?.addEventListener('click', () => {
+                    document.querySelector('.auth-btn.sign-up')?.addEventListener('click', () => {
                         setAuthMode('signup');
                         if (authModal) authModal.classList.add('active');
                     });

@@ -7,7 +7,7 @@
 }
 
 /* ==========================================
-   GLOBAL SELECTION PREVENT
+   GLOBAL SELECTION PREVENT (DISABLES BLUE HIGHLIGHT)
    ========================================== */
 body, #space-matrix, .constellation, .beast-container, img, video, svg, #spaceship-title-container {
     -webkit-user-select: none;
@@ -32,191 +32,56 @@ body {
 }
 
 /* ==========================================
-   AUTHENTICATION & SUBSCRIPTION CORNER (HUD DOCK)
+   AUTHENTICATION & SUBSCRIPTION CORNER
    ========================================== */
 #auth-corner {
     position: fixed;
-    top: 25px;
-    right: 35px;
+    top: 30px;
+    right: 40px;
     z-index: 1000;
-    background: rgba(4, 12, 24, 0.85);
-    border: 1px solid rgba(0, 240, 255, 0.3);
-    border-radius: 6px;
-    padding: 6px 10px;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(0, 240, 255, 0.05);
-    transition: opacity 0.5s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-#auth-corner:hover {
-    border-color: rgba(0, 240, 255, 0.5);
-    box-shadow: 0 8px 35px rgba(0, 240, 255, 0.15), inset 0 0 20px rgba(0, 240, 255, 0.08);
-}
-
-.dock-bracket {
-    position: absolute;
-    width: 6px;
-    height: 6px;
-    border: 2px solid #00f0ff;
-    pointer-events: none;
-}
-
-.dock-bracket.top-left {
-    top: -2px;
-    left: -2px;
-    border-right: none;
-    border-bottom: none;
-}
-
-.dock-bracket.bottom-right {
-    bottom: -2px;
-    right: -2px;
-    border-left: none;
-    border-top: none;
-}
-
-.dock-content {
     display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.dock-divider {
-    width: 1px;
-    height: 20px;
-    background: linear-gradient(180deg, transparent, rgba(0, 240, 255, 0.35), transparent);
-    margin: 0 2px;
+    gap: 12px;
+    transition: opacity 0.5s ease;
 }
 
 .auth-btn {
-    background: rgba(8, 20, 38, 0.6);
-    border: 1px solid rgba(0, 240, 255, 0.25);
-    color: #a3c7e6;
-    padding: 8px 16px;
+    background: rgba(4, 9, 18, 0.75);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    color: #00f0ff;
+    padding: 10px 18px;
     font-family: 'Share Tech Mono', monospace;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     letter-spacing: 1px;
     cursor: pointer;
     border-radius: 4px;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.3s ease;
     display: flex;
     align-items: center;
     gap: 8px;
-    position: relative;
-    overflow: hidden;
-}
-
-.auth-btn i {
-    font-size: 0.85rem;
-    transition: transform 0.3s ease;
+    backdrop-filter: blur(5px);
 }
 
 .auth-btn:hover {
-    background: rgba(0, 240, 255, 0.15);
-    color: #00f0ff;
-    border-color: rgba(0, 240, 255, 0.6);
-    box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
-    transform: translateY(-1px);
+    background: #00f0ff;
+    color: #000;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
 }
 
-.auth-btn:hover i {
-    transform: scale(1.15);
-}
-
-.auth-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* Subscriptions Button */
 .auth-btn.sub-nav-btn {
-    background: rgba(255, 215, 0, 0.08);
-    border-color: rgba(255, 215, 0, 0.35);
+    background: rgba(255, 215, 0, 0.1);
+    border-color: #ffd700;
     color: #ffd700;
 }
 
 .auth-btn.sub-nav-btn:hover {
-    background: rgba(255, 215, 0, 0.2);
-    color: #ffffff;
-    border-color: #ffd700;
-    box-shadow: 0 0 18px rgba(255, 215, 0, 0.4);
+    background: #ffd700;
+    color: #000;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
 }
 
-/* Sign-Up CTA Button */
-.auth-btn.sign-up.cta-btn {
-    background: linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(0, 255, 102, 0.15) 100%);
+.auth-btn.sign-up {
+    background: rgba(0, 240, 255, 0.1);
     border-color: #00f0ff;
-    color: #ffffff;
-    font-weight: bold;
-    text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
-}
-
-.auth-btn.sign-up.cta-btn:hover {
-    background: linear-gradient(135deg, #00f0ff 0%, #00ff66 100%);
-    color: #040912;
-    text-shadow: none;
-    box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
-    border-color: #00ff66;
-}
-
-/* Logout Button */
-.auth-btn.logout-btn {
-    background: rgba(255, 0, 85, 0.08);
-    border-color: rgba(255, 0, 85, 0.3);
-    color: #ff4d88;
-}
-
-.auth-btn.logout-btn:hover {
-    background: #ff0055;
-    color: #ffffff;
-    border-color: #ff0055;
-    box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
-}
-
-/* Agent User Badge */
-.user-badge {
-    font-family: 'Share Tech Mono', monospace;
-    color: #00ff66;
-    font-size: 0.8rem;
-    letter-spacing: 1px;
-    padding: 7px 12px;
-    background: rgba(0, 255, 102, 0.08);
-    border: 1px solid rgba(0, 255, 102, 0.3);
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.user-status-dot {
-    width: 6px;
-    height: 6px;
-    background-color: #00ff66;
-    border-radius: 50%;
-    box-shadow: 0 0 8px #00ff66;
-    animation: statusPulse 2s infinite alternate;
-}
-
-@keyframes statusPulse {
-    0% { opacity: 0.4; transform: scale(0.9); }
-    100% { opacity: 1; transform: scale(1.1); }
-}
-
-/* Credits Badge */
-.credit-badge {
-    font-family: 'Share Tech Mono', monospace;
-    color: #ffd700;
-    font-size: 0.8rem;
-    letter-spacing: 1px;
-    padding: 7px 12px;
-    background: rgba(255, 215, 0, 0.08);
-    border: 1px solid rgba(255, 215, 0, 0.35);
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 0 12px rgba(255, 215, 0, 0.15);
 }
 
 /* ==========================================
@@ -488,10 +353,12 @@ body.warping #spaceship-title-container {
     cursor: pointer;
     filter: drop-shadow(0 0 18px rgba(255, 215, 0, 0.4));
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease;
+    will-change: transform, filter;
+    transform: translate3d(0,0,0);
 }
 
 .btc-sun:hover {
-    transform: scale(1.12);
+    transform: scale(1.12) translate3d(0,0,0);
     filter: drop-shadow(0 0 25px rgba(255, 215, 0, 0.95)) drop-shadow(0 0 50px rgba(255, 140, 0, 0.7));
 }
 
@@ -1167,11 +1034,6 @@ body.landed .module-details { right: 8%; opacity: 1; }
     border-color: #ffffff;
 }
 
-.tier-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
 .tier-btn.featured-btn {
     background: rgba(0, 240, 255, 0.1);
     border-color: #00f0ff;
@@ -1267,6 +1129,20 @@ body.landed .module-details { right: 8%; opacity: 1; }
     transform: scale(1.2);
 }
 
+.user-badge {
+    font-family: 'Share Tech Mono', monospace;
+    color: #00ff66;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    padding: 8px 15px;
+    background: rgba(0, 255, 102, 0.1);
+    border: 1px solid rgba(0, 255, 102, 0.3);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .oauth-divider {
     position: relative;
     text-align: center;
@@ -1341,19 +1217,10 @@ body.landed .module-details { right: 8%; opacity: 1; }
     .tractor-beam-title h1 span { font-size: 1.2rem; letter-spacing: 6px; }
 
     #auth-corner {
-        top: 15px;
-        right: 15px;
-        padding: 5px 8px;
-    }
-
-    .dock-content {
+        top: 20px;
+        right: 20px;
         flex-wrap: wrap;
         justify-content: flex-end;
-        gap: 6px;
-    }
-
-    .dock-divider {
-        display: none;
     }
 
     .pricing-grid {
