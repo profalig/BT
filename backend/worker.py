@@ -126,6 +126,10 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                 user_id = session_obj.get("client_reference_id") if hasattr(session_obj, "get") else getattr(session_obj, "client_reference_id", None)
                 metadata = session_obj.get("metadata", {}) if hasattr(session_obj, "get") else getattr(session_obj, "metadata", {})
                 
+                # Extract the customer's email from Stripe checkout details
+                customer_details = session_obj.get("customer_details", {}) if hasattr(session_obj, "get") else getattr(session_obj, "customer_details", {})
+                customer_email = customer_details.get("email") if hasattr(customer_details, "get") else getattr(customer_details, "email", None)
+                
                 credits_str = metadata.get("credits", "0") if hasattr(metadata, "get") else getattr(metadata, "credits", "0")
                 
                 try:
@@ -134,7 +138,7 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                     credits_purchased = 0
 
                 # DIAGNOSTIC LOGGING
-                print(f"🔍 WEBHOOK DIAGNOSTIC - User ID: {user_id} | Credits to add: {credits_purchased}")
+                print(f"🔍 WEBHOOK DIAGNOSTIC - User ID: {user_id} | Credits to add: {credits_purchased} | Email: {customer_email}")
 
                 if user_id and credits_purchased > 0:
                     try:
@@ -144,10 +148,22 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                         if res.data and len(res.data) > 0:
                             current_credits = res.data[0].get("credits", 0)
                             new_credits = current_credits + credits_purchased
-                            supabase.table("user_profiles").update({"credits": new_credits}).eq("id", user_id).execute()
+                            
+                            # Prepare update payload
+                            update_payload = {"credits": new_credits}
+                            if customer_email:
+                                update_payload["email"] = customer_email
+                                
+                            supabase.table("user_profiles").update(update_payload).eq("id", user_id).execute()
                         else:
                             new_credits = credits_purchased
-                            supabase.table("user_profiles").insert({"id": user_id, "credits": new_credits}).execute()
+                            
+                            # Prepare insert payload
+                            insert_payload = {"id": user_id, "credits": new_credits}
+                            if customer_email:
+                                insert_payload["email"] = customer_email
+                                
+                            supabase.table("user_profiles").insert(insert_payload).execute()
 
                         print(f"🎉 SUCCESS: Granted {credits_purchased} credits to User {user_id}. Total: {new_credits}")
 
