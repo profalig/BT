@@ -357,21 +357,21 @@
         <div class="submission-console">
             <button id="abort-console-btn"><i class="fa-solid fa-xmark"></i> ABORT</button>
             <div class="console-header">
-                <h2><i class="fa-solid fa-terminal"></i> SUBMIT SYSTEM ARCHITECTURE</h2>
-                <p>Configure transmission parameters below. Our quantitative engine will perform multi-threaded backtesting across historical market cycles.</p>
+                <h2><i class="fa-solid fa-terminal"></i> SEC-01 // BACKTEST ENGINE</h2>
+                <p>Input your trading system parameters, risk rules, and strategy logic. Our core engine will run high-frequency simulations across historic market cycles.</p>
             </div>
             <form id="system-submit-form">
                 <div class="input-group">
-                    <label for="system-name"><i class="fa-solid fa-microchip"></i> SYSTEM NAME / STRATEGY ALIAS</label>
-                    <input type="text" id="system-name" placeholder="e.g. Breakout Alpha v2.1" required>
+                    <label for="system-name">// SYSTEM NAME / CALLSIGN</label>
+                    <input type="text" id="system-name" placeholder="e.g., Alpha-Grid V2" required>
                 </div>
                 <div class="input-group">
-                    <label for="contact-email"><i class="fa-solid fa-envelope"></i> CONTACT EMAIL</label>
-                    <input type="email" id="contact-email" placeholder="your.email@domain.com" required>
+                    <label for="contact-email">// COMM-LINK EMAIL</label>
+                    <input type="email" id="contact-email" placeholder="agent@domain.com" required>
                 </div>
                 <div class="input-group">
-                    <label for="system-rules"><i class="fa-solid fa-code"></i> STRATEGY RULES & PARAMETERS</label>
-                    <textarea id="system-rules" rows="5" placeholder="Describe entry conditions, exit rules, risk per trade, stop loss, take profit, timeframe, and asset pair..." required></textarea>
+                    <label for="system-rules">// SYSTEM RULES & SPECIFICATIONS</label>
+                    <textarea id="system-rules" rows="5" placeholder="Define entry/exit rules, timeframe, risk per trade, stop loss, take profit..." required></textarea>
                 </div>
                 <button type="submit" class="submit-system-btn" id="submit-btn">TRANSMIT TO CORE <i class="fa-solid fa-paper-plane"></i></button>
             </form>
@@ -382,19 +382,21 @@
     <div id="tactical-modal-overlay">
         <div class="tactical-modal-card">
             <div class="launch-stage">
-                <div class="hyper-rings"><span></span><span></span><span></span></div>
+                <div class="hyper-rings">
+                    <span></span><span></span><span></span>
+                </div>
                 <svg class="rocket-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <path class="rocket-flame" d="M45,75 L50,95 L55,75 Z" fill="#00ff66"/>
-                    <path d="M50,10 C35,35 35,65 35,75 L65,75 C65,65 65,35 50,10 Z" fill="#06101a" stroke="#00ff66" stroke-width="2"/>
-                    <circle cx="50" cy="40" r="8" fill="#00ff66"/>
-                    <path d="M35,55 L20,75 L35,75 Z" fill="#00ff66"/>
-                    <path d="M65,55 L80,75 L65,75 Z" fill="#00ff66"/>
+                    <path d="M50 10 C35 30 35 60 35 80 L65 80 C65 60 65 30 50 10 Z" fill="#040912" stroke="#00ff66" stroke-width="2"/>
+                    <path d="M35 60 L15 85 L35 80 Z" fill="#00ff66"/>
+                    <path d="M65 60 L85 85 L65 80 Z" fill="#00ff66"/>
+                    <circle cx="50" cy="40" r="8" fill="#00f0ff"/>
+                    <polygon class="rocket-flame" points="42,80 50,98 58,80" fill="#ff0055"/>
                 </svg>
             </div>
-            <div class="modal-status-tag">// TRANSMISSION STATUS</div>
-            <h2 id="modal-heading">SYSTEM NOTICE</h2>
-            <div id="modal-message">Notification details will appear here.</div>
-            <button class="modal-action-btn" id="close-modal-btn">DISENGAGE DOCK</button>
+            <div class="modal-status-tag">// TRANSMISSION STATUS: SECURED</div>
+            <h2 id="modal-heading">UPLINK SECURED</h2>
+            <div id="modal-message">System parameters received. Our core engine will process your request.</div>
+            <button class="modal-action-btn" id="close-modal-btn">ACKNOWLEDGE & CLOSE</button>
         </div>
     </div>
 
@@ -403,90 +405,82 @@
         <div class="subscription-modal-card">
             <button class="abort-btn" id="close-sub-btn"><i class="fa-solid fa-xmark"></i></button>
             <div class="sub-header">
-                <h2><i class="fa-solid fa-gem" style="color:#ffd700;"></i> OPERATIONAL TIERS</h2>
-                <p>Select a backtesting package to unlock institutional quantitative reports, trade logs, and stress tests.</p>
+                <h2>CLEARANCE & PRICING TIERS</h2>
+                <p>Unlock high-frequency backtesting capabilities and institutional data analytics.</p>
             </div>
             <div class="pricing-grid">
                 <div class="tier-card">
-                    <div>
-                        <div class="tier-name">STARTER QUANT</div>
-                        <div class="tier-price">$29 <span>/ package</span></div>
-                        <div class="tier-desc">Ideal for testing individual strategies with full trade logs.</div>
-                        <ul class="tier-features">
-                            <li><i class="fa-solid fa-check"></i> 5 Backtest Credits</li>
-                            <li><i class="fa-solid fa-check"></i> Full Trade-by-Trade Logs</li>
-                            <li><i class="fa-solid fa-check"></i> PDF Intelligence Report</li>
-                            <li><i class="fa-solid fa-xmark unavailable"></i> Priority Queue</li>
-                        </ul>
-                    </div>
-                    <button class="tier-btn select-tier-btn" data-price-id="price_STARTER_ID_HERE" data-credits="5" data-mode="payment" data-plan="Starter Quant">SELECT TIER</button>
+                    <div class="tier-name">SCOUT TIER</div>
+                    <div class="tier-price">$29 <span>/ month</span></div>
+                    <div class="tier-desc">Ideal for individual quantitative traders testing initial strategies.</div>
+                    <ul class="tier-features">
+                        <li><i class="fa-solid fa-check"></i> 5 Backtests / month</li>
+                        <li><i class="fa-solid fa-check"></i> Basic Metrics & Win Rate</li>
+                        <li><i class="fa-solid fa-check"></i> PDF Intelligence Summary</li>
+                        <li><i class="fa-solid fa-xmark unavailable"></i> Full Trade Log Export</li>
+                    </ul>
+                    <button class="tier-btn select-tier-btn" data-price-id="price_scout_id" data-credits="5" data-plan="Scout Tier" data-mode="subscription">SELECT SCOUT</button>
                 </div>
-
                 <div class="tier-card featured">
                     <div class="popular-badge">MOST POPULAR</div>
-                    <div>
-                        <div class="tier-name">PRO ENGINEER</div>
-                        <div class="tier-price">$79 <span>/ package</span></div>
-                        <div class="tier-desc">Designed for systematic traders validating multi-asset algorithms.</div>
-                        <ul class="tier-features">
-                            <li><i class="fa-solid fa-check"></i> 20 Backtest Credits</li>
-                            <li><i class="fa-solid fa-check"></i> Full Trade-by-Trade Logs</li>
-                            <li><i class="fa-solid fa-check"></i> PDF Intelligence Report</li>
-                            <li><i class="fa-solid fa-check"></i> Stress-Test Regimes</li>
-                        </ul>
-                    </div>
-                    <button class="tier-btn featured-btn select-tier-btn" data-price-id="price_PRO_ID_HERE" data-credits="20" data-mode="payment" data-plan="Pro Engineer">SELECT TIER</button>
+                    <div class="tier-name">COMMANDER TIER</div>
+                    <div class="tier-price">$79 <span>/ month</span></div>
+                    <div class="tier-desc">For serious quants requiring deep regime analysis and itemized logs.</div>
+                    <ul class="tier-features">
+                        <li><i class="fa-solid fa-check"></i> 20 Backtests / month</li>
+                        <li><i class="fa-solid fa-check"></i> 30+ Advanced Statistical Stats</li>
+                        <li><i class="fa-solid fa-check"></i> Detailed Trade-by-Trade Logs</li>
+                        <li><i class="fa-solid fa-check"></i> Priority Processing Queue</li>
+                    </ul>
+                    <button class="tier-btn featured-btn select-tier-btn" data-price-id="price_commander_id" data-credits="20" data-plan="Commander Tier" data-mode="subscription">SELECT COMMANDER</button>
                 </div>
-
                 <div class="tier-card">
-                    <div>
-                        <div class="tier-name">INSTITUTIONAL</div>
-                        <div class="tier-price">$199 <span>/ package</span></div>
-                        <div class="tier-desc">Unrestricted access for fund managers and quantitative desks.</div>
-                        <ul class="tier-features">
-                            <li><i class="fa-solid fa-check"></i> 60 Backtest Credits</li>
-                            <li><i class="fa-solid fa-check"></i> Full Trade-by-Trade Logs</li>
-                            <li><i class="fa-solid fa-check"></i> Deep Statistical Analysis</li>
-                            <li><i class="fa-solid fa-check"></i> Priority Processing</li>
-                        </ul>
-                    </div>
-                    <button class="tier-btn select-tier-btn" data-price-id="price_INSTITUTIONAL_ID_HERE" data-credits="60" data-mode="payment" data-plan="Institutional">SELECT TIER</button>
+                    <div class="tier-name">INSTITUTIONAL</div>
+                    <div class="tier-price">$199 <span>/ month</span></div>
+                    <div class="tier-desc">Full suite access with dedicated compute core allocation.</div>
+                    <ul class="tier-features">
+                        <li><i class="fa-solid fa-check"></i> Unlimited Backtest Credits</li>
+                        <li><i class="fa-solid fa-check"></i> Multi-Timeframe Stress Testing</li>
+                        <li><i class="fa-solid fa-check"></i> Raw CSV/JSON Data Exports</li>
+                        <li><i class="fa-solid fa-check"></i> Direct Engineer Uplink</li>
+                    </ul>
+                    <button class="tier-btn select-tier-btn" data-price-id="price_institutional_id" data-credits="999" data-plan="Institutional Tier" data-mode="subscription">SELECT INSTITUTIONAL</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- AUTHENTICATION MODAL & OAUTH -->
+    <!-- AUTHENTICATION HUD MODAL -->
     <div id="auth-modal-overlay">
         <div class="auth-modal-card">
             <button class="abort-btn" id="close-auth-btn"><i class="fa-solid fa-xmark"></i></button>
             <div class="auth-tabs">
                 <button class="auth-tab active" id="tab-signin">SIGN IN</button>
-                <button class="auth-tab" id="tab-signup">REGISTER</button>
+                <button class="auth-tab" id="tab-signup">SIGN UP</button>
             </div>
             <form id="auth-form">
                 <div class="input-group" id="username-group" style="display: none;">
-                    <label for="auth-username"><i class="fa-solid fa-id-badge"></i> CALLSIGN / USERNAME</label>
+                    <label for="auth-username">// CALLSIGN / USERNAME</label>
                     <input type="text" id="auth-username" placeholder="e.g. Agent_Zero">
                 </div>
                 <div class="input-group">
-                    <label for="auth-email"><i class="fa-solid fa-envelope"></i> ACCESS ID (EMAIL)</label>
-                    <input type="email" id="auth-email" placeholder="agent@system.com" required>
+                    <label for="auth-email">// ACCESS ID (EMAIL)</label>
+                    <input type="email" id="auth-email" placeholder="agent@domain.com" required>
                 </div>
                 <div class="input-group">
-                    <label for="auth-password"><i class="fa-solid fa-key"></i> SECURITY PASSWORD</label>
+                    <label for="auth-password">// SECURITY PASSWORD</label>
                     <input type="password" id="auth-password" placeholder="••••••••" required>
                 </div>
                 <button type="submit" class="submit-system-btn" id="auth-submit-btn">AUTHENTICATE <i class="fa-solid fa-key"></i></button>
             </form>
 
             <div class="oauth-divider">
-                <span>OR AUTHENTICATE VIA</span>
+                <span>OR AUTHENTICATE VIA OAUTH</span>
             </div>
 
             <div class="oauth-buttons">
-                <button type="button" class="oauth-btn" id="google-auth-btn">
-                    <i class="fa-brands fa-google"></i> Continue with Google
+                <button class="oauth-btn" id="google-auth-btn">
+                    <i class="fa-brands fa-google"></i> CONTINUE WITH GOOGLE
                 </button>
             </div>
         </div>
