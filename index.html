@@ -431,58 +431,79 @@
             
             <div class="launch-stage">
                 <svg class="rocket-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Fully repaired rocket body and flames -->
-                    <path d="M50,10 C65,30 70,55 75,80 L25,80 C30,55 35,30 50,10 Z" fill="#040912" stroke="#00ff66" stroke-width="2"/>
-                    <polygon class="rocket-flame" points="35,80 65,80 50,100" fill="#00ff66" opacity="0.8"/>
+                    <path d="M50,10 C55,30 65,55 65,75 C65,85 58,90 50,90 C42,90 35,85 35,75 C35,55 45,30 50,10 Z" fill="#040912" stroke="#00ff66" stroke-width="2"/>
+                    <polygon points="35,65 20,82 35,80" fill="#00ff66" />
+                    <polygon points="65,65 80,82 65,80" fill="#00ff66" />
+                    <polygon points="50,90 42,105 50,98 58,105" fill="#ff0055" class="rocket-flame" />
+                    <circle cx="50" cy="45" r="4" fill="#00f0ff" />
                 </svg>
                 <div class="hyper-rings">
                     <span></span><span></span><span></span>
                 </div>
             </div>
-            
-            <div class="modal-status-tag">// TRANSMISSION STATUS: PENDING</div>
-            <h2 id="modal-heading">STATUS</h2>
-            <p id="modal-message">Message content.</p>
-            <button id="close-modal-btn" class="modal-action-btn">ACKNOWLEDGE <i class="fa-solid fa-check"></i></button>
+
+            <div class="modal-status-tag">// TRANSMISSION STATUS: SECURED</div>
+            <h2 id="modal-heading">UPLINK SUCCESSFUL</h2>
+            <div id="modal-message">System architecture dispatches into the quantitative core. Engineering task group assigned.</div>
+
+            <button id="close-modal-btn" class="modal-action-btn">RETURN TO COMMAND <i class="fa-solid fa-chevron-right"></i></button>
         </div>
     </div>
 
-    <!-- SUBSCRIPTION MODAL & PRICING TIERS -->
+    <!-- SUBSCRIPTION & PAYMENT HUD MODAL -->
     <div id="subscription-modal-overlay">
         <div class="subscription-modal-card">
             <button id="close-sub-btn" class="abort-btn"><i class="fa-solid fa-xmark"></i></button>
+            <div class="corner-bracket top-left"></div>
+            <div class="corner-bracket top-right"></div>
+            <div class="corner-bracket bottom-left"></div>
+            <div class="corner-bracket bottom-right"></div>
+
             <div class="sub-header">
-                <h2>OPERATIONAL TIERS</h2>
-                <p>Upgrade your clearance level to unlock additional backtests and intelligence reports.</p>
+                <div class="modal-status-tag">// CLEARANCE MATRIX & POWER SUBSCRIPTIONS</div>
+                <h2>QUANTITATIVE ACCESS TIERS</h2>
+                <p>Select your operational tier to unlock hyper-threaded compute clusters, priority backtests, and deep tick data metrics.</p>
             </div>
+
             <div class="pricing-grid">
                 <div class="tier-card">
-                    <div class="tier-name">BASIC ENTRY</div>
-                    <div class="tier-price">$19<span>/mo</span></div>
-                    <div class="tier-desc">Light quantitative analysis.</div>
+                    <div class="tier-name">START PACK</div>
+                    <div class="tier-price">$29</div>
+                    <p class="tier-desc">Essential pack for emerging quantitative strategy development.</p>
                     <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> 5 Backtest Credits</li>
+                        <li><i class="fa-solid fa-check"></i> Pack of 3 Backtests</li>
+                        <li><i class="fa-solid fa-check"></i> Standard Queue Priority</li>
+                        <li><i class="fa-solid fa-check"></i> Basic Metrics Log</li>
+                        <li><i class="fa-solid fa-xmark unavailable"></i> Tick-level Deep Analysis</li>
                     </ul>
-                    <button class="tier-btn select-tier-btn" data-price-id="price_1" data-credits="5">SELECT TIER</button>
+                    <button class="tier-btn select-tier-btn" data-plan="Start Pack" data-price-id="price_1TzyOFCmZGVreuRmIgmTkt3l" data-credits="3" data-mode="payment">GET START PACK</button>
                 </div>
+
                 <div class="tier-card featured">
-                    <div class="popular-badge">RECOMMENDED</div>
-                    <div class="tier-name">STANDARD OPS</div>
-                    <div class="tier-price">$49<span>/mo</span></div>
-                    <div class="tier-desc">Deep historical data metrics.</div>
+                    <div class="popular-badge">MOST POPULAR</div>
+                    <div class="tier-name" style="color: #00f0ff;">PRO PACK</div>
+                    <div class="tier-price" style="color: #00f0ff;">$79</div>
+                    <p class="tier-desc">High-performance engine pack for serious system traders.</p>
                     <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> 20 Backtest Credits</li>
+                        <li><i class="fa-solid fa-check"></i> Pack of 10 Backtests</li>
+                        <li><i class="fa-solid fa-check"></i> Express Priority Queue</li>
+                        <li><i class="fa-solid fa-check"></i> 99.9% Tick Data Accuracy</li>
+                        <li><i class="fa-solid fa-check"></i> PDF Report Data Export</li>
                     </ul>
-                    <button class="tier-btn featured-btn select-tier-btn" data-price-id="price_2" data-credits="20">SELECT TIER</button>
+                    <button class="tier-btn featured-btn select-tier-btn" data-plan="Pro Pack" data-price-id="price_1TzyXcCmZGVreuRmGZaJOD6w" data-credits="10" data-mode="payment"><i class="fa-solid fa-bolt"></i> GET PRO PACK</button>
                 </div>
+
                 <div class="tier-card">
-                    <div class="tier-name">INSTITUTIONAL</div>
-                    <div class="tier-price">$99<span>/mo</span></div>
-                    <div class="tier-desc">Unlimited architecture limits.</div>
+                    <div class="tier-name" style="color: #ffd700;">QUANT MONTHLY PASS</div>
+                    <div class="tier-price" style="color: #ffd700;">$199 <span>/ mo</span></div>
+                    <p class="tier-desc">Full access monthly pass for dedicated quant engineers & funds.</p>
                     <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> 60 Backtest Credits</li>
+                        <li><i class="fa-solid fa-check"></i> Maximum 40 Backtests</li>
+                        <li><i class="fa-solid fa-check"></i> Full Access to Engine</li>
+                        <li><i class="fa-solid fa-check"></i> 1-on-1 Quant Desk Support</li>
+                        <li><i class="fa-solid fa-check"></i> Databank Priority Access</li>
                     </ul>
-                    <button class="tier-btn select-tier-btn" data-price-id="price_3" data-credits="60">SELECT TIER</button>
+                    <button class="tier-btn select-tier-btn" data-plan="Quant Monthly Pass" data-price-id="price_1TzyYaCmZGVreuRm9Po6DQCk" data-credits="40" data-mode="subscription" style="border-color:#ffd700; color:#ffd700;"><i class="fa-solid fa-crown"></i> UNLOCK MONTHLY PASS</button>
                 </div>
             </div>
         </div>
@@ -492,33 +513,103 @@
     <div id="auth-modal-overlay">
         <div class="auth-modal-card">
             <button id="close-auth-btn" class="abort-btn"><i class="fa-solid fa-xmark"></i></button>
+            <div class="corner-bracket top-left"></div>
+            <div class="corner-bracket top-right"></div>
+            <div class="corner-bracket bottom-left"></div>
+            <div class="corner-bracket bottom-right"></div>
+
             <div class="auth-tabs">
-                <button class="auth-tab active" id="tab-signin">SIGN IN</button>
-                <button class="auth-tab" id="tab-signup">SIGN UP</button>
+                <button type="button" class="auth-tab active" id="tab-signin">SIGN IN</button>
+                <button type="button" class="auth-tab" id="tab-signup">SIGN UP</button>
             </div>
+
             <form id="auth-form">
                 <div class="input-group" id="username-group" style="display: none;">
-                    <label>CALLSIGN</label>
-                    <input type="text" id="auth-username" placeholder="Agent Name">
+                    <label>CALLSIGN (Username)</label>
+                    <input type="text" id="auth-username" placeholder="e.g. QuantTrader_99">
                 </div>
                 <div class="input-group">
-                    <label>ACCESS ID (EMAIL)</label>
-                    <input type="email" id="auth-email" required placeholder="agent@factory.com">
+                    <label>ACCESS ID (Email)</label>
+                    <input type="email" id="auth-email" placeholder="agent@quant.io" required>
                 </div>
                 <div class="input-group">
-                    <label>SECURITY PASSWORD</label>
-                    <input type="password" id="auth-password" required placeholder="••••••••">
+                    <label>SECURITY CLEARANCE (Password)</label>
+                    <input type="password" id="auth-password" placeholder="••••••••••••" required>
                 </div>
                 <button type="submit" id="auth-submit-btn" class="submit-system-btn">AUTHENTICATE <i class="fa-solid fa-key"></i></button>
             </form>
-            <div class="oauth-divider"><span>OR UPLINK VIA</span></div>
+
+            <div class="oauth-divider"><span>OR UPLINK WITH</span></div>
             <div class="oauth-buttons">
-                <button class="oauth-btn" id="google-auth-btn"><i class="fa-brands fa-google"></i> GOOGLE SECURE LOGIN</button>
+                <button type="button" id="google-auth-btn" class="oauth-btn google"><i class="fa-brands fa-google"></i> SIGN IN WITH GOOGLE</button>
             </div>
         </div>
     </div>
 
-<!-- Connect to your JavaScript file -->
-<script src="script.js"></script>
+    <script src="app.js"></script>
+    <script>
+        // ========================================================
+        // ELEGANT "INVISIBLE PEN" SMOOTH WRITING ENGINE
+        // ========================================================
+        
+        async function runBlockWriting(elements, holdTime = 3200, fadeTime = 800) {
+            // Initialize HTML content & find elements
+            const els = elements.map(item => {
+                const el = document.getElementById(item.id);
+                if(el) el.innerHTML = item.text;
+                return { el, ...item };
+            }).filter(item => item.el);
+
+            if(els.length === 0) return;
+
+            while (true) {
+                // 1. Instantly reset all text blocks to be hidden (but keeping the glow bounds)
+                for (const item of els) {
+                    item.el.style.transition = 'none';
+                    item.el.style.opacity = '1';
+                    item.el.style.clipPath = 'inset(-40px 100% -40px -40px)';
+                }
+                
+                // Force a browser repaint so the reset applies before animating
+                void els[0].el.offsetWidth;
+
+                // 2. Write each line sequentially using a smooth, organic reveal speed
+                for (const item of els) {
+                    item.el.style.transition = `clip-path ${item.duration}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`;
+                    item.el.style.clipPath = 'inset(-40px -40px -40px -40px)';
+                    
+                    // Wait for line to finish writing plus a tiny pause before the next line
+                    await new Promise(res => setTimeout(res, item.duration + 150));
+                }
+
+                // 3. Hold the entire block so it can be read
+                await new Promise(res => setTimeout(res, holdTime));
+
+                // 4. Elegantly fade out the whole block at once
+                for (const item of els) {
+                    item.el.style.transition = `opacity ${fadeTime}ms ease-out`;
+                    item.el.style.opacity = '0';
+                }
+
+                // Wait for the fade out to finish plus a gap before looping
+                await new Promise(res => setTimeout(res, fadeTime + 600));
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Right Side Sequence
+            runBlockWriting([
+                { id: 'vice-right-1', text: 'Deep Backtest', duration: 1100 },
+                { id: 'vice-right-2', text: 'In detail report', duration: 1300 },
+                { id: 'vice-right-3', text: 'Crush it G 🚀', duration: 1000 }
+            ], 3500, 1000);
+
+            // Left Side Sequence (UPDATED)
+            runBlockWriting([
+                { id: 'vice-left-1', text: 'Test The Reliability of Your System', duration: 1600 },
+                { id: 'vice-left-2', text: 'Become a Systematic Millionair Trader', duration: 2200 }
+            ], 4500, 1000);
+        });
+    </script>
 </body>
 </html>
