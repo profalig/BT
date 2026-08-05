@@ -241,10 +241,21 @@ orbits.forEach(o => {
 
 const btcSun = document.getElementById('sun');
 if (btcSun) {
-    // Hardware acceleration fix to prevent the sun from blurring when the viewport scales
-    btcSun.style.transform = 'translateZ(0)';
+    // Advanced hardware acceleration and strict anti-blur fix for the Bitcoin Sun
+    btcSun.style.transform = 'translate3d(0, 0, 0)';
     btcSun.style.backfaceVisibility = 'hidden';
-    btcSun.style.willChange = 'transform';
+    btcSun.style.perspective = '1000px';
+    btcSun.style.willChange = 'transform, filter';
+    btcSun.style.imageRendering = '-webkit-optimize-contrast'; // Forces sharp scaling in WebKit
+    btcSun.style.filter = 'blur(0px)';
+    
+    // Apply fix to child image as well if it's rendered as an <img> tag
+    const sunImg = btcSun.querySelector('img');
+    if (sunImg) {
+        sunImg.style.transform = 'translate3d(0, 0, 0)';
+        sunImg.style.imageRendering = '-webkit-optimize-contrast';
+        sunImg.style.backfaceVisibility = 'hidden';
+    }
 }
 const solarSystem = document.getElementById('solar-system');
 if (btcSun && solarSystem) {
