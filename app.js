@@ -241,22 +241,27 @@ orbits.forEach(o => {
 
 const btcSun = document.getElementById('sun');
 if (btcSun) {
-    // Advanced hardware acceleration and strict anti-blur fix for the Bitcoin Sun
-    btcSun.style.transform = 'translate3d(0, 0, 0)';
-    btcSun.style.backfaceVisibility = 'hidden';
-    btcSun.style.perspective = '1000px';
-    btcSun.style.willChange = 'transform, filter';
-    btcSun.style.imageRendering = '-webkit-optimize-contrast'; // Forces sharp scaling in WebKit
-    btcSun.style.filter = 'blur(0px)';
+    // REMOVE hardware acceleration that locks the 1x raster resolution
+    // We want the browser to natively repaint this element during the scale
+    btcSun.style.transform = 'none';
+    btcSun.style.backfaceVisibility = 'visible';
+    btcSun.style.perspective = 'none';
+    btcSun.style.willChange = 'auto';
+    btcSun.style.filter = 'none';
     
-    // Apply fix to child image as well if it's rendered as an <img> tag
+    // Allow the browser to handle standard scaling anti-aliasing
+    btcSun.style.imageRendering = 'auto'; 
+    
+    // Clean the child image tag as well
     const sunImg = btcSun.querySelector('img');
     if (sunImg) {
-        sunImg.style.transform = 'translate3d(0, 0, 0)';
-        sunImg.style.imageRendering = '-webkit-optimize-contrast';
-        sunImg.style.backfaceVisibility = 'hidden';
+        sunImg.style.transform = 'none';
+        sunImg.style.backfaceVisibility = 'visible';
+        sunImg.style.willChange = 'auto';
+        sunImg.style.imageRendering = 'auto';
     }
 }
+
 const solarSystem = document.getElementById('solar-system');
 if (btcSun && solarSystem) {
     btcSun.addEventListener('mouseenter', () => {
