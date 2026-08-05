@@ -7,7 +7,7 @@
 }
 
 /* ==========================================
-   GLOBAL SELECTION PREVENT (DISABLES BLUE HIGHLIGHT)
+   GLOBAL SELECTION PREVENT
    ========================================== */
 body, #space-matrix, .constellation, .beast-container, img, video, svg, #spaceship-title-container {
     -webkit-user-select: none;
@@ -16,7 +16,6 @@ body, #space-matrix, .constellation, .beast-container, img, video, svg, #spacesh
     user-select: none;
 }
 
-/* Allow text highlighting inside input elements for typing */
 input, textarea {
     -webkit-user-select: text;
     -moz-user-select: text;
@@ -33,44 +32,191 @@ body {
 }
 
 /* ==========================================
-   AUTHENTICATION CORNER
+   AUTHENTICATION & SUBSCRIPTION CORNER (HUD DOCK)
    ========================================== */
 #auth-corner {
     position: fixed;
-    top: 30px;
-    right: 40px;
+    top: 25px;
+    right: 35px;
     z-index: 1000;
-    display: flex;
-    gap: 15px;
-    transition: opacity 0.5s ease;
+    background: rgba(4, 12, 24, 0.85);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    border-radius: 6px;
+    padding: 6px 10px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(0, 240, 255, 0.05);
+    transition: opacity 0.5s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.auth-btn {
-    background: rgba(4, 9, 18, 0.7);
-    border: 1px solid rgba(0, 240, 255, 0.3);
-    color: #00f0ff;
-    padding: 10px 20px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.85rem;
-    letter-spacing: 1px;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.3s ease;
+#auth-corner:hover {
+    border-color: rgba(0, 240, 255, 0.5);
+    box-shadow: 0 8px 35px rgba(0, 240, 255, 0.15), inset 0 0 20px rgba(0, 240, 255, 0.08);
+}
+
+.dock-bracket {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border: 2px solid #00f0ff;
+    pointer-events: none;
+}
+
+.dock-bracket.top-left {
+    top: -2px;
+    left: -2px;
+    border-right: none;
+    border-bottom: none;
+}
+
+.dock-bracket.bottom-right {
+    bottom: -2px;
+    right: -2px;
+    border-left: none;
+    border-top: none;
+}
+
+.dock-content {
     display: flex;
     align-items: center;
     gap: 8px;
-    backdrop-filter: blur(5px);
+}
+
+.dock-divider {
+    width: 1px;
+    height: 20px;
+    background: linear-gradient(180deg, transparent, rgba(0, 240, 255, 0.35), transparent);
+    margin: 0 2px;
+}
+
+.auth-btn {
+    background: rgba(8, 20, 38, 0.6);
+    border: 1px solid rgba(0, 240, 255, 0.25);
+    color: #a3c7e6;
+    padding: 8px 16px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.auth-btn i {
+    font-size: 0.85rem;
+    transition: transform 0.3s ease;
 }
 
 .auth-btn:hover {
-    background: #00f0ff;
-    color: #000;
-    box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+    background: rgba(0, 240, 255, 0.15);
+    color: #00f0ff;
+    border-color: rgba(0, 240, 255, 0.6);
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+    transform: translateY(-1px);
 }
 
-.auth-btn.sign-up {
-    background: rgba(0, 240, 255, 0.1);
+.auth-btn:hover i {
+    transform: scale(1.15);
+}
+
+.auth-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Subscriptions Button */
+.auth-btn.sub-nav-btn {
+    background: rgba(255, 215, 0, 0.08);
+    border-color: rgba(255, 215, 0, 0.35);
+    color: #ffd700;
+}
+
+.auth-btn.sub-nav-btn:hover {
+    background: rgba(255, 215, 0, 0.2);
+    color: #ffffff;
+    border-color: #ffd700;
+    box-shadow: 0 0 18px rgba(255, 215, 0, 0.4);
+}
+
+/* Sign-Up CTA Button */
+.auth-btn.sign-up.cta-btn {
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(0, 255, 102, 0.15) 100%);
     border-color: #00f0ff;
+    color: #ffffff;
+    font-weight: bold;
+    text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+}
+
+.auth-btn.sign-up.cta-btn:hover {
+    background: linear-gradient(135deg, #00f0ff 0%, #00ff66 100%);
+    color: #040912;
+    text-shadow: none;
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+    border-color: #00ff66;
+}
+
+/* Logout Button */
+.auth-btn.logout-btn {
+    background: rgba(255, 0, 85, 0.08);
+    border-color: rgba(255, 0, 85, 0.3);
+    color: #ff4d88;
+}
+
+.auth-btn.logout-btn:hover {
+    background: #ff0055;
+    color: #ffffff;
+    border-color: #ff0055;
+    box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
+}
+
+/* Agent User Badge */
+.user-badge {
+    font-family: 'Share Tech Mono', monospace;
+    color: #00ff66;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    padding: 7px 12px;
+    background: rgba(0, 255, 102, 0.08);
+    border: 1px solid rgba(0, 255, 102, 0.3);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.user-status-dot {
+    width: 6px;
+    height: 6px;
+    background-color: #00ff66;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #00ff66;
+    animation: statusPulse 2s infinite alternate;
+}
+
+@keyframes statusPulse {
+    0% { opacity: 0.4; transform: scale(0.9); }
+    100% { opacity: 1; transform: scale(1.1); }
+}
+
+/* Credits Badge */
+.credit-badge {
+    font-family: 'Share Tech Mono', monospace;
+    color: #ffd700;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    padding: 7px 12px;
+    background: rgba(255, 215, 0, 0.08);
+    border: 1px solid rgba(255, 215, 0, 0.35);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.15);
 }
 
 /* ==========================================
@@ -342,12 +488,10 @@ body.warping #spaceship-title-container {
     cursor: pointer;
     filter: drop-shadow(0 0 18px rgba(255, 215, 0, 0.4));
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease;
-    will-change: transform, filter;
-    transform: translate3d(0,0,0);
 }
 
 .btc-sun:hover {
-    transform: scale(1.12) translate3d(0,0,0);
+    transform: scale(1.12);
     filter: drop-shadow(0 0 25px rgba(255, 215, 0, 0.95)) drop-shadow(0 0 50px rgba(255, 140, 0, 0.7));
 }
 
@@ -583,7 +727,7 @@ body.landed .module-details { right: 8%; opacity: 1; }
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.8s ease-in-out !important;
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.5);
     overflow: hidden;
 }
 
@@ -719,7 +863,7 @@ body.landed .module-details { right: 8%; opacity: 1; }
 .tactical-modal-card {
     position: relative;
     width: 90%;
-    max-width: 480px;
+    max-width: 520px;
     background: rgba(6, 16, 26, 0.95);
     border: 1px solid rgba(0, 255, 102, 0.4);
     box-shadow: 0 0 35px rgba(0, 255, 102, 0.25), inset 0 0 15px rgba(0, 255, 102, 0.1);
@@ -815,35 +959,12 @@ body.landed .module-details { right: 8%; opacity: 1; }
     text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
-.tactical-modal-card p {
+.tactical-modal-card #modal-message {
     font-family: 'Inter', sans-serif;
     color: #a0aec0;
     font-size: 0.9rem;
     line-height: 1.5;
     margin-bottom: 25px;
-}
-
-.telemetry-bar {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    background: rgba(0, 240, 255, 0.05);
-    border: 1px solid rgba(0, 240, 255, 0.2);
-    padding: 10px;
-    margin-bottom: 25px;
-}
-
-.telemetry-item span {
-    display: block;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.65rem;
-    color: #718096;
-}
-
-.telemetry-item b {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.85rem;
-    color: #00f0ff;
 }
 
 .modal-action-btn {
@@ -863,6 +984,204 @@ body.landed .module-details { right: 8%; opacity: 1; }
     background: #00ff66;
     color: #040912;
     box-shadow: 0 0 20px rgba(0, 255, 102, 0.6);
+}
+
+/* ==========================================
+   SUBSCRIPTION MODAL & PRICING TIERS
+   ========================================== */
+#subscription-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(2, 6, 12, 0.92);
+    backdrop-filter: blur(12px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9997;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+}
+
+#subscription-modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.subscription-modal-card {
+    position: relative;
+    width: 92%;
+    max-width: 960px;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: rgba(6, 16, 26, 0.95);
+    border: 1px solid rgba(255, 215, 0, 0.4);
+    box-shadow: 0 0 45px rgba(255, 215, 0, 0.15);
+    padding: 40px 30px;
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+    border-radius: 6px;
+}
+
+#subscription-modal-overlay.active .subscription-modal-card {
+    transform: scale(1);
+}
+
+.sub-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.sub-header h2 {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 2.2rem;
+    color: #ffffff;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.sub-header p {
+    color: #8fa3b8;
+    font-size: 0.9rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.tier-card {
+    position: relative;
+    background: rgba(4, 9, 18, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.3s ease;
+}
+
+.tier-card:hover {
+    border-color: rgba(0, 240, 255, 0.4);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.tier-card.featured {
+    background: rgba(0, 240, 255, 0.03);
+    border: 1px solid #00f0ff;
+    box-shadow: 0 0 25px rgba(0, 240, 255, 0.2);
+}
+
+.popular-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #00f0ff;
+    color: #000;
+    font-family: 'Share Tech Mono', monospace;
+    font-weight: bold;
+    font-size: 0.65rem;
+    padding: 3px 12px;
+    border-radius: 12px;
+    letter-spacing: 1px;
+}
+
+.tier-name {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.1rem;
+    color: #ffffff;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+.tier-price {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 2.2rem;
+    font-weight: bold;
+    color: #ffffff;
+    margin-bottom: 8px;
+}
+
+.tier-price span {
+    font-size: 0.8rem;
+    color: #718096;
+}
+
+.tier-desc {
+    font-size: 0.8rem;
+    color: #8fa3b8;
+    margin-bottom: 20px;
+    min-height: 38px;
+}
+
+.tier-features {
+    list-style: none;
+    margin-bottom: 25px;
+    text-align: left;
+}
+
+.tier-features li {
+    font-size: 0.8rem;
+    color: #d0dbe5;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tier-features i {
+    color: #00ff66;
+    font-size: 0.75rem;
+}
+
+.tier-features i.unavailable {
+    color: #ff0055;
+}
+
+.tier-btn {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.tier-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #ffffff;
+}
+
+.tier-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.tier-btn.featured-btn {
+    background: rgba(0, 240, 255, 0.1);
+    border-color: #00f0ff;
+    color: #00f0ff;
+}
+
+.tier-btn.featured-btn:hover {
+    background: #00f0ff;
+    color: #000;
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
 }
 
 /* ==========================================
@@ -948,21 +1267,6 @@ body.landed .module-details { right: 8%; opacity: 1; }
     transform: scale(1.2);
 }
 
-.user-badge {
-    font-family: 'Share Tech Mono', monospace;
-    color: #00ff66;
-    font-size: 0.85rem;
-    letter-spacing: 1px;
-    padding: 8px 15px;
-    background: rgba(0, 255, 102, 0.1);
-    border: 1px solid rgba(0, 255, 102, 0.3);
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-/* OAuth Divider & Social Buttons */
 .oauth-divider {
     position: relative;
     text-align: center;
@@ -992,25 +1296,26 @@ body.landed .module-details { right: 8%; opacity: 1; }
 }
 
 .oauth-buttons {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 12px;
 }
 
 .oauth-btn {
+    width: 100%;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.15);
     color: #ffffff;
-    padding: 10px;
+    padding: 12px;
     font-family: 'Share Tech Mono', monospace;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     letter-spacing: 1px;
     cursor: pointer;
     border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 10px;
     transition: all 0.3s ease;
 }
 
@@ -1019,6 +1324,52 @@ body.landed .module-details { right: 8%; opacity: 1; }
     color: #00f0ff;
     background: rgba(0, 240, 255, 0.1);
     box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+}
+
+/* ==========================================
+   RESPONSIVE OVERRIDES
+   ========================================== */
+@media (max-width: 900px) {
+    #spaceship-title-container {
+        top: 20px;
+        left: 20px;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .mothership-svg { width: 180px; }
+    .tractor-beam-title h1 { font-size: 1.8rem; }
+    .tractor-beam-title h1 span { font-size: 1.2rem; letter-spacing: 6px; }
+
+    #auth-corner {
+        top: 15px;
+        right: 15px;
+        padding: 5px 8px;
+    }
+
+    .dock-content {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+
+    .dock-divider {
+        display: none;
+    }
+
+    .pricing-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .module-details {
+        width: 85%;
+        max-width: none;
+        padding: 25px;
+    }
+
+    body.landed .module-details {
+        right: 50%;
+        transform: translateX(50%);
+    }
 }
 
 /* ==========================================
