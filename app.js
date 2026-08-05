@@ -122,58 +122,67 @@ orbits.forEach(o => {
         document.getElementById('module-title').style.color = data.color;
         document.getElementById('module-desc').innerHTML = data.desc; 
         
-        moduleDetails.style.borderLeftColor = data.color;
-        actionBtn.style.borderColor = data.color;
-        actionBtn.style.color = data.color;
+        if (moduleDetails) moduleDetails.style.borderLeftColor = data.color;
+        if (actionBtn) {
+            actionBtn.style.borderColor = data.color;
+            actionBtn.style.color = data.color;
+        }
 
-        document.getElementById('stats-grid').innerHTML = data.stats.map(s => `
-            <div class="stat-card">
-                <span class="stat-title">${s.label}</span>
-                <span class="stat-value" style="color: ${data.color}">${s.val}</span>
-            </div>
-        `).join('');
+        const statsGrid = document.getElementById('stats-grid');
+        if (statsGrid) {
+            statsGrid.innerHTML = data.stats.map(s => `
+                <div class="stat-card">
+                    <span class="stat-title">${s.label}</span>
+                    <span class="stat-value" style="color: ${data.color}">${s.val}</span>
+                </div>
+            `).join('');
+        }
 
-        if (o.id === 'contact' || o.id === 'about') {
-            actionBtn.style.display = 'none';
-        } else {
-            actionBtn.style.display = 'flex';
+        if (actionBtn) {
+            if (o.id === 'contact' || o.id === 'about') {
+                actionBtn.style.display = 'none';
+            } else {
+                actionBtn.style.display = 'flex';
+            }
         }
 
         setTimeout(() => document.body.classList.add('landed'), 500);
     });
 });
 
-returnBtn.addEventListener('click', () => {
-    document.body.classList.remove('landed');
-    if (activePlanetData && activePlanetData.planetEl) activePlanetData.planetEl.classList.remove('active');
-    activePlanetData = null; 
-    setTimeout(() => { document.body.classList.remove('warping'); }, 800);
-});
-
-// INITIALIZE MODULE BUTTON LOGIC (THE ZOOM & ACTIONS)
-actionBtn.addEventListener('click', () => {
-    if (!activePlanetData) return;
-
-    if (activePlanetData.id === 'backtest') {
-        isHyperZoomed = true;
+if (returnBtn) {
+    returnBtn.addEventListener('click', () => {
         document.body.classList.remove('landed');
-        const titleContainer = document.getElementById('spaceship-title-container');
-        const authCorner = document.getElementById('auth-corner');
-        if (titleContainer) titleContainer.style.opacity = '0';
-        if (authCorner) authCorner.style.opacity = '0';
-        
-        setTimeout(() => {
-            const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
-            if (gasAtmosphere) gasAtmosphere.classList.add('active');
-        }, 800);
-    } else if (activePlanetData.id === 'databank') {
-        showTacticalModal('SYSTEM DATABANK', 'The System Databank is currently under active development. High-edge quantitative strategy models will be released soon.', true);
-    } else if (activePlanetData.id === 'campus') {
-        showTacticalModal('BACKTESTING CAMPUS', 'Enrolling now for the upcoming Quantitative Engineering cohort. Contact our engineering desk via SEC-04 to apply.', true);
-    }
-});
+        if (activePlanetData && activePlanetData.planetEl) activePlanetData.planetEl.classList.remove('active');
+        activePlanetData = null; 
+        setTimeout(() => { document.body.classList.remove('warping'); }, 800);
+    });
+}
 
-// ABORT CONSOLE BUTTON (ZOOM OUT)
+if (actionBtn) {
+    actionBtn.addEventListener('click', () => {
+        if (!activePlanetData) return;
+
+        if (activePlanetData.id === 'backtest') {
+            isHyperZoomed = true;
+            document.body.classList.remove('landed');
+            const titleContainer = document.getElementById('spaceship-title-container');
+            const authCorner = document.getElementById('auth-corner');
+            if (titleContainer) titleContainer.style.opacity = '0';
+            if (authCorner) authCorner.style.opacity = '0';
+            
+            setTimeout(() => {
+                const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
+                if (gasAtmosphere) gasAtmosphere.classList.add('active');
+            }, 800);
+        } else if (activePlanetData.id === 'databank') {
+            showTacticalModal('SYSTEM DATABANK', 'The System Databank is currently under active development. High-edge quantitative strategy models will be released soon.', true);
+        } else if (activePlanetData.id === 'campus') {
+            showTacticalModal('BACKTESTING CAMPUS', 'Enrolling now for the upcoming Quantitative Engineering cohort. Contact our engineering desk via SEC-04 to apply.', true);
+        }
+    });
+}
+
 const abortConsoleBtn = document.getElementById('abort-console-btn');
 if (abortConsoleBtn) {
     abortConsoleBtn.addEventListener('click', () => {
@@ -240,7 +249,6 @@ orbits.forEach(o => {
 });
 
 const btcSun = document.getElementById('sun');
-
 const solarSystem = document.getElementById('solar-system');
 if (btcSun && solarSystem) {
     btcSun.addEventListener('mouseenter', () => {
@@ -315,9 +323,6 @@ function showTacticalModal(title, message, isSuccess = true) {
     if (modalOverlay) modalOverlay.classList.add('active');
 }
 
-// ==========================================
-// SUBSCRIPTION MODAL TRIGGER
-// ==========================================
 function openSubscriptionModal() {
     const subModal = document.getElementById('subscription-modal-overlay');
     if (subModal) subModal.classList.add('active');
@@ -339,6 +344,13 @@ if (window.supabase) {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
+// Helper to reliably get user display name across Password and OAuth log-ins
+function getUserDisplayName(user) {
+    if (!user) return 'AGENT';
+    const meta = user.user_metadata || {};
+    return meta.display_name || meta.full_name || meta.name || (user.email ? user.email.split('@')[0] : 'AGENT');
+}
+
 // ==========================================
 // USER PROFILE & FREE CREDIT ENGINE
 // ==========================================
@@ -346,7 +358,7 @@ async function fetchOrCreateUserProfile(user) {
     if (!supabaseClient || !user) return null;
 
     try {
-        let { data: profile, error } = await supabaseClient
+        let { data: profile } = await supabaseClient
             .from('user_profiles')
             .select('*')
             .eq('id', user.id)
@@ -395,7 +407,7 @@ async function openUserReportsModal() {
 
     const activeUserId = session.user.id;
     const userEmail = session.user.email;
-    const callsign = (session.user.user_metadata?.display_name || userEmail.split('@')[0]).toUpperCase();
+    const callsign = getUserDisplayName(session.user).toUpperCase();
 
     try {
         const userProfile = await fetchOrCreateUserProfile(session.user);
@@ -407,13 +419,9 @@ async function openUserReportsModal() {
             .eq('user_id', activeUserId)
             .order('created_at', { ascending: false });
 
-        if (error) {
-            console.error("[DEBUG] Database Error:", error);
-            throw error;
-        }
+        if (error) throw error;
 
         const historyList = submissions || [];
-        
         const totalSubmissions = historyList.length;
         const completedCount = historyList.filter(s => {
             const hasUrl = (s.report_url || s.pdf_url || s.report_link || s.file_url || s.url || '').trim();
@@ -544,13 +552,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const authCorner = document.getElementById('auth-corner');
     const googleBtn = document.getElementById('google-auth-btn');
 
-    // SUBSCRIPTION NAV BINDINGS
     if (navSubBtn) navSubBtn.addEventListener('click', openSubscriptionModal);
     if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
 
-    // ==========================================
     // STRIPE CHECKOUT INTEGRATION LOGIC
-    // ==========================================
     document.querySelectorAll('.select-tier-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const button = e.currentTarget;
@@ -596,10 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 const data = await response.json();
-
-                if (!response.ok || data.error) {
-                    throw new Error(data.error || 'Failed to initialize Stripe Checkout session.');
-                }
+                if (!response.ok || data.error) throw new Error(data.error || 'Failed to initialize Stripe Checkout session.');
 
                 if (data.url) {
                     window.location.href = data.url;
@@ -615,7 +617,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // CLOSE MODAL LOGIC
     if (closeModalBtn) {
         closeModalBtn.addEventListener('click', () => {
             const modalOverlay = document.getElementById('tactical-modal-overlay');
@@ -627,9 +628,7 @@ document.addEventListener('DOMContentLoaded', () => {
             isHyperZoomed = false;
 
             setTimeout(() => {
-                if (activePlanetData) {
-                    document.body.classList.add('landed');
-                }
+                if (activePlanetData) document.body.classList.add('landed');
                 const titleContainer = document.getElementById('spaceship-title-container');
                 if (authCorner) authCorner.style.opacity = '1';
                 if (titleContainer) titleContainer.style.opacity = '1';
@@ -637,7 +636,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // BACKTEST SUBMISSION WITH CREDIT VERIFICATION & DEDUCTION
     if (systemSubmitForm) {
         systemSubmitForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -648,8 +646,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const { data: { session } } = await supabaseClient.auth.getSession();
-            
-            // 1. REQUIRE AUTHENTICATION
             if (!session || !session.user) {
                 showTacticalModal('AUTHENTICATION REQUIRED', 'Please sign in or create an account to run backtests with your free credit.', false);
                 setAuthMode('signin');
@@ -667,16 +663,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // 2. CHECK USER CREDIT BALANCE
             const profile = await fetchOrCreateUserProfile(session.user);
             const currentCredits = profile ? profile.credits : 0;
 
             if (currentCredits < 1) {
-                showTacticalModal(
-                    'INSUFFICIENT CREDITS', 
-                    'You have 0 Backtest Credits remaining. Please upgrade your operational tier to unlock additional backtests.', 
-                    false
-                );
+                showTacticalModal('INSUFFICIENT CREDITS', 'You have 0 Backtest Credits remaining. Please upgrade your operational tier to unlock additional backtests.', false);
                 openSubscriptionModal();
                 return;
             }
@@ -685,11 +676,9 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.innerText = 'UPLINKING TO CORE...';
             submitBtn.disabled = true;
 
-            // Wake up Render Worker
             fetch("https://backtest-worker-fs1a.onrender.com", { mode: "no-cors" }).catch(() => {});
 
             try {
-                // 3. INSERT BACKTEST SUBMISSION
                 const { error: subError } = await supabaseClient
                     .from('submissions')
                     .insert([{ 
@@ -702,25 +691,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (subError) throw subError;
 
-                // 4. DEDUCT 1 CREDIT FROM USER PROFILE
                 const newCredits = currentCredits - 1;
-                const { error: profileUpdateError } = await supabaseClient
+                await supabaseClient
                     .from('user_profiles')
                     .update({ credits: newCredits })
                     .eq('id', userId);
 
-                if (profileUpdateError) {
-                    console.error("Credit deduction error:", profileUpdateError);
-                }
-
-                // 5. UPDATE HUD BADGES
                 updateCreditBadgeUI(newCredits);
 
-                showTacticalModal(
-                    'UPLINK SECURED', 
-                    `System parameters received! 1 Backtest Credit used. <b>${newCredits} credit(s) remaining</b>.<br><br>Our engineering team will conduct a multi-threaded data analysis and compile your report shortly.`, 
-                    true
-                );
+                showTacticalModal('UPLINK SECURED', `System parameters received! 1 Backtest Credit used. <b>${newCredits} credit(s) remaining</b>.<br><br>Our engineering team will conduct a multi-threaded data analysis and compile your report shortly.`, true);
 
                 systemNameInput.value = '';
                 rulesInput.value = '';
@@ -734,15 +713,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // UPDATE UI CREDIT BADGE
     function updateCreditBadgeUI(credits) {
         const badgeEl = document.getElementById('nav-credits-label');
-        if (badgeEl) {
-            badgeEl.innerHTML = `CREDITS: ${credits}`;
-        }
+        if (badgeEl) badgeEl.innerHTML = `CREDITS: ${credits}`;
     }
 
-    // AUTH MODE SWITCHING
     function setAuthMode(mode) {
         authMode = mode;
         if (mode === 'signin') {
@@ -767,7 +742,6 @@ document.addEventListener('DOMContentLoaded', () => {
         closeAuthBtn.addEventListener('click', () => authModal.classList.remove('active'));
     }
 
-    // AUTH FORM SUBMISSION
     if (authForm) {
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -809,28 +783,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
 
                     if (error) throw error;
-
-                    if (data?.user) {
-                        await fetchOrCreateUserProfile(data.user);
-                    }
+                    if (data?.user) await fetchOrCreateUserProfile(data.user);
 
                     authModal.classList.remove('active');
-                    showTacticalModal(
-                        'CLEARANCE CREATED', 
-                        'Check your email comm-link to verify your account. Your <b>1 Free Credit</b> has been assigned!', 
-                        true
-                    );
+                    showTacticalModal('CLEARANCE CREATED', 'Check your email comm-link to verify your account. Your <b>1 Free Credit</b> has been assigned!', true);
                 } else {
                     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
                     if (error) throw error;
-
-                    if (data?.user) {
-                        await fetchOrCreateUserProfile(data.user);
-                    }
+                    if (data?.user) await fetchOrCreateUserProfile(data.user);
 
                     authModal.classList.remove('active');
-                    const displayName = data.user.user_metadata?.display_name || data.user.email.split('@')[0];
-                    showTacticalModal('ACCESS GRANTED', `Authenticated as AGENT: ${displayName}`, true);
+                    const displayName = getUserDisplayName(data.user);
+                    showTacticalModal('ACCESS GRANTED', `Authenticated as AGENT: ${displayName.toUpperCase()}`, true);
                 }
             } catch (err) {
                 showTacticalModal('AUTHENTICATION FAILED', err.message, false);
@@ -841,13 +805,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // OAUTH AUTHENTICATION
     async function handleOAuth(provider) {
-        if (!supabaseClient) return;
+        if (!supabaseClient) {
+            showTacticalModal('AUTHENTICATION ERROR', 'Supabase client is not initialized.', false);
+            return;
+        }
         try {
             const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: provider,
-                options: { redirectTo: window.location.origin }
+                options: { 
+                    redirectTo: window.location.origin + window.location.pathname
+                }
             });
             if (error) throw error;
         } catch (err) {
@@ -857,7 +825,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (googleBtn) googleBtn.addEventListener('click', () => handleOAuth('google'));
 
-    // AUTH STATE LISTENER & SESSION BINDING
+    // DYNAMIC ERROR PARSING FOR URL REDIRECTS (EXPLICIT GOOGLE OAUTH HANDLING)
     if (supabaseClient) {
         const hashStr = window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash;
         const hashParams = new URLSearchParams(hashStr);
@@ -875,10 +843,21 @@ document.addEventListener('DOMContentLoaded', () => {
             showTacticalModal('PAYMENT CANCELLED', 'Stripe checkout session was cancelled. No charges were made.', false);
             window.history.replaceState(null, null, window.location.pathname);
         } else if (urlError || urlErrorDesc) {
-            const formattedMsg = urlErrorDesc 
-                ? decodeURIComponent(urlErrorDesc).replace(/\+/g, ' ') 
-                : 'Verification link is invalid or has expired.';
-            showTacticalModal('LINK EXPIRED', formattedMsg, false);
+            const rawMsg = urlErrorDesc ? decodeURIComponent(urlErrorDesc).replace(/\+/g, ' ') : '';
+            const lowerMsg = rawMsg.toLowerCase();
+
+            let title = 'AUTHENTICATION NOTICE';
+            let message = rawMsg || 'Verification link is invalid or has expired.';
+
+            if (lowerMsg.includes('already registered') || lowerMsg.includes('already exists') || lowerMsg.includes('identity_already_exists')) {
+                title = 'ACCOUNT ALREADY EXISTS';
+                message = 'An account with this Google email address already exists.<br><br>Please click <b>SIGN IN</b> and authenticate using your email and password, or use the primary login method used when registering.';
+            } else if (lowerMsg.includes('expired') || lowerMsg.includes('invalid')) {
+                title = 'LINK EXPIRED';
+                message = 'The security token or confirmation link has expired. Please request a new authentication link.';
+            }
+
+            showTacticalModal(title, message, false);
             window.history.replaceState(null, null, window.location.pathname);
         } else if (authType === 'signup' || authType === 'email_confirmation') {
             showTacticalModal('EMAIL VERIFIED', 'Access Clearance Confirmed. 1 Free Credit Provisioned.', true);
@@ -889,15 +868,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         supabaseClient.auth.onAuthStateChange(async (event, session) => {
             if (session && session.user) {
-                const displayName = session.user.user_metadata?.display_name || session.user.email.split('@')[0];
-                
+                const displayName = getUserDisplayName(session.user);
                 const profile = await fetchOrCreateUserProfile(session.user);
                 const userCredits = profile ? profile.credits : 0;
 
                 const contactEmailInput = document.getElementById('contact-email');
-                if (contactEmailInput) {
-                    contactEmailInput.value = session.user.email;
-                }
+                if (contactEmailInput) contactEmailInput.value = session.user.email;
 
                 if (authCorner) {
                     authCorner.innerHTML = `
@@ -948,7 +924,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     document.getElementById('my-sub-btn')?.addEventListener('click', openSubscriptionModal);
                     document.getElementById('my-reports-btn')?.addEventListener('click', openUserReportsModal);
-
                     document.getElementById('signout-btn')?.addEventListener('click', async () => {
                         await supabaseClient.auth.signOut();
                         window.location.reload();

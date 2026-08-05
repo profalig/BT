@@ -6,9 +6,6 @@
     -webkit-font-smoothing: antialiased;
 }
 
-/* ==========================================
-   GLOBAL SELECTION PREVENT
-   ========================================== */
 body, #space-matrix, .constellation, .beast-container, img, video, svg, #spaceship-title-container {
     -webkit-user-select: none;
     -moz-user-select: none;
@@ -31,9 +28,6 @@ body {
     width: 100vw;
 }
 
-/* ==========================================
-   AUTHENTICATION & SUBSCRIPTION CORNER (HUD DOCK)
-   ========================================== */
 #auth-corner {
     position: fixed;
     top: 25px;
@@ -129,7 +123,6 @@ body {
     cursor: not-allowed;
 }
 
-/* Subscriptions Button */
 .auth-btn.sub-nav-btn {
     background: rgba(255, 215, 0, 0.08);
     border-color: rgba(255, 215, 0, 0.35);
@@ -143,7 +136,6 @@ body {
     box-shadow: 0 0 18px rgba(255, 215, 0, 0.4);
 }
 
-/* Sign-Up CTA Button */
 .auth-btn.sign-up.cta-btn {
     background: linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(0, 255, 102, 0.15) 100%);
     border-color: #00f0ff;
@@ -160,7 +152,6 @@ body {
     border-color: #00ff66;
 }
 
-/* Logout Button */
 .auth-btn.logout-btn {
     background: rgba(255, 0, 85, 0.08);
     border-color: rgba(255, 0, 85, 0.3);
@@ -174,7 +165,6 @@ body {
     box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
 }
 
-/* Agent User Badge */
 .user-badge {
     font-family: 'Share Tech Mono', monospace;
     color: #00ff66;
@@ -203,7 +193,6 @@ body {
     100% { opacity: 1; transform: scale(1.1); }
 }
 
-/* Credits Badge */
 .credit-badge {
     font-family: 'Share Tech Mono', monospace;
     color: #ffd700;
@@ -219,9 +208,6 @@ body {
     box-shadow: 0 0 12px rgba(255, 215, 0, 0.15);
 }
 
-/* ==========================================
-   BACKGROUND MATRIX & SPACE LAYERS
-   ========================================== */
 #space-matrix {
     position: fixed;
     top: 0;
@@ -266,9 +252,6 @@ body {
     transform: translateZ(0);
 }
 
-/* ==========================================
-   SPACESHIP TITLE DISPLAY
-   ========================================== */
 #spaceship-title-container {
     position: fixed;
     top: 40px;
@@ -350,9 +333,6 @@ body {
     100% { transform: translateY(-15px) rotate(1.5deg); }
 }
 
-/* ==========================================
-   CONSTELLATION BEASTS
-   ========================================== */
 .constellation {
     --parallax-x: 0px;
     --parallax-y: 0px;
@@ -448,9 +428,6 @@ body.warping #spaceship-title-container {
     transition: opacity 0.5s ease;
 }
 
-/* ==========================================
-   CAMERA VIEWPORT & SOLAR SYSTEM
-   ========================================== */
 #spaceship-viewport {
     width: 100vw;
     height: 100vh;
@@ -598,9 +575,6 @@ body.warping #spaceship-title-container {
     pointer-events: none !important;
 }
 
-/* ==========================================
-   HUD MODULE OVERLAY
-   ========================================== */
 #cinematic-overlay {
     position: fixed;
     top: 0;
@@ -711,9 +685,6 @@ body.landed #cinematic-overlay { pointer-events: all; }
 body.landed #return-btn { opacity: 1; }
 body.landed .module-details { right: 8%; opacity: 1; }
 
-/* ==========================================
-   GAS GIANT ATMOSPHERE (BACKTEST FORM)
-   ========================================== */
 #gas-giant-atmosphere {
     position: fixed;
     top: 0;
@@ -835,9 +806,6 @@ body.landed .module-details { right: 8%; opacity: 1; }
     box-shadow: 0 0 25px rgba(0,255,102,0.6);
 }
 
-/* ==========================================
-   TACTICAL UPLINK MODAL STYLES
-   ========================================== */
 #tactical-modal-overlay {
     position: fixed;
     top: 0;
@@ -986,9 +954,6 @@ body.landed .module-details { right: 8%; opacity: 1; }
     box-shadow: 0 0 20px rgba(0, 255, 102, 0.6);
 }
 
-/* ==========================================
-   SUBSCRIPTION MODAL & PRICING TIERS
-   ========================================== */
 #subscription-modal-overlay {
     position: fixed;
     top: 0;
@@ -1184,9 +1149,6 @@ body.landed .module-details { right: 8%; opacity: 1; }
     box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
 }
 
-/* ==========================================
-   AUTHENTICATION HUD MODAL & OAUTH
-   ========================================== */
 #auth-modal-overlay {
     position: fixed;
     top: 0;
@@ -1326,9 +1288,6 @@ body.landed .module-details { right: 8%; opacity: 1; }
     box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
 }
 
-/* ==========================================
-   RESPONSIVE OVERRIDES
-   ========================================== */
 @media (max-width: 900px) {
     #spaceship-title-container {
         top: 20px;
@@ -1352,13 +1311,8 @@ body.landed .module-details { right: 8%; opacity: 1; }
         gap: 6px;
     }
 
-    .dock-divider {
-        display: none;
-    }
-
-    .pricing-grid {
-        grid-template-columns: 1fr;
-    }
+    .dock-divider { display: none; }
+    .pricing-grid { grid-template-columns: 1fr; }
 
     .module-details {
         width: 85%;
@@ -1372,9 +1326,6 @@ body.landed .module-details { right: 8%; opacity: 1; }
     }
 }
 
-/* ==========================================
-   PERFORMANCE OVERRIDES
-   ========================================== */
 body.landed .orbit,
 body.landed .constellation {
     animation-play-state: paused !important;
