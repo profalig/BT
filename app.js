@@ -354,11 +354,12 @@ async function fetchOrCreateUserProfile(user) {
 
         if (!profile) {
             console.log("Creating new user profile with 1 Free Credit for User:", user.id);
-            // Modified: Removed the 'email' field to align with DB schema
+            // Modified: Added the 'email' field back into the payload
             const { data: newProfile, error: createError } = await supabaseClient
                 .from('user_profiles')
                 .insert([{ 
                     id: user.id, 
+                    email: user.email, 
                     credits: 1 
                 }])
                 .select()
