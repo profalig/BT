@@ -1,6 +1,3 @@
-// ==========================================
-// PLANET DATA & ORBIT ENGINE CONFIGURATION
-// ==========================================
 const planetData = {
     backtest: {
         tag: "ENGINE // SEC-01", title: "Backtest Machine", color: "#00ff66",
@@ -45,7 +42,7 @@ const orbits = orbitConfig.map(c => ({
     radius: 0
 }));
 
-function updateOrbitRadii() { orbits.forEach(o => { if (o.orbitEl) o.radius = o.orbitEl.offsetWidth / 2; }); }
+function updateOrbitRadii() { orbits.forEach(o => o.radius = o.orbitEl.offsetWidth / 2); }
 updateOrbitRadii();
 window.addEventListener('resize', updateOrbitRadii);
 
@@ -62,7 +59,6 @@ let targetCam = { x: 0, y: 0, scale: 1 };
 
 function renderEngine(time) {
     orbits.forEach(o => {
-        if (!o.orbitEl || !o.planetEl) return;
         const progress = (time / (o.duration * 1000)) % 1;
         o.currentAngle = progress * 360;
         if (o.reverse) o.currentAngle = -o.currentAngle;
@@ -96,19 +92,18 @@ function renderEngine(time) {
     cam.y += (targetCam.y - cam.y) * lerpSpeed;
     cam.scale += (targetCam.scale - cam.scale) * lerpSpeed;
 
-    if (viewport) viewport.style.transform = `scale(${cam.scale}) translate(${cam.x}px, ${cam.y}px)`;
-    if (spaceMatrix) spaceMatrix.style.transform = `translate(${cam.x * 0.15}px, ${cam.y * 0.15}px)`;
+    viewport.style.transform = `scale(${cam.scale}) translate(${cam.x}px, ${cam.y}px)`;
+    spaceMatrix.style.transform = `translate(${cam.x * 0.15}px, ${cam.y * 0.15}px)`;
 
     requestAnimationFrame(renderEngine);
 }
 requestAnimationFrame(renderEngine);
 
 orbits.forEach(o => {
-    if (!o.planetEl) return;
     o.planetEl.addEventListener('click', () => {
         if (document.body.classList.contains('warping') || isHyperZoomed) return;
 
-        orbits.forEach(orbit => orbit.planetEl && orbit.planetEl.classList.remove('active'));
+        orbits.forEach(orbit => orbit.planetEl.classList.remove('active'));
         
         activePlanetData = o;
         o.planetEl.classList.add('active'); 
@@ -133,7 +128,7 @@ orbits.forEach(o => {
             </div>
         `).join('');
 
-        if (o.id === 'contact' || o.id === 'about') {
+        if(o.id === 'contact' || o.id === 'about') {
             actionBtn.style.display = 'none';
         } else {
             actionBtn.style.display = 'flex';
@@ -145,51 +140,36 @@ orbits.forEach(o => {
 
 returnBtn.addEventListener('click', () => {
     document.body.classList.remove('landed');
-    if (activePlanetData && activePlanetData.planetEl) activePlanetData.planetEl.classList.remove('active');
+    if (activePlanetData) activePlanetData.planetEl.classList.remove('active');
     activePlanetData = null; 
     setTimeout(() => { document.body.classList.remove('warping'); }, 800);
 });
 
-// INITIALIZE MODULE BUTTON LOGIC (THE ZOOM & ACTIONS)
+// INITIALIZE MODULE BUTTON LOGIC (THE ZOOM)
 actionBtn.addEventListener('click', () => {
-    if (!activePlanetData) return;
-
-    if (activePlanetData.id === 'backtest') {
+    if (activePlanetData && activePlanetData.id === 'backtest') {
         isHyperZoomed = true;
         document.body.classList.remove('landed');
-        const titleContainer = document.getElementById('spaceship-title-container');
-        const authCorner = document.getElementById('auth-corner');
-        if (titleContainer) titleContainer.style.opacity = '0';
-        if (authCorner) authCorner.style.opacity = '0';
+        document.getElementById('spaceship-title-container').style.opacity = '0';
+        document.getElementById('auth-corner').style.opacity = '0';
         
         setTimeout(() => {
-            const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
-            if (gasAtmosphere) gasAtmosphere.classList.add('active');
+            document.getElementById('gas-giant-atmosphere').classList.add('active');
         }, 800);
-    } else if (activePlanetData.id === 'databank') {
-        showTacticalModal('SYSTEM DATABANK', 'The System Databank is currently under active development. High-edge quantitative strategy models will be released soon.', true);
-    } else if (activePlanetData.id === 'campus') {
-        showTacticalModal('BACKTESTING CAMPUS', 'Enrolling now for the upcoming Quantitative Engineering cohort. Contact our engineering desk via SEC-04 to apply.', true);
     }
 });
 
 // ABORT CONSOLE BUTTON (ZOOM OUT)
-const abortConsoleBtn = document.getElementById('abort-console-btn');
-if (abortConsoleBtn) {
-    abortConsoleBtn.addEventListener('click', () => {
-        const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
-        if (gasAtmosphere) gasAtmosphere.classList.remove('active');
-        isHyperZoomed = false;
-        
-        setTimeout(() => {
-            document.body.classList.add('landed');
-            const titleContainer = document.getElementById('spaceship-title-container');
-            const authCorner = document.getElementById('auth-corner');
-            if (titleContainer) titleContainer.style.opacity = '1';
-            if (authCorner) authCorner.style.opacity = '1';
-        }, 600);
-    });
-}
+document.getElementById('abort-console-btn').addEventListener('click', () => {
+    document.getElementById('gas-giant-atmosphere').classList.remove('active');
+    isHyperZoomed = false;
+    
+    setTimeout(() => {
+        document.body.classList.add('landed');
+        document.getElementById('spaceship-title-container').style.opacity = '1';
+        document.getElementById('auth-corner').style.opacity = '1';
+    }, 600);
+});
 
 // ==========================================
 // CONSTELLATION PARALLAX & VIDEO HOVER ENGINE
@@ -209,18 +189,16 @@ document.addEventListener('mousemove', (e) => {
 });
 
 const triggerAttack = (constellation) => {
-    if (!constellation) return;
     constellation.classList.add('highlight');
     const vid = constellation.querySelector('.beast-vid');
     if (vid) {
         if (vid.pauseTimeout) { clearTimeout(vid.pauseTimeout); vid.pauseTimeout = null; }
         vid.currentTime = 0; 
-        vid.play().catch(() => {}); 
+        vid.play().catch(e => console.log("Autoplay blocked")); 
     }
 };
 
 const resetAttack = (constellation) => {
-    if (!constellation) return;
     constellation.classList.remove('highlight');
     const vid = constellation.querySelector('.beast-vid');
     if (vid) {
@@ -230,7 +208,6 @@ const resetAttack = (constellation) => {
 };
 
 orbits.forEach(o => {
-    if (!o.planetEl) return;
     o.planetEl.addEventListener('mouseenter', () => {
         if (['backtest', 'campus'].includes(o.id)) triggerAttack(bullConstellation);
         else if (['databank', 'contact'].includes(o.id)) triggerAttack(bearConstellation);
@@ -241,16 +218,14 @@ orbits.forEach(o => {
 
 const btcSun = document.getElementById('sun');
 const solarSystem = document.getElementById('solar-system');
-if (btcSun && solarSystem) {
-    btcSun.addEventListener('mouseenter', () => {
-        solarSystem.classList.add('show-labels');
-        triggerAttack(bullConstellation); triggerAttack(bearConstellation);
-    });
-    btcSun.addEventListener('mouseleave', () => {
-        solarSystem.classList.remove('show-labels');
-        resetAttack(bullConstellation); resetAttack(bearConstellation);
-    });
-}
+btcSun.addEventListener('mouseenter', () => {
+    solarSystem.classList.add('show-labels');
+    triggerAttack(bullConstellation); triggerAttack(bearConstellation);
+});
+btcSun.addEventListener('mouseleave', () => {
+    solarSystem.classList.remove('show-labels');
+    resetAttack(bullConstellation); resetAttack(bearConstellation);
+});
 
 // ==========================================
 // DENSE BLACKBOARD GENERATOR ENGINE
@@ -301,164 +276,19 @@ function showTacticalModal(title, message, isSuccess = true) {
     const card = document.querySelector('.tactical-modal-card');
 
     if (heading) heading.innerText = title;
-    if (msg) msg.innerHTML = message;
+    if (msg) msg.innerText = message;
 
     if (!isSuccess) {
-        if (statusTag) { statusTag.innerText = '// TRANSMISSION STATUS: ERROR'; statusTag.style.color = '#ff0055'; }
+        if (statusTag) statusTag.innerText = '// TRANSMISSION STATUS: ERROR';
+        if (statusTag) statusTag.style.color = '#ff0055';
         if (card) card.style.borderColor = 'rgba(255, 0, 85, 0.5)';
     } else {
-        if (statusTag) { statusTag.innerText = '// TRANSMISSION STATUS: SECURED'; statusTag.style.color = '#00ff66'; }
+        if (statusTag) statusTag.innerText = '// TRANSMISSION STATUS: SECURED';
+        if (statusTag) statusTag.style.color = '#00ff66';
         if (card) card.style.borderColor = 'rgba(0, 255, 102, 0.4)';
     }
 
     if (modalOverlay) modalOverlay.classList.add('active');
-}
-
-// ==========================================
-// SUBSCRIPTION MODAL TRIGGER
-// ==========================================
-function openSubscriptionModal() {
-    const subModal = document.getElementById('subscription-modal-overlay');
-    if (subModal) subModal.classList.add('active');
-}
-
-function closeSubscriptionModal() {
-    const subModal = document.getElementById('subscription-modal-overlay');
-    if (subModal) subModal.classList.remove('active');
-}
-
-// ==========================================
-// AGENT PROFILE & PERMANENT HISTORY ENGINE
-// ==========================================
-async function openUserReportsModal() {
-    if (!supabaseClient) {
-        showTacticalModal('SYSTEM ERROR', 'Supabase client is not initialized.', false);
-        return;
-    }
-
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session || !session.user) {
-        showTacticalModal('ACCESS DENIED', 'Please authenticate to view your transmission log.', false);
-        return;
-    }
-
-    const activeUserId = session.user.id;
-    const userEmail = session.user.email;
-    const callsign = (session.user.user_metadata?.display_name || userEmail.split('@')[0]).toUpperCase();
-
-    try {
-        const { data: submissions, error } = await supabaseClient
-            .from('submissions')
-            .select('*')
-            .eq('user_id', activeUserId)
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error("[DEBUG] Database Error:", error);
-            throw error;
-        }
-
-        const historyList = submissions || [];
-        
-        const totalSubmissions = historyList.length;
-        const completedCount = historyList.filter(s => {
-            const hasUrl = (s.report_url || s.pdf_url || s.report_link || s.file_url || s.url || '').trim();
-            const rawStatus = String(s.status || '').toLowerCase().trim();
-            return hasUrl || ['completed', 'complete', 'done', 'success'].includes(rawStatus);
-        }).length;
-        const pendingCount = totalSubmissions - completedCount;
-
-        const profileHeaderHtml = `
-            <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 10px; margin-bottom: 12px;">
-                    <div>
-                        <div style="font-size: 0.75em; color: #888; letter-spacing: 1px;">// CLEARANCE LEVEL: AGENT</div>
-                        <div style="font-size: 1.3em; font-weight: bold; color: #00ffff; letter-spacing: 1px;">
-                            <i class="fa-solid fa-id-badge"></i> ${callsign}
-                        </div>
-                    </div>
-                    <div style="text-align: right; font-size: 0.85em; color: #aaa;">
-                        <div><i class="fa-solid fa-envelope"></i> ${userEmail}</div>
-                        <div style="color: #00ff66; margin-top: 2px;">● COMM-LINK ACTIVE</div>
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;">
-                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="font-size: 0.7em; color: #888;">TOTAL RUNS</div>
-                        <div style="font-size: 1.2em; font-weight: bold; color: #ffffff;">${totalSubmissions}</div>
-                    </div>
-                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(0, 255, 102, 0.15);">
-                        <div style="font-size: 0.7em; color: #888;">COMPLETED</div>
-                        <div style="font-size: 1.2em; font-weight: bold; color: #00ff66;">${completedCount}</div>
-                    </div>
-                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255, 215, 0, 0.15);">
-                        <div style="font-size: 0.7em; color: #888;">IN QUEUE</div>
-                        <div style="font-size: 1.2em; font-weight: bold; color: #ffd700;">${pendingCount}</div>
-                    </div>
-                </div>
-            </div>
-            <div style="font-size: 0.8em; color: #888; text-align: left; margin-bottom: 10px; letter-spacing: 1px;">
-                // TRANSMISSION HISTORY LOG (${totalSubmissions} ARCHIVED)
-            </div>
-        `;
-
-        if (totalSubmissions === 0) {
-            const emptyContent = profileHeaderHtml + `
-                <div style="padding: 20px; text-align: center; color: #aaa; border: 1px dashed rgba(255,255,255,0.15); border-radius: 6px;">
-                    No backtest transmissions recorded for this account.<br>
-                    Initialize a backtest in <b>SEC-01: Backtest Machine</b> to generate your first intelligence report.
-                </div>
-            `;
-            showTacticalModal('AGENT PROFILE // COMMAND CENTER', emptyContent, true);
-            return;
-        }
-
-        const reportRowsHtml = historyList.map(sub => {
-            const dateStr = sub.created_at ? new Date(sub.created_at).toLocaleDateString() : 'RECENT';
-            const reportUrl = (sub.report_url || sub.pdf_url || sub.report_link || sub.file_url || sub.url || '').trim();
-            const rawStatus = String(sub.status || '').toLowerCase().trim();
-
-            let statusBadge;
-            let downloadBtn;
-
-            if (reportUrl) {
-                statusBadge = `<span style="color:#00ff66; font-weight:bold;">[ COMPLETED ]</span>`;
-                downloadBtn = `<a href="${reportUrl}" target="_blank" download style="color:#00f0ff; text-decoration:underline; font-weight:bold;"><i class="fa-solid fa-file-pdf"></i> DOWNLOAD PDF REPORT</a>`;
-            } else if (['completed', 'complete', 'done', 'success'].includes(rawStatus)) {
-                statusBadge = `<span style="color:#00ff66; font-weight:bold;">[ COMPLETED ]</span>`;
-                downloadBtn = `<span style="color:#ffd700;"><i class="fa-solid fa-triangle-exclamation"></i> Link pending in database</span>`;
-            } else if (['failed', 'error', 'rejected'].includes(rawStatus)) {
-                statusBadge = `<span style="color:#ff0055; font-weight:bold;">[ FAILED ]</span>`;
-                downloadBtn = `<span style="color:#ff0055;"><i class="fa-solid fa-circle-xmark"></i> Execution Error</span>`;
-            } else {
-                statusBadge = `<span style="color:#ffd700; font-weight:bold;">[ PROCESSING ]</span>`;
-                downloadBtn = `<span style="color:#888;"><i class="fa-solid fa-spinner fa-spin"></i> Analyzing Tick Data...</span>`;
-            }
-
-            return `
-                <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(0,255,255,0.2); margin-bottom: 10px; padding: 12px 14px; border-radius: 6px; text-align: left;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <strong style="color: #00ffff; font-size: 1.05em; letter-spacing: 0.5px;">${sub.system_name || 'UNTITLED SYSTEM'}</strong>
-                        ${statusBadge}
-                    </div>
-                    <div style="font-size: 0.8em; color: #aaa; margin: 4px 0;">SUBMITTED: ${dateStr}</div>
-                    <div style="margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; font-size: 0.9em;">${downloadBtn}</div>
-                </div>
-            `;
-        }).join('');
-
-        const finalModalHtml = `
-            ${profileHeaderHtml}
-            <div style="max-height: 320px; overflow-y: auto; padding-right: 4px;">
-                ${reportRowsHtml}
-            </div>
-        `;
-
-        showTacticalModal('AGENT PROFILE // COMMAND CENTER', finalModalHtml, true);
-    } catch (err) {
-        showTacticalModal('FETCH ERROR', err.message, false);
-    }
 }
 
 // ==========================================
@@ -472,49 +302,14 @@ if (window.supabase) {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
-// ==========================================
-// APPLICATION INITIALIZATION & AUTHENTICATION ENGINE
-// ==========================================
-let authMode = 'signin';
-
 document.addEventListener('DOMContentLoaded', () => {
-    const closeModalBtn = document.getElementById('close-modal-btn');
-    const closeSubBtn = document.getElementById('close-sub-btn');
-    const navSubBtn = document.getElementById('nav-subscription-btn');
-    const systemSubmitForm = document.getElementById('system-submit-form');
+    const submitBtn = document.getElementById('submit-btn');
     const systemNameInput = document.getElementById('system-name');
     const emailInput = document.getElementById('contact-email');
     const rulesInput = document.getElementById('system-rules');
-    const submitBtn = document.getElementById('submit-btn');
+    const closeModalBtn = document.getElementById('close-modal-btn');
 
-    const authModal = document.getElementById('auth-modal-overlay');
-    const closeAuthBtn = document.getElementById('close-auth-btn');
-    const tabSignIn = document.getElementById('tab-signin');
-    const tabSignUp = document.getElementById('tab-signup');
-    const authForm = document.getElementById('auth-form');
-    const authSubmitBtn = document.getElementById('auth-submit-btn');
-    const usernameGroup = document.getElementById('username-group');
-    const authCorner = document.getElementById('auth-corner');
-    const googleBtn = document.getElementById('google-auth-btn');
-
-    // SUBSCRIPTION NAV BINDINGS
-    if (navSubBtn) navSubBtn.addEventListener('click', openSubscriptionModal);
-    if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
-
-    // TIER SELECTION / PAYMENT UPLINK HANDLERS
-    document.querySelectorAll('.select-tier-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const planName = e.target.getAttribute('data-plan') || 'Plan';
-            closeSubscriptionModal();
-            showTacticalModal(
-                'PAYMENT UPLINK INITIALIZED', 
-                `Your request for <b>${planName} Tier Clearance</b> has been registered. Connecting to secure gateway payment link...`, 
-                true
-            );
-        });
-    });
-
-    // CLOSE MODAL LOGIC
+    // FIXED CLOSE MODAL LOGIC (Prevents camera freeze/stocking)
     if (closeModalBtn) {
         closeModalBtn.addEventListener('click', () => {
             const modalOverlay = document.getElementById('tactical-modal-overlay');
@@ -530,15 +325,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.body.classList.add('landed');
                 }
                 const titleContainer = document.getElementById('spaceship-title-container');
-                if (authCorner) authCorner.style.opacity = '1';
+                const authCorner = document.getElementById('auth-corner');
                 if (titleContainer) titleContainer.style.opacity = '1';
+                if (authCorner) authCorner.style.opacity = '1';
             }, 400);
         });
     }
 
-    // BACKTEST SUBMISSION WITH USER LINKING & WORKER WAKE-UP
-    if (systemSubmitForm) {
-        systemSubmitForm.addEventListener('submit', async (e) => {
+    if (submitBtn) {
+        submitBtn.addEventListener('click', async (e) => {
             e.preventDefault();
 
             if (!supabaseClient) {
@@ -559,30 +354,18 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.innerText = 'UPLINKING TO CORE...';
             submitBtn.disabled = true;
 
-            // Wake up Render Worker instantly
-            fetch("https://backtest-worker-fs1a.onrender.com", { mode: "no-cors" }).catch(() => {});
-
             try {
-                const { data: { session } } = await supabaseClient.auth.getSession();
-                const userId = session?.user?.id || null;
-
-                const { error } = await supabaseClient
+                const { data, error } = await supabaseClient
                     .from('submissions')
-                    .insert([{ 
-                        system_name: systemName, 
-                        email: email, 
-                        rules: rules, 
-                        status: 'pending',
-                        user_id: userId
-                    }]);
+                    .insert([{ system_name: systemName, email: email, rules: rules, status: 'pending' }]);
 
                 if (error) throw error;
 
                 showTacticalModal('UPLINK SECURED', 'System parameters received. Our engineering team will conduct a multi-threaded data analysis and compile your report shortly.', true);
 
                 systemNameInput.value = '';
+                emailInput.value = '';
                 rulesInput.value = '';
-                if (!userId) emailInput.value = '';
             } catch (err) {
                 console.error('Submission Error:', err.message);
                 showTacticalModal('UPLINK FAILED', err.message, false);
@@ -592,20 +375,38 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+});
 
-    // AUTH MODE SWITCHING
+// ==========================================
+// AUTHENTICATION ENGINE
+// ==========================================
+let authMode = 'signin';
+
+document.addEventListener('DOMContentLoaded', () => {
+    const authModal = document.getElementById('auth-modal-overlay');
+    const closeAuthBtn = document.getElementById('close-auth-btn');
+    const tabSignIn = document.getElementById('tab-signin');
+    const tabSignUp = document.getElementById('tab-signup');
+    const authForm = document.getElementById('auth-form');
+    const authSubmitBtn = document.getElementById('auth-submit-btn');
+    const usernameGroup = document.getElementById('username-group');
+    const authCorner = document.getElementById('auth-corner');
+    const googleBtn = document.getElementById('google-auth-btn');
+    const appleBtn = document.getElementById('apple-auth-btn');
+
+    // Tab Switching Logic
     function setAuthMode(mode) {
         authMode = mode;
         if (mode === 'signin') {
-            if (tabSignIn) tabSignIn.classList.add('active');
-            if (tabSignUp) tabSignUp.classList.remove('active');
+            tabSignIn.classList.add('active');
+            tabSignUp.classList.remove('active');
             if (usernameGroup) usernameGroup.style.display = 'none';
-            if (authSubmitBtn) authSubmitBtn.innerHTML = 'AUTHENTICATE <i class="fa-solid fa-key"></i>';
+            authSubmitBtn.innerHTML = 'AUTHENTICATE <i class="fa-solid fa-key"></i>';
         } else {
-            if (tabSignUp) tabSignUp.classList.add('active');
-            if (tabSignIn) tabSignIn.classList.remove('active');
+            tabSignUp.classList.add('active');
+            tabSignIn.classList.remove('active');
             if (usernameGroup) usernameGroup.style.display = 'block';
-            if (authSubmitBtn) authSubmitBtn.innerHTML = 'CREATE CLEARANCE <i class="fa-solid fa-user-plus"></i>';
+            authSubmitBtn.innerHTML = 'CREATE CLEARANCE <i class="fa-solid fa-user-plus"></i>';
         }
     }
 
@@ -614,11 +415,11 @@ document.addEventListener('DOMContentLoaded', () => {
         tabSignUp.addEventListener('click', () => setAuthMode('signup'));
     }
 
-    if (closeAuthBtn && authModal) {
+    if (closeAuthBtn) {
         closeAuthBtn.addEventListener('click', () => authModal.classList.remove('active'));
     }
 
-    // AUTH FORM SUBMISSION
+    // Form Submission Logic
     if (authForm) {
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -630,8 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const email = document.getElementById('auth-email').value.trim();
             const password = document.getElementById('auth-password').value;
-            const usernameInput = document.getElementById('auth-username');
-            const username = usernameInput ? usernameInput.value.trim() : '';
+            const username = document.getElementById('auth-username').value.trim();
 
             if (!email || !password) {
                 showTacticalModal('ACCESS DENIED', 'Please input both Access ID and Security Password.', false);
@@ -650,7 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
 
-                    const { error } = await supabaseClient.auth.signUp({ 
+                    const { data, error } = await supabaseClient.auth.signUp({ 
                         email, 
                         password,
                         options: {
@@ -684,13 +484,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // OAUTH AUTHENTICATION
+    // OAuth Handlers
     async function handleOAuth(provider) {
         if (!supabaseClient) return;
         try {
-            const { error } = await supabaseClient.auth.signInWithOAuth({
+            const { data, error } = await supabaseClient.auth.signInWithOAuth({
                 provider: provider,
-                options: { redirectTo: window.location.origin }
+                options: {
+                    redirectTo: window.location.origin
+                }
             });
             if (error) throw error;
         } catch (err) {
@@ -699,16 +501,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (googleBtn) googleBtn.addEventListener('click', () => handleOAuth('google'));
+    if (appleBtn) appleBtn.addEventListener('click', () => handleOAuth('apple'));
 
-    // AUTH STATE LISTENER & SESSION BINDING
+    // Monitor Auth State & Email Confirmation Redirects
     if (supabaseClient) {
+        // Parse URL parameters for Auth errors (like expired links)
         const hashStr = window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash;
         const hashParams = new URLSearchParams(hashStr);
         const queryParams = new URLSearchParams(window.location.search);
 
         const urlError = hashParams.get('error') || queryParams.get('error');
         const urlErrorDesc = hashParams.get('error_description') || queryParams.get('error_description');
-        const authType = hashParams.get('type') || queryParams.get('type');
 
         if (urlError || urlErrorDesc) {
             const formattedMsg = urlErrorDesc 
@@ -716,10 +519,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 : 'Verification link is invalid or has expired.';
             showTacticalModal('LINK EXPIRED', formattedMsg, false);
             window.history.replaceState(null, null, window.location.pathname);
-        } else if (authType === 'signup' || authType === 'email_confirmation') {
-            showTacticalModal('EMAIL VERIFIED', 'Access Clearance Confirmed. Tactical Link Established.', true);
-            window.history.replaceState(null, null, window.location.pathname);
         } else if (window.location.hash.includes('access_token') || window.location.search.includes('code')) {
+            showTacticalModal('EMAIL VERIFIED', 'Access Clearance Confirmed. Tactical Link Established.', true);
             window.history.replaceState(null, null, window.location.pathname);
         }
 
@@ -727,44 +528,28 @@ document.addEventListener('DOMContentLoaded', () => {
             if (session && session.user) {
                 const displayName = session.user.user_metadata?.display_name || session.user.email.split('@')[0];
                 
-                const contactEmailInput = document.getElementById('contact-email');
-                if (contactEmailInput) {
-                    contactEmailInput.value = session.user.email;
-                }
+                authCorner.innerHTML = `
+                    <div class="user-badge"><i class="fa-solid fa-shield-halved"></i> AGENT: ${displayName.toUpperCase()}</div>
+                    <button id="signout-btn" class="auth-btn"><i class="fa-solid fa-power-off"></i> LOGOUT</button>
+                `;
 
-                if (authCorner) {
-                    authCorner.innerHTML = `
-                        <div class="user-badge"><i class="fa-solid fa-shield-halved"></i> AGENT: ${displayName.toUpperCase()}</div>
-                        <button id="my-sub-btn" class="auth-btn sub-nav-btn"><i class="fa-solid fa-gem"></i> SUBSCRIPTIONS</button>
-                        <button id="my-reports-btn" class="auth-btn"><i class="fa-solid fa-folder-open"></i> MY REPORTS</button>
-                        <button id="signout-btn" class="auth-btn"><i class="fa-solid fa-power-off"></i> LOGOUT</button>
-                    `;
-
-                    document.getElementById('my-sub-btn')?.addEventListener('click', openSubscriptionModal);
-                    document.getElementById('my-reports-btn')?.addEventListener('click', openUserReportsModal);
-
-                    document.getElementById('signout-btn')?.addEventListener('click', async () => {
-                        await supabaseClient.auth.signOut();
-                        window.location.reload();
-                    });
-                }
+                document.getElementById('signout-btn').addEventListener('click', async () => {
+                    await supabaseClient.auth.signOut();
+                    window.location.reload();
+                });
             } else {
-                if (authCorner) {
-                    authCorner.innerHTML = `
-                        <button id="nav-subscription-btn" class="auth-btn sub-nav-btn"><i class="fa-solid fa-gem"></i> SUBSCRIPTIONS</button>
-                        <button class="auth-btn sign-in"><i class="fa-solid fa-user"></i> SIGN IN</button>
-                        <button class="auth-btn sign-up"><i class="fa-solid fa-user-plus"></i> SIGN UP</button>
-                    `;
-                    document.getElementById('nav-subscription-btn')?.addEventListener('click', openSubscriptionModal);
-                    document.querySelector('.auth-btn.sign-in')?.addEventListener('click', () => {
-                        setAuthMode('signin');
-                        if (authModal) authModal.classList.add('active');
-                    });
-                    document.querySelector('.auth-btn.sign-up')?.addEventListener('click', () => {
-                        setAuthMode('signup');
-                        if (authModal) authModal.classList.add('active');
-                    });
-                }
+                authCorner.innerHTML = `
+                    <button class="auth-btn sign-in"><i class="fa-solid fa-user"></i> SIGN IN</button>
+                    <button class="auth-btn sign-up"><i class="fa-solid fa-user-plus"></i> SIGN UP</button>
+                `;
+                document.querySelector('.auth-btn.sign-in')?.addEventListener('click', () => {
+                    setAuthMode('signin');
+                    authModal.classList.add('active');
+                });
+                document.querySelector('.auth-btn.sign-up')?.addEventListener('click', () => {
+                    setAuthMode('signup');
+                    authModal.classList.add('active');
+                });
             }
         });
     }
