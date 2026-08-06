@@ -4,6 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>System & Backtest Factory</title>
+    
+    <!-- URL Sanitizer to fix Instagram / Facebook browser routing issues -->
+    <script>
+        (function() {
+            try {
+                var url = new URL(window.location.href);
+                var params = ['fbclid', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+                var hasTracking = false;
+                
+                params.forEach(function(param) {
+                    if (url.searchParams.has(param)) {
+                        url.searchParams.delete(param);
+                        hasTracking = true;
+                    }
+                });
+                
+                if (hasTracking) {
+                    window.history.replaceState(null, '', url.toString());
+                }
+            } catch (e) {
+                console.error("URL cleaning failed", e);
+            }
+        })();
+    </script>
+
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;600;800&family=Damion&display=swap" rel="stylesheet">
