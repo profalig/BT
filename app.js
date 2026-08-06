@@ -1,3 +1,6 @@
+// ==========================================
+// PLANET DATA & ORBIT ENGINE CONFIGURATION
+// ==========================================
 const planetData = {
     backtest: {
         tag: "ENGINE // SEC-01", title: "Backtest Machine", color: "#00ff66",
@@ -74,19 +77,15 @@ function renderEngine(time) {
         const px = o.radius * Math.sin(rad);
         const py = -o.radius * Math.cos(rad);
         
-        const isMobile = window.innerWidth <= 900;
-        
         if (isHyperZoomed) {
-            // Fix #5: Avoid scaling into full blurriness on mobile devices
-            targetCam.scale = isMobile ? 5 : 15;
+            targetCam.scale = 15;
             targetCam.x = -px;
             targetCam.y = -py;
         } else {
-            // Fix #4: Adjusting camera level for mobile to have the planet clear above the text
-            targetCam.scale = isMobile ? 1.5 : 2.8; 
-            const screenOffset = isMobile ? 0 : -220; 
+            targetCam.scale = 2.8;
+            const screenOffset = -220; 
             targetCam.x = (screenOffset / targetCam.scale) - px;
-            targetCam.y = isMobile ? -py + (80 / targetCam.scale) : -py;
+            targetCam.y = -py;
         }
     } else {
         targetCam.x = 0; targetCam.y = 0; targetCam.scale = 1;
@@ -151,6 +150,7 @@ returnBtn.addEventListener('click', () => {
     setTimeout(() => { document.body.classList.remove('warping'); }, 800);
 });
 
+// INITIALIZE MODULE BUTTON LOGIC (THE ZOOM & ACTIONS)
 actionBtn.addEventListener('click', () => {
     if (!activePlanetData) return;
 
@@ -173,6 +173,7 @@ actionBtn.addEventListener('click', () => {
     }
 });
 
+// ABORT CONSOLE BUTTON (ZOOM OUT)
 const abortConsoleBtn = document.getElementById('abort-console-btn');
 if (abortConsoleBtn) {
     abortConsoleBtn.addEventListener('click', () => {
@@ -190,6 +191,9 @@ if (abortConsoleBtn) {
     });
 }
 
+// ==========================================
+// CONSTELLATION PARALLAX & VIDEO HOVER ENGINE
+// ==========================================
 const bullConstellation = document.querySelector('.bull-constellation');
 const bearConstellation = document.querySelector('.bear-constellation');
 
@@ -247,20 +251,11 @@ if (btcSun && solarSystem) {
         solarSystem.classList.remove('show-labels');
         resetAttack(bullConstellation); resetAttack(bearConstellation);
     });
-    
-    btcSun.addEventListener('touchstart', (e) => {
-        e.preventDefault(); 
-        solarSystem.classList.add('show-labels');
-        triggerAttack(bullConstellation); triggerAttack(bearConstellation);
-    }, { passive: false });
-    
-    btcSun.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        solarSystem.classList.remove('show-labels');
-        resetAttack(bullConstellation); resetAttack(bearConstellation);
-    }, { passive: false });
 }
 
+// ==========================================
+// DENSE BLACKBOARD GENERATOR ENGINE
+// ==========================================
 function generateBlackboard() {
     const canvas = document.getElementById('blackboard-bg');
     if (!canvas) return;
@@ -296,6 +291,9 @@ function generateBlackboard() {
 generateBlackboard();
 window.addEventListener('resize', generateBlackboard);
 
+// ==========================================
+// TACTICAL HUD MODAL TRIGGER
+// ==========================================
 function showTacticalModal(title, message, isSuccess = true) {
     const modalOverlay = document.getElementById('tactical-modal-overlay');
     const heading = document.getElementById('modal-heading');
@@ -317,6 +315,9 @@ function showTacticalModal(title, message, isSuccess = true) {
     if (modalOverlay) modalOverlay.classList.add('active');
 }
 
+// ==========================================
+// SUBSCRIPTION MODAL TRIGGER
+// ==========================================
 function openSubscriptionModal() {
     const subModal = document.getElementById('subscription-modal-overlay');
     if (subModal) subModal.classList.add('active');
@@ -327,6 +328,9 @@ function closeSubscriptionModal() {
     if (subModal) subModal.classList.remove('active');
 }
 
+// ==========================================
+// SUPABASE CLIENT INITIALIZATION
+// ==========================================
 const SUPABASE_URL = 'https://woxswhiayrkecspebuwb.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndveHN3aGlheXJrZWNzcGVidXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTc5ODYsImV4cCI6MjEwMDk5Mzk4Nn0.faEmt5_tw6dN9Cs-pKJHa9D0yyEBbAl4oT0Y9QWYuFg';
 
@@ -335,6 +339,9 @@ if (window.supabase) {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
+// ==========================================
+// USER PROFILE & FREE CREDIT ENGINE
+// ==========================================
 async function fetchOrCreateUserProfile(user) {
     if (!supabaseClient || !user) return null;
 
@@ -347,6 +354,7 @@ async function fetchOrCreateUserProfile(user) {
 
         if (!profile) {
             console.log("Creating new user profile with 1 Free Credit for User:", user.id);
+            // Modified: Added the 'email' field back into the payload
             const { data: newProfile, error: createError } = await supabaseClient
                 .from('user_profiles')
                 .insert([{ 
@@ -371,6 +379,9 @@ async function fetchOrCreateUserProfile(user) {
     }
 }
 
+// ==========================================
+// AGENT PROFILE & PERMANENT HISTORY ENGINE
+// ==========================================
 async function openUserReportsModal() {
     if (!supabaseClient) {
         showTacticalModal('SYSTEM ERROR', 'Supabase client is not initialized.', false);
@@ -509,6 +520,9 @@ async function openUserReportsModal() {
     }
 }
 
+// ==========================================
+// APPLICATION INITIALIZATION & AUTHENTICATION ENGINE
+// ==========================================
 let authMode = 'signin';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -531,9 +545,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const authCorner = document.getElementById('auth-corner');
     const googleBtn = document.getElementById('google-auth-btn');
 
+    // SUBSCRIPTION NAV BINDINGS
     if (navSubBtn) navSubBtn.addEventListener('click', openSubscriptionModal);
     if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
 
+    // ==========================================
+    // STRIPE CHECKOUT INTEGRATION LOGIC
+    // ==========================================
     document.querySelectorAll('.select-tier-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const button = e.currentTarget;
@@ -598,6 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // CLOSE MODAL LOGIC
     if (closeModalBtn) {
         closeModalBtn.addEventListener('click', () => {
             const modalOverlay = document.getElementById('tactical-modal-overlay');
@@ -619,6 +638,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // BACKTEST SUBMISSION WITH CREDIT VERIFICATION & DEDUCTION
     if (systemSubmitForm) {
         systemSubmitForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -630,6 +650,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { data: { session } } = await supabaseClient.auth.getSession();
             
+            // 1. REQUIRE AUTHENTICATION
             if (!session || !session.user) {
                 showTacticalModal('AUTHENTICATION REQUIRED', 'Please sign in or create an account to run backtests with your free credit.', false);
                 setAuthMode('signin');
@@ -647,6 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // 2. CHECK USER CREDIT BALANCE
             const profile = await fetchOrCreateUserProfile(session.user);
             const currentCredits = profile ? profile.credits : 0;
 
@@ -664,9 +686,11 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.innerText = 'UPLINKING TO CORE...';
             submitBtn.disabled = true;
 
+            // Wake up Render Worker
             fetch("https://backtest-worker-fs1a.onrender.com", { mode: "no-cors" }).catch(() => {});
 
             try {
+                // 3. INSERT BACKTEST SUBMISSION
                 const { error: subError } = await supabaseClient
                     .from('submissions')
                     .insert([{ 
@@ -679,6 +703,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (subError) throw subError;
 
+                // 4. DEDUCT 1 CREDIT FROM USER PROFILE
                 const newCredits = currentCredits - 1;
                 const { error: profileUpdateError } = await supabaseClient
                     .from('user_profiles')
@@ -689,6 +714,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error("Credit deduction error:", profileUpdateError);
                 }
 
+                // 5. UPDATE HUD BADGES
                 updateCreditBadgeUI(newCredits);
 
                 showTacticalModal(
@@ -709,6 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // UPDATE UI CREDIT BADGE
     function updateCreditBadgeUI(credits) {
         const badgeEl = document.getElementById('nav-credits-label');
         if (badgeEl) {
@@ -716,6 +743,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // AUTH MODE SWITCHING
     function setAuthMode(mode) {
         authMode = mode;
         if (mode === 'signin') {
@@ -740,6 +768,7 @@ document.addEventListener('DOMContentLoaded', () => {
         closeAuthBtn.addEventListener('click', () => authModal.classList.remove('active'));
     }
 
+    // AUTH FORM SUBMISSION
     if (authForm) {
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -813,6 +842,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // OAUTH AUTHENTICATION
     async function handleOAuth(provider) {
         if (!supabaseClient) return;
         try {
@@ -828,6 +858,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (googleBtn) googleBtn.addEventListener('click', () => handleOAuth('google'));
 
+    // AUTH STATE LISTENER & SESSION BINDING
     if (supabaseClient) {
         const hashStr = window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash;
         const hashParams = new URLSearchParams(hashStr);
