@@ -28,6 +28,7 @@ body {
     color: #ffffff;
     overflow: hidden;
     height: 100vh;
+    height: 100dvh;
     width: 100vw;
 }
 
@@ -105,6 +106,11 @@ body {
     gap: 8px;
     position: relative;
     overflow: hidden;
+    pointer-events: auto;
+}
+
+.auth-btn i, .auth-btn span {
+    pointer-events: none;
 }
 
 .auth-btn i {
@@ -228,6 +234,7 @@ body {
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     z-index: 0;
     pointer-events: none;
     transform: translateZ(0);
@@ -454,6 +461,7 @@ body.warping #spaceship-title-container {
 #spaceship-viewport {
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -468,6 +476,7 @@ body.warping #spaceship-title-container {
     position: relative;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -607,6 +616,7 @@ body.warping #spaceship-title-container {
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     pointer-events: none;
     z-index: 600;
     display: flex;
@@ -720,6 +730,7 @@ body.landed .module-details { right: 8%; opacity: 1; }
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     z-index: 1000;
     display: flex;
     justify-content: center;
@@ -844,6 +855,7 @@ body.landed .module-details { right: 8%; opacity: 1; }
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     background: rgba(2, 6, 12, 0.88);
     backdrop-filter: blur(12px);
     display: flex;
@@ -995,6 +1007,7 @@ body.landed .module-details { right: 8%; opacity: 1; }
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     background: rgba(2, 6, 12, 0.92);
     backdrop-filter: blur(12px);
     display: flex;
@@ -1193,6 +1206,7 @@ body.landed .module-details { right: 8%; opacity: 1; }
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     background: rgba(2, 6, 12, 0.88);
     backdrop-filter: blur(12px);
     display: flex;
@@ -1366,35 +1380,57 @@ body.warping * {
     .tractor-beam-title h1 { font-size: 1.4rem; }
     .tractor-beam-title h1 span { font-size: 0.9rem; letter-spacing: 4px; }
 
-    /* Relocate Auth Dock for Thumb Accessibility */
+    /* FIXED MOBILE AUTH DOCK CONTAINER */
     #auth-corner {
-        top: auto;
-        bottom: 15px;
-        right: 15px;
-        left: 15px;
+        top: auto !important;
+        bottom: 15px !important;
+        right: 15px !important;
+        left: 15px !important;
+        height: auto !important;
+        max-height: max-content !important;
         border-radius: 8px;
+        padding: 8px 10px;
+        display: flex !important;
+        align-items: center;
         justify-content: center;
     }
     
     .dock-content {
+        display: flex;
+        align-items: center;
         justify-content: space-around;
         width: 100%;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 6px;
     }
     
-    .dock-divider { display: none; }
+    .dock-divider { 
+        display: block; 
+        height: 18px; 
+        opacity: 0.4;
+    }
     
     .auth-btn {
-        padding: 10px;
+        padding: 8px 10px;
         justify-content: center;
         flex: 1;
+        min-width: 0;
         text-align: center;
+        white-space: nowrap;
+        font-size: 0.75rem;
+        pointer-events: auto;
+    }
+
+    .auth-btn i, .auth-btn span {
+        pointer-events: none;
     }
     
     .user-badge, .credit-badge {
         flex: 1;
         justify-content: center;
+        padding: 6px 10px;
+        font-size: 0.75rem;
+        white-space: nowrap;
     }
 
     /* Centralize & scale module details for viewing */
