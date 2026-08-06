@@ -1327,64 +1327,6 @@ body.landed .module-details { right: 8%; opacity: 1; }
 }
 
 /* ==========================================
-   RESPONSIVE OVERRIDES
-   ========================================== */
-@media (max-width: 900px) {
-    body {
-        height: 100dvh; /* Mobile viewport cutoff fix */
-    }
-
-    .beast-vid {
-        display: none !important; /* Disables heavy video renders on mobile */
-    }
-
-    .constellation.highlight .beast-img {
-        opacity: 1 !important; /* Forces static image fallback for mobile */
-    }
-
-    #spaceship-title-container {
-        top: 20px;
-        left: 20px;
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    .mothership-svg { width: 180px; }
-    .tractor-beam-title h1 { font-size: 1.8rem; }
-    .tractor-beam-title h1 span { font-size: 1.2rem; letter-spacing: 6px; }
-
-    #auth-corner {
-        top: 15px;
-        right: 15px;
-        padding: 5px 8px;
-    }
-
-    .dock-content {
-        flex-wrap: wrap;
-        justify-content: flex-end;
-        gap: 6px;
-    }
-
-    .dock-divider {
-        display: none;
-    }
-
-    .pricing-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .module-details {
-        width: 85%;
-        max-width: none;
-        padding: 25px;
-    }
-
-    body.landed .module-details {
-        right: 50%;
-        transform: translateX(50%);
-    }
-}
-
-/* ==========================================
    PERFORMANCE OVERRIDES
    ========================================== */
 body.landed .orbit,
@@ -1399,4 +1341,130 @@ body.landed .constellation {
 
 body.warping * {
     animation: none !important;
+}
+
+/* ==========================================
+   RESPONSIVE OVERRIDES (MOBILE FIXES)
+   ========================================== */
+@media (max-width: 900px) {
+    body {
+        height: 100dvh; /* Mobile viewport cutoff fix */
+    }
+
+    .beast-vid {
+        display: none !important; /* Disables heavy video renders on mobile */
+    }
+
+    .constellation.highlight .beast-img {
+        opacity: 1 !important; /* Forces static image fallback for mobile */
+    }
+
+    /* Spaceship Title Adjustments */
+    #spaceship-title-container {
+        top: 15px;
+        left: 10px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        transform: scale(0.75);
+        transform-origin: top left;
+        animation: none; /* Stops heavy floating animation on mobile */
+    }
+    
+    /* New HUD / Auth Corner Mobile Adjustments */
+    #auth-corner {
+        top: 10px;
+        right: 10px;
+        padding: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        backdrop-filter: none;
+    }
+
+    .hud-bar {
+        padding: 4px 6px;
+        gap: 4px;
+        background: rgba(4, 12, 20, 0.95);
+        border: 1px solid #00f0ff;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 240, 255, 0.25);
+    }
+
+    .hud-slot {
+        height: 32px;
+        padding: 0 8px;
+    }
+
+    .hud-icon-box {
+        font-size: 13px;
+        gap: 4px;
+    }
+
+    .status-dot {
+        width: 5px;
+        height: 5px;
+    }
+
+    .hud-slot:hover .hud-label-box {
+        max-width: 180px;
+        margin-left: 6px;
+        letter-spacing: 0px;
+        font-size: 11px;
+    }
+
+    /* Hide Vice Neon Text on Mobile to prevent UI overlap */
+    .vice-text-container {
+        display: none !important;
+    }
+
+    .pricing-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .sub-header h2 {
+        font-size: 1.5rem;
+    }
+
+    /* Modal & Module Adjustments for Mobile */
+    .module-details {
+        width: 90%;
+        max-width: none;
+        padding: 20px;
+    }
+    
+    .module-details h2 { 
+        font-size: 1.6rem; 
+        margin-bottom: 10px;
+    }
+    
+    .module-details p { 
+        font-size: 0.85rem; 
+        margin-bottom: 15px; 
+    }
+
+    .stats-grid {
+        margin-bottom: 20px;
+    }
+
+    body.landed .module-details {
+        right: 5%;
+        transform: translateX(0);
+    }
+
+    .submission-console, .tactical-modal-card, .auth-modal-card, .subscription-modal-card {
+        width: 95%;
+        padding: 25px 20px;
+    }
+    
+    .console-header h2 {
+        font-size: 1.5rem;
+    }
+
+    /* Orbit sizes tweak (vmin handles it well, but labels might overlap) */
+    .planet-label {
+        font-size: 0.6rem;
+        padding: 4px 8px;
+    }
 }
