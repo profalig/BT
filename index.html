@@ -10,7 +10,6 @@
         (function() {
             try {
                 var url = new URL(window.location.href);
-                // Added 'igshid' specifically for Instagram tracking links
                 var params = ['fbclid', 'igshid', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
                 var hasTracking = false;
                 
@@ -21,14 +20,12 @@
                     }
                 });
                 
-                // Also check if Vercel root is missing the trailing slash
                 var needsSlash = url.pathname === '' && !url.toString().endsWith('/');
                 
                 if (hasTracking || needsSlash) {
                     if (url.pathname === '') {
                         url.pathname = '/';
                     }
-                    // Hard redirect to the clean URL so the page actually loads correctly
                     window.location.replace(url.toString());
                 }
             } catch (e) {
@@ -42,7 +39,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;600;800&family=Damion&display=swap" rel="stylesheet">
     
     <!-- Supabase JS Client SDK -->
-    <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=33V2npBf1aUbNvRwgfX_NhfE0tJSaHX8oy3gxbAZh_wN2z1xBgY43mRnLhtpk8SxHJlciW-bTiq1xV-CeHMEsK_r4LClzWHluofB0uBnXsi1LHBSWy_hoETJI562q4-sK5KCmvRuLedoQxav1d68fogbCVvOEnN8ngH0PfQr3VL6G8MCMYK7_wMWjONSeaWYq4ngt-HGsW7Wzp4KBYOTTlWRgzweVXMeTIiNKkeN5oKKvk6VDAi82dtupmjYblxLLse5KVvZqNvpOmfssbqkwQGer4km3d3z69EKQRZPByc1Z4KpFgEaPilalxiAW2Hh" charset="UTF-8"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         /* COMPACT EXPANDABLE HUD NAVIGATION STYLES */
@@ -77,19 +74,15 @@
             overflow: hidden;
             cursor: pointer;
             color: var(--theme-color);
-            
-            /* INSTANT COLLAPSE ON MOUSE LEAVE */
             transition: all 0.25s ease-out 0s;
         }
 
-        /* Color Themes for Slots */
         .hud-slot.agent    { --theme-color: #00ff88; --glow: rgba(0, 255, 136, 0.4); }
         .hud-slot.credits  { --theme-color: #facc15; --glow: rgba(250, 204, 21, 0.4); }
         .hud-slot.subs     { --theme-color: #eab308; --glow: rgba(234, 179, 8, 0.4); }
         .hud-slot.reports  { --theme-color: #38bdf8; --glow: rgba(56, 189, 248, 0.4); }
         .hud-slot.logout   { --theme-color: #f43f5e; --glow: rgba(244, 63, 94, 0.4); }
 
-        /* Sci-Fi Sweeping Light Flare */
         .hud-slot::after {
             content: '';
             position: absolute;
@@ -103,7 +96,6 @@
             transition: none;
         }
 
-        /* Permanent Visible Icon & Indicator (Compact View) */
         .hud-icon-box {
             display: flex;
             align-items: center;
@@ -115,7 +107,6 @@
         }
 
         .hud-icon-box i {
-            /* Instant reset on mouse leave */
             transition: transform 0.2s ease-out 0s;
         }
 
@@ -128,12 +119,11 @@
             flex-shrink: 0;
         }
 
-        /* Fancy Expandable Text Label */
         .hud-label-box {
             display: block;
             white-space: nowrap;
             opacity: 0;
-            max-width: 0; /* Fully closed by default */
+            max-width: 0; 
             overflow: hidden;
             font-size: 13px;
             font-weight: 700;
@@ -141,8 +131,6 @@
             transform: scale(0.9);
             margin-left: 0;
             z-index: 2;
-            
-            /* INSTANT COLLAPSE ON MOUSE LEAVE */
             transition: max-width 0.25s ease-out 0s,
                         opacity 0.2s ease-out 0s,
                         margin-left 0.2s ease-out 0s,
@@ -150,11 +138,9 @@
                         letter-spacing 0.2s ease-out 0s;
         }
 
-        /* HOVER TRIGGER: Delayed Activation & Spring Reveal */
         .hud-slot:hover {
             box-shadow: 0 0 18px var(--glow), inset 0 0 10px var(--glow);
             background: rgba(8, 28, 44, 0.95);
-            /* Wait 0.2s before applying hover background */
             transition: all 0.3s ease 0.2s;
         }
 
@@ -165,7 +151,6 @@
 
         .hud-slot:hover .hud-icon-box i {
             transform: scale(1.15) rotate(-5deg);
-            /* Wait 0.2s before tilting icon */
             transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s;
         }
 
@@ -175,8 +160,6 @@
             margin-left: 8px;
             letter-spacing: 0.8px;
             transform: scale(1);
-            
-            /* Wait 0.2s, then spring open */
             transition: max-width 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s,
                         opacity 0.3s ease 0.2s,
                         margin-left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s,
@@ -184,9 +167,6 @@
                         letter-spacing 0.4s ease 0.2s;
         }
 
-        /* ===================================================
-           ELEGANT NEON HANDWRITING (SMOOTH REVEAL ANIMATION)
-           =================================================== */
         .vice-text-container {
             position: fixed;
             z-index: 999;
@@ -196,7 +176,6 @@
             flex-direction: column;
         }
 
-        /* Bottom Right Container */
         .vice-text-container.vice-right {
             bottom: 40px;
             right: 50px;
@@ -204,7 +183,6 @@
             text-align: right;
         }
 
-        /* Bottom Left Container - Expanded for larger text */
         .vice-text-container.vice-left {
             bottom: 40px;
             left: 50px;
@@ -215,24 +193,19 @@
 
         .vice-line {
             font-family: 'Damion', cursive;
-            font-size: 1.3rem; /* Scaled down exactly in half from 2.6rem */
+            font-size: 1.3rem; 
             letter-spacing: 1px;
             line-height: 1.15;
             white-space: nowrap;
-            /* Added a crisp border stroke to make the letters perfectly visible */
             -webkit-text-stroke: 0.8px rgba(255, 255, 255, 0.7);
-            /* Expanded bounding box padding so the neon glow isn't cut off by the clip-path */
             padding-right: 40px;
             padding-bottom: 20px;
             padding-top: 10px;
             margin-bottom: -15px; 
-            
-            /* Default hidden state for the custom JS clip-path reveal */
             opacity: 0;
             clip-path: inset(-40px 100% -40px -40px);
         }
 
-        /* Adjusted left text for sharper readability */
         .vice-left .vice-line {
             font-size: 1.45rem;
             letter-spacing: 1.2px;
@@ -242,38 +215,26 @@
             padding-right: 40px;
         }
 
-        /* Lowered Neon Light Effects for a softer, more refined glow */
         .vice-line.cyan {
             color: #00f0ff;
-            text-shadow: 
-                0 0 2px #fff,
-                0 0 8px #00f0ff,
-                0 0 15px #00a8ff;
+            text-shadow: 0 0 2px #fff, 0 0 8px #00f0ff, 0 0 15px #00a8ff;
         }
 
         .vice-line.pink {
             color: #ff007f;
-            text-shadow: 
-                0 0 2px #fff,
-                0 0 8px #ff007f,
-                0 0 15px #ff0055;
+            text-shadow: 0 0 2px #fff, 0 0 8px #ff007f, 0 0 15px #ff0055;
         }
 
         .vice-line.yellow {
             color: #ffe600;
-            text-shadow: 
-                0 0 2px #fff,
-                0 0 8px #ffe600,
-                0 0 15px #ff9900;
+            text-shadow: 0 0 2px #fff, 0 0 8px #ffe600, 0 0 15px #ff9900;
         }
     </style>
 </head>
 <body>
 
-    <!-- AUTHENTICATION & SUBSCRIPTION CORNER (HUD DOCK) -->
     <div id="auth-corner">
         <div class="hud-bar">
-            <!-- 1. AGENT / SIGN IN -->
             <div class="hud-slot agent" id="nav-agent-btn">
                 <div class="hud-icon-box">
                     <span class="status-dot"></span>
@@ -284,7 +245,6 @@
                 </div>
             </div>
 
-            <!-- 2. CREDITS -->
             <div class="hud-slot credits" id="nav-credits-btn">
                 <div class="hud-icon-box">
                     <i class="fa-solid fa-coins"></i>
@@ -294,7 +254,6 @@
                 </div>
             </div>
 
-            <!-- 3. SUBSCRIPTIONS -->
             <div class="hud-slot subs" id="nav-subscription-btn">
                 <div class="hud-icon-box">
                     <i class="fa-solid fa-gem"></i>
@@ -304,7 +263,6 @@
                 </div>
             </div>
 
-            <!-- 4. MY REPORTS -->
             <div class="hud-slot reports" id="nav-reports-btn">
                 <div class="hud-icon-box">
                     <i class="fa-solid fa-folder-open"></i>
@@ -314,7 +272,6 @@
                 </div>
             </div>
 
-            <!-- 5. LOGOUT -->
             <div class="hud-slot logout" id="nav-logout-btn">
                 <div class="hud-icon-box">
                     <i class="fa-solid fa-power-off"></i>
@@ -326,20 +283,17 @@
         </div>
     </div>
 
-    <!-- ELEGANT WRITING NEON TEXT (BOTTOM RIGHT) -->
     <div class="vice-text-container vice-right">
         <div class="vice-line cyan" id="vice-right-1"></div>
         <div class="vice-line pink" id="vice-right-2"></div>
         <div class="vice-line yellow" id="vice-right-3"></div>
     </div>
 
-    <!-- ELEGANT WRITING NEON TEXT (BOTTOM LEFT) -->
     <div class="vice-text-container vice-left">
         <div class="vice-line pink" id="vice-left-1"></div>
         <div class="vice-line pink" id="vice-left-2"></div>
     </div>
 
-    <!-- SPACE BACKGROUND MATRIX -->
     <div id="space-matrix">
         <canvas id="blackboard-bg"></canvas>
         <div class="tactical-grid"></div>
@@ -366,7 +320,6 @@
         </div>
     </div>
 
-    <!-- MOTHERSHIP TITLE DISPLAY -->
     <div id="spaceship-title-container">
         <svg class="mothership-svg" viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -385,264 +338,9 @@
                 </filter>
             </defs>
             <polygon class="engine-flame" points="25,43 -10,50 25,57" fill="#ff0055" filter="url(#magentaGlow)"/>
-            <path d="M45,35 L15,10 L75,38 Z" fill="#040912" stroke="#00f0ff" stroke-width="1.5" />
-            <path d="M45,65 L15,90 L75,62 Z" fill="#040912" stroke="#00f0ff" stroke-width="1.5" />
-            <path d="M25,30 L160,45 L185,50 L160,55 L25,70 L50,50 Z" fill="url(#shipHull)" stroke="#00f0ff" stroke-width="2" />
-            <polygon points="100,43 140,47 140,53 100,57" fill="#00f0ff" filter="url(#cyanGlow)" />
-            <circle cx="185" cy="50" r="4" fill="#ffffff" filter="url(#cyanGlow)" />
-            <path d="M165,35 L175,45 L165,48 Z" fill="#ff0055" opacity="0.8" />
-            <path d="M165,65 L175,55 L165,52 Z" fill="#ff0055" opacity="0.8" />
+            <path d="M45,35 L15,10 L75,38 Z" fill="#040912" stroke="#00f0ff" stroke-width="1"/>
         </svg>
-        <div class="tractor-beam-title">
-            <h1>SYSTEM & BACKTEST<br><span>FACTORY</span></h1>
-        </div>
+        <div class="mobile-reliability-text">Test the reliability of your system...</div>
     </div>
-
-    <!-- CAMERA VIEWPORT -->
-    <div id="spaceship-viewport">
-        <section id="solar-system">
-            <div class="btc-sun" id="sun" style="background-image: url('images/btc-coin.png');"></div>
-            <div class="orbit orbit-1"><div class="planet" data-id="backtest" style="background-image: url('images/planet1.png');"><div class="target-reticle"></div><span class="planet-label">Backtest Machine</span></div></div>
-            <div class="orbit orbit-2"><div class="planet" data-id="databank" style="background-image: url('images/planet2.png');"><div class="target-reticle"></div><span class="planet-label">System Databank</span></div></div>
-            <div class="orbit orbit-3"><div class="planet" data-id="about" style="background-image: url('images/planet3.png');"><div class="target-reticle"></div><span class="planet-label">About Us</span></div></div>
-            <div class="orbit orbit-4"><div class="planet" data-id="contact" style="background-image: url('images/planet4.png');"><div class="target-reticle"></div><span class="planet-label">Contact Us</span></div></div>
-            <div class="orbit orbit-5"><div class="planet" data-id="campus" style="background-image: url('images/planet5.png');"><div class="target-reticle"></div><span class="planet-label">Backtesting Campus</span></div></div>
-        </section>
-    </div>
-
-    <!-- HUD MODULE OVERLAY -->
-    <div id="cinematic-overlay">
-        <button id="return-btn"><i class="fa-solid fa-plane-departure"></i> DISENGAGE TRACKING</button>
-        <div class="module-details">
-            <div class="corner-bracket top-left"></div><div class="corner-bracket top-right"></div>
-            <div class="corner-bracket bottom-left"></div><div class="corner-bracket bottom-right"></div>
-            <span class="module-tag" id="module-tag"></span>
-            <h2 id="module-title"></h2>
-            <p id="module-desc"></p>
-            <div class="stats-grid" id="stats-grid"></div>
-            <button class="action-btn" id="module-action-btn">INITIALIZE MODULE <i class="fa-solid fa-chevron-right"></i></button>
-        </div>
-    </div>
-
-    <!-- GAS GIANT FORM ATMOSPHERE -->
-    <div id="gas-giant-atmosphere">
-        <div class="gas-clouds"></div>
-        <div class="lightning-flash"></div>
-        
-        <div class="submission-console">
-            <button id="abort-console-btn"><i class="fa-solid fa-xmark"></i> ABORT UPLINK</button>
-            <div class="console-header">
-                <h2>SYSTEM SUBMISSION PROTOCOL</h2>
-                <p>Deploy your system architecture to our core. Submitting consumes <b>1 Backtest Credit</b> from your account.</p>
-            </div>
-
-            <form id="system-submit-form">
-                <div class="input-group">
-                    <label>SYSTEM DESIGNATION</label>
-                    <input type="text" id="system-name" placeholder="e.g., Mean Reversion Alpha v2" required>
-                </div>
-                <div class="input-group">
-                    <label>CONTACT COMM-LINK (Email)</label>
-                    <input type="email" id="contact-email" placeholder="Where should we send the data analysis?" required>
-                </div>
-                <div class="input-group">
-                    <label>SYSTEM ARCHITECTURE & RULES</label>
-                    <textarea id="system-rules" placeholder="Define your logic. Include entry/exit criteria, timeframes, asset classes, and risk management parameters..." rows="6" required></textarea>
-                </div>
-                <button type="submit" id="submit-btn" class="submit-system-btn">INITIATE DEEP BACKTEST (1 CREDIT) <i class="fa-solid fa-bolt"></i></button>
-            </form>
-        </div>
-    </div>
-
-    <!-- TACTICAL UPLINK SUCCESS / REPORT HUD MODAL -->
-    <div id="tactical-modal-overlay">
-        <div class="tactical-modal-card">
-            <div class="corner-bracket top-left"></div>
-            <div class="corner-bracket top-right"></div>
-            <div class="corner-bracket bottom-left"></div>
-            <div class="corner-bracket bottom-right"></div>
-            
-            <div class="launch-stage">
-                <svg class="rocket-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M50,10 C55,30 65,55 65,75 C65,85 58,90 50,90 C42,90 35,85 35,75 C35,55 45,30 50,10 Z" fill="#040912" stroke="#00ff66" stroke-width="2"/>
-                    <polygon points="35,65 20,82 35,80" fill="#00ff66" />
-                    <polygon points="65,65 80,82 65,80" fill="#00ff66" />
-                    <polygon points="50,90 42,105 50,98 58,105" fill="#ff0055" class="rocket-flame" />
-                    <circle cx="50" cy="45" r="4" fill="#00f0ff" />
-                </svg>
-                <div class="hyper-rings">
-                    <span></span><span></span><span></span>
-                </div>
-            </div>
-
-            <div class="modal-status-tag">// TRANSMISSION STATUS: SECURED</div>
-            <h2 id="modal-heading">UPLINK SUCCESSFUL</h2>
-            <div id="modal-message">System architecture dispatches into the quantitative core. Engineering task group assigned.</div>
-
-            <button id="close-modal-btn" class="modal-action-btn">RETURN TO COMMAND <i class="fa-solid fa-chevron-right"></i></button>
-        </div>
-    </div>
-
-    <!-- SUBSCRIPTION & PAYMENT HUD MODAL -->
-    <div id="subscription-modal-overlay">
-        <div class="subscription-modal-card">
-            <button id="close-sub-btn" class="abort-btn"><i class="fa-solid fa-xmark"></i></button>
-            <div class="corner-bracket top-left"></div>
-            <div class="corner-bracket top-right"></div>
-            <div class="corner-bracket bottom-left"></div>
-            <div class="corner-bracket bottom-right"></div>
-
-            <div class="sub-header">
-                <div class="modal-status-tag">// CLEARANCE MATRIX & POWER SUBSCRIPTIONS</div>
-                <h2>QUANTITATIVE ACCESS TIERS</h2>
-                <p>Select your operational tier to unlock hyper-threaded compute clusters, priority backtests, and deep tick data metrics.</p>
-            </div>
-
-            <div class="pricing-grid">
-                <div class="tier-card">
-                    <div class="tier-name">START PACK</div>
-                    <div class="tier-price">$29</div>
-                    <p class="tier-desc">Essential pack for emerging quantitative strategy development.</p>
-                    <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> Pack of 3 Backtests</li>
-                        <li><i class="fa-solid fa-check"></i> Standard Queue Priority</li>
-                        <li><i class="fa-solid fa-check"></i> Basic Metrics Log</li>
-                        <li><i class="fa-solid fa-xmark unavailable"></i> Tick-level Deep Analysis</li>
-                    </ul>
-                    <button class="tier-btn select-tier-btn" data-plan="Start Pack" data-price-id="price_1U16NFCWCAQzKASWoUezwHKg" data-credits="3" data-mode="payment">GET START PACK</button>
-                </div>
-
-                <div class="tier-card featured">
-                    <div class="popular-badge">MOST POPULAR</div>
-                    <div class="tier-name" style="color: #00f0ff;">PRO PACK</div>
-                    <div class="tier-price" style="color: #00f0ff;">$79</div>
-                    <p class="tier-desc">High-performance engine pack for serious system traders.</p>
-                    <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> Pack of 10 Backtests</li>
-                        <li><i class="fa-solid fa-check"></i> Express Priority Queue</li>
-                        <li><i class="fa-solid fa-check"></i> 99.9% Tick Data Accuracy</li>
-                        <li><i class="fa-solid fa-check"></i> PDF Report Data Export</li>
-                    </ul>
-                    <button class="tier-btn featured-btn select-tier-btn" data-plan="Pro Pack" data-price-id="price_1U16Q9CWCAQzKASWjG2gvbvf" data-credits="10" data-mode="payment"><i class="fa-solid fa-bolt"></i> GET PRO PACK</button>
-                </div>
-
-                <div class="tier-card">
-                    <div class="tier-name" style="color: #ffd700;">QUANT MONTHLY PASS</div>
-                    <div class="tier-price" style="color: #ffd700;">$199 <span>/ mo</span></div>
-                    <p class="tier-desc">Full access monthly pass for dedicated quant engineers & funds.</p>
-                    <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> Maximum 40 Backtests</li>
-                        <li><i class="fa-solid fa-check"></i> Full Access to Engine</li>
-                        <li><i class="fa-solid fa-check"></i> 1-on-1 Quant Desk Support</li>
-                        <li><i class="fa-solid fa-check"></i> Databank Priority Access</li>
-                    </ul>
-                    <button class="tier-btn select-tier-btn" data-plan="Quant Monthly Pass" data-price-id="price_1U16RuCWCAQzKASW1SCBeQhn" data-credits="40" data-mode="subscription" style="border-color:#ffd700; color:#ffd700;"><i class="fa-solid fa-crown"></i> UNLOCK MONTHLY PASS</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- AUTHENTICATION HUD MODAL -->
-    <div id="auth-modal-overlay">
-        <div class="auth-modal-card">
-            <button id="close-auth-btn" class="abort-btn"><i class="fa-solid fa-xmark"></i></button>
-            <div class="corner-bracket top-left"></div>
-            <div class="corner-bracket top-right"></div>
-            <div class="corner-bracket bottom-left"></div>
-            <div class="corner-bracket bottom-right"></div>
-
-            <div class="auth-tabs">
-                <button type="button" class="auth-tab active" id="tab-signin">SIGN IN</button>
-                <button type="button" class="auth-tab" id="tab-signup">SIGN UP</button>
-            </div>
-
-            <form id="auth-form">
-                <div class="input-group" id="username-group" style="display: none;">
-                    <label>CALLSIGN (Username)</label>
-                    <input type="text" id="auth-username" placeholder="e.g. QuantTrader_99">
-                </div>
-                <div class="input-group">
-                    <label>ACCESS ID (Email)</label>
-                    <input type="email" id="auth-email" placeholder="agent@quant.io" required>
-                </div>
-                <div class="input-group">
-                    <label>SECURITY CLEARANCE (Password)</label>
-                    <input type="password" id="auth-password" placeholder="••••••••••••" required>
-                </div>
-                <button type="submit" id="auth-submit-btn" class="submit-system-btn">AUTHENTICATE <i class="fa-solid fa-key"></i></button>
-            </form>
-
-            <div class="oauth-divider"><span>OR UPLINK WITH</span></div>
-            <div class="oauth-buttons">
-                <button type="button" id="google-auth-btn" class="oauth-btn google"><i class="fa-brands fa-google"></i> SIGN IN WITH GOOGLE</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="app.js"></script>
-    <script>
-        // ========================================================
-        // ELEGANT "INVISIBLE PEN" SMOOTH WRITING ENGINE
-        // ========================================================
-        
-        async function runBlockWriting(elements, holdTime = 3200, fadeTime = 800) {
-            // Initialize HTML content & find elements
-            const els = elements.map(item => {
-                const el = document.getElementById(item.id);
-                if(el) el.innerHTML = item.text;
-                return { el, ...item };
-            }).filter(item => item.el);
-
-            if(els.length === 0) return;
-
-            while (true) {
-                // 1. Instantly reset all text blocks to be hidden (but keeping the glow bounds)
-                for (const item of els) {
-                    item.el.style.transition = 'none';
-                    item.el.style.opacity = '1';
-                    item.el.style.clipPath = 'inset(-40px 100% -40px -40px)';
-                }
-                
-                // Force a browser repaint so the reset applies before animating
-                void els[0].el.offsetWidth;
-
-                // 2. Write each line sequentially using a smooth, organic reveal speed
-                for (const item of els) {
-                    item.el.style.transition = `clip-path ${item.duration}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`;
-                    item.el.style.clipPath = 'inset(-40px -40px -40px -40px)';
-                    
-                    // Wait for line to finish writing plus a tiny pause before the next line
-                    await new Promise(res => setTimeout(res, item.duration + 150));
-                }
-
-                // 3. Hold the entire block so it can be read
-                await new Promise(res => setTimeout(res, holdTime));
-
-                // 4. Elegantly fade out the whole block at once
-                for (const item of els) {
-                    item.el.style.transition = `opacity ${fadeTime}ms ease-out`;
-                    item.el.style.opacity = '0';
-                }
-
-                // Wait for the fade out to finish plus a gap before looping
-                await new Promise(res => setTimeout(res, fadeTime + 600));
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // Right Side Sequence
-            runBlockWriting([
-                { id: 'vice-right-1', text: 'Deep Backtest', duration: 1100 },
-                { id: 'vice-right-2', text: 'In detail report', duration: 1300 },
-                { id: 'vice-right-3', text: 'Crush it G 🚀', duration: 1000 }
-            ], 3500, 1000);
-
-            // Left Side Sequence (UPDATED)
-            runBlockWriting([
-                { id: 'vice-left-1', text: 'Test The Reliability of Your System', duration: 1600 },
-                { id: 'vice-left-2', text: 'Become a Systematic Millionair Trader', duration: 2200 }
-            ], 4500, 1000);
-        });
-    </script>
 </body>
 </html>
