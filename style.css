@@ -1327,7 +1327,7 @@ body.landed .module-details { right: 8%; opacity: 1; }
 }
 
 /* ==========================================
-   RESPONSIVE OVERRIDES
+   RESPONSIVE OVERRIDES (TABLETS & PHONES)
    ========================================== */
 @media (max-width: 900px) {
     #spaceship-title-container {
@@ -1369,6 +1369,158 @@ body.landed .module-details { right: 8%; opacity: 1; }
     body.landed .module-details {
         right: 50%;
         transform: translateX(50%);
+    }
+}
+
+/* ==========================================
+   DEDICATED MOBILE OVERRIDES (PHONES)
+   ========================================== */
+@media (max-width: 768px) {
+    
+    /* 1. HIDE BULL AND BEAR CONSTELLATIONS ON PHONE */
+    .bull-constellation,
+    .bear-constellation,
+    .constellation {
+        display: none !important;
+    }
+
+    /* 2. CENTER & SCALE SOLAR SYSTEM SYSTEM FOR PHONE */
+    #spaceship-viewport,
+    #solar-system {
+        width: 100vw;
+        height: 100vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transform: translate3d(0, 0, 0) !important;
+    }
+
+    .orbit-1 { width: 35vw; height: 35vw; }
+    .orbit-2 { width: 50vw; height: 50vw; }
+    .orbit-3 { width: 65vw; height: 65vw; }
+    .orbit-4 { width: 78vw; height: 78vw; }
+    .orbit-5 { width: 90vw; height: 90vw; }
+
+    .btc-sun {
+        width: 16vw;
+        height: 16vw;
+        max-width: 65px;
+        max-height: 65px;
+    }
+
+    .planet {
+        width: 10vw;
+        height: 10vw;
+        max-width: 42px;
+        max-height: 42px;
+        top: -5vw;
+    }
+
+    /* 3. MOBILE TITLE DISPLAY & SCALED WRITINGS */
+    #spaceship-title-container {
+        top: 12px;
+        left: 12px;
+        gap: 6px;
+        transform: none !important;
+        animation: none !important;
+    }
+
+    .mothership-svg {
+        width: 110px;
+    }
+
+    .tractor-beam-title {
+        padding: 6px 12px;
+        border-left-width: 3px;
+    }
+
+    .tractor-beam-title h1 {
+        font-size: 1.2rem;
+        letter-spacing: 1px;
+    }
+
+    .tractor-beam-title h1 span {
+        font-size: 0.75rem;
+        letter-spacing: 3px;
+    }
+
+    /* 4. OPTIMIZED MOBILE AUTH HUD & BUTTONS */
+    #auth-corner {
+        top: 12px;
+        right: 12px;
+        padding: 4px 6px;
+    }
+
+    .dock-content {
+        gap: 4px;
+    }
+
+    .auth-btn {
+        padding: 5px 9px;
+        font-size: 0.68rem;
+        letter-spacing: 0.5px;
+    }
+
+    .user-badge, .credit-badge {
+        font-size: 0.68rem;
+        padding: 4px 8px;
+    }
+
+    /* 5. SCALED MODALS & DRAWERS FOR MOBILE */
+    .module-details {
+        width: 92%;
+        padding: 20px;
+        bottom: 20px;
+        top: auto;
+    }
+
+    .module-details h2 {
+        font-size: 1.5rem;
+        margin-bottom: 8px;
+    }
+
+    .module-details p {
+        font-size: 0.8rem;
+        line-height: 1.4;
+        margin-bottom: 15px;
+    }
+
+    .stats-grid {
+        gap: 8px;
+        margin-bottom: 15px;
+    }
+
+    .stat-title { font-size: 0.55rem; }
+    .stat-value { font-size: 0.9rem; }
+
+    #return-btn {
+        top: 12px;
+        left: 12px;
+        padding: 8px 14px;
+        font-size: 0.7rem;
+    }
+
+    .submission-console,
+    .tactical-modal-card,
+    .subscription-modal-card,
+    .auth-modal-card {
+        width: 94%;
+        padding: 25px 18px;
+        max-height: 85vh;
+    }
+
+    .console-header h2 { font-size: 1.4rem; }
+    .console-header p { font-size: 0.8rem; margin-bottom: 15px; }
+
+    .sub-header h2 { font-size: 1.5rem; }
+    .sub-header p { font-size: 0.8rem; }
+
+    .planet-label {
+        font-size: 0.65rem;
+        padding: 3px 8px;
     }
 }
 
