@@ -1330,6 +1330,18 @@ body.landed .module-details { right: 8%; opacity: 1; }
    RESPONSIVE OVERRIDES
    ========================================== */
 @media (max-width: 900px) {
+    body {
+        height: 100dvh; /* Mobile viewport cutoff fix */
+    }
+
+    .beast-vid {
+        display: none !important; /* Disables heavy video renders on mobile */
+    }
+
+    .constellation.highlight .beast-img {
+        opacity: 1 !important; /* Forces static image fallback for mobile */
+    }
+
     #spaceship-title-container {
         top: 20px;
         left: 20px;

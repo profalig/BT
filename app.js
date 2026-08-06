@@ -243,6 +243,7 @@ const btcSun = document.getElementById('sun');
 
 const solarSystem = document.getElementById('solar-system');
 if (btcSun && solarSystem) {
+    // Desktop Hover
     btcSun.addEventListener('mouseenter', () => {
         solarSystem.classList.add('show-labels');
         triggerAttack(bullConstellation); triggerAttack(bearConstellation);
@@ -251,6 +252,19 @@ if (btcSun && solarSystem) {
         solarSystem.classList.remove('show-labels');
         resetAttack(bullConstellation); resetAttack(bearConstellation);
     });
+    
+    // Mobile Touch Parity
+    btcSun.addEventListener('touchstart', (e) => {
+        e.preventDefault(); 
+        solarSystem.classList.add('show-labels');
+        triggerAttack(bullConstellation); triggerAttack(bearConstellation);
+    }, { passive: false });
+    
+    btcSun.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        solarSystem.classList.remove('show-labels');
+        resetAttack(bullConstellation); resetAttack(bearConstellation);
+    }, { passive: false });
 }
 
 // ==========================================
