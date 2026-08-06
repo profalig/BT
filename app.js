@@ -354,7 +354,7 @@ async function fetchOrCreateUserProfile(user) {
 
         if (!profile) {
             console.log("Creating new user profile with 1 Free Credit for User:", user.id);
-            // Modified: Added the 'email' field back into the payload
+            // Modified: Included the 'email' field explicitly in the insert payload
             const { data: newProfile, error: createError } = await supabaseClient
                 .from('user_profiles')
                 .insert([{ 
@@ -947,6 +947,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     `;
 
+                    document.getElementById('nav-agent-btn')?.addEventListener('click', openUserReportsModal);
+                    document.getElementById('nav-credits-btn')?.addEventListener('click', openSubscriptionModal);
                     document.getElementById('my-sub-btn')?.addEventListener('click', openSubscriptionModal);
                     document.getElementById('my-reports-btn')?.addEventListener('click', openUserReportsModal);
 
