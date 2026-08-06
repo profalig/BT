@@ -1327,58 +1327,6 @@ body.landed .module-details { right: 8%; opacity: 1; }
 }
 
 /* ==========================================
-   RESPONSIVE OVERRIDES
-   ========================================== */
-@media (max-width: 900px) {
-    #spaceship-title-container {
-        top: 20px;
-        left: 20px;
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    .mothership-svg { width: 180px; }
-    .tractor-beam-title h1 { font-size: 1.8rem; }
-    .tractor-beam-title h1 span { font-size: 1.2rem; letter-spacing: 6px; }
-
-    #auth-corner {
-        top: 15px;
-        right: 15px;
-        padding: 5px 8px;
-    }
-
-    .dock-content {
-        flex-wrap: wrap;
-        justify-content: flex-end;
-        gap: 6px;
-    }
-
-    .dock-divider {
-        display: none;
-    }
-
-    .pricing-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .module-details {
-        width: 85%;
-        max-width: none;
-        padding: 25px;
-    }
-
-    body.landed .module-details {
-        right: 50%;
-        transform: translateX(50%);
-    }
-
-    /* Hiding bull and bear on mobile devices */
-    .bull-constellation,
-    .bear-constellation {
-        display: none !important;
-    }
-}
-
-/* ==========================================
    PERFORMANCE OVERRIDES
    ========================================== */
 body.landed .orbit,
@@ -1393,4 +1341,106 @@ body.landed .constellation {
 
 body.warping * {
     animation: none !important;
+}
+
+/* ==========================================
+   RESPONSIVE OVERRIDES (ENHANCED FOR MOBILE)
+   ========================================== */
+@media (max-width: 900px) {
+    /* Baseline layout swaps */
+    .pricing-grid { grid-template-columns: 1fr; }
+    .bull-constellation, .bear-constellation { display: none !important; }
+}
+
+@media (max-width: 768px) {
+    /* Scale down HUD branding */
+    #spaceship-title-container {
+        top: 15px;
+        left: 15px;
+        gap: 10px;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .mothership-svg { width: 120px; }
+    .tractor-beam-title { padding: 10px 20px; }
+    .tractor-beam-title h1 { font-size: 1.4rem; }
+    .tractor-beam-title h1 span { font-size: 0.9rem; letter-spacing: 4px; }
+
+    /* Relocate Auth Dock for Thumb Accessibility */
+    #auth-corner {
+        top: auto;
+        bottom: 15px;
+        right: 15px;
+        left: 15px;
+        border-radius: 8px;
+        justify-content: center;
+    }
+    
+    .dock-content {
+        justify-content: space-around;
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    
+    .dock-divider { display: none; }
+    
+    .auth-btn {
+        padding: 10px;
+        justify-content: center;
+        flex: 1;
+        text-align: center;
+    }
+    
+    .user-badge, .credit-badge {
+        flex: 1;
+        justify-content: center;
+    }
+
+    /* Centralize & scale module details for viewing */
+    .module-details {
+        width: 92%;
+        max-width: none;
+        padding: 20px;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    body.landed .module-details {
+        right: 50%;
+        transform: translate(50%, 0);
+    }
+
+    #return-btn {
+        top: 15px;
+        left: 15px;
+        padding: 10px 15px;
+        font-size: 0.75rem;
+        z-index: 700;
+    }
+
+    /* Modal Form Constraints */
+    .submission-console, .auth-modal-card, .tactical-modal-card, .subscription-modal-card {
+        width: 95%;
+        padding: 25px 20px;
+    }
+
+    .console-header h2, .sub-header h2 { font-size: 1.6rem; }
+    .tier-price { font-size: 1.8rem; }
+}
+
+@media (max-width: 480px) {
+    /* Prevent planet overlap by tightening the VMIN ratio */
+    .orbit-1 { width: 40vmin; height: 40vmin; }
+    .orbit-2 { width: 60vmin; height: 60vmin; }
+    .orbit-3 { width: 80vmin; height: 80vmin; }
+    .orbit-4 { width: 100vmin; height: 100vmin; }
+    .orbit-5 { width: 120vmin; height: 120vmin; }
+    
+    .planet { width: 12vmin; height: 12vmin; top: -6vmin; }
+    
+    /* Stats Grid stack for extreme narrow displays */
+    .stats-grid { grid-template-columns: 1fr; }
+    
+    .oauth-btn { font-size: 0.75rem; padding: 10px; }
 }
