@@ -10,7 +10,8 @@
         (function() {
             try {
                 var url = new URL(window.location.href);
-                var params = ['fbclid', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+                // Added 'igshid' specifically for Instagram tracking links
+                var params = ['fbclid', 'igshid', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
                 var hasTracking = false;
                 
                 params.forEach(function(param) {
@@ -20,8 +21,15 @@
                     }
                 });
                 
-                if (hasTracking) {
-                    window.history.replaceState(null, '', url.toString());
+                // Also check if Vercel root is missing the trailing slash
+                var needsSlash = url.pathname === '' && !url.toString().endsWith('/');
+                
+                if (hasTracking || needsSlash) {
+                    if (url.pathname === '') {
+                        url.pathname = '/';
+                    }
+                    // Hard redirect to the clean URL so the page actually loads correctly
+                    window.location.replace(url.toString());
                 }
             } catch (e) {
                 console.error("URL cleaning failed", e);
