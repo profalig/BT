@@ -1370,6 +1370,12 @@ body.landed .module-details { right: 8%; opacity: 1; }
         right: 50%;
         transform: translateX(50%);
     }
+
+    /* Hiding bull and bear on mobile devices */
+    .bull-constellation,
+    .bear-constellation {
+        display: none !important;
+    }
 }
 
 /* ==========================================
