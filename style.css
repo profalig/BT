@@ -1388,3 +1388,13 @@ body.landed .constellation {
 body.warping * {
     animation: none !important;
 }
+
+/* ==========================================
+   HIDE CONSTELLATIONS ON MOBILE
+   ========================================== */
+@media (max-width: 768px) {
+    .bull-constellation,
+    .bear-constellation {
+        display: none !important;
+    }
+}
