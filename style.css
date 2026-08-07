@@ -9,7 +9,7 @@
 /* ==========================================
    GLOBAL SELECTION PREVENT
    ========================================== */
-body, #space-matrix, .constellation, .beast-container, img, video, svg, #spaceship-title-container {
+body, #space-matrix, .constellation, .beast-container, img, video, svg, #spaceship-title-container, .vice-text-container {
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
@@ -46,7 +46,7 @@ body {
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(0, 240, 255, 0.05);
-    transition: opacity 0.5s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: opacity 0.5s ease, border-color 0.3s ease, box-shadow 0.3s ease, visibility 0.5s ease;
 }
 
 #auth-corner:hover {
@@ -279,6 +279,7 @@ body {
     gap: 15px;
     pointer-events: none;
     animation: mothership-hover 6s ease-in-out infinite alternate;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
 }
 
 .mothership-svg {
@@ -348,6 +349,25 @@ body {
 @keyframes mothership-hover {
     0% { transform: translateY(0px) rotate(0deg); }
     100% { transform: translateY(-15px) rotate(1.5deg); }
+}
+
+/* ==========================================
+   BOTTOM-LEFT HANDWRITING TEXT CONTAINER
+   ========================================== */
+.vice-text-container {
+    position: fixed;
+    bottom: 30px;
+    left: 40px;
+    z-index: 500;
+    pointer-events: none;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.vice-line {
+    font-family: 'Caveat', 'Rock Salt', cursive, sans-serif;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.2rem;
+    letter-spacing: 1px;
 }
 
 /* ==========================================
@@ -599,7 +619,7 @@ body.warping #spaceship-title-container {
 }
 
 /* ==========================================
-   HUD MODULE OVERLAY
+   HUD MODULE OVERLAY & LANDED STATE VISIBILITY
    ========================================== */
 #cinematic-overlay {
     position: fixed;
@@ -707,9 +727,19 @@ body.warping #spaceship-title-container {
     box-shadow: 0 0 25px rgba(0,240,255,0.6);
 }
 
+/* Active Landed States */
 body.landed #cinematic-overlay { pointer-events: all; }
 body.landed #return-btn { opacity: 1; }
 body.landed .module-details { right: 8%; opacity: 1; }
+
+/* Hide UI Overlays on Planet Touch / Landing */
+body.landed #spaceship-title-container,
+body.landed #auth-corner,
+body.landed .vice-text-container,
+body.landed .constellation {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
 
 /* ==========================================
    GAS GIANT ATMOSPHERE (BACKTEST FORM)
@@ -1330,20 +1360,15 @@ body.landed .module-details { right: 8%; opacity: 1; }
    RESPONSIVE OVERRIDES
    ========================================== */
 @media (max-width: 900px) {
-    /* Hide top-right HUD when landed on a planet view */
-    body.landed #auth-corner {
-        display: none !important;
-    }
-
     #spaceship-title-container {
-        top: 90px; /* Increased from 20px to avoid the mobile HUD */
+        top: 90px;
         left: 20px;
         flex-direction: column;
         align-items: flex-start;
     }
-    .mothership-svg { width: 140px; } /* Decreased from 180px */
-    .tractor-beam-title h1 { font-size: 1.5rem; } /* Decreased from 1.8rem */
-    .tractor-beam-title h1 span { font-size: 1rem; letter-spacing: 6px; } /* Decreased from 1.2rem */
+    .mothership-svg { width: 140px; }
+    .tractor-beam-title h1 { font-size: 1.5rem; }
+    .tractor-beam-title h1 span { font-size: 1rem; letter-spacing: 6px; }
 
     #auth-corner {
         top: 15px;
