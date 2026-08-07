@@ -348,7 +348,7 @@ function closeSubscriptionModal() {
 // SUPABASE CLIENT INITIALIZATION
 // ==========================================
 const SUPABASE_URL = 'https://woxswhiayrkecspebuwb.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInRefiI6IndveHN3aGlheXJrZWNzcGVidXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTc5ODYsImV4cCI6210MDk5Mzk4Nn0.faEmt5_tw6dN9Cs-pKJHa9D0yyEBbAl4oT0Y9QWYuFg';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndveHN3aGlheXJrZWNzcGVidXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTc5ODYsImV4cCI6MjEwMDk5Mzk4Nn0.faEmt5_tw6dN9Cs-pKJHa9D0yyEBbAl4oT0Y9QWYuFg';
 
 let supabaseClient = null;
 if (window.supabase) {
@@ -564,123 +564,11 @@ document.addEventListener('click', (e) => {
 }, true);
 
 // ==========================================
-// MOBILE INFO BUTTON & INTERACTIVE TOOLTIP TOUR
-// ==========================================
-const tourSteps = [
-    {
-        target: '#sun',
-        title: 'STEP 1 // SOLAR CORE & LABELS',
-        desc: 'Tap the Sun or any orbiting planet to view strategy descriptions and metrics.'
-    },
-    {
-        target: '.orbit-1 .planet',
-        title: 'STEP 2 // BACKTEST MACHINE',
-        desc: 'Tap SEC-01 Backtest Machine to submit your strategy parameters to our core.'
-    },
-    {
-        target: '#auth-corner',
-        title: 'STEP 3 // NAVIGATION HUD',
-        desc: 'Use the top HUD bar to access your clearance, credits, and archived reports.'
-    }
-];
-
-let currentTourStep = 0;
-
-function initMobileInfoAndTour() {
-    // Inject floating Mobile Info Button
-    if (!document.getElementById('mobile-info-btn')) {
-        const infoBtn = document.createElement('button');
-        infoBtn.id = 'mobile-info-btn';
-        infoBtn.setAttribute('aria-label', 'Mobile Navigation Tour');
-        infoBtn.innerHTML = '<i class="fa-solid fa-circle-info"></i>';
-        document.body.appendChild(infoBtn);
-
-        infoBtn.addEventListener('click', () => {
-            startMobileTour();
-        });
-    }
-
-    // Auto-launch walkthrough for first-time mobile visitors
-    const isMobile = window.innerWidth <= 768;
-    const hasSeenTour = localStorage.getItem('mobile_tour_completed');
-    if (isMobile && !hasSeenTour) {
-        setTimeout(() => {
-            startMobileTour();
-        }, 1200);
-    }
-}
-
-function startMobileTour() {
-    currentTourStep = 0;
-    renderTourStep(currentTourStep);
-}
-
-function renderTourStep(stepIndex) {
-    let tourOverlay = document.getElementById('interactive-tour-overlay');
-    if (!tourOverlay) {
-        tourOverlay = document.createElement('div');
-        tourOverlay.id = 'interactive-tour-overlay';
-        tourOverlay.className = 'interactive-tour-overlay';
-        document.body.appendChild(tourOverlay);
-    }
-
-    const step = tourSteps[stepIndex];
-    if (!step) {
-        finishMobileTour();
-        return;
-    }
-
-    // Highlight active element
-    document.querySelectorAll('.tour-highlight').forEach(el => el.classList.remove('tour-highlight'));
-    const targetEl = document.querySelector(step.target);
-    if (targetEl) {
-        targetEl.classList.add('tour-highlight');
-    }
-
-    const isLast = stepIndex === tourSteps.length - 1;
-
-    tourOverlay.innerHTML = `
-        <div class="tour-backdrop"></div>
-        <div class="tour-card">
-            <div class="tour-header">
-                <span class="tour-title">${step.title}</span>
-                <span class="tour-counter">${stepIndex + 1}/${tourSteps.length}</span>
-            </div>
-            <div class="tour-body">${step.desc}</div>
-            <div class="tour-actions">
-                <button id="tour-skip-btn" class="tour-btn tour-btn-secondary">SKIP</button>
-                <button id="tour-next-btn" class="tour-btn tour-btn-primary">${isLast ? 'FINISH' : 'NEXT <i class="fa-solid fa-chevron-right"></i>'}</button>
-            </div>
-        </div>
-    `;
-
-    tourOverlay.classList.add('active');
-
-    document.getElementById('tour-skip-btn')?.addEventListener('click', finishMobileTour);
-    document.getElementById('tour-next-btn')?.addEventListener('click', () => {
-        if (isLast) {
-            finishMobileTour();
-        } else {
-            renderTourStep(stepIndex + 1);
-        }
-    });
-}
-
-function finishMobileTour() {
-    const tourOverlay = document.getElementById('interactive-tour-overlay');
-    if (tourOverlay) tourOverlay.classList.remove('active');
-    document.querySelectorAll('.tour-highlight').forEach(el => el.classList.remove('tour-highlight'));
-    localStorage.setItem('mobile_tour_completed', 'true');
-}
-
-// ==========================================
 // APPLICATION INITIALIZATION & AUTHENTICATION ENGINE
 // ==========================================
 let authMode = 'signin';
 
 document.addEventListener('DOMContentLoaded', () => {
-    initMobileInfoAndTour();
-
     const closeModalBtn = document.getElementById('close-modal-btn');
     const closeSubBtn = document.getElementById('close-sub-btn');
     const navSubBtn = document.getElementById('nav-subscription-btn');

@@ -321,73 +321,110 @@
     <div id="spaceship-viewport">
         <section id="solar-system">
             <div class="btc-sun" id="sun" style="background-image: url('images/btc-coin.png');"></div>
-            <div class="orbit orbit-1"><div class="planet" data-id="backtest" style="background-image: url('images/planet1.png');"><div class="target-reticle"></div><span class="planet-label">Backtest Machine</span></div></div>
-            <div class="orbit orbit-2"><div class="planet" data-id="databank" style="background-image: url('images/planet2.png');"><div class="target-reticle"></div><span class="planet-label">System Databank</span></div></div>
-            <div class="orbit orbit-3"><div class="planet" data-id="about" style="background-image: url('images/planet3.png');"><div class="target-reticle"></div><span class="planet-label">About Us</span></div></div>
-            <div class="orbit orbit-4"><div class="planet" data-id="contact" style="background-image: url('images/planet4.png');"><div class="target-reticle"></div><span class="planet-label">Contact Us</span></div></div>
-            <div class="orbit orbit-5"><div class="planet" data-id="campus" style="background-image: url('images/planet5.png');"><div class="target-reticle"></div><span class="planet-label">Backtesting Campus</span></div></div>
+
+            <!-- Orbit 1: Backtest Machine -->
+            <div class="orbit orbit-1">
+                <div class="planet" id="planet-backtest" style="background-image: url('images/planet-backtest.png');">
+                    <div class="target-reticle"></div>
+                    <div class="planet-label">Backtest Machine</div>
+                </div>
+            </div>
+
+            <!-- Orbit 2: System Databank -->
+            <div class="orbit orbit-2">
+                <div class="planet" id="planet-databank" style="background-image: url('images/planet-databank.png');">
+                    <div class="target-reticle"></div>
+                    <div class="planet-label">System Databank</div>
+                </div>
+            </div>
+
+            <!-- Orbit 3: About The Factory -->
+            <div class="orbit orbit-3">
+                <div class="planet" id="planet-about" style="background-image: url('images/planet-about.png');">
+                    <div class="target-reticle"></div>
+                    <div class="planet-label">About Factory</div>
+                </div>
+            </div>
+
+            <!-- Orbit 4: Contact Us -->
+            <div class="orbit orbit-4">
+                <div class="planet" id="planet-contact" style="background-image: url('images/planet-contact.png');">
+                    <div class="target-reticle"></div>
+                    <div class="planet-label">Contact Us</div>
+                </div>
+            </div>
+
+            <!-- Orbit 5: Backtesting Campus -->
+            <div class="orbit orbit-5">
+                <div class="planet" id="planet-campus" style="background-image: url('images/planet-campus.png');">
+                    <div class="target-reticle"></div>
+                    <div class="planet-label">Backtesting Campus</div>
+                </div>
+            </div>
         </section>
     </div>
 
-    <!-- HUD MODULE OVERLAY -->
+    <!-- HUD MODULE OVERLAY (LANDED VIEW) -->
     <div id="cinematic-overlay">
-        <button id="return-btn"><i class="fa-solid fa-plane-departure"></i> DISENGAGE TRACKING</button>
+        <button id="return-btn"><i class="fa-solid fa-arrow-left"></i> RETURN TO SYSTEM</button>
         <div class="module-details">
-            <div class="corner-bracket top-left"></div><div class="corner-bracket top-right"></div>
-            <div class="corner-bracket bottom-left"></div><div class="corner-bracket bottom-right"></div>
-            <span class="module-tag" id="module-tag"></span>
-            <h2 id="module-title"></h2>
+            <div class="corner-bracket top-left"></div>
+            <div class="corner-bracket top-right"></div>
+            <div class="corner-bracket bottom-left"></div>
+            <div class="corner-bracket bottom-right"></div>
+
+            <span class="module-tag" id="module-tag">ENGINE // SEC-01</span>
+            <h2 id="module-title">Backtest Machine</h2>
             <p id="module-desc"></p>
+            
             <div class="stats-grid" id="stats-grid"></div>
-            <button class="action-btn" id="module-action-btn">INITIALIZE MODULE <i class="fa-solid fa-chevron-right"></i></button>
+
+            <button class="action-btn" id="module-action-btn">
+                INITIALIZE MODULE <i class="fa-solid fa-bolt"></i>
+            </button>
         </div>
     </div>
 
-    <!-- GAS GIANT FORM ATMOSPHERE -->
+    <!-- GAS GIANT ATMOSPHERE (BACKTEST SUBMISSION FORM) -->
     <div id="gas-giant-atmosphere">
-        <div class="gas-clouds"></div>
-        <div class="lightning-flash"></div>
-        
         <div class="submission-console">
-            <button id="abort-console-btn"><i class="fa-solid fa-xmark"></i> ABORT UPLINK</button>
+            <button id="abort-console-btn"><i class="fa-solid fa-xmark"></i> ABORT</button>
             <div class="console-header">
-                <h2>SYSTEM SUBMISSION PROTOCOL</h2>
-                <p>Deploy your system architecture to our core. Submitting consumes <b>1 Backtest Credit</b> from your account.</p>
+                <h2>// BACKTEST MACHINE</h2>
+                <p>Submit your trading system parameters below. Our core engine will process multi-year historical tick data and deliver a detailed quantitative report.</p>
             </div>
-
             <form id="system-submit-form">
                 <div class="input-group">
-                    <label>SYSTEM DESIGNATION</label>
-                    <input type="text" id="system-name" placeholder="e.g., Mean Reversion Alpha v2" required>
+                    <label>SYSTEM NAME</label>
+                    <input type="text" id="system-name" required placeholder="e.g. Alpha Momentum Breakout">
                 </div>
                 <div class="input-group">
-                    <label>CONTACT COMM-LINK (Email)</label>
-                    <input type="email" id="contact-email" placeholder="Where should we send the data analysis?" required>
+                    <label>CONTACT EMAIL</label>
+                    <input type="email" id="contact-email" required placeholder="agent@domain.com">
                 </div>
                 <div class="input-group">
-                    <label>SYSTEM ARCHITECTURE & RULES</label>
-                    <textarea id="system-rules" placeholder="Define your logic. Include entry/exit criteria, timeframes, asset classes, and risk management parameters..." rows="6" required></textarea>
+                    <label>STRATEGY RULES & PARAMETERS</label>
+                    <textarea id="system-rules" rows="5" required placeholder="Describe entry conditions, exit rules, risk management, timeframe, and assets..."></textarea>
                 </div>
-                <button type="submit" id="submit-btn" class="submit-system-btn">INITIATE DEEP BACKTEST (1 CREDIT) <i class="fa-solid fa-bolt"></i></button>
+                <button type="submit" class="submit-system-btn" id="submit-btn">
+                    UPLINK TO CORE <i class="fa-solid fa-paper-plane"></i>
+                </button>
             </form>
         </div>
     </div>
 
-    <!-- TACTICAL UPLINK SUCCESS / REPORT HUD MODAL -->
+    <!-- TACTICAL UPLINK MODAL -->
     <div id="tactical-modal-overlay">
         <div class="tactical-modal-card">
             <div class="corner-bracket top-left"></div>
             <div class="corner-bracket top-right"></div>
             <div class="corner-bracket bottom-left"></div>
             <div class="corner-bracket bottom-right"></div>
-            
+
             <div class="launch-stage">
-                <svg class="rocket-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M50,10 C55,30 65,55 65,75 C65,85 58,90 50,90 C42,90 35,85 35,75 C35,55 45,30 50,10 Z" fill="#040912" stroke="#00ff66" stroke-width="2"/>
-                    <polygon points="35,65 20,82 35,80" fill="#00ff66" />
-                    <polygon points="65,65 80,82 65,80" fill="#00ff66" />
-                    <polygon points="50,90 42,105 50,98 58,105" fill="#ff0055" class="rocket-flame" />
-                    <circle cx="50" cy="45" r="4" fill="#00f0ff" />
+                <svg class="rocket-svg" viewBox="0 0 24 24" fill="none" stroke="#00ff66" stroke-width="1.5">
+                    <path d="M12 2S6 7 6 15c0 2.5 1 4 1 4s2-1 5-1 5 1 5 1 .5-1.5 1-4c0-8-6-13-6-13z" />
+                    <path class="rocket-flame" d="M12 18v4M9 19v2M15 19v2" stroke="#ff0055" stroke-width="2" />
                 </svg>
                 <div class="hyper-rings">
                     <span></span><span></span><span></span>
@@ -395,67 +432,59 @@
             </div>
 
             <div class="modal-status-tag">// TRANSMISSION STATUS: SECURED</div>
-            <h2 id="modal-heading">UPLINK SUCCESSFUL</h2>
-            <div id="modal-message">System architecture dispatches into the quantitative core. Engineering task group assigned.</div>
-
-            <button id="close-modal-btn" class="modal-action-btn">RETURN TO COMMAND <i class="fa-solid fa-chevron-right"></i></button>
+            <h2 id="modal-heading">SYSTEM NOTICE</h2>
+            <p id="modal-message"></p>
+            <button class="modal-action-btn" id="close-modal-btn">ACKNOWLEDGE & DISMISS</button>
         </div>
     </div>
 
-    <!-- SUBSCRIPTION & PAYMENT HUD MODAL -->
+    <!-- SUBSCRIPTION MODAL -->
     <div id="subscription-modal-overlay">
         <div class="subscription-modal-card">
-            <button id="close-sub-btn" class="abort-btn"><i class="fa-solid fa-xmark"></i></button>
-            <div class="corner-bracket top-left"></div>
-            <div class="corner-bracket top-right"></div>
-            <div class="corner-bracket bottom-left"></div>
-            <div class="corner-bracket bottom-right"></div>
-
+            <button class="abort-btn" id="close-sub-btn"><i class="fa-solid fa-xmark"></i></button>
             <div class="sub-header">
-                <div class="modal-status-tag">// CLEARANCE MATRIX & POWER SUBSCRIPTIONS</div>
-                <h2>QUANTITATIVE ACCESS TIERS</h2>
-                <p>Select your operational tier to unlock hyper-threaded compute clusters, priority backtests, and deep tick data metrics.</p>
+                <h2>SUBSCRIPTION & TIER UPGRADES</h2>
+                <p>Select an operational tier to unlock higher backtest credit capacity and institutional reporting features.</p>
             </div>
-
             <div class="pricing-grid">
                 <div class="tier-card">
-                    <div class="tier-name">START PACK</div>
-                    <div class="tier-price">$29</div>
-                    <p class="tier-desc">Essential pack for emerging quantitative strategy development.</p>
+                    <div class="tier-name">SCOUT TIER</div>
+                    <div class="tier-price">$29 <span>/ month</span></div>
+                    <div class="tier-desc">Ideal for individual traders testing initial system parameters.</div>
                     <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> Pack of 3 Backtests</li>
-                        <li><i class="fa-solid fa-check"></i> Standard Queue Priority</li>
-                        <li><i class="fa-solid fa-check"></i> Basic Metrics Log</li>
-                        <li><i class="fa-solid fa-xmark unavailable"></i> Tick-level Deep Analysis</li>
+                        <li><i class="fa-solid fa-check"></i> 5 Backtest Credits / Month</li>
+                        <li><i class="fa-solid fa-check"></i> Detailed PDF Report</li>
+                        <li><i class="fa-solid fa-check"></i> Trade Log Generation</li>
+                        <li><i class="fa-solid fa-xmark unavailable"></i> Priority Execution</li>
                     </ul>
-                    <button class="tier-btn select-tier-btn" data-plan="Start Pack" data-price-id="price_1U16NFCWCAQzKASWoUezwHKg" data-credits="3" data-mode="payment">GET START PACK</button>
+                    <button class="tier-btn select-tier-btn" data-price-id="price_scout_id" data-credits="5" data-mode="subscription" data-plan="Scout">SELECT PLAN</button>
                 </div>
 
                 <div class="tier-card featured">
-                    <div class="popular-badge">MOST POPULAR</div>
-                    <div class="tier-name" style="color: #00f0ff;">PRO PACK</div>
-                    <div class="tier-price" style="color: #00f0ff;">$79</div>
-                    <p class="tier-desc">High-performance engine pack for serious system traders.</p>
+                    <div class="popular-badge">RECOMMENDED</div>
+                    <div class="tier-name">COMMANDER TIER</div>
+                    <div class="tier-price">$79 <span>/ month</span></div>
+                    <div class="tier-desc">Designed for active quant developers requiring high throughput.</div>
                     <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> Pack of 10 Backtests</li>
-                        <li><i class="fa-solid fa-check"></i> Express Priority Queue</li>
-                        <li><i class="fa-solid fa-check"></i> 99.9% Tick Data Accuracy</li>
-                        <li><i class="fa-solid fa-check"></i> PDF Report Data Export</li>
+                        <li><i class="fa-solid fa-check"></i> 20 Backtest Credits / Month</li>
+                        <li><i class="fa-solid fa-check"></i> Institutional PDF Report</li>
+                        <li><i class="fa-solid fa-check"></i> Full Trade Log CSV</li>
+                        <li><i class="fa-solid fa-check"></i> Priority Execution Queue</li>
                     </ul>
-                    <button class="tier-btn featured-btn select-tier-btn" data-plan="Pro Pack" data-price-id="price_1U16Q9CWCAQzKASWjG2gvbvf" data-credits="10" data-mode="payment"><i class="fa-solid fa-bolt"></i> GET PRO PACK</button>
+                    <button class="tier-btn featured-btn select-tier-btn" data-price-id="price_commander_id" data-credits="20" data-mode="subscription" data-plan="Commander">SELECT PLAN</button>
                 </div>
 
                 <div class="tier-card">
-                    <div class="tier-name" style="color: #ffd700;">QUANT MONTHLY PASS</div>
-                    <div class="tier-price" style="color: #ffd700;">$199 <span>/ mo</span></div>
-                    <p class="tier-desc">Full access monthly pass for dedicated quant engineers & funds.</p>
+                    <div class="tier-name">INSTITUTIONAL</div>
+                    <div class="tier-price">$199 <span>/ month</span></div>
+                    <div class="tier-desc">For funds and quantitative teams needing unlimited analysis.</div>
                     <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> Maximum 40 Backtests</li>
-                        <li><i class="fa-solid fa-check"></i> Full Access to Engine</li>
-                        <li><i class="fa-solid fa-check"></i> 1-on-1 Quant Desk Support</li>
-                        <li><i class="fa-solid fa-check"></i> Databank Priority Access</li>
+                        <li><i class="fa-solid fa-check"></i> 60 Backtest Credits / Month</li>
+                        <li><i class="fa-solid fa-check"></i> Custom Stress Tests</li>
+                        <li><i class="fa-solid fa-check"></i> Dedicated Engineering Desk</li>
+                        <li><i class="fa-solid fa-check"></i> Direct API Access</li>
                     </ul>
-                    <button class="tier-btn select-tier-btn" data-plan="Quant Monthly Pass" data-price-id="price_1U16RuCWCAQzKASW1SCBeQhn" data-credits="40" data-mode="subscription" style="border-color:#ffd700; color:#ffd700;"><i class="fa-solid fa-crown"></i> UNLOCK MONTHLY PASS</button>
+                    <button class="tier-btn select-tier-btn" data-price-id="price_institutional_id" data-credits="60" data-mode="subscription" data-plan="Institutional">SELECT PLAN</button>
                 </div>
             </div>
         </div>
@@ -464,84 +493,39 @@
     <!-- AUTHENTICATION HUD MODAL -->
     <div id="auth-modal-overlay">
         <div class="auth-modal-card">
-            <button id="close-auth-btn" class="abort-btn"><i class="fa-solid fa-xmark"></i></button>
-            <div class="corner-bracket top-left"></div>
-            <div class="corner-bracket top-right"></div>
-            <div class="corner-bracket bottom-left"></div>
-            <div class="corner-bracket bottom-right"></div>
-
+            <button class="abort-btn" id="close-auth-btn"><i class="fa-solid fa-xmark"></i></button>
             <div class="auth-tabs">
-                <button type="button" class="auth-tab active" id="tab-signin">SIGN IN</button>
-                <button type="button" class="auth-tab" id="tab-signup">SIGN UP</button>
+                <button class="auth-tab active" id="tab-signin">SIGN IN</button>
+                <button class="auth-tab" id="tab-signup">SIGN UP</button>
             </div>
-
             <form id="auth-form">
-                <div class="input-group" id="username-group" style="display: none;">
-                    <label>CALLSIGN (Username)</label>
-                    <input type="text" id="auth-username" placeholder="e.g. QuantTrader_99">
+                <div class="input-group" id="username-group" style="display:none;">
+                    <label>CALLSIGN / USERNAME</label>
+                    <input type="text" id="auth-username" placeholder="Agent_404">
                 </div>
                 <div class="input-group">
-                    <label>ACCESS ID (Email)</label>
-                    <input type="email" id="auth-email" placeholder="agent@quant.io" required>
+                    <label>ACCESS ID (EMAIL)</label>
+                    <input type="email" id="auth-email" required placeholder="agent@domain.com">
                 </div>
                 <div class="input-group">
-                    <label>SECURITY CLEARANCE (Password)</label>
-                    <input type="password" id="auth-password" placeholder="••••••••••••" required>
+                    <label>SECURITY PASSWORD</label>
+                    <input type="password" id="auth-password" required placeholder="••••••••">
                 </div>
-                <button type="submit" id="auth-submit-btn" class="submit-system-btn">AUTHENTICATE <i class="fa-solid fa-key"></i></button>
+                <button type="submit" class="submit-system-btn" id="auth-submit-btn">
+                    AUTHENTICATE <i class="fa-solid fa-key"></i>
+                </button>
             </form>
-
-            <div class="oauth-divider"><span>OR UPLINK WITH</span></div>
+            <div class="oauth-divider">
+                <span>OR UPLINK WITH</span>
+            </div>
             <div class="oauth-buttons">
-                <button type="button" id="google-auth-btn" class="oauth-btn google"><i class="fa-brands fa-google"></i> SIGN IN WITH GOOGLE</button>
+                <button class="oauth-btn" id="google-auth-btn">
+                    <i class="fa-brands fa-google"></i> CONTINUE WITH GOOGLE
+                </button>
             </div>
         </div>
     </div>
 
-    <script src="app.js"></script>
-    <script>
-        // ELEGANT "INVISIBLE PEN" WRITING ENGINE
-        async function runBlockWriting(elements, holdTime = 3200, fadeTime = 800) {
-            const els = elements.map(item => {
-                const el = document.getElementById(item.id);
-                if(el) el.innerHTML = item.text;
-                return { el, ...item };
-            }).filter(item => item.el);
-
-            if(els.length === 0) return;
-
-            while (true) {
-                for (const item of els) {
-                    item.el.style.transition = 'none';
-                    item.el.style.opacity = '1';
-                    item.el.style.clipPath = 'inset(-40px 100% -40px -40px)';
-                }
-                
-                void els[0].el.offsetWidth;
-
-                for (const item of els) {
-                    item.el.style.transition = `clip-path ${item.duration}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`;
-                    item.el.style.clipPath = 'inset(-40px -40px -40px -40px)';
-                    await new Promise(res => setTimeout(res, item.duration + 150));
-                }
-
-                await new Promise(res => setTimeout(res, holdTime));
-
-                for (const item of els) {
-                    item.el.style.transition = `opacity ${fadeTime}ms ease-out`;
-                    item.el.style.opacity = '0';
-                }
-
-                await new Promise(res => setTimeout(res, fadeTime + 600));
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            runBlockWriting([
-                { id: 'vice-left-1', text: 'Test the reliability of your system', duration: 1600 },
-                { id: 'vice-left-2', text: 'Become a profitable trader', duration: 1600 }
-            ], 4500, 1000);
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
