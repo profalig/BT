@@ -45,7 +45,11 @@ const orbits = orbitConfig.map(c => ({
     radius: 0
 }));
 
-function updateOrbitRadii() { orbits.forEach(o => { if (o.orbitEl) o.radius = o.orbitEl.offsetWidth / 2; }); }
+function updateOrbitRadii() { 
+    orbits.forEach(o => { 
+        if (o.orbitEl) o.radius = o.orbitEl.offsetWidth / 2; 
+    }); 
+}
 updateOrbitRadii();
 window.addEventListener('resize', updateOrbitRadii);
 
@@ -81,8 +85,6 @@ function renderEngine(time) {
         const py = -o.radius * Math.cos(rad);
         
         if (isHyperZoomed) {
-            // Mobile screen width is ~375-430px. Scaling 15x causes massive over-zoom and blur.
-            // Scale 5.5 on mobile fills the phone screen cleanly without bitmap pixelation.
             targetCam.scale = isMobile ? 5.5 : 15;
             targetCam.x = -px;
             targetCam.y = -py;
@@ -102,7 +104,6 @@ function renderEngine(time) {
     cam.scale += (targetCam.scale - cam.scale) * lerpSpeed;
 
     if (viewport) {
-        // translate3d forces GPU hardware layer acceleration to prevent mobile rendering blur
         viewport.style.transform = `scale(${cam.scale}) translate3d(${cam.x}px, ${cam.y}px, 0px)`;
     }
     if (spaceMatrix) {
@@ -160,7 +161,7 @@ returnBtn.addEventListener('click', () => {
     setTimeout(() => { document.body.classList.remove('warping'); }, 800);
 });
 
-// INITIALIZE MODULE BUTTON LOGIC (THE ZOOM & ACTIONS)
+// INITIALIZE MODULE BUTTON LOGIC
 actionBtn.addEventListener('click', () => {
     if (!activePlanetData) return;
 
@@ -183,7 +184,7 @@ actionBtn.addEventListener('click', () => {
     }
 });
 
-// ABORT CONSOLE BUTTON (ZOOM OUT)
+// ABORT CONSOLE BUTTON
 const abortConsoleBtn = document.getElementById('abort-console-btn');
 if (abortConsoleBtn) {
     abortConsoleBtn.addEventListener('click', () => {
@@ -250,7 +251,6 @@ orbits.forEach(o => {
 });
 
 const btcSun = document.getElementById('sun');
-
 const solarSystem = document.getElementById('solar-system');
 if (btcSun && solarSystem) {
     btcSun.addEventListener('mouseenter', () => {
@@ -264,14 +264,13 @@ if (btcSun && solarSystem) {
 }
 
 // ==========================================
-// DENSE BLACKBOARD GENERATOR ENGINE (WITH HIGH-DPI/RETINA SCALING FIX)
+// DENSE BLACKBOARD GENERATOR ENGINE
 // ==========================================
 function generateBlackboard() {
     const canvas = document.getElementById('blackboard-bg');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     
-    // Support mobile retina high-DPI crisp rendering
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = window.innerWidth * dpr;
     canvas.height = window.innerHeight * dpr;
@@ -363,14 +362,13 @@ async function fetchOrCreateUserProfile(user) {
     if (!supabaseClient || !user) return null;
 
     try {
-        let { data: profile, error } = await supabaseClient
+        let { data: profile } = await supabaseClient
             .from('user_profiles')
             .select('*')
             .eq('id', user.id)
             .maybeSingle();
 
         if (!profile) {
-            console.log("Creating new user profile with 1 Free Credit for User:", user.id);
             const { data: newProfile, error: createError } = await supabaseClient
                 .from('user_profiles')
                 .insert([{ 
@@ -424,10 +422,7 @@ async function openUserReportsModal() {
             .eq('user_id', activeUserId)
             .order('created_at', { ascending: false });
 
-        if (error) {
-            console.error("[DEBUG] Database Error:", error);
-            throw error;
-        }
+        if (error) throw error;
 
         const historyList = submissions || [];
         
@@ -537,7 +532,7 @@ async function openUserReportsModal() {
 }
 
 // ==========================================
-// MOBILE HUD DOUBLE-TOUCH ENGINE
+// MOBILE HUD TOUCH EXPANSION ENGINE
 // ==========================================
 document.addEventListener('click', (e) => {
     const isMobile = window.innerWidth <= 768;
@@ -596,9 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navSubBtn) navSubBtn.addEventListener('click', openSubscriptionModal);
     if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
 
-    // ==========================================
     // STRIPE CHECKOUT INTEGRATION LOGIC
-    // ==========================================
     document.querySelectorAll('.select-tier-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const button = e.currentTarget;
@@ -983,6 +976,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     `;
 
+                    document.getElementById('nav-agent-btn')?.addEventListener('click', openUserReportsModal);
+                    document.getElementById('nav-credits-btn')?.addEventListener('click', openSubscriptionModal);
                     document.getElementById('my-sub-btn')?.addEventListener('click', openSubscriptionModal);
                     document.getElementById('my-reports-btn')?.addEventListener('click', openUserReportsModal);
 
