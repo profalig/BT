@@ -103,6 +103,7 @@ function renderEngine(time) {
 }
 requestAnimationFrame(renderEngine);
 
+// PLANET TOUCH / CLICK LOGIC
 orbits.forEach(o => {
     if (!o.planetEl) return;
     o.planetEl.addEventListener('click', () => {
@@ -113,6 +114,12 @@ orbits.forEach(o => {
         activePlanetData = o;
         o.planetEl.classList.add('active'); 
         document.body.classList.add('warping');
+
+        // HIDE TITLE CONTAINER & TYPEWRITER TEXT WHEN PLANET IS TOUCHED
+        const titleContainer = document.getElementById('spaceship-title-container');
+        const typewriterEl = document.getElementById('typewriter-text') || document.getElementById('typewriter') || document.querySelector('.typewriter');
+        if (titleContainer) titleContainer.style.opacity = '0';
+        if (typewriterEl) typewriterEl.style.opacity = '0';
 
         const data = planetData[o.id];
         
@@ -143,10 +150,18 @@ orbits.forEach(o => {
     });
 });
 
+// RETURN BUTTON LOGIC (RESTORE TITLE & TYPEWRITER TEXT)
 returnBtn.addEventListener('click', () => {
     document.body.classList.remove('landed');
     if (activePlanetData && activePlanetData.planetEl) activePlanetData.planetEl.classList.remove('active');
     activePlanetData = null; 
+
+    // SHOW TITLE CONTAINER & TYPEWRITER TEXT WHEN RETURNING TO ORBIT
+    const titleContainer = document.getElementById('spaceship-title-container');
+    const typewriterEl = document.getElementById('typewriter-text') || document.getElementById('typewriter') || document.querySelector('.typewriter');
+    if (titleContainer) titleContainer.style.opacity = '1';
+    if (typewriterEl) typewriterEl.style.opacity = '1';
+
     setTimeout(() => { document.body.classList.remove('warping'); }, 800);
 });
 
@@ -158,8 +173,10 @@ actionBtn.addEventListener('click', () => {
         isHyperZoomed = true;
         document.body.classList.remove('landed');
         const titleContainer = document.getElementById('spaceship-title-container');
+        const typewriterEl = document.getElementById('typewriter-text') || document.getElementById('typewriter') || document.querySelector('.typewriter');
         const authCorner = document.getElementById('auth-corner');
         if (titleContainer) titleContainer.style.opacity = '0';
+        if (typewriterEl) typewriterEl.style.opacity = '0';
         if (authCorner) authCorner.style.opacity = '0';
         
         setTimeout(() => {
@@ -184,8 +201,10 @@ if (abortConsoleBtn) {
         setTimeout(() => {
             document.body.classList.add('landed');
             const titleContainer = document.getElementById('spaceship-title-container');
+            const typewriterEl = document.getElementById('typewriter-text') || document.getElementById('typewriter') || document.querySelector('.typewriter');
             const authCorner = document.getElementById('auth-corner');
-            if (titleContainer) titleContainer.style.opacity = '1';
+            if (titleContainer) titleContainer.style.opacity = '0';
+            if (typewriterEl) typewriterEl.style.opacity = '0';
             if (authCorner) authCorner.style.opacity = '1';
         }, 600);
     });
@@ -332,7 +351,7 @@ function closeSubscriptionModal() {
 // SUPABASE CLIENT INITIALIZATION
 // ==========================================
 const SUPABASE_URL = 'https://woxswhiayrkecspebuwb.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndveHN3aGlheXJrZWNzcGVidXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTc5ODYsImV4cCI6MjEwMDk5Mzk4Nn0.faEmt5_tw6dN9Cs-pKJHa9D0yyEBbAl4oT0Y9QWYuFg';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndveHN3aGlheXJrZWNzcGVidXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTc5ODYsImV4cCI62100993986n0.faEmt5_tw6dN9Cs-pKJHa9D0yyEBbAl4oT0Y9QWYuFg';
 
 let supabaseClient = null;
 if (window.supabase) {
@@ -522,7 +541,6 @@ async function openUserReportsModal() {
 // ==========================================
 // MOBILE HUD DOUBLE-TOUCH ENGINE
 // ==========================================
-// On phone screens, 1st tap opens/expands the HUD slot bar, 2nd tap triggers the action ("goes in").
 document.addEventListener('click', (e) => {
     const isMobile = window.innerWidth <= 768;
     if (!isMobile) return;
@@ -530,25 +548,19 @@ document.addEventListener('click', (e) => {
     const slot = e.target.closest('.hud-slot');
 
     if (slot) {
-        // If slot is not currently expanded/active, first tap expands the bar and intercepts action
         if (!slot.classList.contains('expanded') && !slot.classList.contains('active') && !slot.classList.contains('open')) {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
 
-            // Close all other open HUD slots
             document.querySelectorAll('.hud-slot').forEach(s => {
                 s.classList.remove('expanded', 'active', 'open');
             });
 
-            // Open this slot / bar
             slot.classList.add('expanded', 'active', 'open');
             slot.closest('.hud-bar')?.classList.add('open');
-        } else {
-            // Second tap: Already open! Allow normal action execution ("goes in")
         }
     } else {
-        // Tapping outside HUD slots: collapse all open HUD bars
         document.querySelectorAll('.hud-slot').forEach(s => {
             s.classList.remove('expanded', 'active', 'open');
         });
@@ -587,9 +599,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navSubBtn) navSubBtn.addEventListener('click', openSubscriptionModal);
     if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
 
-    // ==========================================
     // STRIPE CHECKOUT INTEGRATION LOGIC
-    // ==========================================
     document.querySelectorAll('.select-tier-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const button = e.currentTarget;
@@ -666,12 +676,16 @@ document.addEventListener('DOMContentLoaded', () => {
             isHyperZoomed = false;
 
             setTimeout(() => {
+                const titleContainer = document.getElementById('spaceship-title-container');
+                const typewriterEl = document.getElementById('typewriter-text') || document.getElementById('typewriter') || document.querySelector('.typewriter');
+                
                 if (activePlanetData) {
                     document.body.classList.add('landed');
+                } else {
+                    if (titleContainer) titleContainer.style.opacity = '1';
+                    if (typewriterEl) typewriterEl.style.opacity = '1';
                 }
-                const titleContainer = document.getElementById('spaceship-title-container');
                 if (authCorner) authCorner.style.opacity = '1';
-                if (titleContainer) titleContainer.style.opacity = '1';
             }, 400);
         });
     }
@@ -688,7 +702,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { data: { session } } = await supabaseClient.auth.getSession();
             
-            // 1. REQUIRE AUTHENTICATION
             if (!session || !session.user) {
                 showTacticalModal('AUTHENTICATION REQUIRED', 'Please sign in or create an account to run backtests with your free credit.', false);
                 setAuthMode('signin');
@@ -706,7 +719,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // 2. CHECK USER CREDIT BALANCE
             const profile = await fetchOrCreateUserProfile(session.user);
             const currentCredits = profile ? profile.credits : 0;
 
@@ -724,11 +736,9 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.innerText = 'UPLINKING TO CORE...';
             submitBtn.disabled = true;
 
-            // Wake up Render Worker
             fetch("https://backtest-worker-fs1a.onrender.com", { mode: "no-cors" }).catch(() => {});
 
             try {
-                // 3. INSERT BACKTEST SUBMISSION
                 const { error: subError } = await supabaseClient
                     .from('submissions')
                     .insert([{ 
@@ -741,7 +751,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (subError) throw subError;
 
-                // 4. DEDUCT 1 CREDIT FROM USER PROFILE
                 const newCredits = currentCredits - 1;
                 const { error: profileUpdateError } = await supabaseClient
                     .from('user_profiles')
@@ -752,7 +761,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error("Credit deduction error:", profileUpdateError);
                 }
 
-                // 5. UPDATE HUD BADGES
                 updateCreditBadgeUI(newCredits);
 
                 showTacticalModal(
@@ -773,7 +781,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // UPDATE UI CREDIT BADGE
     function updateCreditBadgeUI(credits) {
         const badgeEl = document.getElementById('nav-credits-label');
         if (badgeEl) {
@@ -781,7 +788,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // AUTH MODE SWITCHING
     function setAuthMode(mode) {
         authMode = mode;
         if (mode === 'signin') {
@@ -806,7 +812,6 @@ document.addEventListener('DOMContentLoaded', () => {
         closeAuthBtn.addEventListener('click', () => authModal.classList.remove('active'));
     }
 
-    // AUTH FORM SUBMISSION
     if (authForm) {
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -880,7 +885,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // OAUTH AUTHENTICATION
     async function handleOAuth(provider) {
         if (!supabaseClient) return;
         try {
@@ -896,7 +900,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (googleBtn) googleBtn.addEventListener('click', () => handleOAuth('google'));
 
-    // AUTH STATE LISTENER & SESSION BINDING
     if (supabaseClient) {
         const hashStr = window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash;
         const hashParams = new URLSearchParams(hashStr);
