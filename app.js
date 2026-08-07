@@ -60,6 +60,7 @@ let isHyperZoomed = false;
 let cam = { x: 0, y: 0, scale: 1 };
 let targetCam = { x: 0, y: 0, scale: 1 };
 
+// CAMERA RENDER ENGINE (OPTIMIZED FOR MOBILE PIXEL DENSITY & HD ZOOM)
 function renderEngine(time) {
     orbits.forEach(o => {
         if (!o.orbitEl || !o.planetEl) return;
@@ -71,6 +72,8 @@ function renderEngine(time) {
         o.planetEl.style.transform = `translateX(-50%) rotate(${-o.currentAngle}deg)`;
     });
 
+    const isMobile = window.innerWidth <= 768;
+
     if (activePlanetData) {
         const o = activePlanetData;
         const rad = (o.currentAngle * Math.PI) / 180;
@@ -78,12 +81,14 @@ function renderEngine(time) {
         const py = -o.radius * Math.cos(rad);
         
         if (isHyperZoomed) {
-            targetCam.scale = 15;
+            // Mobile screen width is ~375-430px. Scaling 15x causes massive over-zoom and blur.
+            // Scale 5.5 on mobile fills the phone screen cleanly without bitmap pixelation.
+            targetCam.scale = isMobile ? 5.5 : 15;
             targetCam.x = -px;
             targetCam.y = -py;
         } else {
-            targetCam.scale = 2.8;
-            const screenOffset = -220; 
+            targetCam.scale = isMobile ? 1.8 : 2.8;
+            const screenOffset = isMobile ? 0 : -220; 
             targetCam.x = (screenOffset / targetCam.scale) - px;
             targetCam.y = -py;
         }
@@ -96,8 +101,13 @@ function renderEngine(time) {
     cam.y += (targetCam.y - cam.y) * lerpSpeed;
     cam.scale += (targetCam.scale - cam.scale) * lerpSpeed;
 
-    if (viewport) viewport.style.transform = `scale(${cam.scale}) translate(${cam.x}px, ${cam.y}px)`;
-    if (spaceMatrix) spaceMatrix.style.transform = `translate(${cam.x * 0.15}px, ${cam.y * 0.15}px)`;
+    if (viewport) {
+        // translate3d forces GPU hardware layer acceleration to prevent mobile rendering blur
+        viewport.style.transform = `scale(${cam.scale}) translate3d(${cam.x}px, ${cam.y}px, 0px)`;
+    }
+    if (spaceMatrix) {
+        spaceMatrix.style.transform = `translate3d(${cam.x * 0.15}px, ${cam.y * 0.15}px, 0px)`;
+    }
 
     requestAnimationFrame(renderEngine);
 }
@@ -254,15 +264,22 @@ if (btcSun && solarSystem) {
 }
 
 // ==========================================
-// DENSE BLACKBOARD GENERATOR ENGINE
+// DENSE BLACKBOARD GENERATOR ENGINE (WITH HIGH-DPI/RETINA SCALING FIX)
 // ==========================================
 function generateBlackboard() {
     const canvas = document.getElementById('blackboard-bg');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Support mobile retina high-DPI crisp rendering
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = `${window.innerWidth}px`;
+    canvas.style.height = `${window.innerHeight}px`;
+    ctx.scale(dpr, dpr);
+    
+    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
     
     const formulas = [
         "dS_t = μS_t dt + σS_t dW_t", "E = mc²", "∇ × E = - ∂B / ∂t", "w* = Σ⁻¹ μ", "iℏ(∂Ψ/∂t) = HΨ", 
@@ -273,11 +290,11 @@ function generateBlackboard() {
         "PV = nRT", "V = (4/3)πr³", "lim(x→∞) (1 + 1/x)^x = e", "sin²θ + cos²θ = 1"
     ];
     
-    const density = Math.floor((canvas.width * canvas.height) / 7500); 
+    const density = Math.floor((window.innerWidth * window.innerHeight) / 7500); 
     for (let i = 0; i < density; i++) {
         const text = formulas[Math.floor(Math.random() * formulas.length)];
-        const x = Math.random() * canvas.width;
-        const y = Math.random() * canvas.height;
+        const x = Math.random() * window.innerWidth;
+        const y = Math.random() * window.innerHeight;
         const fontSize = Math.random() * 12 + 14; 
         ctx.font = `italic ${fontSize}px 'Times New Roman', serif`;
         const alpha = Math.random() * 0.12 + 0.03; 
@@ -522,7 +539,6 @@ async function openUserReportsModal() {
 // ==========================================
 // MOBILE HUD DOUBLE-TOUCH ENGINE
 // ==========================================
-// On phone screens, 1st tap opens/expands the HUD slot bar, 2nd tap triggers the action ("goes in").
 document.addEventListener('click', (e) => {
     const isMobile = window.innerWidth <= 768;
     if (!isMobile) return;
@@ -530,25 +546,19 @@ document.addEventListener('click', (e) => {
     const slot = e.target.closest('.hud-slot');
 
     if (slot) {
-        // If slot is not currently expanded/active, first tap expands the bar and intercepts action
         if (!slot.classList.contains('expanded') && !slot.classList.contains('active') && !slot.classList.contains('open')) {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
 
-            // Close all other open HUD slots
             document.querySelectorAll('.hud-slot').forEach(s => {
                 s.classList.remove('expanded', 'active', 'open');
             });
 
-            // Open this slot / bar
             slot.classList.add('expanded', 'active', 'open');
             slot.closest('.hud-bar')?.classList.add('open');
-        } else {
-            // Second tap: Already open! Allow normal action execution ("goes in")
         }
     } else {
-        // Tapping outside HUD slots: collapse all open HUD bars
         document.querySelectorAll('.hud-slot').forEach(s => {
             s.classList.remove('expanded', 'active', 'open');
         });
@@ -583,7 +593,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const authCorner = document.getElementById('auth-corner');
     const googleBtn = document.getElementById('google-auth-btn');
 
-    // SUBSCRIPTION NAV BINDINGS
     if (navSubBtn) navSubBtn.addEventListener('click', openSubscriptionModal);
     if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
 
@@ -688,7 +697,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { data: { session } } = await supabaseClient.auth.getSession();
             
-            // 1. REQUIRE AUTHENTICATION
             if (!session || !session.user) {
                 showTacticalModal('AUTHENTICATION REQUIRED', 'Please sign in or create an account to run backtests with your free credit.', false);
                 setAuthMode('signin');
@@ -706,7 +714,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // 2. CHECK USER CREDIT BALANCE
             const profile = await fetchOrCreateUserProfile(session.user);
             const currentCredits = profile ? profile.credits : 0;
 
@@ -724,11 +731,9 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.innerText = 'UPLINKING TO CORE...';
             submitBtn.disabled = true;
 
-            // Wake up Render Worker
             fetch("https://backtest-worker-fs1a.onrender.com", { mode: "no-cors" }).catch(() => {});
 
             try {
-                // 3. INSERT BACKTEST SUBMISSION
                 const { error: subError } = await supabaseClient
                     .from('submissions')
                     .insert([{ 
@@ -741,7 +746,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (subError) throw subError;
 
-                // 4. DEDUCT 1 CREDIT FROM USER PROFILE
                 const newCredits = currentCredits - 1;
                 const { error: profileUpdateError } = await supabaseClient
                     .from('user_profiles')
@@ -752,7 +756,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error("Credit deduction error:", profileUpdateError);
                 }
 
-                // 5. UPDATE HUD BADGES
                 updateCreditBadgeUI(newCredits);
 
                 showTacticalModal(
@@ -773,7 +776,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // UPDATE UI CREDIT BADGE
     function updateCreditBadgeUI(credits) {
         const badgeEl = document.getElementById('nav-credits-label');
         if (badgeEl) {
@@ -781,7 +783,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // AUTH MODE SWITCHING
     function setAuthMode(mode) {
         authMode = mode;
         if (mode === 'signin') {
@@ -806,7 +807,6 @@ document.addEventListener('DOMContentLoaded', () => {
         closeAuthBtn.addEventListener('click', () => authModal.classList.remove('active'));
     }
 
-    // AUTH FORM SUBMISSION
     if (authForm) {
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -880,7 +880,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // OAUTH AUTHENTICATION
     async function handleOAuth(provider) {
         if (!supabaseClient) return;
         try {
@@ -896,7 +895,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (googleBtn) googleBtn.addEventListener('click', () => handleOAuth('google'));
 
-    // AUTH STATE LISTENER & SESSION BINDING
     if (supabaseClient) {
         const hashStr = window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash;
         const hashParams = new URLSearchParams(hashStr);
