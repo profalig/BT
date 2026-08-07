@@ -28,6 +28,7 @@ body {
     color: #ffffff;
     overflow: hidden;
     height: 100vh;
+    height: 100dvh;
     width: 100vw;
 }
 
@@ -105,6 +106,11 @@ body {
     gap: 8px;
     position: relative;
     overflow: hidden;
+    pointer-events: auto;
+}
+
+.auth-btn i, .auth-btn span {
+    pointer-events: none;
 }
 
 .auth-btn i {
@@ -228,6 +234,7 @@ body {
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     z-index: 0;
     pointer-events: none;
     transform: translateZ(0);
@@ -454,6 +461,7 @@ body.warping #spaceship-title-container {
 #spaceship-viewport {
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -468,6 +476,7 @@ body.warping #spaceship-title-container {
     position: relative;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -607,6 +616,7 @@ body.warping #spaceship-title-container {
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     pointer-events: none;
     z-index: 600;
     display: flex;
@@ -720,6 +730,7 @@ body.landed .module-details { right: 8%; opacity: 1; }
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     z-index: 1000;
     display: flex;
     justify-content: center;
@@ -844,6 +855,7 @@ body.landed .module-details { right: 8%; opacity: 1; }
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     background: rgba(2, 6, 12, 0.88);
     backdrop-filter: blur(12px);
     display: flex;
@@ -995,6 +1007,7 @@ body.landed .module-details { right: 8%; opacity: 1; }
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     background: rgba(2, 6, 12, 0.92);
     backdrop-filter: blur(12px);
     display: flex;
@@ -1193,6 +1206,7 @@ body.landed .module-details { right: 8%; opacity: 1; }
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     background: rgba(2, 6, 12, 0.88);
     backdrop-filter: blur(12px);
     display: flex;
@@ -1212,179 +1226,5 @@ body.landed .module-details { right: 8%; opacity: 1; }
 .auth-modal-card {
     position: relative;
     width: 90%;
-    max-width: 440px;
-    background: rgba(6, 16, 26, 0.95);
-    border: 1px solid rgba(0, 240, 255, 0.4);
-    box-shadow: 0 0 35px rgba(0, 240, 255, 0.25);
-    padding: 35px 30px;
-    transform: scale(0.9);
-    transition: transform 0.3s ease;
-}
-
-#auth-modal-overlay.active .auth-modal-card {
-    transform: scale(1);
-}
-
-.auth-tabs {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 25px;
-    border-bottom: 1px solid rgba(0, 240, 255, 0.2);
-    padding-bottom: 10px;
-}
-
-.auth-tab {
-    background: transparent;
-    border: none;
-    color: #718096;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 1.1rem;
-    cursor: pointer;
-    letter-spacing: 1px;
-    padding: 5px 10px;
-    transition: all 0.3s ease;
-}
-
-.auth-tab.active {
-    color: #00f0ff;
-    border-bottom: 2px solid #00f0ff;
-    text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
-}
-
-.abort-btn {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    background: transparent;
-    border: none;
-    color: #ff0055;
-    font-size: 1.2rem;
-    cursor: pointer;
-    transition: transform 0.2s ease;
-}
-
-.abort-btn:hover {
-    transform: scale(1.2);
-}
-
-.oauth-divider {
-    position: relative;
-    text-align: center;
-    margin: 25px 0 18px;
-}
-
-.oauth-divider::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    width: 100%;
-    height: 1px;
-    background: rgba(0, 240, 255, 0.2);
-    z-index: 1;
-}
-
-.oauth-divider span {
-    position: relative;
-    z-index: 2;
-    background: #06101a;
-    padding: 0 12px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
-    color: #718096;
-    letter-spacing: 1px;
-}
-
-.oauth-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.oauth-btn {
-    width: 100%;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #ffffff;
-    padding: 12px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.85rem;
-    letter-spacing: 1px;
-    cursor: pointer;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    transition: all 0.3s ease;
-}
-
-.oauth-btn:hover {
-    border-color: #00f0ff;
-    color: #00f0ff;
-    background: rgba(0, 240, 255, 0.1);
-    box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
-}
-
-/* ==========================================
-   RESPONSIVE OVERRIDES
-   ========================================== */
-@media (max-width: 900px) {
-    #spaceship-title-container {
-        top: 20px;
-        left: 20px;
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    .mothership-svg { width: 180px; }
-    .tractor-beam-title h1 { font-size: 1.8rem; }
-    .tractor-beam-title h1 span { font-size: 1.2rem; letter-spacing: 6px; }
-
-    #auth-corner {
-        top: 15px;
-        right: 15px;
-        padding: 5px 8px;
-    }
-
-    .dock-content {
-        flex-wrap: wrap;
-        justify-content: flex-end;
-        gap: 6px;
-    }
-
-    .dock-divider {
-        display: none;
-    }
-
-    .pricing-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .module-details {
-        width: 85%;
-        max-width: none;
-        padding: 25px;
-    }
-
-    body.landed .module-details {
-        right: 50%;
-        transform: translateX(50%);
-    }
-}
-
-/* ==========================================
-   PERFORMANCE OVERRIDES
-   ========================================== */
-body.landed .orbit,
-body.landed .constellation {
-    animation-play-state: paused !important;
-}
-
-.gas-clouds,
-.lightning-flash {
-    display: none !important;
-}
-
-body.warping * {
-    animation: none !important;
+    max-width: 400px;
 }
