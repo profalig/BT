@@ -329,10 +329,43 @@ function closeSubscriptionModal() {
 }
 
 // ==========================================
+// MOBILE HUD ICON 2-TOUCH BINDING ENGINE
+// ==========================================
+function bindHudSlot(element, actionCallback) {
+    if (!element) return;
+    element.addEventListener('click', (e) => {
+        const isMobile = window.innerWidth <= 768 || ('ontouchstart' in window);
+
+        if (isMobile && !element.classList.contains('expanded')) {
+            e.preventDefault();
+            e.stopPropagation();
+            // Collapse any other open HUD slots
+            document.querySelectorAll('.hud-slot').forEach(slot => slot.classList.remove('expanded'));
+            // Expand this HUD slot to reveal label
+            element.classList.add('expanded');
+            return;
+        }
+
+        // Second touch on mobile or standard click on desktop
+        element.classList.remove('expanded');
+        if (typeof actionCallback === 'function') {
+            actionCallback(e);
+        }
+    });
+}
+
+// Close expanded HUD slots when tapping outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.hud-slot')) {
+        document.querySelectorAll('.hud-slot').forEach(slot => slot.classList.remove('expanded'));
+    }
+});
+
+// ==========================================
 // SUPABASE CLIENT INITIALIZATION
 // ==========================================
 const SUPABASE_URL = 'https://woxswhiayrkecspebuwb.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndveHN3aGlheXJrZWNzcGVidXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTc5ODYsImV4cCI6MjEwMDk5Mzk4Nn0.faEmt5_tw6dN9Cs-pKJHa9D0yyEBbAl4oT0Y9QWYuFg';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInRefiI6IndveHN3aGlheXJrZWNzcGVidXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTc5ODYsImV4cCI6MjEwMDk5Mzk4Nn0.faEmt5_tw6dN9Cs-pKJHa9D0yyEBbAl4oT0Y9QWYuFg';
 
 let supabaseClient = null;
 if (window.supabase) {
@@ -354,7 +387,6 @@ async function fetchOrCreateUserProfile(user) {
 
         if (!profile) {
             console.log("Creating new user profile with 1 Free Credit for User:", user.id);
-            // Modified: Added the 'email' field back into the payload
             const { data: newProfile, error: createError } = await supabaseClient
                 .from('user_profiles')
                 .insert([{ 
@@ -546,7 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const googleBtn = document.getElementById('google-auth-btn');
 
     // SUBSCRIPTION NAV BINDINGS
-    if (navSubBtn) navSubBtn.addEventListener('click', openSubscriptionModal);
+    if (navSubBtn) bindHudSlot(navSubBtn, openSubscriptionModal);
     if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
 
     // ==========================================
@@ -947,10 +979,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     `;
 
-                    document.getElementById('my-sub-btn')?.addEventListener('click', openSubscriptionModal);
-                    document.getElementById('my-reports-btn')?.addEventListener('click', openUserReportsModal);
+                    bindHudSlot(document.getElementById('nav-agent-btn'), openUserReportsModal);
+                    bindHudSlot(document.getElementById('nav-credits-btn'), openSubscriptionModal);
+                    bindHudSlot(document.getElementById('my-sub-btn'), openSubscriptionModal);
+                    bindHudSlot(document.getElementById('my-reports-btn'), openUserReportsModal);
 
-                    document.getElementById('signout-btn')?.addEventListener('click', async () => {
+                    bindHudSlot(document.getElementById('signout-btn'), async () => {
                         await supabaseClient.auth.signOut();
                         window.location.reload();
                     });
@@ -973,12 +1007,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         </div>
                     `;
-                    document.getElementById('nav-subscription-btn')?.addEventListener('click', openSubscriptionModal);
-                    document.querySelector('.sign-in')?.addEventListener('click', () => {
+
+                    bindHudSlot(document.getElementById('nav-subscription-btn'), openSubscriptionModal);
+                    
+                    bindHudSlot(document.querySelector('.sign-in'), () => {
                         setAuthMode('signin');
                         if (authModal) authModal.classList.add('active');
                     });
-                    document.querySelector('.sign-up')?.addEventListener('click', () => {
+
+                    bindHudSlot(document.querySelector('.sign-up'), () => {
                         setAuthMode('signup');
                         if (authModal) authModal.classList.add('active');
                     });
