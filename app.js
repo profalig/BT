@@ -545,6 +545,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const authCorner = document.getElementById('auth-corner');
     const googleBtn = document.getElementById('google-auth-btn');
 
+    // --- MOBILE HAMBURGER MENU LOGIC ---
+    const hamburgerBtn = document.getElementById('mobile-menu-btn');
+    if (hamburgerBtn && authCorner) {
+        hamburgerBtn.addEventListener('click', () => {
+            authCorner.classList.toggle('menu-open');
+        });
+    }
+    // -----------------------------------
+
     // SUBSCRIPTION NAV BINDINGS
     if (navSubBtn) navSubBtn.addEventListener('click', openSubscriptionModal);
     if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
