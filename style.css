@@ -1376,21 +1376,6 @@ body.landed .constellation {
 }
 
 /* ==========================================
-   DESKTOP SUN HIGH-DPI & SHARPNESS ENHANCEMENT
-   ========================================== */
-@media (min-width: 769px) {
-    .btc-sun, #sun {
-        image-rendering: -webkit-optimize-contrast;
-        image-rendering: crisp-edges;
-        -ms-interpolation-mode: nearest-neighbor;
-        transform: translate3d(0, 0, 0);
-        backface-visibility: hidden;
-        perspective: 1000px;
-        will-change: transform, filter;
-    }
-}
-
-/* ==========================================
    RESPONSIVE OVERRIDES
    ========================================== */
 @media (max-width: 900px) {
