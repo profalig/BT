@@ -157,10 +157,6 @@ actionBtn.addEventListener('click', () => {
     if (activePlanetData.id === 'backtest') {
         isHyperZoomed = true;
         document.body.classList.remove('landed');
-        const titleContainer = document.getElementById('spaceship-title-container');
-        const authCorner = document.getElementById('auth-corner');
-        if (titleContainer) titleContainer.style.opacity = '0';
-        if (authCorner) authCorner.style.opacity = '0';
         
         setTimeout(() => {
             const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
@@ -183,10 +179,6 @@ if (abortConsoleBtn) {
         
         setTimeout(() => {
             document.body.classList.add('landed');
-            const titleContainer = document.getElementById('spaceship-title-container');
-            const authCorner = document.getElementById('auth-corner');
-            if (titleContainer) titleContainer.style.opacity = '1';
-            if (authCorner) authCorner.style.opacity = '1';
         }, 600);
     });
 }
@@ -522,7 +514,6 @@ async function openUserReportsModal() {
 // ==========================================
 // MOBILE HUD DOUBLE-TOUCH ENGINE
 // ==========================================
-// On phone screens, 1st tap opens/expands the HUD slot bar, 2nd tap triggers the action ("goes in").
 document.addEventListener('click', (e) => {
     const isMobile = window.innerWidth <= 768;
     if (!isMobile) return;
@@ -530,25 +521,19 @@ document.addEventListener('click', (e) => {
     const slot = e.target.closest('.hud-slot');
 
     if (slot) {
-        // If slot is not currently expanded/active, first tap expands the bar and intercepts action
         if (!slot.classList.contains('expanded') && !slot.classList.contains('active') && !slot.classList.contains('open')) {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
 
-            // Close all other open HUD slots
             document.querySelectorAll('.hud-slot').forEach(s => {
                 s.classList.remove('expanded', 'active', 'open');
             });
 
-            // Open this slot / bar
             slot.classList.add('expanded', 'active', 'open');
             slot.closest('.hud-bar')?.classList.add('open');
-        } else {
-            // Second tap: Already open! Allow normal action execution ("goes in")
         }
     } else {
-        // Tapping outside HUD slots: collapse all open HUD bars
         document.querySelectorAll('.hud-slot').forEach(s => {
             s.classList.remove('expanded', 'active', 'open');
         });
@@ -669,9 +654,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (activePlanetData) {
                     document.body.classList.add('landed');
                 }
-                const titleContainer = document.getElementById('spaceship-title-container');
-                if (authCorner) authCorner.style.opacity = '1';
-                if (titleContainer) titleContainer.style.opacity = '1';
             }, 400);
         });
     }
@@ -688,7 +670,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { data: { session } } = await supabaseClient.auth.getSession();
             
-            // 1. REQUIRE AUTHENTICATION
             if (!session || !session.user) {
                 showTacticalModal('AUTHENTICATION REQUIRED', 'Please sign in or create an account to run backtests with your free credit.', false);
                 setAuthMode('signin');
@@ -706,7 +687,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // 2. CHECK USER CREDIT BALANCE
             const profile = await fetchOrCreateUserProfile(session.user);
             const currentCredits = profile ? profile.credits : 0;
 
@@ -724,11 +704,9 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.innerText = 'UPLINKING TO CORE...';
             submitBtn.disabled = true;
 
-            // Wake up Render Worker
             fetch("https://backtest-worker-fs1a.onrender.com", { mode: "no-cors" }).catch(() => {});
 
             try {
-                // 3. INSERT BACKTEST SUBMISSION
                 const { error: subError } = await supabaseClient
                     .from('submissions')
                     .insert([{ 
@@ -741,7 +719,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (subError) throw subError;
 
-                // 4. DEDUCT 1 CREDIT FROM USER PROFILE
                 const newCredits = currentCredits - 1;
                 const { error: profileUpdateError } = await supabaseClient
                     .from('user_profiles')
@@ -752,7 +729,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error("Credit deduction error:", profileUpdateError);
                 }
 
-                // 5. UPDATE HUD BADGES
                 updateCreditBadgeUI(newCredits);
 
                 showTacticalModal(
@@ -773,7 +749,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // UPDATE UI CREDIT BADGE
     function updateCreditBadgeUI(credits) {
         const badgeEl = document.getElementById('nav-credits-label');
         if (badgeEl) {
@@ -781,7 +756,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // AUTH MODE SWITCHING
     function setAuthMode(mode) {
         authMode = mode;
         if (mode === 'signin') {
@@ -806,7 +780,6 @@ document.addEventListener('DOMContentLoaded', () => {
         closeAuthBtn.addEventListener('click', () => authModal.classList.remove('active'));
     }
 
-    // AUTH FORM SUBMISSION
     if (authForm) {
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -880,7 +853,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // OAUTH AUTHENTICATION
     async function handleOAuth(provider) {
         if (!supabaseClient) return;
         try {
@@ -896,7 +868,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (googleBtn) googleBtn.addEventListener('click', () => handleOAuth('google'));
 
-    // AUTH STATE LISTENER & SESSION BINDING
     if (supabaseClient) {
         const hashStr = window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash;
         const hashParams = new URLSearchParams(hashStr);

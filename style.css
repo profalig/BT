@@ -46,7 +46,7 @@ body {
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(0, 240, 255, 0.05);
-    transition: opacity 0.5s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: opacity 0.5s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.5s ease;
 }
 
 #auth-corner:hover {
@@ -279,6 +279,7 @@ body {
     gap: 15px;
     pointer-events: none;
     animation: mothership-hover 6s ease-in-out infinite alternate;
+    transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
 .mothership-svg {
@@ -440,11 +441,16 @@ body {
 .bull-constellation { left: 0%; color: #00ff66; }
 .bear-constellation { right: 0%; color: #ff0055; }
 
+/* HIDE HUD & WRITING & BACKGROUNDS WHEN LANDED / WARPING */
+body.warping #auth-corner,
+body.landed #auth-corner,
+body.warping #spaceship-title-container,
+body.landed #spaceship-title-container,
 body.warping .constellation, 
 body.warping .tactical-grid, 
-body.warping #blackboard-bg,
-body.warping #spaceship-title-container {
+body.warping #blackboard-bg {
     opacity: 0 !important;
+    pointer-events: none !important;
     transition: opacity 0.5s ease;
 }
 
@@ -618,14 +624,25 @@ body.warping #spaceship-title-container {
     right: -60%;
     width: 40%;
     max-width: 550px;
+    max-height: 82vh;
+    overflow-y: auto;
     background: rgba(4, 9, 18, 0.95);
     border: 1px solid rgba(0, 240, 255, 0.3);
     border-left: 4px solid #00f0ff;
-    padding: 40px;
+    padding: 30px;
     opacity: 0;
     transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
     box-shadow: 0 20px 60px rgba(0,0,0,0.9);
     will-change: transform, opacity;
+}
+
+/* Custom scrollbar for Module Details */
+.module-details::-webkit-scrollbar {
+    width: 4px;
+}
+.module-details::-webkit-scrollbar-thumb {
+    background: rgba(0, 240, 255, 0.4);
+    border-radius: 2px;
 }
 
 .corner-bracket { position: absolute; width: 8px; height: 8px; border: 2px solid #00f0ff; }
@@ -659,9 +676,10 @@ body.warping #spaceship-title-container {
 .stat-value { font-size: 1.1rem; font-weight: bold; color: #fff; }
 
 #return-btn {
-    position: absolute;
-    top: 70px;
-    left: 40px;
+    position: fixed;
+    top: 25px;
+    left: 25px;
+    z-index: 900;
     background: rgba(4, 9, 18, 0.95);
     color: #00f0ff;
     border: 1px solid #00f0ff;
@@ -672,8 +690,10 @@ body.warping #spaceship-title-container {
     letter-spacing: 2px;
     cursor: pointer;
     opacity: 0;
+    pointer-events: none;
     transition: all 0.4s ease;
-    will-change: opacity;
+    will-change: opacity, transform;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
 }
 
 #return-btn:hover {
@@ -708,7 +728,7 @@ body.warping #spaceship-title-container {
 }
 
 body.landed #cinematic-overlay { pointer-events: all; }
-body.landed #return-btn { opacity: 1; }
+body.landed #return-btn { opacity: 1; pointer-events: auto; }
 body.landed .module-details { right: 8%; opacity: 1; }
 
 /* ==========================================
@@ -1331,14 +1351,14 @@ body.landed .module-details { right: 8%; opacity: 1; }
    ========================================== */
 @media (max-width: 900px) {
     #spaceship-title-container {
-        top: 90px; /* Increased from 20px to avoid the mobile HUD */
+        top: 90px;
         left: 20px;
         flex-direction: column;
         align-items: flex-start;
     }
-    .mothership-svg { width: 140px; } /* Decreased from 180px */
-    .tractor-beam-title h1 { font-size: 1.5rem; } /* Decreased from 1.8rem */
-    .tractor-beam-title h1 span { font-size: 1rem; letter-spacing: 6px; } /* Decreased from 1.2rem */
+    .mothership-svg { width: 140px; }
+    .tractor-beam-title h1 { font-size: 1.5rem; }
+    .tractor-beam-title h1 span { font-size: 1rem; letter-spacing: 6px; }
 
     #auth-corner {
         top: 15px;
@@ -1360,15 +1380,24 @@ body.landed .module-details { right: 8%; opacity: 1; }
         grid-template-columns: 1fr;
     }
 
+    #return-btn {
+        top: 20px;
+        left: 20px;
+        padding: 8px 16px;
+        font-size: 0.75rem;
+    }
+
     .module-details {
-        width: 85%;
+        width: 90%;
         max-width: none;
-        padding: 25px;
+        max-height: 75vh;
+        padding: 20px;
     }
 
     body.landed .module-details {
         right: 50%;
-        transform: translateX(50%);
+        top: 55%;
+        transform: translate(50%, -50%);
     }
 }
 
