@@ -443,13 +443,7 @@ body {
 body.warping .constellation, 
 body.warping .tactical-grid, 
 body.warping #blackboard-bg,
-body.warping #spaceship-title-container,
-body.warping .vice-text-container {
-    opacity: 0 !important;
-    transition: opacity 0.5s ease;
-}
-
-body.landed .vice-text-container {
+body.warping #spaceship-title-container {
     opacity: 0 !important;
     transition: opacity 0.5s ease;
 }
