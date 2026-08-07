@@ -116,58 +116,71 @@ orbits.forEach(o => {
 
         const data = planetData[o.id];
         
-        document.getElementById('module-tag').innerText = data.tag;
-        document.getElementById('module-tag').style.color = data.color;
-        document.getElementById('module-title').innerText = data.title;
-        document.getElementById('module-title').style.color = data.color;
-        document.getElementById('module-desc').innerHTML = data.desc; 
+        const tagEl = document.getElementById('module-tag');
+        const titleEl = document.getElementById('module-title');
+        const descEl = document.getElementById('module-desc');
+
+        if (tagEl) { tagEl.innerText = data.tag; tagEl.style.color = data.color; }
+        if (titleEl) { titleEl.innerText = data.title; titleEl.style.color = data.color; }
+        if (descEl) { descEl.innerHTML = data.desc; }
         
-        moduleDetails.style.borderLeftColor = data.color;
-        actionBtn.style.borderColor = data.color;
-        actionBtn.style.color = data.color;
+        if (moduleDetails) moduleDetails.style.borderLeftColor = data.color;
+        if (actionBtn) {
+            actionBtn.style.borderColor = data.color;
+            actionBtn.style.color = data.color;
+        }
 
-        document.getElementById('stats-grid').innerHTML = data.stats.map(s => `
-            <div class="stat-card">
-                <span class="stat-title">${s.label}</span>
-                <span class="stat-value" style="color: ${data.color}">${s.val}</span>
-            </div>
-        `).join('');
+        const statsGridEl = document.getElementById('stats-grid');
+        if (statsGridEl) {
+            statsGridEl.innerHTML = data.stats.map(s => `
+                <div class="stat-card">
+                    <span class="stat-title">${s.label}</span>
+                    <span class="stat-value" style="color: ${data.color}">${s.val}</span>
+                </div>
+            `).join('');
+        }
 
-        if (o.id === 'contact' || o.id === 'about') {
-            actionBtn.style.display = 'none';
-        } else {
-            actionBtn.style.display = 'flex';
+        if (actionBtn) {
+            if (o.id === 'contact' || o.id === 'about') {
+                actionBtn.style.display = 'none';
+            } else {
+                actionBtn.style.display = 'flex';
+            }
         }
 
         setTimeout(() => document.body.classList.add('landed'), 500);
     });
 });
 
-returnBtn.addEventListener('click', () => {
-    document.body.classList.remove('landed');
-    if (activePlanetData && activePlanetData.planetEl) activePlanetData.planetEl.classList.remove('active');
-    activePlanetData = null; 
-    setTimeout(() => { document.body.classList.remove('warping'); }, 800);
-});
-
-// INITIALIZE MODULE BUTTON LOGIC (THE ZOOM & ACTIONS)
-actionBtn.addEventListener('click', () => {
-    if (!activePlanetData) return;
-
-    if (activePlanetData.id === 'backtest') {
-        isHyperZoomed = true;
+if (returnBtn) {
+    returnBtn.addEventListener('click', () => {
         document.body.classList.remove('landed');
-        
-        setTimeout(() => {
-            const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
-            if (gasAtmosphere) gasAtmosphere.classList.add('active');
-        }, 800);
-    } else if (activePlanetData.id === 'databank') {
-        showTacticalModal('SYSTEM DATABANK', 'The System Databank is currently under active development. High-edge quantitative strategy models will be released soon.', true);
-    } else if (activePlanetData.id === 'campus') {
-        showTacticalModal('BACKTESTING CAMPUS', 'Enrolling now for the upcoming Quantitative Engineering cohort. Contact our engineering desk via SEC-04 to apply.', true);
-    }
-});
+        if (activePlanetData && activePlanetData.planetEl) activePlanetData.planetEl.classList.remove('active');
+        activePlanetData = null; 
+        setTimeout(() => { document.body.classList.remove('warping'); }, 800);
+    });
+}
+
+// INITIALIZE MODULE BUTTON LOGIC
+if (actionBtn) {
+    actionBtn.addEventListener('click', () => {
+        if (!activePlanetData) return;
+
+        if (activePlanetData.id === 'backtest') {
+            isHyperZoomed = true;
+            document.body.classList.remove('landed');
+            
+            setTimeout(() => {
+                const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
+                if (gasAtmosphere) gasAtmosphere.classList.add('active');
+            }, 800);
+        } else if (activePlanetData.id === 'databank') {
+            showTacticalModal('SYSTEM DATABANK', 'The System Databank is currently under active development. High-edge quantitative strategy models will be released soon.', true);
+        } else if (activePlanetData.id === 'campus') {
+            showTacticalModal('BACKTESTING CAMPUS', 'Enrolling now for the upcoming Quantitative Engineering cohort. Contact our engineering desk via SEC-04 to apply.', true);
+        }
+    });
+}
 
 // ABORT CONSOLE BUTTON (ZOOM OUT)
 const abortConsoleBtn = document.getElementById('abort-console-btn');
@@ -232,15 +245,12 @@ orbits.forEach(o => {
 });
 
 const btcSun = document.getElementById('sun');
-
 const solarSystem = document.getElementById('solar-system');
 if (btcSun && solarSystem) {
     btcSun.addEventListener('mouseenter', () => {
-        solarSystem.classList.add('show-labels');
         triggerAttack(bullConstellation); triggerAttack(bearConstellation);
     });
     btcSun.addEventListener('mouseleave', () => {
-        solarSystem.classList.remove('show-labels');
         resetAttack(bullConstellation); resetAttack(bearConstellation);
     });
 }
@@ -568,13 +578,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const authCorner = document.getElementById('auth-corner');
     const googleBtn = document.getElementById('google-auth-btn');
 
-    // SUBSCRIPTION NAV BINDINGS
     if (navSubBtn) navSubBtn.addEventListener('click', openSubscriptionModal);
     if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
 
-    // ==========================================
     // STRIPE CHECKOUT INTEGRATION LOGIC
-    // ==========================================
     document.querySelectorAll('.select-tier-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const button = e.currentTarget;
@@ -639,7 +646,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // CLOSE MODAL LOGIC
     if (closeModalBtn) {
         closeModalBtn.addEventListener('click', () => {
             const modalOverlay = document.getElementById('tactical-modal-overlay');
@@ -658,7 +664,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // BACKTEST SUBMISSION WITH CREDIT VERIFICATION & DEDUCTION
     if (systemSubmitForm) {
         systemSubmitForm.addEventListener('submit', async (e) => {
             e.preventDefault();

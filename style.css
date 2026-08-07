@@ -7,8 +7,19 @@
 }
 
 /* ==========================================
-   GLOBAL SELECTION PREVENT
+   GLOBAL SELECTION PREVENT & VIEWPORT FIX
    ========================================== */
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    height: 100dvh;
+    width: 100vw;
+    background-color: #000000;
+    color: #ffffff;
+    overflow: hidden;
+}
+
 body, #space-matrix, .constellation, .beast-container, img, video, svg, #spaceship-title-container {
     -webkit-user-select: none;
     -moz-user-select: none;
@@ -21,14 +32,6 @@ input, textarea {
     -moz-user-select: text;
     -ms-user-select: text;
     user-select: text;
-}
-
-body {
-    background-color: #000000;
-    color: #ffffff;
-    overflow: hidden;
-    height: 100vh;
-    width: 100vw;
 }
 
 /* ==========================================
@@ -52,6 +55,85 @@ body {
 #auth-corner:hover {
     border-color: rgba(0, 240, 255, 0.5);
     box-shadow: 0 8px 35px rgba(0, 240, 255, 0.15), inset 0 0 20px rgba(0, 240, 255, 0.08);
+}
+
+/* HUD BAR & DYNAMIC SLOTS */
+.hud-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+}
+
+.hud-slot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(8, 20, 38, 0.6);
+    border: 1px solid rgba(0, 240, 255, 0.25);
+    color: #a3c7e6;
+    padding: 6px 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+}
+
+.hud-slot:hover {
+    background: rgba(0, 240, 255, 0.15);
+    color: #00f0ff;
+    border-color: rgba(0, 240, 255, 0.6);
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+.hud-icon-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.hud-label-box span {
+    white-space: nowrap;
+}
+
+.hud-slot.subs, .hud-slot.credits {
+    background: rgba(255, 215, 0, 0.08);
+    border-color: rgba(255, 215, 0, 0.35);
+    color: #ffd700;
+}
+
+.hud-slot.subs:hover, .hud-slot.credits:hover {
+    background: rgba(255, 215, 0, 0.2);
+    color: #ffffff;
+    border-color: #ffd700;
+    box-shadow: 0 0 18px rgba(255, 215, 0, 0.4);
+}
+
+.hud-slot.logout {
+    background: rgba(255, 0, 85, 0.08);
+    border-color: rgba(255, 0, 85, 0.3);
+    color: #ff4d88;
+}
+
+.hud-slot.logout:hover {
+    background: #ff0055;
+    color: #ffffff;
+    border-color: #ff0055;
+    box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    background-color: #00ff66;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #00ff66;
+    animation: statusPulse 2s infinite alternate;
 }
 
 .dock-bracket {
@@ -129,7 +211,6 @@ body {
     cursor: not-allowed;
 }
 
-/* Subscriptions Button */
 .auth-btn.sub-nav-btn {
     background: rgba(255, 215, 0, 0.08);
     border-color: rgba(255, 215, 0, 0.35);
@@ -143,7 +224,6 @@ body {
     box-shadow: 0 0 18px rgba(255, 215, 0, 0.4);
 }
 
-/* Sign-Up CTA Button */
 .auth-btn.sign-up.cta-btn {
     background: linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(0, 255, 102, 0.15) 100%);
     border-color: #00f0ff;
@@ -160,7 +240,6 @@ body {
     border-color: #00ff66;
 }
 
-/* Logout Button */
 .auth-btn.logout-btn {
     background: rgba(255, 0, 85, 0.08);
     border-color: rgba(255, 0, 85, 0.3);
@@ -174,7 +253,6 @@ body {
     box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
 }
 
-/* Agent User Badge */
 .user-badge {
     font-family: 'Share Tech Mono', monospace;
     color: #00ff66;
@@ -203,7 +281,6 @@ body {
     100% { opacity: 1; transform: scale(1.1); }
 }
 
-/* Credits Badge */
 .credit-badge {
     font-family: 'Share Tech Mono', monospace;
     color: #ffd700;
@@ -228,6 +305,7 @@ body {
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     z-index: 0;
     pointer-events: none;
     transform: translateZ(0);
@@ -352,7 +430,7 @@ body {
 }
 
 /* ==========================================
-   CONSTELLATION BEASTS
+   CONSTELLATION BEASTS & BOTTOM TEXT REMOVAL
    ========================================== */
 .constellation {
     --parallax-x: 0px;
@@ -369,13 +447,22 @@ body {
     will-change: transform, opacity;
 }
 
+/* Hide any text at the bottom of constellations */
+.constellation h1,
+.constellation h2,
+.constellation h3,
+.constellation p,
+.constellation span:not(.beast-vid):not(.beast-img) {
+    display: none !important;
+}
+
 @keyframes breathe { 0% { opacity: 0.3; } 100% { opacity: 0.6; } }
 
 .beast-container {
     position: relative;
     width: 60vmin;
     height: 60vmin;
-    margin-bottom: 10px;
+    margin-bottom: 0;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -441,7 +528,6 @@ body {
 .bull-constellation { left: 0%; color: #00ff66; }
 .bear-constellation { right: 0%; color: #ff0055; }
 
-/* HIDE HUD & WRITING & BACKGROUNDS WHEN LANDED / WARPING */
 body.warping #auth-corner,
 body.landed #auth-corner,
 body.warping #spaceship-title-container,
@@ -460,6 +546,7 @@ body.warping #blackboard-bg {
 #spaceship-viewport {
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -474,6 +561,7 @@ body.warping #blackboard-bg {
     position: relative;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -508,6 +596,7 @@ body.warping #blackboard-bg {
     pointer-events: none;
     will-change: transform;
     transform: translateZ(0);
+    transform-origin: center center;
 }
 
 .orbit-1 { width: 30vmin; height: 30vmin; }
@@ -568,36 +657,14 @@ body.warping #blackboard-bg {
     100% { transform: rotate(360deg) translateZ(0); } 
 }
 
+/* HIDE TEXT ON THE BOTTOM OF PLANETS */
 .planet-label {
-    position: absolute;
-    top: 125%;
-    left: 50%;
-    transform: translateX(-50%) translateZ(0);
-    background: #040912;
-    border: 1px solid rgba(0, 240, 255, 0.4);
-    padding: 5px 14px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: bold;
-    text-transform: uppercase;
-    white-space: nowrap;
-    font-family: 'Share Tech Mono', monospace;
-    color: #ffffff;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.8);
-    will-change: opacity, transform;
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
 }
 
-.planet:hover .planet-label {
-    opacity: 1;
-    border: 2px solid #00f0ff;
-    box-shadow: 0 0 15px rgba(0,240,255,0.6);
-    background: #000;
-}
-
-#solar-system.show-labels .planet-label { opacity: 1; border-color: rgba(0,240,255,0.5); }
 .planet.active .target-reticle, .planet.active .planet-label {
     opacity: 0 !important;
     visibility: hidden !important;
@@ -613,6 +680,7 @@ body.warping #blackboard-bg {
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     pointer-events: none;
     z-index: 600;
     display: flex;
@@ -636,7 +704,6 @@ body.warping #blackboard-bg {
     will-change: transform, opacity;
 }
 
-/* Custom scrollbar for Module Details */
 .module-details::-webkit-scrollbar {
     width: 4px;
 }
@@ -740,6 +807,7 @@ body.landed .module-details { right: 8%; opacity: 1; }
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     z-index: 1000;
     display: flex;
     justify-content: center;
@@ -864,6 +932,7 @@ body.landed .module-details { right: 8%; opacity: 1; }
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     background: rgba(2, 6, 12, 0.88);
     backdrop-filter: blur(12px);
     display: flex;
@@ -1015,6 +1084,7 @@ body.landed .module-details { right: 8%; opacity: 1; }
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     background: rgba(2, 6, 12, 0.92);
     backdrop-filter: blur(12px);
     display: flex;
@@ -1213,6 +1283,7 @@ body.landed .module-details { right: 8%; opacity: 1; }
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     background: rgba(2, 6, 12, 0.88);
     backdrop-filter: blur(12px);
     display: flex;
@@ -1366,6 +1437,12 @@ body.landed .module-details { right: 8%; opacity: 1; }
         padding: 5px 8px;
     }
 
+    .hud-bar {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+
     .dock-content {
         flex-wrap: wrap;
         justify-content: flex-end;
@@ -1402,7 +1479,7 @@ body.landed .module-details { right: 8%; opacity: 1; }
 }
 
 /* ==========================================
-   PERFORMANCE OVERRIDES
+   PERFORMANCE & MOBILE HIDE OVERRIDES
    ========================================== */
 body.landed .orbit,
 body.landed .constellation {
@@ -1418,9 +1495,6 @@ body.warping * {
     animation: none !important;
 }
 
-/* ==========================================
-   HIDE CONSTELLATIONS ON MOBILE
-   ========================================== */
 @media (max-width: 768px) {
     .bull-constellation,
     .bear-constellation {
