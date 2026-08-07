@@ -137,1264 +137,487 @@ body {
 }
 
 .auth-btn.sub-nav-btn:hover {
-    background: rgba(255, 215, 0, 0.2);
-    color: #ffffff;
-    border-color: #ffd700;
-    box-shadow: 0 0 18px rgba(255, 215, 0, 0.4);
-}
-
-/* Sign-Up CTA Button */
-.auth-btn.sign-up.cta-btn {
-    background: linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(0, 255, 102, 0.15) 100%);
-    border-color: #00f0ff;
-    color: #ffffff;
-    font-weight: bold;
-    text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
-}
-
-.auth-btn.sign-up.cta-btn:hover {
-    background: linear-gradient(135deg, #00f0ff 0%, #00ff66 100%);
-    color: #040912;
-    text-shadow: none;
-    box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
-    border-color: #00ff66;
-}
-
-/* Logout Button */
-.auth-btn.logout-btn {
-    background: rgba(255, 0, 85, 0.08);
-    border-color: rgba(255, 0, 85, 0.3);
-    color: #ff4d88;
-}
-
-.auth-btn.logout-btn:hover {
-    background: #ff0055;
-    color: #ffffff;
-    border-color: #ff0055;
-    box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
-}
-
-/* Agent User Badge */
-.user-badge {
-    font-family: 'Share Tech Mono', monospace;
-    color: #00ff66;
-    font-size: 0.8rem;
-    letter-spacing: 1px;
-    padding: 7px 12px;
-    background: rgba(0, 255, 102, 0.08);
-    border: 1px solid rgba(0, 255, 102, 0.3);
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.user-status-dot {
-    width: 6px;
-    height: 6px;
-    background-color: #00ff66;
-    border-radius: 50%;
-    box-shadow: 0 0 8px #00ff66;
-    animation: statusPulse 2s infinite alternate;
-}
-
-@keyframes statusPulse {
-    0% { opacity: 0.4; transform: scale(0.9); }
-    100% { opacity: 1; transform: scale(1.1); }
-}
-
-/* Credits Badge */
-.credit-badge {
-    font-family: 'Share Tech Mono', monospace;
-    color: #ffd700;
-    font-size: 0.8rem;
-    letter-spacing: 1px;
-    padding: 7px 12px;
-    background: rgba(255, 215, 0, 0.08);
-    border: 1px solid rgba(255, 215, 0, 0.35);
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 0 12px rgba(255, 215, 0, 0.15);
-}
-
-/* ==========================================
-   BACKGROUND MATRIX & SPACE LAYERS
-   ========================================== */
-#space-matrix {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 0;
-    pointer-events: none;
-    transform: translateZ(0);
-}
-
-#blackboard-bg {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0; 
-    pointer-events: none;
-}
-
-.stars {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background-image: radial-gradient(1.5px 1.5px at 20px 30px, #fff, rgba(0,0,0,0)), radial-gradient(1.5px 1.5px at 80px 70px, rgba(255,255,255,0.8), rgba(0,0,0,0));
-    background-repeat: repeat;
-    background-size: 200px 200px;
-    opacity: 0.5;
-    z-index: 1;
-    will-change: transform;
-    transform: translateZ(0);
-}
-
-.tactical-grid {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background-image: linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
-    background-size: 80px 80px;
-    z-index: 2;
-    transform: translateZ(0);
-}
-
-/* ==========================================
-   SPACESHIP TITLE DISPLAY
-   ========================================== */
-#spaceship-title-container {
-    position: fixed;
-    top: 40px;
-    left: 40px;
-    z-index: 500;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    pointer-events: none;
-    animation: mothership-hover 6s ease-in-out infinite alternate;
-}
-
-.mothership-svg {
-    width: 280px; 
-    height: auto;
-    filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.9));
-    transform: rotate(2deg);
-}
-
-.engine-flame {
-    transform-origin: 25px 50px;
-    animation: thruster-pulse 0.1s infinite alternate;
-    will-change: transform, opacity;
-}
-
-@keyframes thruster-pulse {
-    0% { transform: scaleX(1) scaleY(1); opacity: 0.8; }
-    100% { transform: scaleX(1.3) scaleY(1.1); opacity: 1; }
-}
-
-.tractor-beam-title {
-    position: relative;
-    padding: 15px 35px;
-    border-left: 5px dashed #00f0ff;
-    background: linear-gradient(90deg, rgba(0, 240, 255, 0.25) 0%, rgba(0, 240, 255, 0.05) 40%, transparent 100%);
-    border-radius: 4px;
-    box-shadow: -15px 0 35px rgba(0, 240, 255, 0.2);
-    overflow: hidden;
-}
-
-.tractor-beam-title::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 240, 255, 0.1) 3px, transparent 4px);
-    pointer-events: none;
-    animation: scanline 4s linear infinite;
-    will-change: transform;
-}
-
-@keyframes scanline {
-    0% { transform: translateY(-100%); }
-    100% { transform: translateY(100%); }
-}
-
-.tractor-beam-title h1 {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 3rem;
-    font-weight: 900;
-    color: #ffffff;
-    letter-spacing: 2px;
-    line-height: 1.1;
-    text-shadow: 0 0 10px #00f0ff, 0 0 25px rgba(0, 240, 255, 0.6);
-    margin: 0;
-    position: relative;
-    z-index: 2;
-}
-
-.tractor-beam-title h1 span {
-    display: block;
-    font-size: 2rem;
-    color: #00f0ff;
-    letter-spacing: 12px;
-    text-shadow: none;
-}
-
-@keyframes mothership-hover {
-    0% { transform: translateY(0px) rotate(0deg); }
-    100% { transform: translateY(-15px) rotate(1.5deg); }
-}
-
-/* ==========================================
-   CONSTELLATION BEASTS
-   ========================================== */
-.constellation {
-    --parallax-x: 0px;
-    --parallax-y: 0px;
-    position: absolute;
-    top: 50%;
-    transform: translate(calc(0px + var(--parallax-x)), calc(-50% + var(--parallax-y)));
-    opacity: 0.45;
-    transition: opacity 0.5s ease;
-    text-align: center;
-    z-index: 3;
-    mix-blend-mode: screen;
-    animation: breathe 8s infinite alternate ease-in-out;
-    will-change: transform, opacity;
-}
-
-@keyframes breathe { 0% { opacity: 0.3; } 100% { opacity: 0.6; } }
-
-.beast-container {
-    position: relative;
-    width: 60vmin;
-    height: 60vmin;
-    margin-bottom: 10px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: transparent;
-}
-
-.beast-container::after {
-    content: '';
-    position: absolute;
-    width: 80%;
-    height: 80%;
-    border-radius: 50%;
-    opacity: 0;
-    transition: opacity 0.6s ease, transform 0.6s ease;
-    pointer-events: none;
-    z-index: -1;
-    transform: scale(0.8) translateZ(0);
-}
-
-.bull-constellation.highlight .beast-container::after {
-    opacity: 1;
-    transform: scale(1.2) translateZ(0);
-    background: radial-gradient(circle, rgba(0, 255, 102, 0.45) 0%, rgba(0, 255, 102, 0) 70%);
-}
-
-.bear-constellation.highlight .beast-container::after {
-    opacity: 1;
-    transform: scale(1.2) translateZ(0);
-    background: radial-gradient(circle, rgba(255, 0, 85, 0.45) 0%, rgba(255, 0, 85, 0) 70%);
-}
-
-.beast-img, .beast-vid {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    pointer-events: none;
-    mix-blend-mode: screen;
-    will-change: transform, opacity, filter;
-    transform: translateZ(0);
-}
-
-.beast-img {
-    opacity: 1;
-    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.6s ease, opacity 0.4s ease;
-}
-
-.beast-vid {
-    opacity: 0;
-    transform: scale(1) translateZ(0);
-    filter: contrast(180%) brightness(110%);
-    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.6s ease, opacity 0.4s ease;
-}
-
-.constellation.highlight { opacity: 1 !important; }
-.constellation.highlight .beast-img { opacity: 0; }
-.bull-constellation.highlight .beast-vid, .bear-constellation.highlight .beast-vid {
-    opacity: 1;
-    filter: contrast(180%) brightness(120%);
-    transform: scale(1.35) translateZ(0);
-}
-
-.bull-constellation { left: 0%; color: #00ff66; }
-.bear-constellation { right: 0%; color: #ff0055; }
-
-body.warping .constellation, 
-body.warping .tactical-grid, 
-body.warping #blackboard-bg,
-body.warping #spaceship-title-container {
-    opacity: 0 !important;
-    transition: opacity 0.5s ease;
-}
-
-/* ==========================================
-   CAMERA VIEWPORT & SOLAR SYSTEM
-   ========================================== */
-#spaceship-viewport {
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transform-origin: center center;
-    will-change: transform;
-    transform: translate3d(0, 0, 0);
-    backface-visibility: hidden;
-    perspective: 1000px;
-}
-
-#solar-system {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 10;
-    will-change: transform;
-    transform: translate3d(0, 0, 0);
-}
-
-.btc-sun {
-    position: absolute;
-    width: 13vmin;
-    height: 13vmin;
-    background-size: contain;
-    background-position: center;
-    background-repeat: no-repeat;
-    border-radius: 50%;
-    z-index: 50;
-    cursor: pointer;
-    filter: drop-shadow(0 0 18px rgba(255, 215, 0, 0.4));
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease;
-}
-
-.btc-sun:hover {
-    transform: scale(1.12);
-    filter: drop-shadow(0 0 25px rgba(255, 215, 0, 0.95)) drop-shadow(0 0 50px rgba(255, 140, 0, 0.7));
-}
-
-.orbit {
-    position: absolute;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    pointer-events: none;
-    will-change: transform;
-    transform: translateZ(0);
-}
-
-.orbit-1 { width: 30vmin; height: 30vmin; }
-.orbit-2 { width: 45vmin; height: 45vmin; }
-.orbit-3 { width: 60vmin; height: 60vmin; }
-.orbit-4 { width: 75vmin; height: 75vmin; }
-.orbit-5 { width: 90vmin; height: 90vmin; }
-
-.planet {
-    position: absolute;
-    top: -5vmin;
-    left: 50%;
-    width: 10vmin;
-    height: 10vmin;
-    background-size: contain;
-    background-position: center;
-    background-repeat: no-repeat;
-    cursor: pointer;
-    pointer-events: auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    transform: translateX(-50%) translate3d(0, 0, 0);
-    will-change: transform;
-    backface-visibility: hidden;
-}
-
-.planet::before {
-    content: '';
-    position: absolute;
-    top: -15px;
-    left: -15px;
-    right: -15px;
-    bottom: -15px;
-    border-radius: 50%;
-}
-
-.target-reticle {
-    position: absolute;
-    width: 140%;
-    height: 140%;
-    border: 2px dashed #00f0ff;
-    border-radius: 50%;
-    opacity: 0;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    animation: spin-reticle 10s linear infinite;
-    pointer-events: none;
-    will-change: transform, opacity;
-}
-
-.planet:hover .target-reticle { 
-    opacity: 1; 
-    transform: scale(1.05) translateZ(0); 
-}
-
-@keyframes spin-reticle { 
-    100% { transform: rotate(360deg) translateZ(0); } 
-}
-
-.planet-label {
-    position: absolute;
-    top: 125%;
-    left: 50%;
-    transform: translateX(-50%) translateZ(0);
-    background: #040912;
-    border: 1px solid rgba(0, 240, 255, 0.4);
-    padding: 5px 14px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: bold;
-    text-transform: uppercase;
-    white-space: nowrap;
-    font-family: 'Share Tech Mono', monospace;
-    color: #ffffff;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.8);
-    will-change: opacity, transform;
-}
-
-.planet:hover .planet-label {
-    opacity: 1;
-    border: 2px solid #00f0ff;
-    box-shadow: 0 0 15px rgba(0,240,255,0.6);
-    background: #000;
-}
-
-#solar-system.show-labels .planet-label { opacity: 1; border-color: rgba(0,240,255,0.5); }
-.planet.active .target-reticle, .planet.active .planet-label {
-    opacity: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-}
-
-/* ==========================================
-   HUD MODULE OVERLAY
-   ========================================== */
-#cinematic-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    z-index: 600;
-    display: flex;
-    align-items: center;
-}
-
-.module-details {
-    position: absolute;
-    right: -60%;
-    width: 40%;
-    max-width: 550px;
-    background: rgba(4, 9, 18, 0.95);
-    border: 1px solid rgba(0, 240, 255, 0.3);
-    border-left: 4px solid #00f0ff;
-    padding: 40px;
-    opacity: 0;
-    transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.9);
-    will-change: transform, opacity;
-}
-
-.corner-bracket { position: absolute; width: 8px; height: 8px; border: 2px solid #00f0ff; }
-.top-left { top: -2px; left: -2px; border-right: none; border-bottom: none; }
-.top-right { top: -2px; right: -2px; border-left: none; border-bottom: none; }
-.bottom-left { bottom: -2px; left: -2px; border-right: none; border-top: none; }
-.bottom-right { bottom: -2px; right: -2px; border-left: none; border-top: none; }
-
-.module-tag {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.8rem;
-    color: #00f0ff;
-    letter-spacing: 2px;
-    display: block;
-    margin-bottom: 10px;
-}
-
-.module-details h2 { font-size: 2.5rem; margin-bottom: 15px; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; }
-.module-details p { font-size: 0.95rem; line-height: 1.7; margin-bottom: 25px; color: #a3b8cc; }
-
-.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px; }
-.stat-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255,255,255,0.08);
-    padding: 10px 14px;
-    border-radius: 4px;
-    font-family: 'Share Tech Mono', monospace;
-}
-
-.stat-title { font-size: 0.65rem; color: rgba(255, 255, 255, 0.4); display: block; margin-bottom: 4px; }
-.stat-value { font-size: 1.1rem; font-weight: bold; color: #fff; }
-
-#return-btn {
-    position: absolute;
-    top: 70px;
-    left: 40px;
-    background: rgba(4, 9, 18, 0.95);
-    color: #00f0ff;
-    border: 1px solid #00f0ff;
-    padding: 12px 24px;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    font-family: 'Share Tech Mono', monospace;
-    letter-spacing: 2px;
-    cursor: pointer;
-    opacity: 0;
-    transition: all 0.4s ease;
-    will-change: opacity;
-}
-
-#return-btn:hover {
-    background: #00f0ff;
-    color: #000;
-    box-shadow: 0 0 20px rgba(0,240,255,0.6);
-}
-
-.action-btn {
-    width: 100%;
-    padding: 15px;
-    font-size: 0.9rem;
-    font-weight: bold;
-    font-family: 'Share Tech Mono', monospace;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    background: transparent;
-    color: #fff;
-    border: 1px solid #00f0ff;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-}
-
-.action-btn:hover {
-    background: #00f0ff;
-    color: #000;
-    box-shadow: 0 0 25px rgba(0,240,255,0.6);
-}
-
-body.landed #cinematic-overlay { pointer-events: all; }
-body.landed #return-btn { opacity: 1; }
-body.landed .module-details { right: 8%; opacity: 1; }
-
-/* ==========================================
-   GAS GIANT ATMOSPHERE (BACKTEST FORM)
-   ========================================== */
-#gas-giant-atmosphere {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 1000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.8s ease-in-out !important;
-    background: rgba(0, 0, 0, 0.5);
-    overflow: hidden;
-}
-
-#gas-giant-atmosphere.active {
-    opacity: 1;
-    pointer-events: all;
-}
-
-.submission-console {
-    position: relative;
-    z-index: 10;
-    background: rgba(4, 9, 18, 0.98) !important;
-    border: 1px solid rgba(0, 255, 102, 0.4);
-    border-top: 4px solid #00ff66;
-    padding: 40px;
-    width: 90%;
-    max-width: 700px;
-    border-radius: 6px;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.8) !important;
-    transform: translateY(50px) scale(0.95);
-    transition: transform 0.4s ease-out, opacity 0.4s ease-out !important;
-    will-change: transform;
-}
-
-#gas-giant-atmosphere.active .submission-console {
-    transform: translateY(0) scale(1);
-}
-
-#abort-console-btn {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    background: transparent;
-    color: #ff0055;
-    border: 1px solid #ff0055;
-    padding: 6px 12px;
-    font-family: 'Share Tech Mono', monospace;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-}
-
-#abort-console-btn:hover { background: #ff0055; color: #fff; box-shadow: 0 0 15px rgba(255,0,85,0.5); }
-
-.console-header h2 {
-    font-family: 'Share Tech Mono', monospace;
-    color: #00ff66;
-    font-size: 2rem;
-    margin-bottom: 15px;
-    letter-spacing: 1px;
-}
-
-.console-header p {
-    color: #a3b8cc;
-    font-size: 0.95rem;
-    line-height: 1.6;
-    margin-bottom: 30px;
-}
-
-.input-group { margin-bottom: 20px; text-align: left; }
-.input-group label {
-    display: block;
-    font-family: 'Share Tech Mono', monospace;
-    color: #00ff66;
-    font-size: 0.8rem;
-    margin-bottom: 8px;
-    letter-spacing: 1px;
-}
-
-.input-group input, .input-group textarea {
-    width: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(0, 255, 102, 0.3);
-    color: #fff;
-    padding: 12px 15px;
-    font-family: 'Inter', sans-serif;
-    border-radius: 4px;
-    outline: none;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.input-group input:focus, .input-group textarea:focus {
-    border-color: #00ff66;
-    box-shadow: 0 0 15px rgba(0,255,102,0.2);
-}
-
-.submit-system-btn {
-    width: 100%;
-    background: rgba(0, 255, 102, 0.1);
-    color: #00ff66;
-    border: 1px solid #00ff66;
-    padding: 15px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 1.1rem;
-    letter-spacing: 2px;
-    cursor: pointer;
-    margin-top: 10px;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-}
-
-.submit-system-btn:hover {
-    background: #00ff66;
-    color: #000;
-    box-shadow: 0 0 25px rgba(0,255,102,0.6);
-}
-
-/* ==========================================
-   TACTICAL UPLINK MODAL STYLES
-   ========================================== */
-#tactical-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(2, 6, 12, 0.88);
-    backdrop-filter: blur(12px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.4s ease;
-}
-
-#tactical-modal-overlay.active {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-.tactical-modal-card {
-    position: relative;
-    width: 90%;
-    max-width: 520px;
-    background: rgba(6, 16, 26, 0.95);
-    border: 1px solid rgba(0, 255, 102, 0.4);
-    box-shadow: 0 0 35px rgba(0, 255, 102, 0.25), inset 0 0 15px rgba(0, 255, 102, 0.1);
-    padding: 40px 30px;
-    text-align: center;
-    transform: scale(0.85);
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-#tactical-modal-overlay.active .tactical-modal-card {
-    transform: scale(1);
-}
-
-.launch-stage {
-    position: relative;
-    width: 100px;
-    height: 100px;
-    margin: 0 auto 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.rocket-svg {
-    width: 70px;
-    height: 70px;
-    filter: drop-shadow(0 0 10px #00ff66);
-    transform: translateY(0);
-}
-
-#tactical-modal-overlay.active .rocket-svg {
-    animation: launchAscent 2.5s infinite ease-in-out;
-}
-
-@keyframes launchAscent {
-    0% { transform: translateY(5px) scale(0.98); }
-    50% { transform: translateY(-12px) scale(1.02); }
-    100% { transform: translateY(5px) scale(0.98); }
-}
-
-.rocket-flame {
-    animation: pulseFlame 0.15s infinite alternate;
-}
-
-@keyframes pulseFlame {
-    0% { transform: scaleY(0.8); opacity: 0.7; }
-    100% { transform: scaleY(1.3); opacity: 1; }
-}
-
-.hyper-rings {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-}
-
-.hyper-rings span {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    border: 1px solid #00f0ff;
-    border-radius: 50%;
-    animation: expandRing 2s infinite linear;
-    opacity: 0;
-}
-
-.hyper-rings span:nth-child(1) { animation-delay: 0s; }
-.hyper-rings span:nth-child(2) { animation-delay: 0.6s; }
-.hyper-rings span:nth-child(3) { animation-delay: 1.2s; }
-
-@keyframes expandRing {
-    0% { width: 10px; height: 10px; opacity: 1; }
-    100% { width: 120px; height: 120px; opacity: 0; }
-}
-
-.modal-status-tag {
-    font-family: 'Share Tech Mono', monospace;
-    color: #00ff66;
-    font-size: 0.75rem;
-    letter-spacing: 2px;
-    margin-bottom: 8px;
-}
-
-.tactical-modal-card h2 {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 1.8rem;
-    color: #ffffff;
-    margin: 0 0 12px 0;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-}
-
-.tactical-modal-card #modal-message {
-    font-family: 'Inter', sans-serif;
-    color: #a0aec0;
-    font-size: 0.9rem;
-    line-height: 1.5;
-    margin-bottom: 25px;
-}
-
-.modal-action-btn {
-    width: 100%;
-    padding: 12px;
-    background: transparent;
-    border: 1px solid #00ff66;
-    color: #00ff66;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.95rem;
-    letter-spacing: 1.5px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.modal-action-btn:hover {
-    background: #00ff66;
-    color: #040912;
-    box-shadow: 0 0 20px rgba(0, 255, 102, 0.6);
-}
-
-/* ==========================================
-   SUBSCRIPTION MODAL & PRICING TIERS
-   ========================================== */
-#subscription-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(2, 6, 12, 0.92);
-    backdrop-filter: blur(12px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9997;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.4s ease;
-}
-
-#subscription-modal-overlay.active {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-.subscription-modal-card {
-    position: relative;
-    width: 92%;
-    max-width: 960px;
-    max-height: 90vh;
-    overflow-y: auto;
-    background: rgba(6, 16, 26, 0.95);
-    border: 1px solid rgba(255, 215, 0, 0.4);
-    box-shadow: 0 0 45px rgba(255, 215, 0, 0.15);
-    padding: 40px 30px;
-    transform: scale(0.9);
-    transition: transform 0.3s ease;
-    border-radius: 6px;
-}
-
-#subscription-modal-overlay.active .subscription-modal-card {
-    transform: scale(1);
-}
-
-.sub-header {
-    text-align: center;
-    margin-bottom: 30px;
-}
-
-.sub-header h2 {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 2.2rem;
-    color: #ffffff;
-    letter-spacing: 1px;
-    margin-bottom: 8px;
-}
-
-.sub-header p {
-    color: #8fa3b8;
-    font-size: 0.9rem;
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-.pricing-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    margin-top: 20px;
-}
-
-.tier-card {
-    position: relative;
-    background: rgba(4, 9, 18, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
-    padding: 30px 20px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    transition: all 0.3s ease;
-}
-
-.tier-card:hover {
-    border-color: rgba(0, 240, 255, 0.4);
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-}
-
-.tier-card.featured {
-    background: rgba(0, 240, 255, 0.03);
-    border: 1px solid #00f0ff;
-    box-shadow: 0 0 25px rgba(0, 240, 255, 0.2);
-}
-
-.popular-badge {
-    position: absolute;
-    top: -12px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #00f0ff;
-    color: #000;
-    font-family: 'Share Tech Mono', monospace;
-    font-weight: bold;
-    font-size: 0.65rem;
-    padding: 3px 12px;
-    border-radius: 12px;
-    letter-spacing: 1px;
-}
-
-.tier-name {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 1.1rem;
-    color: #ffffff;
-    letter-spacing: 1px;
-    margin-bottom: 10px;
-}
-
-.tier-price {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 2.2rem;
-    font-weight: bold;
-    color: #ffffff;
-    margin-bottom: 8px;
-}
-
-.tier-price span {
-    font-size: 0.8rem;
-    color: #718096;
-}
-
-.tier-desc {
-    font-size: 0.8rem;
-    color: #8fa3b8;
-    margin-bottom: 20px;
-    min-height: 38px;
-}
-
-.tier-features {
-    list-style: none;
-    margin-bottom: 25px;
-    text-align: left;
-}
-
-.tier-features li {
-    font-size: 0.8rem;
-    color: #d0dbe5;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.tier-features i {
-    color: #00ff66;
-    font-size: 0.75rem;
-}
-
-.tier-features i.unavailable {
-    color: #ff0055;
-}
-
-.tier-btn {
-    width: 100%;
-    padding: 12px;
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #ffffff;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.85rem;
-    letter-spacing: 1px;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-}
-
-.tier-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: #ffffff;
-}
-
-.tier-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.tier-btn.featured-btn {
-    background: rgba(0, 240, 255, 0.1);
-    border-color: #00f0ff;
-    color: #00f0ff;
-}
-
-.tier-btn.featured-btn:hover {
-    background: #00f0ff;
-    color: #000;
-    box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
-}
-
-/* ==========================================
-   AUTHENTICATION HUD MODAL & OAUTH
-   ========================================== */
-#auth-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(2, 6, 12, 0.88);
-    backdrop-filter: blur(12px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9998;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.4s ease;
-}
-
-#auth-modal-overlay.active {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-.auth-modal-card {
-    position: relative;
-    width: 90%;
-    max-width: 440px;
-    background: rgba(6, 16, 26, 0.95);
-    border: 1px solid rgba(0, 240, 255, 0.4);
-    box-shadow: 0 0 35px rgba(0, 240, 255, 0.25);
-    padding: 35px 30px;
-    transform: scale(0.9);
-    transition: transform 0.3s ease;
-}
-
-#auth-modal-overlay.active .auth-modal-card {
-    transform: scale(1);
-}
-
-.auth-tabs {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 25px;
-    border-bottom: 1px solid rgba(0, 240, 255, 0.2);
-    padding-bottom: 10px;
-}
-
-.auth-tab {
-    background: transparent;
-    border: none;
-    color: #718096;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 1.1rem;
-    cursor: pointer;
-    letter-spacing: 1px;
-    padding: 5px 10px;
-    transition: all 0.3s ease;
-}
-
-.auth-tab.active {
-    color: #00f0ff;
-    border-bottom: 2px solid #00f0ff;
-    text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
-}
-
-.abort-btn {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    background: transparent;
-    border: none;
-    color: #ff0055;
-    font-size: 1.2rem;
-    cursor: pointer;
-    transition: transform 0.2s ease;
-}
-
-.abort-btn:hover {
-    transform: scale(1.2);
-}
-
-.oauth-divider {
-    position: relative;
-    text-align: center;
-    margin: 25px 0 18px;
-}
-
-.oauth-divider::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    width: 100%;
-    height: 1px;
-    background: rgba(0, 240, 255, 0.2);
-    z-index: 1;
-}
-
-.oauth-divider span {
-    position: relative;
-    z-index: 2;
-    background: #06101a;
-    padding: 0 12px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
-    color: #718096;
-    letter-spacing: 1px;
-}
-
-.oauth-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.oauth-btn {
-    width: 100%;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #ffffff;
-    padding: 12px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.85rem;
-    letter-spacing: 1px;
-    cursor: pointer;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    transition: all 0.3s ease;
-}
-
-.oauth-btn:hover {
-    border-color: #00f0ff;
-    color: #00f0ff;
-    background: rgba(0, 240, 255, 0.1);
-    box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
-}
-
-/* ==========================================
-   RESPONSIVE OVERRIDES
-   ========================================== */
-@media (max-width: 900px) {
-    #spaceship-title-container {
-        top: 90px; /* Increased from 20px to avoid the mobile HUD */
-        left: 20px;
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    .mothership-svg { width: 140px; } /* Decreased from 180px */
-    .tractor-beam-title h1 { font-size: 1.5rem; } /* Decreased from 1.8rem */
-    .tractor-beam-title h1 span { font-size: 1rem; letter-spacing: 6px; } /* Decreased from 1.2rem */
-
-    #auth-corner {
-        top: 15px;
-        right: 15px;
-        padding: 5px 8px;
-    }
-
-    .dock-content {
-        flex-wrap: wrap;
-        justify-content: flex-end;
-        gap: 6px;
-    }
-
-    .dock-divider {
-        display: none;
-    }
-
-    .pricing-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .module-details {
-        width: 85%;
-        max-width: none;
-        padding: 25px;
-    }
-
-    body.landed .module-details {
-        right: 50%;
-        transform: translateX(50%);
-    }
-}
-
-/* ==========================================
-   PERFORMANCE OVERRIDES
-   ========================================== */
-body.landed .orbit,
-body.landed .constellation {
-    animation-play-state: paused !important;
-}
-
-.gas-clouds,
-.lightning-flash {
-    display: none !important;
-}
-
-body.warping * {
-    animation: none !important;
-}
-
-/* ==========================================
-   HIDE CONSTELLATIONS ON MOBILE
-   ========================================== */
-@media (max-width: 768px) {
-    .bull-constellation,
-    .bear-constellation {
-        display: none !important;
-    }
-}
+    background: rgba(255, 215, 0, 0.2);Here is the full updated code for your `index.html` and `script.js` files. 
+
+To ensure the new compact HUD and neon text modifications only appear on mobile devices (and leave the PC version completely untouched), I have wrapped the custom `<style>` block in `index.html` with a `@media (max-width: 768px)` query[cite: 3]. I also updated the initial HTML structure and the `script.js` authentication listener to conditionally render the PC layout (`.dock-content`) for desktops and the new HUD layout (`.hud-bar`) for mobile screens[cite: 2, 3]. 
+
+*(Note: Your `style.css` remains completely untouched as it already contains the correct default PC styling.)*
+
+### 1. `index.html`
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base href="/">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System & Backtest Factory</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
+    <link href="[https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;600;800&family=Damion&display=swap](https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;600;800&family=Damion&display=swap)" rel="stylesheet">
+    
+    <!-- Supabase JS Client SDK -->
+    <script src="[https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2](https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2)"></script>
+
+    <style>
+        /* HIDE ELEMENTS BASED ON DEVICE */
+        @media (min-width: 769px) {
+            .mobile-only { display: none !important; }
+        }
+        @media (max-width: 768px) {
+            .pc-only { display: none !important; }
+            
+            /* COMPACT EXPANDABLE HUD NAVIGATION STYLES (MOBILE ONLY) */
+            #auth-corner {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 1000;
+                background: transparent;
+                border: none;
+                box-shadow: none;
+                padding: 0;
+            }
+
+            .hud-bar {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 10px;
+                background: rgba(4, 12, 20, 0.95);
+                border: 1px solid #00f0ff;
+                border-radius: 10px;
+                box-shadow: 0 0 15px rgba(0, 240, 255, 0.25), inset 0 0 10px rgba(0, 240, 255, 0.1);
+                font-family: 'Share Tech Mono', monospace;
+            }
+
+            .hud-slot {
+                position: relative;
+                display: flex;
+                align-items: center;
+                height: 38px;
+                padding: 0 12px;
+                border-radius: 6px;
+                background: rgba(6, 18, 30, 0.85);
+                border: 1px solid var(--theme-color);
+                overflow: hidden;
+                cursor: pointer;
+                color: var(--theme-color);
+                transition: all 0.25s ease-out 0s;
+            }
+
+            .hud-slot.agent    { --theme-color: #00ff88; --glow: rgba(0, 255, 136, 0.4); }
+            .hud-slot.credits  { --theme-color: #facc15; --glow: rgba(250, 204, 21, 0.4); }
+            .hud-slot.subs     { --theme-color: #eab308; --glow: rgba(234, 179, 8, 0.4); }
+            .hud-slot.reports  { --theme-color: #38bdf8; --glow: rgba(56, 189, 248, 0.4); }
+            .hud-slot.logout   { --theme-color: #f43f5e; --glow: rgba(244, 63, 94, 0.4); }
+
+            .hud-slot::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -150%;
+                width: 70%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+                transform: skewX(-25deg);
+                pointer-events: none;
+                transition: none;
+            }
+
+            .hud-icon-box {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                font-size: 15px;
+                flex-shrink: 0;
+                z-index: 2;
+            }
+
+            .hud-icon-box i {
+                transition: transform 0.2s ease-out 0s;
+            }
+
+            .status-dot {
+                width: 6px;
+                height: 6px;
+                background-color: #00ff88;
+                border-radius: 50%;
+                box-shadow: 0 0 8px #00ff88;
+                flex-shrink: 0;
+            }
+
+            .hud-label-box {
+                display: block;
+                white-space: nowrap;
+                opacity: 0;
+                max-width: 0; 
+                overflow: hidden;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: -1px;
+                transform: scale(0.9);
+                margin-left: 0;
+                z-index: 2;
+                transition: max-width 0.25s ease-out 0s,
+                            opacity 0.2s ease-out 0s,
+                            margin-left 0.2s ease-out 0s,
+                            transform 0.2s ease-out 0s,
+                            letter-spacing 0.2s ease-out 0s;
+            }
+
+            /* For Mobile Touch Open State (replaces hover) */
+            .hud-slot.expanded, .hud-slot.active, .hud-slot.open {
+                box-shadow: 0 0 18px var(--glow), inset 0 0 10px var(--glow);
+                background: rgba(8, 28, 44, 0.95);
+            }
+
+            .hud-slot.expanded .hud-icon-box i {
+                transform: scale(1.15) rotate(-5deg);
+            }
+
+            .hud-slot.expanded .hud-label-box {
+                opacity: 1;
+                max-width: 250px;
+                margin-left: 8px;
+                letter-spacing: 0.8px;
+                transform: scale(1);
+            }
+
+            /* ELEGANT NEON HANDWRITING (MOBILE ONLY) */
+            .vice-text-container {
+                position: fixed;
+                z-index: 999;
+                pointer-events: none;
+                user-select: none;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .vice-text-container.vice-left {
+                bottom: 40px;
+                left: 20px;
+                align-items: flex-start;
+                text-align: left;
+                max-width: 700px;
+            }
+
+            .vice-line {
+                font-family: 'Damion', cursive;
+                font-size: 1.3rem;
+                letter-spacing: 1px;
+                line-height: 1.15;
+                white-space: nowrap;
+                -webkit-text-stroke: 0.8px rgba(255, 255, 255, 0.7);
+                padding-right: 40px;
+                padding-bottom: 20px;
+                padding-top: 10px;
+                margin-bottom: -15px; 
+                opacity: 0;
+                clip-path: inset(-40px 100% -40px -40px);
+            }
+
+            .vice-left .vice-line {
+                font-size: 1.45rem;
+                letter-spacing: 1.2px;
+                line-height: 1.3;
+                -webkit-text-stroke: 0.3px rgba(255, 255, 255, 0.9);
+                margin-bottom: 2px;
+                padding-right: 40px;
+            }
+
+            .vice-line.pink {
+                color: #ff007f;
+                text-shadow: 
+                    0 0 2px #fff,
+                    0 0 8px #ff007f,
+                    0 0 15px #ff0055;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- AUTHENTICATION & SUBSCRIPTION CORNER -->
+    <div id="auth-corner">
+        
+        <!-- PC VIEW DOCK (Original Style) -->
+        <div class="dock-content pc-only">
+            <button class="auth-btn sub-nav-btn" id="nav-subscription-btn-pc">
+                <i class="fa-solid fa-gem"></i> SUBSCRIPTIONS
+            </button>
+            <div class="dock-divider"></div>
+            <button class="auth-btn sign-in" id="nav-signin-pc">
+                <i class="fa-solid fa-user"></i> SIGN IN
+            </button>
+            <button class="auth-btn sign-up cta-btn" id="nav-signup-pc">
+                SIGN UP <i class="fa-solid fa-user-plus"></i>
+            </button>
+        </div>
+
+        <!-- MOBILE VIEW HUD (New Style) -->
+        <div class="hud-bar mobile-only">
+            <div class="hud-slot subs" id="nav-subscription-btn">
+                <div class="hud-icon-box"><i class="fa-solid fa-gem"></i></div>
+                <div class="hud-label-box"><span>SUBSCRIPTIONS</span></div>
+            </div>
+            <div class="hud-slot agent sign-in">
+                <div class="hud-icon-box"><i class="fa-solid fa-user"></i></div>
+                <div class="hud-label-box"><span>SIGN IN</span></div>
+            </div>
+            <div class="hud-slot credits sign-up">
+                <div class="hud-icon-box"><i class="fa-solid fa-user-plus"></i></div>
+                <div class="hud-label-box"><span>SIGN UP</span></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ELEGANT WRITING NEON TEXT (MOBILE ONLY) -->
+    <div class="vice-text-container vice-left mobile-only">
+        <div class="vice-line pink" id="vice-left-1"></div>
+        <div class="vice-line pink" id="vice-left-2"></div>
+    </div>
+
+    <!-- SPACE BACKGROUND MATRIX -->
+    <div id="space-matrix">
+        <canvas id="blackboard-bg"></canvas>
+        <div class="tactical-grid"></div>
+        <div class="stars"></div>
+
+        <div class="constellation bull-constellation">
+            <div class="beast-container">
+                <img src="images/bull-pattern.png" alt="Taurus" class="beast-img">
+                <video muted playsinline class="beast-vid">
+                    <source src="images/bull-animated.webm" type="video/webm">
+                    <source src="images/bull-animated.mp4" type="video/mp4">
+                </video>
+            </div>
+        </div>
+        
+        <div class="constellation bear-constellation">
+            <div class="beast-container">
+                <img src="images/bear-pattern.png" alt="Ursa" class="beast-img">
+                <video muted playsinline class="beast-vid">
+                    <source src="images/bear-animated.webm" type="video/webm">
+                    <source src="images/bear-animated.mp4" type="video/mp4">
+                </video>
+            </div>
+        </div>
+    </div>
+
+    <!-- MOTHERSHIP TITLE DISPLAY -->
+    <div id="spaceship-title-container">
+        <svg class="mothership-svg" viewBox="0 0 220 100" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)">
+            <defs>
+                <linearGradient id="shipHull" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#040912" />
+                    <stop offset="50%" stop-color="#121e2d" />
+                    <stop offset="100%" stop-color="#040912" />
+                </linearGradient>
+                <filter id="cyanGlow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="4" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+                <filter id="magentaGlow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="6" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+            </defs>
+            <polygon class="engine-flame" points="25,43 -10,50 25,57" fill="#ff0055" filter="url(#magentaGlow)"/>
+            <path d="M45,35 L15,10 L75,38 Z" fill="#040912" stroke="#00f0ff" stroke-width="1.5" />
+            <path d="M45,65 L15,90 L75,62 Z" fill="#040912" stroke="#00f0ff" stroke-width="1.5" />
+            <path d="M25,30 L160,45 L185,50 L160,55 L25,70 L50,50 Z" fill="url(#shipHull)" stroke="#00f0ff" stroke-width="2" />
+            <polygon points="100,43 140,47 140,53 100,57" fill="#00f0ff" filter="url(#cyanGlow)" />
+            <circle cx="185" cy="50" r="4" fill="#ffffff" filter="url(#cyanGlow)" />
+            <path d="M165,35 L175,45 L165,48 Z" fill="#ff0055" opacity="0.8" />
+            <path d="M165,65 L175,55 L165,52 Z" fill="#ff0055" opacity="0.8" />
+        </svg>
+        <div class="tractor-beam-title">
+            <h1>SYSTEM & BACKTEST<br><span>FACTORY</span></h1>
+        </div>
+    </div>
+
+    <!-- CAMERA VIEWPORT -->
+    <div id="spaceship-viewport">
+        <section id="solar-system">
+            <div class="btc-sun" id="sun" style="background-image: url('images/btc-coin.png');"></div>
+            <div class="orbit orbit-1"><div class="planet" data-id="backtest" style="background-image: url('images/planet1.png');"><div class="target-reticle"></div><span class="planet-label">Backtest Machine</span></div></div>
+            <div class="orbit orbit-2"><div class="planet" data-id="databank" style="background-image: url('images/planet2.png');"><div class="target-reticle"></div><span class="planet-label">System Databank</span></div></div>
+            <div class="orbit orbit-3"><div class="planet" data-id="about" style="background-image: url('images/planet3.png');"><div class="target-reticle"></div><span class="planet-label">About Us</span></div></div>
+            <div class="orbit orbit-4"><div class="planet" data-id="contact" style="background-image: url('images/planet4.png');"><div class="target-reticle"></div><span class="planet-label">Contact Us</span></div></div>
+            <div class="orbit orbit-5"><div class="planet" data-id="campus" style="background-image: url('images/planet5.png');"><div class="target-reticle"></div><span class="planet-label">Backtesting Campus</span></div></div>
+        </section>
+    </div>
+
+    <!-- HUD MODULE OVERLAY -->
+    <div id="cinematic-overlay">
+        <button id="return-btn"><i class="fa-solid fa-plane-departure"></i> DISENGAGE TRACKING</button>
+        <div class="module-details">
+            <div class="corner-bracket top-left"></div><div class="corner-bracket top-right"></div>
+            <div class="corner-bracket bottom-left"></div><div class="corner-bracket bottom-right"></div>
+            <span class="module-tag" id="module-tag"></span>
+            <h2 id="module-title"></h2>
+            <p id="module-desc"></p>
+            <div class="stats-grid" id="stats-grid"></div>
+            <button class="action-btn" id="module-action-btn">INITIALIZE MODULE <i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+    </div>
+
+    <!-- GAS GIANT FORM ATMOSPHERE -->
+    <div id="gas-giant-atmosphere">
+        <div class="gas-clouds"></div>
+        <div class="lightning-flash"></div>
+        
+        <div class="submission-console">
+            <button id="abort-console-btn"><i class="fa-solid fa-xmark"></i> ABORT UPLINK</button>
+            <div class="console-header">
+                <h2>SYSTEM SUBMISSION PROTOCOL</h2>
+                <p>Deploy your system architecture to our core. Submitting consumes <b>1 Backtest Credit</b> from your account.</p>
+            </div>
+
+            <form id="system-submit-form">
+                <div class="input-group">
+                    <label>SYSTEM DESIGNATION</label>
+                    <input type="text" id="system-name" placeholder="e.g., Mean Reversion Alpha v2" required>
+                </div>
+                <div class="input-group">
+                    <label>CONTACT COMM-LINK (Email)</label>
+                    <input type="email" id="contact-email" placeholder="Where should we send the data analysis?" required>
+                </div>
+                <div class="input-group">
+                    <label>SYSTEM ARCHITECTURE & RULES</label>
+                    <textarea id="system-rules" placeholder="Define your logic. Include entry/exit criteria, timeframes, asset classes, and risk management parameters..." rows="6" required></textarea>
+                </div>
+                <button type="submit" id="submit-btn" class="submit-system-btn">INITIATE DEEP BACKTEST (1 CREDIT) <i class="fa-solid fa-bolt"></i></button>
+            </form>
+        </div>
+    </div>
+
+    <!-- TACTICAL UPLINK SUCCESS / REPORT HUD MODAL -->
+    <div id="tactical-modal-overlay">
+        <div class="tactical-modal-card">
+            <div class="corner-bracket top-left"></div>
+            <div class="corner-bracket top-right"></div>
+            <div class="corner-bracket bottom-left"></div>
+            <div class="corner-bracket bottom-right"></div>
+            
+            <div class="launch-stage">
+                <svg class="rocket-svg" viewBox="0 0 24 24" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" fill="none" stroke="#00ff66" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2l.5-.5m3.43-8.07L16 6l2 2-4.93 4.57m-2.82 2.82L5.5 18l-1.5 1.5M12 12l2 2m4.5-4.5l-2-2m-1-1l3.5-3.5a2.12 2.12 0 0 1 3 3l-3.5 3.5"></path>
+                    <path class="rocket-flame" d="M10 14c-.5.5-.5 1.5 0 2 .5-.5 1.5-.5 2 0-.5-1.5 0-2 0-2"></path>
+                </svg>
+            </div>
+            
+            <div class="modal-status-tag">// TRANSMISSION STATUS: SECURED</div>
+            <h2 id="modal-heading">UPLINK SECURED</h2>
+            <p id="modal-message">System parameters received.</p>
+            <button id="close-modal-btn" class="modal-action-btn">ACKNOWLEDGE & RETURN</button>
+        </div>
+    </div>
+
+    <!-- AUTHENTICATION HUD MODAL & OAUTH -->
+    <div id="auth-modal-overlay">
+        <div class="auth-modal-card">
+            <div class="corner-bracket top-left"></div>
+            <div class="corner-bracket top-right"></div>
+            <div class="corner-bracket bottom-left"></div>
+            <div class="corner-bracket bottom-right"></div>
+            
+            <button id="close-auth-btn" class="abort-btn"><i class="fa-solid fa-xmark"></i></button>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tab-signin">SIGN IN</button>
+                <button class="auth-tab" id="tab-signup">REGISTER</button>
+            </div>
+
+            <form id="auth-form">
+                <div class="input-group" id="username-group" style="display: none;">
+                    <label>CALLSIGN (Username)</label>
+                    <input type="text" id="auth-username" placeholder="Enter operative callsign">
+                </div>
+                <div class="input-group">
+                    <label>ACCESS ID (Email)</label>
+                    <input type="email" id="auth-email" placeholder="example@domain.com" required>
+                </div>
+                <div class="input-group">
+                    <label>SECURITY PASSWORD</label>
+                    <input type="password" id="auth-password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" id="auth-submit-btn" class="modal-action-btn">AUTHENTICATE <i class="fa-solid fa-key"></i></button>
+            </form>
+            
+            <div class="oauth-divider"><span>OR UPLINK WITH</span></div>
+            
+            <div class="oauth-buttons">
+                <button id="google-auth-btn" class="oauth-btn"><i class="fa-brands fa-google"></i> GOOGLE PROTOCOL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUBSCRIPTION MODAL & PRICING TIERS -->
+    <div id="subscription-modal-overlay">
+        <div class="subscription-modal-card">
+            <button id="close-sub-btn" class="abort-btn" style="top: 25px; right: 25px;"><i class="fa-solid fa-xmark"></i></button>
+            
+            <div class="sub-header">
+                <h2>OPERATIONAL TIERS</h2>
+                <p>Acquire tactical backtest credits to continuously deploy strategies to the core architecture.</p>
+            </div>
+
+            <div class="pricing-grid">
+                <!-- TIER 1 -->
+                <div class="tier-card">
+                    <div class="tier-name">INITIATE</div>
+                    <div class="tier-price">$25<span>/mo</span></div>
+                    <div class="tier-desc">Light quantitative analysis for junior researchers.</div>
+                    <ul class="tier-features">
+                        <li><i class="fa-solid fa-check"></i> 5 Backtest Credits /mo</li>
+                        <li><i class="fa-solid fa-check"></i> Standard Data Priority</li>
+                        <li><i class="fa-solid fa-check"></i> Max 2 Yr History Cycle</li>
+                        <li><i class="fa-solid fa-xmark unavailable"></i> No Python Script Export</li>
+                    </ul>
+                    <!-- Insert Stripe Payment Link Here for TIER 1 -->
+                    <button class="tier-btn select-tier-btn" data-price-id="YOUR_STRIPE_PRICE_ID_HERE" data-credits="5" data-mode="subscription" data-plan="Initiate">SUBSCRIBE INITIATE</button>
+                </div>
+
+                <!-- TIER 2 (FEATURED) -->
+                <div class="tier-card featured">
+                    <div class="popular-badge">COMMANDER CHOICE</div>
+                    <div class="tier-name">ARCHITECT</div>
+                    <div class="tier-price">$65<span>/mo</span></div>
+                    <div class="tier-desc">Heavy robust data processing for active strategists.</div>
+                    <ul class="tier-features">
+                        <li><i class="fa-solid fa-check"></i> 15 Backtest Credits /mo</li>
+                        <li><i class="fa-solid fa-check"></i> High Data Priority (Fast)</li>
+                        <li><i class="fa-solid fa-check"></i> Max 5 Yr History Cycle</li>
+                        <li><i class="fa-solid fa-check"></i> AI Optimization Suggestions</li>
+                    </ul>
+                    <!-- Insert Stripe Payment Link Here for TIER 2 -->
+                    <button class="tier-btn featured-btn select-tier-btn" data-price-id="YOUR_STRIPE_PRICE_ID_HERE" data-credits="15" data-mode="subscription" data-plan="Architect">SUBSCRIBE ARCHITECT</button>
+                </div>
+
+                <!-- TIER 3 (ONE TIME / PAY AS YOU GO) -->
+                <div class="tier-card">
+                    <div class="tier-name">PAY-AS-YOU-GO</div>
+                    <div class="tier-price">$10<span>/ea</span></div>
+                    <div class="tier-desc">Deploy single credits without ongoing subscriptions.</div>
+                    <ul class="tier-features">
+                        <li><i class="fa-solid fa-check"></i> 1 Backtest Credit (Lifetime)</li>
+                        <li><i class="fa-solid fa-check"></i> Standard Data Priority</li>
+                        <li><i class="fa-solid fa-check"></i> Max 5 Yr History Cycle</li>
+                        <li><i class="fa-solid fa-check"></i> Full Trade Logs Included</li>
+                    </ul>
+                    <!-- Insert Stripe Payment Link Here for TIER 3 -->
+                    <button class="tier-btn select-tier-btn" data-price-id="YOUR_STRIPE_PRICE_ID_HERE" data-credits="1" data-mode="payment" data-plan="Single Credit">PURCHASE CREDIT</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+</body>
+</html>
