@@ -481,6 +481,8 @@ body.warping #spaceship-title-container {
     will-change: transform;
     transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform-style: preserve-3d;
     perspective: 1000px;
 }
 
@@ -548,6 +550,8 @@ body.warping #spaceship-title-container {
     transform: translateX(-50%) translate3d(0, 0, 0);
     will-change: transform;
     backface-visibility: hidden;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
 }
 
 .planet::before {
