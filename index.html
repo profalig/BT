@@ -192,44 +192,6 @@
                 0 0 8px #ff007f,
                 0 0 15px #ff0055;
         }
-
-        /* CANVAS SPACE MATRIX OVERRIDES FOR HIGH FPS */
-        #space-matrix {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 0;
-            pointer-events: none;
-        }
-
-        #blackboard-bg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: block;
-            z-index: 1;
-        }
-
-        /* LIGHTWEIGHT DOM SOLAR SYSTEM OVERLAY */
-        #solar-system {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            pointer-events: none;
-        }
-
-        .btc-sun, .planet {
-            position: absolute;
-            pointer-events: auto;
-            transform: translate(-50%, -50%);
-            will-change: transform;
-        }
     </style>
 </head>
 <body>
@@ -296,10 +258,11 @@
         <div class="vice-line pink" id="vice-left-2"></div>
     </div>
 
-    <!-- HARDWARE ACCELERATED CANVAS SPACE MATRIX -->
+    <!-- SPACE BACKGROUND MATRIX -->
     <div id="space-matrix">
         <canvas id="blackboard-bg"></canvas>
         <div class="tactical-grid"></div>
+        <div class="stars"></div>
 
         <div class="constellation bull-constellation">
             <div class="beast-container">
@@ -358,28 +321,11 @@
     <div id="spaceship-viewport">
         <section id="solar-system">
             <div class="btc-sun" id="sun" style="background-image: url('images/btc-coin.png');"></div>
-            
-            <!-- PLANETS (DOM Interactivity Overlay synced via Canvas Math Engine) -->
-            <div class="planet" data-id="backtest" style="background-image: url('images/planet1.png');">
-                <div class="target-reticle"></div>
-                <span class="planet-label">Backtest Machine</span>
-            </div>
-            <div class="planet" data-id="databank" style="background-image: url('images/planet2.png');">
-                <div class="target-reticle"></div>
-                <span class="planet-label">System Databank</span>
-            </div>
-            <div class="planet" data-id="about" style="background-image: url('images/planet3.png');">
-                <div class="target-reticle"></div>
-                <span class="planet-label">About Us</span>
-            </div>
-            <div class="planet" data-id="contact" style="background-image: url('images/planet4.png');">
-                <div class="target-reticle"></div>
-                <span class="planet-label">Contact Us</span>
-            </div>
-            <div class="planet" data-id="campus" style="background-image: url('images/planet5.png');">
-                <div class="target-reticle"></div>
-                <span class="planet-label">Backtesting Campus</span>
-            </div>
+            <div class="orbit orbit-1"><div class="planet" data-id="backtest" style="background-image: url('images/planet1.png');"><div class="target-reticle"></div><span class="planet-label">Backtest Machine</span></div></div>
+            <div class="orbit orbit-2"><div class="planet" data-id="databank" style="background-image: url('images/planet2.png');"><div class="target-reticle"></div><span class="planet-label">System Databank</span></div></div>
+            <div class="orbit orbit-3"><div class="planet" data-id="about" style="background-image: url('images/planet3.png');"><div class="target-reticle"></div><span class="planet-label">About Us</span></div></div>
+            <div class="orbit orbit-4"><div class="planet" data-id="contact" style="background-image: url('images/planet4.png');"><div class="target-reticle"></div><span class="planet-label">Contact Us</span></div></div>
+            <div class="orbit orbit-5"><div class="planet" data-id="campus" style="background-image: url('images/planet5.png');"><div class="target-reticle"></div><span class="planet-label">Backtesting Campus</span></div></div>
         </section>
     </div>
 
@@ -551,123 +497,6 @@
             </div>
         </div>
     </div>
-
-    <!-- HARDWARE ACCELERATED CANVAS ORBIT & SPACE ENGINE -->
-    <script>
-        class CanvasSpaceEngine {
-            constructor() {
-                this.canvas = document.getElementById('blackboard-bg');
-                this.ctx = this.canvas.getContext('2d');
-                this.dpr = window.devicePixelRatio || 1;
-                
-                this.stars = [];
-                this.numStars = 220;
-                
-                this.planets = [
-                    { id: 'backtest', orbitRatio: 0.15, speed: 0.008, angle: 0 },
-                    { id: 'databank', orbitRatio: 0.22, speed: 0.006, angle: 1.2 },
-                    { id: 'about',    orbitRatio: 0.30, speed: 0.004, angle: 2.5 },
-                    { id: 'contact',  orbitRatio: 0.38, speed: 0.003, angle: 3.8 },
-                    { id: 'campus',   orbitRatio: 0.45, speed: 0.002, angle: 5.0 }
-                ];
-
-                this.init();
-            }
-
-            init() {
-                this.resize();
-                window.addEventListener('resize', () => this.resize());
-                
-                // Build Stars
-                for (let i = 0; i < this.numStars; i++) {
-                    this.stars.push({
-                        x: Math.random() * this.width,
-                        y: Math.random() * this.height,
-                        radius: Math.random() * 1.5 + 0.5,
-                        alpha: Math.random(),
-                        speed: Math.random() * 0.015 + 0.005
-                    });
-                }
-
-                // Place BTC Sun in viewport center
-                const sunEl = document.getElementById('sun');
-                if (sunEl) {
-                    sunEl.style.left = '50%';
-                    sunEl.style.top = '50%';
-                }
-
-                this.loop();
-            }
-
-            resize() {
-                this.width = window.innerWidth;
-                this.height = window.innerHeight;
-                this.canvas.width = this.width * this.dpr;
-                this.canvas.height = this.height * this.dpr;
-                this.canvas.style.width = `${this.width}px`;
-                this.canvas.style.height = `${this.height}px`;
-                this.ctx.scale(this.dpr, this.dpr);
-            }
-
-            drawStarfield() {
-                this.ctx.fillStyle = '#000000';
-                this.ctx.fillRect(0, 0, this.width, this.height);
-
-                for (let star of this.stars) {
-                    star.alpha += star.speed;
-                    if (star.alpha > 1 || star.alpha < 0) star.speed = -star.speed;
-
-                    this.ctx.beginPath();
-                    this.ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-                    this.ctx.fillStyle = `rgba(255, 255, 255, ${Math.abs(star.alpha)})`;
-                    this.ctx.fill();
-                }
-            }
-
-            drawOrbitsAndPositionPlanets() {
-                const centerX = this.width / 2;
-                const centerY = this.height / 2;
-                const minDimension = Math.min(this.width, this.height);
-
-                this.planets.forEach(planet => {
-                    const radius = minDimension * planet.orbitRatio;
-
-                    // Draw Orbit Ring via Canvas Vectors (No DOM repaint lag)
-                    this.ctx.beginPath();
-                    this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                    this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.12)';
-                    this.ctx.lineWidth = 1;
-                    this.ctx.setLineDash([4, 6]);
-                    this.ctx.stroke();
-                    this.ctx.setLineDash([]);
-
-                    // Update angle
-                    planet.angle += planet.speed;
-
-                    // Calculate 2D Coordinate
-                    const x = centerX + radius * Math.cos(planet.angle);
-                    const y = centerY + radius * Math.sin(planet.angle);
-
-                    // Sync DOM planet target
-                    const domEl = document.querySelector(`.planet[data-id="${planet.id}"]`);
-                    if (domEl) {
-                        domEl.style.left = `${x}px`;
-                        domEl.style.top = `${y}px`;
-                    }
-                });
-            }
-
-            loop() {
-                this.drawStarfield();
-                this.drawOrbitsAndPositionPlanets();
-                requestAnimationFrame(() => this.loop());
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            window.spaceEngine = new CanvasSpaceEngine();
-        });
-    </script>
 
     <script src="app.js"></script>
     <script>
