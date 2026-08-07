@@ -354,7 +354,6 @@ async function fetchOrCreateUserProfile(user) {
 
         if (!profile) {
             console.log("Creating new user profile with 1 Free Credit for User:", user.id);
-            // Modified: Added the 'email' field back into the payload
             const { data: newProfile, error: createError } = await supabaseClient
                 .from('user_profiles')
                 .insert([{ 
@@ -519,6 +518,45 @@ async function openUserReportsModal() {
         showTacticalModal('FETCH ERROR', err.message, false);
     }
 }
+
+// ==========================================
+// MOBILE HUD DOUBLE-TOUCH ENGINE
+// ==========================================
+// On phone screens, 1st tap opens/expands the HUD slot bar, 2nd tap triggers the action ("goes in").
+document.addEventListener('click', (e) => {
+    const isMobile = window.innerWidth <= 768;
+    if (!isMobile) return;
+
+    const slot = e.target.closest('.hud-slot');
+
+    if (slot) {
+        // If slot is not currently expanded/active, first tap expands the bar and intercepts action
+        if (!slot.classList.contains('expanded') && !slot.classList.contains('active') && !slot.classList.contains('open')) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+
+            // Close all other open HUD slots
+            document.querySelectorAll('.hud-slot').forEach(s => {
+                s.classList.remove('expanded', 'active', 'open');
+            });
+
+            // Open this slot / bar
+            slot.classList.add('expanded', 'active', 'open');
+            slot.closest('.hud-bar')?.classList.add('open');
+        } else {
+            // Second tap: Already open! Allow normal action execution ("goes in")
+        }
+    } else {
+        // Tapping outside HUD slots: collapse all open HUD bars
+        document.querySelectorAll('.hud-slot').forEach(s => {
+            s.classList.remove('expanded', 'active', 'open');
+        });
+        document.querySelectorAll('.hud-bar').forEach(bar => {
+            bar.classList.remove('open');
+        });
+    }
+}, true);
 
 // ==========================================
 // APPLICATION INITIALIZATION & AUTHENTICATION ENGINE
