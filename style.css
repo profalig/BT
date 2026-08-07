@@ -496,9 +496,6 @@ body.warping #spaceship-title-container {
     transform: translate3d(0, 0, 0);
 }
 
-/* ==========================================
-   OPTIMIZED SUN ELEMENT (UNBLURRED)
-   ========================================== */
 .btc-sun {
     position: absolute;
     width: 13vmin;
@@ -511,16 +508,10 @@ body.warping #spaceship-title-container {
     cursor: pointer;
     filter: drop-shadow(0 0 18px rgba(255, 215, 0, 0.4));
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease;
-    will-change: transform, filter;
-    transform: translate3d(0, 0, 0);
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
 }
 
 .btc-sun:hover {
-    transform: scale(1.12) translate3d(0, 0, 0);
+    transform: scale(1.12);
     filter: drop-shadow(0 0 25px rgba(255, 215, 0, 0.95)) drop-shadow(0 0 50px rgba(255, 140, 0, 0.7));
 }
 
@@ -645,12 +636,12 @@ body.warping #spaceship-title-container {
 .module-details {
     position: absolute;
     right: -60%;
-    width: 32%;
-    max-width: 420px;
+    width: 32%;             /* Reduced from 40% */
+    max-width: 420px;       /* Reduced from 550px for a tighter horizontal profile */
     background: rgba(4, 9, 18, 0.95);
     border: 1px solid rgba(0, 240, 255, 0.3);
     border-left: 4px solid #00f0ff;
-    padding: 25px 30px;
+    padding: 25px 30px;     /* Compacted internal padding */
     opacity: 0;
     transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
     box-shadow: 0 20px 60px rgba(0,0,0,0.9);
@@ -673,7 +664,7 @@ body.warping #spaceship-title-container {
 }
 
 .module-details h2 { 
-    font-size: 1.8rem;
+    font-size: 1.8rem;      /* Reduced title scale from 2.5rem */
     margin-bottom: 10px; 
     text-transform: uppercase; 
     font-weight: 800; 
@@ -681,7 +672,7 @@ body.warping #spaceship-title-container {
 }
 
 .module-details p { 
-    font-size: 0.88rem;
+    font-size: 0.88rem;     /* Scaled text font size */
     line-height: 1.5; 
     margin-bottom: 20px; 
     color: #a3b8cc; 
@@ -707,9 +698,9 @@ body.warping #spaceship-title-container {
 
 #return-btn {
     position: absolute;
-    top: 40px;
+    top: 40px;              /* Repositioned cleanly in top-left viewport */
     left: 40px;
-    z-index: 700;
+    z-index: 700;           /* High z-index to guarantee button stays on top */
     background: rgba(4, 9, 18, 0.95);
     color: #00f0ff;
     border: 1px solid #00f0ff;
@@ -758,7 +749,7 @@ body.warping #spaceship-title-container {
 /* Active Landed States */
 body.landed #cinematic-overlay { pointer-events: all; }
 body.landed #return-btn { opacity: 1; }
-body.landed .module-details { right: 5%; opacity: 1; }
+body.landed .module-details { right: 5%; opacity: 1; }  /* Positioned neatly away from canvas center */
 
 /* Hide UI Overlays on Planet Touch / Landing */
 body.landed #spaceship-title-container,
