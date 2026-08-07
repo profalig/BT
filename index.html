@@ -172,9 +172,9 @@
             text-align: right;
         }
 
-        /* Bottom Left Container - Expanded for larger text */
+        /* Bottom Left Container - Brought lower */
         .vice-text-container.vice-left {
-            bottom: 40px;
+            bottom: 20px; 
             left: 50px;
             align-items: flex-start;
             text-align: left;
@@ -183,30 +183,27 @@
 
         .vice-line {
             font-family: 'Damion', cursive;
-            font-size: 1.3rem; /* Scaled down exactly in half from 2.6rem */
+            font-size: 1.3rem; 
             letter-spacing: 1px;
             line-height: 1.15;
             white-space: nowrap;
-            /* Added a crisp border stroke to make the letters perfectly visible */
             -webkit-text-stroke: 0.8px rgba(255, 255, 255, 0.7);
-            /* Expanded bounding box padding so the neon glow isn't cut off by the clip-path */
             padding-right: 40px;
             padding-bottom: 20px;
             padding-top: 10px;
             margin-bottom: -15px; 
             
-            /* Default hidden state for the custom JS clip-path reveal */
             opacity: 0;
             clip-path: inset(-40px 100% -40px -40px);
         }
 
-        /* Adjusted left text for sharper readability */
+        /* Adjusted left text - Brought lines closer */
         .vice-left .vice-line {
             font-size: 1.45rem;
             letter-spacing: 1.2px;
-            line-height: 1.3;
+            line-height: 1.1;
             -webkit-text-stroke: 0.3px rgba(255, 255, 255, 0.9);
-            margin-bottom: 2px;
+            margin-bottom: -12px;
             padding-right: 40px;
         }
 
@@ -499,18 +496,18 @@
                     <div class="tier-price" style="color: #ffd700;">$199 <span>/ mo</span></div>
                     <p class="tier-desc">Full access monthly pass for dedicated quant engineers & funds.</p>
                     <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> Maximum 40 Backtests</li>
-                        <li><i class="fa-solid fa-check"></i> Full Access to Engine</li>
-                        <li><i class="fa-solid fa-check"></i> 1-on-1 Quant Desk Support</li>
-                        <li><i class="fa-solid fa-check"></i> Databank Priority Access</li>
+                        <li><i class="fa-solid fa-check"></i> Unlimited Backtests</li>
+                        <li><i class="fa-solid fa-check"></i> Highest Priority Core Queue</li>
+                        <li><i class="fa-solid fa-check"></i> Dedicated Quant Engineer Link</li>
+                        <li><i class="fa-solid fa-check"></i> Custom API Deployment</li>
                     </ul>
-                    <button class="tier-btn select-tier-btn" data-plan="Quant Monthly Pass" data-price-id="price_1U16RuCWCAQzKASW1SCBeQhn" data-credits="40" data-mode="subscription" style="border-color:#ffd700; color:#ffd700;"><i class="fa-solid fa-crown"></i> UNLOCK MONTHLY PASS</button>
+                    <button class="tier-btn select-tier-btn" style="border-color: #ffd700; color: #ffd700;" data-plan="Quant Monthly" data-price-id="price_1QxZ2sCWCAQzKASWS6bQxG2C" data-credits="Unlimited" data-mode="subscription">SUBSCRIBE NOW</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- AUTHENTICATION HUD MODAL -->
+    <!-- AUTHENTICATION (OAUTH ONLY) HUD MODAL -->
     <div id="auth-modal-overlay">
         <div class="auth-modal-card">
             <button id="close-auth-btn" class="abort-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -519,96 +516,86 @@
             <div class="corner-bracket bottom-left"></div>
             <div class="corner-bracket bottom-right"></div>
 
-            <div class="auth-tabs">
-                <button type="button" class="auth-tab active" id="tab-signin">SIGN IN</button>
-                <button type="button" class="auth-tab" id="tab-signup">SIGN UP</button>
+            <div class="sub-header" style="margin-bottom: 15px;">
+                <div class="modal-status-tag">// AGENT IDENTIFICATION REQUIRED</div>
+                <h2>LOGIN TO MOTHERSHIP</h2>
             </div>
 
-            <form id="auth-form">
-                <div class="input-group" id="username-group" style="display: none;">
-                    <label>CALLSIGN (Username)</label>
-                    <input type="text" id="auth-username" placeholder="e.g. QuantTrader_99">
-                </div>
-                <div class="input-group">
-                    <label>ACCESS ID (Email)</label>
-                    <input type="email" id="auth-email" placeholder="agent@quant.io" required>
-                </div>
-                <div class="input-group">
-                    <label>SECURITY CLEARANCE (Password)</label>
-                    <input type="password" id="auth-password" placeholder="••••••••••••" required>
-                </div>
-                <button type="submit" id="auth-submit-btn" class="submit-system-btn">AUTHENTICATE <i class="fa-solid fa-key"></i></button>
-            </form>
-
-            <div class="oauth-divider"><span>OR UPLINK WITH</span></div>
+            <div class="oauth-divider" style="margin-top: 5px;">
+                <span>SECURE OAUTH TERMINALS</span>
+            </div>
+            
             <div class="oauth-buttons">
-                <button type="button" id="google-auth-btn" class="oauth-btn google"><i class="fa-brands fa-google"></i> SIGN IN WITH GOOGLE</button>
+                <button class="oauth-btn google-oauth-btn">
+                    <i class="fa-brands fa-google" style="color: #ea4335;"></i> INITIATE GOOGLE UPLINK
+                </button>
+                <button class="oauth-btn github-oauth-btn">
+                    <i class="fa-brands fa-github"></i> INITIATE GITHUB UPLINK
+                </button>
             </div>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="script.js"></script>
+
     <script>
-        // ========================================================
-        // ELEGANT "INVISIBLE PEN" SMOOTH WRITING ENGINE
-        // ========================================================
-        
-        async function runBlockWriting(elements, holdTime = 3200, fadeTime = 800) {
-            // Initialize HTML content & find elements
-            const els = elements.map(item => {
-                const el = document.getElementById(item.id);
-                if(el) el.innerHTML = item.text;
-                return { el, ...item };
-            }).filter(item => item.el);
-
-            if(els.length === 0) return;
-
-            while (true) {
-                // 1. Instantly reset all text blocks to be hidden (but keeping the glow bounds)
-                for (const item of els) {
-                    item.el.style.transition = 'none';
-                    item.el.style.opacity = '1';
-                    item.el.style.clipPath = 'inset(-40px 100% -40px -40px)';
+        /* ===================================================
+           ELEGANT NEON WRITING ANIMATION CONTROLLER
+           =================================================== */
+        document.addEventListener('DOMContentLoaded', () => {
+            const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+            
+            function animateHandwriting(elementId, text, totalDuration) {
+                const element = document.getElementById(elementId);
+                if (!element) return;
+                
+                element.textContent = text;
+                element.style.opacity = 1;
+                
+                let start = null;
+                
+                function step(timestamp) {
+                    if (!start) start = timestamp;
+                    const progress = timestamp - start;
+                    const ratio = Math.min(progress / totalDuration, 1);
+                    const eased = easeOutCubic(ratio);
+                    
+                    const p = -40 + (eased * 140);
+                    element.style.clipPath = `inset(-40px ${100 - p}% -40px -40px)`;
+                    
+                    if (progress < totalDuration) {
+                        requestAnimationFrame(step);
+                    } else {
+                        element.style.clipPath = `inset(-40px -40px -40px -40px)`;
+                    }
                 }
                 
-                // Force a browser repaint so the reset applies before animating
-                void els[0].el.offsetWidth;
-
-                // 2. Write each line sequentially using a smooth, organic reveal speed
-                for (const item of els) {
-                    item.el.style.transition = `clip-path ${item.duration}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`;
-                    item.el.style.clipPath = 'inset(-40px -40px -40px -40px)';
-                    
-                    // Wait for line to finish writing plus a tiny pause before the next line
-                    await new Promise(res => setTimeout(res, item.duration + 150));
-                }
-
-                // 3. Hold the entire block so it can be read
-                await new Promise(res => setTimeout(res, holdTime));
-
-                // 4. Elegantly fade out the whole block at once
-                for (const item of els) {
-                    item.el.style.transition = `opacity ${fadeTime}ms ease-out`;
-                    item.el.style.opacity = '0';
-                }
-
-                // Wait for the fade out to finish plus a gap before looping
-                await new Promise(res => setTimeout(res, fadeTime + 600));
+                requestAnimationFrame(step);
             }
-        }
 
-        document.addEventListener('DOMContentLoaded', () => {
+            function runBlockWriting(lines, delay, pauseBetweenLines) {
+                setTimeout(() => {
+                    let cumulativeDelay = 0;
+                    lines.forEach(lineConfig => {
+                        setTimeout(() => {
+                            animateHandwriting(lineConfig.id, lineConfig.text, lineConfig.duration);
+                        }, cumulativeDelay);
+                        cumulativeDelay += lineConfig.duration + pauseBetweenLines;
+                    });
+                }, delay);
+            }
+
             // Right Side Sequence
             runBlockWriting([
-                { id: 'vice-right-1', text: 'Deep Backtest', duration: 1100 },
-                { id: 'vice-right-2', text: 'In detail report', duration: 1300 },
-                { id: 'vice-right-3', text: 'Crush it G 🚀', duration: 1000 }
-            ], 3500, 1000);
+                { id: 'vice-right-1', text: 'You Need an Edge,', duration: 1800 },
+                { id: 'vice-right-2', text: 'We Test Your Edge', duration: 1600 },
+                { id: 'vice-right-3', text: 'To Make You Unbeatable.', duration: 2000 }
+            ], 500, 1000);
 
-            // Left Side Sequence (UPDATED)
+            // Left Side Sequence (UPDATED: Clean two-line format)
             runBlockWriting([
-                { id: 'vice-left-1', text: 'Test The Reliability of Your System', duration: 1600 },
-                { id: 'vice-left-2', text: 'Become a Systematic Millionair Trader', duration: 2200 }
+                { id: 'vice-left-1', text: 'Test The Reliability', duration: 1600 },
+                { id: 'vice-left-2', text: 'Of Your System', duration: 1600 }
             ], 4500, 1000);
         });
     </script>
