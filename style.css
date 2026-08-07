@@ -1330,6 +1330,11 @@ body.landed .module-details { right: 8%; opacity: 1; }
    RESPONSIVE OVERRIDES
    ========================================== */
 @media (max-width: 900px) {
+    /* Hide top-right HUD when landed on a planet view */
+    body.landed #auth-corner {
+        display: none !important;
+    }
+
     #spaceship-title-container {
         top: 90px; /* Increased from 20px to avoid the mobile HUD */
         left: 20px;
