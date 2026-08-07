@@ -1331,14 +1331,14 @@ body.landed .module-details { right: 8%; opacity: 1; }
    ========================================== */
 @media (max-width: 900px) {
     #spaceship-title-container {
-        top: 20px;
+        top: 90px; /* Increased from 20px to avoid the mobile HUD */
         left: 20px;
         flex-direction: column;
         align-items: flex-start;
     }
-    .mothership-svg { width: 180px; }
-    .tractor-beam-title h1 { font-size: 1.8rem; }
-    .tractor-beam-title h1 span { font-size: 1.2rem; letter-spacing: 6px; }
+    .mothership-svg { width: 140px; } /* Decreased from 180px */
+    .tractor-beam-title h1 { font-size: 1.5rem; } /* Decreased from 1.8rem */
+    .tractor-beam-title h1 span { font-size: 1rem; letter-spacing: 6px; } /* Decreased from 1.2rem */
 
     #auth-corner {
         top: 15px;
