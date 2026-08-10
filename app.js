@@ -10,7 +10,7 @@ const planetData = {
     databank: {
         tag: "VAULT // SEC-02", title: "System Databank", color: "#00ffff",
         desc: "Here we present quantitative trading systems that demonstrate high potential and surface-level profitability. However, initial light-layer ideas are just the beginning.<br><br>These concepts must be rigorously checked by the user in our Backtest Machine for deep statistical data analysis before being considered reliable for live trading. This magnificent databank is currently under active development by our engineering team.",
-        stats: [{ label: "STATUS", val: "Active Vault" }, { label: "SYSTEMS", val: "Curating" }, { label: "VALIDATION", val: "Required" }, { label: "POTENTIAL", val: "High" }]
+        stats: [{ label: "STATUS", val: "Under Dev" }, { label: "SYSTEMS", val: "Curating" }, { label: "VALIDATION", val: "Required" }, { label: "POTENTIAL", val: "High" }]
     },
     about: {
         tag: "IDENTITY // SEC-03", title: "About The Factory", color: "#b700ff",
@@ -178,82 +178,27 @@ actionBtn.addEventListener('click', () => {
             if (gasAtmosphere) gasAtmosphere.classList.add('active');
         }, 800);
     } else if (activePlanetData.id === 'databank') {
-        // MODIFIED TO OPEN THE NEW DATABANK MODAL
-        isHyperZoomed = true;
-        document.body.classList.remove('landed');
-        const titleContainer = document.getElementById('spaceship-title-container');
-        const authCorner = document.getElementById('auth-corner');
-        if (titleContainer) titleContainer.style.opacity = '0';
-        if (authCorner) authCorner.style.opacity = '0';
-        
-        setTimeout(() => {
-            const databankOverlay = document.getElementById('databank-overlay');
-            if (databankOverlay) databankOverlay.classList.add('active');
-        }, 800);
+        showTacticalModal('SYSTEM DATABANK', 'The System Databank is currently under active development. High-edge quantitative strategy models will be released soon.', true);
     } else if (activePlanetData.id === 'campus') {
         showTacticalModal('BACKTESTING CAMPUS', 'Enrolling now for the upcoming Quantitative Engineering cohort. Contact our engineering desk via SEC-04 to apply.', true);
     }
 });
 
-// ABORT CONSOLE / DATABANK BUTTONS
+// ABORT CONSOLE BUTTON
 const abortConsoleBtn = document.getElementById('abort-console-btn');
-const abortDatabankBtn = document.getElementById('abort-databank-btn');
-
-function resetHyperZoomOverlay(overlayId) {
-    const overlay = document.getElementById(overlayId);
-    if (overlay) overlay.classList.remove('active');
-    isHyperZoomed = false;
-    
-    setTimeout(() => {
-        document.body.classList.add('landed');
-        const titleContainer = document.getElementById('spaceship-title-container');
-        const authCorner = document.getElementById('auth-corner');
-        if (titleContainer) titleContainer.style.opacity = '1';
-        if (authCorner) authCorner.style.opacity = '1';
-    }, 600);
-}
-
 if (abortConsoleBtn) {
-    abortConsoleBtn.addEventListener('click', () => resetHyperZoomOverlay('gas-giant-atmosphere'));
-}
-if (abortDatabankBtn) {
-    abortDatabankBtn.addEventListener('click', () => resetHyperZoomOverlay('databank-overlay'));
-}
-
-// ==========================================
-// SYSTEM DATABANK FORM LOGIC (NEW)
-// ==========================================
-const databankForm = document.getElementById('add-system-form');
-const systemsListContainer = document.getElementById('systems-list-container');
-
-if (databankForm) {
-    databankForm.addEventListener('submit', (e) => {
-        e.preventDefault();
+    abortConsoleBtn.addEventListener('click', () => {
+        const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
+        if (gasAtmosphere) gasAtmosphere.classList.remove('active');
+        isHyperZoomed = false;
         
-        const sysName = document.getElementById('db-sys-name').value.trim();
-        const sysDesc = document.getElementById('db-sys-desc').value.trim();
-        const sysResult = document.getElementById('db-sys-result').value.trim();
-
-        if (sysName && sysDesc && sysResult) {
-            // Create New System Card
-            const newCard = document.createElement('div');
-            newCard.className = 'system-card';
-            newCard.style.cssText = 'background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(0, 240, 255, 0.3); padding: 15px; margin-bottom: 15px; border-radius: 6px; animation: scaleIn 0.3s ease;';
-            
-            newCard.innerHTML = `
-                <h3 style="color: #00f0ff; font-family: 'Share Tech Mono', monospace; margin-bottom: 8px;">${sysName}</h3>
-                <p style="color: #a3b8cc; font-size: 0.85rem; margin-bottom: 8px;">${sysDesc}</p>
-                <div style="color: #00ff66; font-weight: bold; font-size: 0.9rem; font-family: 'Share Tech Mono', monospace;">Monthly Result: ${sysResult}</div>
-            `;
-            
-            // Prepend so it shows up at the top
-            systemsListContainer.prepend(newCard);
-
-            // Reset Form Inputs
-            databankForm.reset();
-            
-            showTacticalModal('SYSTEM DATABANK UPLINK', 'Your system architecture was successfully added to the Databank Vault.', true);
-        }
+        setTimeout(() => {
+            document.body.classList.add('landed');
+            const titleContainer = document.getElementById('spaceship-title-container');
+            const authCorner = document.getElementById('auth-corner');
+            if (titleContainer) titleContainer.style.opacity = '1';
+            if (authCorner) authCorner.style.opacity = '1';
+        }, 600);
     });
 }
 
@@ -403,7 +348,7 @@ function closeSubscriptionModal() {
 // SUPABASE CLIENT INITIALIZATION
 // ==========================================
 const SUPABASE_URL = 'https://woxswhiayrkecspebuwb.supabase.co';
-const SUPABASE_ANON_KEY = 'YOUR_KEY_HERE'; // Keep this identical to what you had before.
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndveHN3aGlheXJrZWNzcGVidXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTc5ODYsImV4cCI6MjEwMDk5Mzk4Nn0.faEmt5_tw6dN9Cs-pKJHa9D0yyEBbAl4oT0Y9QWYuFg';
 
 let supabaseClient = null;
 if (window.supabase) {
@@ -646,6 +591,71 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navSubBtn) navSubBtn.addEventListener('click', openSubscriptionModal);
     if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
 
+    // STRIPE CHECKOUT INTEGRATION LOGIC
+    document.querySelectorAll('.select-tier-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const button = e.currentTarget;
+            const priceId = button.getAttribute('data-price-id');
+            const creditsToAdd = button.getAttribute('data-credits') || '0';
+            const mode = button.getAttribute('data-mode') || 'subscription';
+            const planName = button.getAttribute('data-plan') || 'Plan';
+
+            if (!priceId || priceId.includes('ID_HERE')) {
+                showTacticalModal('CONFIGURATION NOTICE', `Stripe Price ID for ${planName} is missing. Update the <code>data-price-id</code> attribute in index.html.`, false);
+                return;
+            }
+
+            if (!supabaseClient) {
+                showTacticalModal('SYSTEM ERROR', 'Supabase authentication client is unavailable.', false);
+                return;
+            }
+
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session || !session.user) {
+                closeSubscriptionModal();
+                showTacticalModal('AUTHENTICATION REQUIRED', 'Please sign in or register an account before proceeding to Stripe Checkout.', false);
+                setAuthMode('signin');
+                if (authModal) authModal.classList.add('active');
+                return;
+            }
+
+            const originalBtnHtml = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> UPLINKING TO STRIPE...';
+
+            try {
+                const backendServerUrl = 'https://backtest-worker-fs1a.onrender.com';
+                const response = await fetch(`${backendServerUrl}/create-checkout-session`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        priceId: priceId,
+                        userId: session.user.id,
+                        creditsToAdd: parseInt(creditsToAdd, 10),
+                        mode: mode
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || 'Failed to initialize Stripe Checkout session.');
+                }
+
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    throw new Error('No checkout URL returned from server gateway.');
+                }
+            } catch (err) {
+                console.error('Stripe Uplink Error:', err);
+                showTacticalModal('GATEWAY ERROR', err.message, false);
+                button.disabled = false;
+                button.innerHTML = originalBtnHtml;
+            }
+        });
+    });
+
     // CLOSE MODAL LOGIC
     if (closeModalBtn) {
         closeModalBtn.addEventListener('click', () => {
@@ -654,9 +664,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
             if (gasAtmosphere) gasAtmosphere.classList.remove('active');
-            
-            const databankOverlay = document.getElementById('databank-overlay');
-            if (databankOverlay) databankOverlay.classList.remove('active');
             
             isHyperZoomed = false;
 

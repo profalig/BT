@@ -761,9 +761,9 @@ body.landed .constellation {
 }
 
 /* ==========================================
-   GAS GIANT ATMOSPHERE (BACKTEST FORM) & DATABANK FORM
+   GAS GIANT ATMOSPHERE (BACKTEST FORM)
    ========================================== */
-#gas-giant-atmosphere, #databank-overlay {
+#gas-giant-atmosphere {
     position: fixed;
     top: 0;
     left: 0;
@@ -780,7 +780,7 @@ body.landed .constellation {
     overflow: hidden;
 }
 
-#gas-giant-atmosphere.active, #databank-overlay.active {
+#gas-giant-atmosphere.active {
     opacity: 1;
     pointer-events: all;
 }
@@ -801,16 +801,11 @@ body.landed .constellation {
     will-change: transform;
 }
 
-#databank-overlay .submission-console {
-    border-color: rgba(0, 240, 255, 0.4);
-    border-top-color: #00f0ff;
-}
-
-#gas-giant-atmosphere.active .submission-console, #databank-overlay.active .submission-console {
+#gas-giant-atmosphere.active .submission-console {
     transform: translateY(0) scale(1);
 }
 
-#abort-console-btn, #abort-databank-btn {
+#abort-console-btn {
     position: absolute;
     top: 20px;
     right: 20px;
@@ -824,7 +819,7 @@ body.landed .constellation {
     transition: all 0.3s ease;
 }
 
-#abort-console-btn:hover, #abort-databank-btn:hover { background: #ff0055; color: #fff; box-shadow: 0 0 15px rgba(255,0,85,0.5); }
+#abort-console-btn:hover { background: #ff0055; color: #fff; box-shadow: 0 0 15px rgba(255,0,85,0.5); }
 
 .console-header h2 {
     font-family: 'Share Tech Mono', monospace;
@@ -868,11 +863,6 @@ body.landed .constellation {
     box-shadow: 0 0 15px rgba(0,255,102,0.2);
 }
 
-#databank-overlay .input-group input:focus, #databank-overlay .input-group textarea:focus {
-    border-color: #00f0ff;
-    box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
-}
-
 .submit-system-btn {
     width: 100%;
     background: rgba(0, 255, 102, 0.1);
@@ -892,12 +882,6 @@ body.landed .constellation {
     background: #00ff66;
     color: #000;
     box-shadow: 0 0 25px rgba(0,255,102,0.6);
-}
-
-#databank-overlay .submit-system-btn:hover {
-    background: #00f0ff !important;
-    color: #000 !important;
-    box-shadow: 0 0 25px rgba(0,240,255,0.6) !important;
 }
 
 /* ==========================================
@@ -1002,6 +986,11 @@ body.landed .constellation {
 .hyper-rings span:nth-child(1) { animation-delay: 0s; }
 .hyper-rings span:nth-child(2) { animation-delay: 0.6s; }
 .hyper-rings span:nth-child(3) { animation-delay: 1.2s; }
+
+@keyframes expandRing {
+    0% { width: 10px; height: 10px; opacity: 1; }
+    100% { width: 120px; height: 120px; opacity: 0; }
+}
 
 .modal-status-tag {
     font-family: 'Share Tech Mono', monospace;
