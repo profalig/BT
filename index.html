@@ -417,53 +417,6 @@
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- SYSTEM DATABANK MODAL (NEW)                -->
-    <!-- ========================================== -->
-    <div id="databank-modal" class="tactical-modal hidden">
-        <div class="modal-content neon-border">
-            <button class="close-btn" onclick="closeDatabank()">[X] CLOSE</button>
-            <h2 class="cyber-title">SYSTEM DATABANK</h2>
-            
-            <!-- View 1: The List of Systems -->
-            <div id="databank-list-view">
-                <ul class="system-list">
-                    <!-- We will populate this dynamically or hardcode your first system here -->
-                    <li class="system-item" onclick="openSystemDetails('sys-01')">
-                        <span class="sys-id">SYS-01</span> 
-                        <span class="sys-name">Loading First Protocol...</span>
-                    </li>
-                </ul>
-            </div>
-
-            <!-- View 2: System Details & Download (Hidden by default) -->
-            <div id="databank-details-view" class="hidden">
-                <button class="back-btn" onclick="backToList()">< RETURN</button>
-                
-                <div class="detail-section">
-                    <span class="detail-label">// SYSTEM NAME</span>
-                    <h3 id="detail-sys-name" class="glow-text">System Name</h3>
-                </div>
-
-                <div class="detail-section">
-                    <span class="detail-label">// SYSTEM DESCRIPTION</span>
-                    <div class="system-description">
-                        <p id="detail-sys-desc">System description will load here.</p>
-                    </div>
-                </div>
-                
-                <div class="detail-section">
-                    <span class="detail-label">// SYSTEM RESULTS</span>
-                    <div class="download-zone">
-                        <p>In-depth Backtest Report (PDF)</p>
-                        <!-- The href will be injected dynamically via JS -->
-                        <a id="detail-sys-pdf" href="#" target="_blank" class="action-btn download-btn">
-                            <i class="fa-solid fa-download"></i> DOWNLOAD DATASHEET
-                        </a>
-                    </div>
-                </div>
-            </div>
-
     <!-- SUBSCRIPTION & PAYMENT HUD MODAL -->
     <div id="subscription-modal-overlay">
         <div class="subscription-modal-card">
