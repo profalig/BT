@@ -1018,3 +1018,58 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+/* ========================================== */
+/* SYSTEM DATABANK LOGIC                      */
+/* ========================================== */
+
+// Dummy data structure to hold your systems temporarily
+const systemDatabank = {
+  'sys-01': {
+    name: "Awaiting System Name",
+    description: "Awaiting system description..."
+  }
+};
+
+// Function to open the databank modal (Bind this to your HUD button later)
+function openDatabank() {
+  document.getElementById('databank-modal').classList.remove('hidden');
+  backToList(); // Ensure it opens on the list view
+}
+
+// Function to close the databank modal
+function closeDatabank() {
+  document.getElementById('databank-modal').classList.add('hidden');
+}
+
+// Switch to Details View
+function openSystemDetails(sysId) {
+  const sysData = systemDatabank[sysId];
+  
+  if(sysData) {
+    // Populate the details
+    document.getElementById('detail-sys-name').innerText = sysData.name;
+    document.getElementById('detail-sys-desc').innerText = sysData.description;
+    
+    // Toggle views
+    document.getElementById('databank-list-view').classList.add('hidden');
+    document.getElementById('databank-details-view').classList.remove('hidden');
+  }
+}
+
+// Switch back to List View
+function backToList() {
+  document.getElementById('databank-details-view').classList.add('hidden');
+  document.getElementById('databank-list-view').classList.remove('hidden');
+}
+
+// Placeholder for future Supabase upload logic
+function handleUpload() {
+  const fileInput = document.getElementById('backtest-upload');
+  if(fileInput.files.length > 0) {
+    alert("File selected: " + fileInput.files[0].name + " \nSupabase bucket integration pending.");
+    // Supabase logic goes here later
+  } else {
+    alert("Please select a file first.");
+  }
+}
