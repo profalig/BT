@@ -1514,12 +1514,57 @@ body.warping * {
   margin-right: 15px;
 }
 
-.upload-zone {
-  margin-top: 20px;
-  padding: 20px;
-  border: 1px dashed #00ffcc;
-  text-align: center;
-  background: rgba(0, 0, 0, 0.5);
+/* DATABANK DETAILS STYLING (NEW DOWNLOAD ZONE) */
+.detail-section {
+    margin-bottom: 22px;
+    text-align: left;
+}
+
+.detail-label {
+    color: #00f0ff;
+    font-size: 12px;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 1.5px;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+    opacity: 0.8;
+    text-shadow: 0 0 5px rgba(0, 240, 255, 0.3);
+}
+
+.download-zone {
+    background: rgba(0, 240, 255, 0.05);
+    border: 1px dashed #00f0ff;
+    padding: 15px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.download-zone p {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 14px;
+    color: #fff;
+    font-weight: 600;
+}
+
+.download-btn {
+    display: inline-block;
+    text-decoration: none;
+    background: rgba(0, 255, 136, 0.1);
+    border: 1px solid #00ff88;
+    color: #00ff88;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.download-btn:hover {
+    background: #00ff88;
+    color: #000;
+    box-shadow: 0 0 15px #00ff88;
 }
 
 .action-btn, .back-btn, .close-btn {

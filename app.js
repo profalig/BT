@@ -1023,67 +1023,57 @@ document.addEventListener('DOMContentLoaded', () => {
 /* SYSTEM DATABANK LOGIC & WIRING             */
 /* ========================================== */
 
-// 1. Dummy data structure to hold your systems temporarily
+// 1. Data structure holding your systems (Add your Supabase PDF links here)
 const systemDatabank = {
   'sys-01': {
     name: "Mean Reversion Alpha v2",
-    description: "Executes counter-trend trades on the 1H timeframe when RSI drops below 25 or exceeds 75, combining Bollinger Band standard deviations for dynamic stop-losses."
+    description: "Executes counter-trend trades on the 1H timeframe when RSI drops below 25 or exceeds 75, combining Bollinger Band standard deviations for dynamic stop-losses.",
+    // Replace this string with the public URL from your Supabase storage bucket
+    pdfUrl: "https://your-project-id.supabase.co/storage/v1/object/public/reports/sys-01-report.pdf" 
   }
 };
 
-// 2. Function to open the databank modal
+// 2. Open Databank Modal
 function openDatabank() {
   document.getElementById('databank-modal').classList.remove('hidden');
-  backToList(); // Ensure it always opens on the list view first
+  backToList();
 }
 
-// 3. Function to close the databank modal
+// 3. Close Databank Modal
 function closeDatabank() {
   document.getElementById('databank-modal').classList.add('hidden');
 }
 
-// 4. Switch to Details View when a system is clicked
+// 4. Populate Details & Inject PDF Link
 function openSystemDetails(sysId) {
   const sysData = systemDatabank[sysId];
   
   if(sysData) {
-    // Populate the details dynamically
     document.getElementById('detail-sys-name').innerText = sysData.name;
     document.getElementById('detail-sys-desc').innerText = sysData.description;
     
-    // Toggle views (hide list, show details)
+    // Inject the specific PDF URL into the download button
+    document.getElementById('detail-sys-pdf').href = sysData.pdfUrl;
+    
+    // Toggle views
     document.getElementById('databank-list-view').classList.add('hidden');
     document.getElementById('databank-details-view').classList.remove('hidden');
   }
 }
 
-// 5. Switch back to List View from the details page
+// 5. Switch back to List View
 function backToList() {
   document.getElementById('databank-details-view').classList.add('hidden');
   document.getElementById('databank-list-view').classList.remove('hidden');
 }
 
-// 6. Placeholder for future file upload logic
-function handleUpload() {
-  const fileInput = document.getElementById('backtest-upload');
-  if(fileInput.files.length > 0) {
-    alert("File selected: " + fileInput.files[0].name + "\n(Supabase bucket integration pending.)");
-  } else {
-    alert("Please select a file first.");
-  }
-}
-
-// 7. WIRE THE "INITIALIZE MODULE" BUTTON TO THE DATABANK (OVERRIDING OLD MODAL)
+// 6. Module Action Button Override (Same as before)
 document.getElementById('module-action-btn').addEventListener('click', function(e) {
   const currentModuleTitle = document.getElementById('module-title').innerText.toLowerCase();
-  
   if (currentModuleTitle.includes('databank')) {
-    // Intercept and cancel the old 'under development' modal completely
     e.preventDefault(); 
     e.stopPropagation();
     e.stopImmediatePropagation();
-    
-    // Open only our new Databank modal
     openDatabank();
   }
-}, true); // 'true' forces this to run first before any original app.js code fires
+}, true);
