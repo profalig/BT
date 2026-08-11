@@ -1073,18 +1073,17 @@ function handleUpload() {
   }
 }
 
-// 7. WIRE THE "INITIALIZE MODULE" BUTTON TO THE DATABANK
-// This listens to your main HUD action button.
+// 7. WIRE THE "INITIALIZE MODULE" BUTTON TO THE DATABANK (OVERRIDING OLD MODAL)
 document.getElementById('module-action-btn').addEventListener('click', function(e) {
-  // We check the module title to see if the user is currently parked at the Databank
   const currentModuleTitle = document.getElementById('module-title').innerText.toLowerCase();
   
   if (currentModuleTitle.includes('databank')) {
-    // Prevent any default behavior your app.js might already have for this button
+    // Intercept and cancel the old 'under development' modal completely
     e.preventDefault(); 
     e.stopPropagation();
+    e.stopImmediatePropagation();
     
-    // Trigger our new modal!
+    // Open only our new Databank modal
     openDatabank();
   }
-});
+}, true); // 'true' forces this to run first before any original app.js code fires
