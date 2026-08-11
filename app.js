@@ -769,252 +769,181 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // AUTHENTICATION MODAL TRIGGERS
+    function updateAuthUI(session) {
+        if (!authCorner) return;
+
+        if (session && session.user) {
+            const userEmail = session.user.email;
+            const displayName = session.user.user_metadata?.display_name || userEmail.split('@')[0];
+            const upperCallsign = displayName.toUpperCase();
+
+            authCorner.innerHTML = `
+                <div class="dock-bracket top-left"></div>
+                <div class="dock-bracket bottom-right"></div>
+                <div class="dock-content">
+                    <button id="nav-subscription-btn" class="auth-btn sub-nav-btn" onclick="openSubscriptionModal()">
+                        <i class="fa-solid fa-bolt"></i> PRO TIER
+                    </button>
+                    <div class="dock-divider"></div>
+                    <div id="credit-badge-container" class="credit-badge">
+                        <i class="fa-solid fa-coins"></i> <span id="credit-count">...</span>
+                    </div>
+                    <div class="user-badge" id="agent-profile-btn" style="cursor:pointer;" title="View Transmission History">
+                        <div class="user-status-dot"></div>
+                        AGENT: ${upperCallsign}
+                    </div>
+                    <button id="logout-btn" class="auth-btn logout-btn">
+                        <i class="fa-solid fa-power-off"></i> LOGOUT
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+            document.getElementById('agent-profile-btn')?.addEventListener('click', openUserReportsModal);
+
+            fetchOrCreateUserProfile(session.user).then(profile => {
+                const credits = profile ? profile.credits : 0;
+                updateCreditBadgeUI(credits);
+            });
+        } else {
+            authCorner.innerHTML = `
+                <div class="dock-bracket top-left"></div>
+                <div class="dock-bracket bottom-right"></div>
+                <div class="dock-content">
+                    <button id="login-btn" class="auth-btn">
+                        <i class="fa-solid fa-terminal"></i> LOGIN
+                    </button>
+                    <button id="signup-btn" class="auth-btn sign-up cta-btn">
+                        <i class="fa-solid fa-satellite-dish"></i> INITIATE UPLINK
+                    </button>
+                </div>
+            `;
+            document.getElementById('login-btn')?.addEventListener('click', () => {
+                setAuthMode('signin');
+                if (authModal) authModal.classList.add('active');
+            });
+            document.getElementById('signup-btn')?.addEventListener('click', () => {
+                setAuthMode('signup');
+                if (authModal) authModal.classList.add('active');
+            });
+        }
+    }
+
     function updateCreditBadgeUI(credits) {
-        const badgeEl = document.getElementById('nav-credits-label');
-        if (badgeEl) {
-            badgeEl.innerHTML = `CREDITS: ${credits}`;
+        const creditCountEl = document.getElementById('credit-count');
+        if (creditCountEl) {
+            creditCountEl.innerText = credits;
+            if (credits === 0) {
+                creditCountEl.style.color = '#ff0055';
+            } else {
+                creditCountEl.style.color = '#ffd700';
+            }
         }
     }
 
     function setAuthMode(mode) {
         authMode = mode;
         if (mode === 'signin') {
-            if (tabSignIn) tabSignIn.classList.add('active');
-            if (tabSignUp) tabSignUp.classList.remove('active');
-            if (usernameGroup) usernameGroup.style.display = 'none';
-            if (authSubmitBtn) authSubmitBtn.innerHTML = 'AUTHENTICATE <i class="fa-solid fa-key"></i>';
+            tabSignIn.classList.add('active');
+            tabSignUp.classList.remove('active');
+            usernameGroup.style.display = 'none';
+            document.getElementById('auth-username').removeAttribute('required');
+            authSubmitBtn.innerHTML = '<i class="fa-solid fa-fingerprint"></i> AUTHENTICATE';
         } else {
-            if (tabSignUp) tabSignUp.classList.add('active');
-            if (tabSignIn) tabSignIn.classList.remove('active');
-            if (usernameGroup) usernameGroup.style.display = 'block';
-            if (authSubmitBtn) authSubmitBtn.innerHTML = 'CREATE CLEARANCE (1 FREE CREDIT) <i class="fa-solid fa-user-plus"></i>';
+            tabSignUp.classList.add('active');
+            tabSignIn.classList.remove('active');
+            usernameGroup.style.display = 'block';
+            document.getElementById('auth-username').setAttribute('required', 'true');
+            authSubmitBtn.innerHTML = '<i class="fa-solid fa-satellite-dish"></i> REGISTER AGENT';
         }
     }
 
-    if (tabSignIn && tabSignUp) {
-        tabSignIn.addEventListener('click', () => setAuthMode('signin'));
-        tabSignUp.addEventListener('click', () => setAuthMode('signup'));
-    }
-
-    if (closeAuthBtn && authModal) {
-        closeAuthBtn.addEventListener('click', () => authModal.classList.remove('active'));
-    }
+    if (tabSignIn) tabSignIn.addEventListener('click', () => setAuthMode('signin'));
+    if (tabSignUp) tabSignUp.addEventListener('click', () => setAuthMode('signup'));
+    if (closeAuthBtn) closeAuthBtn.addEventListener('click', () => authModal.classList.remove('active'));
 
     if (authForm) {
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-
             if (!supabaseClient) {
-                showTacticalModal('AUTHENTICATION ERROR', 'Supabase client is offline.', false);
+                showTacticalModal('SYSTEM ERROR', 'Supabase client is not loaded.', false);
                 return;
             }
 
-            const email = document.getElementById('auth-email').value.trim();
+            const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
-            const usernameInput = document.getElementById('auth-username');
-            const username = usernameInput ? usernameInput.value.trim() : '';
+            const username = document.getElementById('auth-username').value;
+            const originalBtnHtml = authSubmitBtn.innerHTML;
 
-            if (!email || !password) {
-                showTacticalModal('ACCESS DENIED', 'Please input both Access ID and Security Password.', false);
-                return;
-            }
-
-            authSubmitBtn.innerText = 'PROCESSING CLEARANCE...';
             authSubmitBtn.disabled = true;
+            authSubmitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> PROCESSING...';
 
             try {
                 if (authMode === 'signup') {
-                    if (!username) {
-                        showTacticalModal('CALLSIGN REQUIRED', 'Please specify a Callsign / Username for sign-up.', false);
-                        authSubmitBtn.disabled = false;
-                        setAuthMode('signup');
-                        return;
-                    }
-
-                    const { data, error } = await supabaseClient.auth.signUp({ 
-                        email, 
+                    const { data, error } = await supabaseClient.auth.signUp({
+                        email,
                         password,
-                        options: {
-                            data: { display_name: username },
-                            emailRedirectTo: window.location.origin
-                        }
+                        options: { data: { display_name: username } }
                     });
-
                     if (error) throw error;
+                    
+                    showTacticalModal('REGISTRATION COMPLETE', 'Agent profile created! Verify your email to activate the comm-link.', true);
+                    if (authModal) authModal.classList.remove('active');
 
-                    if (data?.user) {
-                        await fetchOrCreateUserProfile(data.user);
-                    }
-
-                    authModal.classList.remove('active');
-                    showTacticalModal(
-                        'CLEARANCE CREATED', 
-                        'Check your email comm-link to verify your account. Your <b>1 Free Credit</b> has been assigned!', 
-                        true
-                    );
                 } else {
-                    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                    const { data, error } = await supabaseClient.auth.signInWithPassword({
+                        email, password
+                    });
                     if (error) throw error;
-
-                    if (data?.user) {
-                        await fetchOrCreateUserProfile(data.user);
-                    }
-
-                    authModal.classList.remove('active');
-                    const displayName = data.user.user_metadata?.display_name || data.user.email.split('@')[0];
-                    showTacticalModal('ACCESS GRANTED', `Authenticated as AGENT: ${displayName}`, true);
+                    
+                    if (authModal) authModal.classList.remove('active');
                 }
             } catch (err) {
                 showTacticalModal('AUTHENTICATION FAILED', err.message, false);
             } finally {
-                setAuthMode(authMode);
                 authSubmitBtn.disabled = false;
+                authSubmitBtn.innerHTML = originalBtnHtml;
+                authForm.reset();
             }
         });
     }
 
-    async function handleOAuth(provider) {
+    if (googleBtn) {
+        googleBtn.addEventListener('click', async () => {
+            if (!supabaseClient) return;
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: { redirectTo: window.location.origin }
+                });
+                if (error) throw error;
+            } catch (err) {
+                showTacticalModal('OAUTH ERROR', err.message, false);
+            }
+        });
+    }
+
+    async function handleLogout() {
         if (!supabaseClient) return;
-        try {
-            const { error } = await supabaseClient.auth.signInWithOAuth({
-                provider: provider,
-                options: { redirectTo: window.location.origin }
-            });
-            if (error) throw error;
-        } catch (err) {
-            showTacticalModal('OAUTH FAILED', err.message, false);
+        const { error } = await supabaseClient.auth.signOut();
+        if (error) {
+            showTacticalModal('LOGOUT FAILED', error.message, false);
         }
     }
 
-    if (googleBtn) googleBtn.addEventListener('click', () => handleOAuth('google'));
-
+    // AUTH STATE CHANGE LISTENER
     if (supabaseClient) {
-        const hashStr = window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash;
-        const hashParams = new URLSearchParams(hashStr);
-        const queryParams = new URLSearchParams(window.location.search);
+        supabaseClient.auth.getSession().then(({ data: { session } }) => {
+            updateAuthUI(session);
+        });
 
-        const urlError = hashParams.get('error') || queryParams.get('error');
-        const urlErrorDesc = hashParams.get('error_description') || queryParams.get('error_description');
-        const authType = hashParams.get('type') || queryParams.get('type');
-        const paymentStatus = queryParams.get('payment');
-
-        if (paymentStatus === 'success') {
-            showTacticalModal('PAYMENT SUCCESSFUL', 'Transaction complete! Your subscription credits have been assigned to your profile.', true);
-            window.history.replaceState(null, null, window.location.pathname);
-        } else if (paymentStatus === 'cancelled') {
-            showTacticalModal('PAYMENT CANCELLED', 'Stripe checkout session was cancelled. No charges were made.', false);
-            window.history.replaceState(null, null, window.location.pathname);
-        } else if (urlError || urlErrorDesc) {
-            const formattedMsg = urlErrorDesc 
-                ? decodeURIComponent(urlErrorDesc).replace(/\+/g, ' ') 
-                : 'Verification link is invalid or has expired.';
-            showTacticalModal('LINK EXPIRED', formattedMsg, false);
-            window.history.replaceState(null, null, window.location.pathname);
-        } else if (authType === 'signup' || authType === 'email_confirmation') {
-            showTacticalModal('EMAIL VERIFIED', 'Access Clearance Confirmed. 1 Free Credit Provisioned.', true);
-            window.history.replaceState(null, null, window.location.pathname);
-        } else if (window.location.hash.includes('access_token') || window.location.search.includes('code')) {
-            window.history.replaceState(null, null, window.location.pathname);
-        }
-
-        supabaseClient.auth.onAuthStateChange(async (event, session) => {
-            if (session && session.user) {
-                const displayName = session.user.user_metadata?.display_name || session.user.email.split('@')[0];
-                
-                const profile = await fetchOrCreateUserProfile(session.user);
-                const userCredits = profile ? profile.credits : 0;
-
-                const contactEmailInput = document.getElementById('contact-email');
-                if (contactEmailInput) {
-                    contactEmailInput.value = session.user.email;
-                }
-
-                if (authCorner) {
-                    authCorner.innerHTML = `
-                        <div class="hud-bar">
-                            <div class="hud-slot agent" id="nav-agent-btn">
-                                <div class="hud-icon-box">
-                                    <span class="status-dot"></span>
-                                    <i class="fa-solid fa-user-shield"></i>
-                                </div>
-                                <div class="hud-label-box">
-                                    <span id="nav-user-label">AGENT: ${displayName.toUpperCase()}</span>
-                                </div>
-                            </div>
-                            <div class="hud-slot credits" id="nav-credits-btn">
-                                <div class="hud-icon-box">
-                                    <i class="fa-solid fa-coins"></i>
-                                </div>
-                                <div class="hud-label-box">
-                                    <span id="nav-credits-label">CREDITS: ${userCredits}</span>
-                                </div>
-                            </div>
-                            <div class="hud-slot subs" id="my-sub-btn">
-                                <div class="hud-icon-box">
-                                    <i class="fa-solid fa-gem"></i>
-                                </div>
-                                <div class="hud-label-box">
-                                    <span>SUBSCRIPTIONS</span>
-                                </div>
-                            </div>
-                            <div class="hud-slot reports" id="my-reports-btn">
-                                <div class="hud-icon-box">
-                                    <i class="fa-solid fa-folder-open"></i>
-                                </div>
-                                <div class="hud-label-box">
-                                    <span>MY REPORTS</span>
-                                </div>
-                            </div>
-                            <div class="hud-slot logout" id="signout-btn">
-                                <div class="hud-icon-box">
-                                    <i class="fa-solid fa-power-off"></i>
-                                </div>
-                                <div class="hud-label-box">
-                                    <span>LOGOUT</span>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-
-                    document.getElementById('nav-agent-btn')?.addEventListener('click', openUserReportsModal);
-                    document.getElementById('nav-credits-btn')?.addEventListener('click', openSubscriptionModal);
-                    document.getElementById('my-sub-btn')?.addEventListener('click', openSubscriptionModal);
-                    document.getElementById('my-reports-btn')?.addEventListener('click', openUserReportsModal);
-
-                    document.getElementById('signout-btn')?.addEventListener('click', async () => {
-                        await supabaseClient.auth.signOut();
-                        window.location.reload();
-                    });
-                }
-            } else {
-                if (authCorner) {
-                    authCorner.innerHTML = `
-                        <div class="hud-bar">
-                            <div class="hud-slot subs" id="nav-subscription-btn">
-                                <div class="hud-icon-box"><i class="fa-solid fa-gem"></i></div>
-                                <div class="hud-label-box"><span>SUBSCRIPTIONS</span></div>
-                            </div>
-                            <div class="hud-slot agent sign-in">
-                                <div class="hud-icon-box"><i class="fa-solid fa-user"></i></div>
-                                <div class="hud-label-box"><span>SIGN IN</span></div>
-                            </div>
-                            <div class="hud-slot credits sign-up">
-                                <div class="hud-icon-box"><i class="fa-solid fa-user-plus"></i></div>
-                                <div class="hud-label-box"><span>SIGN UP</span></div>
-                            </div>
-                        </div>
-                    `;
-                    document.getElementById('nav-subscription-btn')?.addEventListener('click', openSubscriptionModal);
-                    document.querySelector('.sign-in')?.addEventListener('click', () => {
-                        setAuthMode('signin');
-                        if (authModal) authModal.classList.add('active');
-                    });
-                    document.querySelector('.sign-up')?.addEventListener('click', () => {
-                        setAuthMode('signup');
-                        if (authModal) authModal.classList.add('active');
-                    });
-                }
-            }
+        supabaseClient.auth.onAuthStateChange((_event, session) => {
+            updateAuthUI(session);
         });
     }
+});
+
+document.addEventListener('gesturestart', function(e) {
+    e.preventDefault();
 });
