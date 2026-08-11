@@ -1020,56 +1020,71 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ========================================== */
-/* SYSTEM DATABANK LOGIC                      */
+/* SYSTEM DATABANK LOGIC & WIRING             */
 /* ========================================== */
 
-// Dummy data structure to hold your systems temporarily
+// 1. Dummy data structure to hold your systems temporarily
 const systemDatabank = {
   'sys-01': {
-    name: "Awaiting System Name",
-    description: "Awaiting system description..."
+    name: "Mean Reversion Alpha v2",
+    description: "Executes counter-trend trades on the 1H timeframe when RSI drops below 25 or exceeds 75, combining Bollinger Band standard deviations for dynamic stop-losses."
   }
 };
 
-// Function to open the databank modal (Bind this to your HUD button later)
+// 2. Function to open the databank modal
 function openDatabank() {
   document.getElementById('databank-modal').classList.remove('hidden');
-  backToList(); // Ensure it opens on the list view
+  backToList(); // Ensure it always opens on the list view first
 }
 
-// Function to close the databank modal
+// 3. Function to close the databank modal
 function closeDatabank() {
   document.getElementById('databank-modal').classList.add('hidden');
 }
 
-// Switch to Details View
+// 4. Switch to Details View when a system is clicked
 function openSystemDetails(sysId) {
   const sysData = systemDatabank[sysId];
   
   if(sysData) {
-    // Populate the details
+    // Populate the details dynamically
     document.getElementById('detail-sys-name').innerText = sysData.name;
     document.getElementById('detail-sys-desc').innerText = sysData.description;
     
-    // Toggle views
+    // Toggle views (hide list, show details)
     document.getElementById('databank-list-view').classList.add('hidden');
     document.getElementById('databank-details-view').classList.remove('hidden');
   }
 }
 
-// Switch back to List View
+// 5. Switch back to List View from the details page
 function backToList() {
   document.getElementById('databank-details-view').classList.add('hidden');
   document.getElementById('databank-list-view').classList.remove('hidden');
 }
 
-// Placeholder for future Supabase upload logic
+// 6. Placeholder for future file upload logic
 function handleUpload() {
   const fileInput = document.getElementById('backtest-upload');
   if(fileInput.files.length > 0) {
-    alert("File selected: " + fileInput.files[0].name + " \nSupabase bucket integration pending.");
-    // Supabase logic goes here later
+    alert("File selected: " + fileInput.files[0].name + "\n(Supabase bucket integration pending.)");
   } else {
     alert("Please select a file first.");
   }
 }
+
+// 7. WIRE THE "INITIALIZE MODULE" BUTTON TO THE DATABANK
+// This listens to your main HUD action button.
+document.getElementById('module-action-btn').addEventListener('click', function(e) {
+  // We check the module title to see if the user is currently parked at the Databank
+  const currentModuleTitle = document.getElementById('module-title').innerText.toLowerCase();
+  
+  if (currentModuleTitle.includes('databank')) {
+    // Prevent any default behavior your app.js might already have for this button
+    e.preventDefault(); 
+    e.stopPropagation();
+    
+    // Trigger our new modal!
+    openDatabank();
+  }
+});
