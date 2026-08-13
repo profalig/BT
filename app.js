@@ -1007,7 +1007,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// SYSTEM DATABANK ENGINE (SEARCH & FILTERS FIXED)
+// SYSTEM DATABANK ENGINE (DEEP SEARCH & CAPTURE FIX)
 // ==========================================
 
 let cachedSystems = [];
@@ -1019,7 +1019,7 @@ function openDatabankModal() {
     if (modal) modal.classList.remove('hidden');
     showDatabankList();
     setupDatabankEventListeners();
-    bindSearchInputsDirectly();
+    attachSearchInputListeners();
     fetchTradingSystems();
 }
 
@@ -1035,40 +1035,30 @@ function showDatabankList() {
     if (detailView) detailView.style.display = 'none';
 }
 
-// Direct binding to all search inputs in the DOM
-function bindSearchInputsDirectly() {
-    const inputs = document.querySelectorAll('input');
-    inputs.forEach(input => {
-        if (!input.dataset.searchBound) {
-            input.dataset.searchBound = "true";
-            
-            const handleSearch = (e) => {
-                currentSearchQuery = e.target.value.toLowerCase().trim();
-                applyDatabankFilters();
-            };
-
-            input.addEventListener('input', handleSearch);
-            input.addEventListener('keyup', handleSearch);
-            input.addEventListener('change', handleSearch);
-        }
+// Direct backup attachment for any search input in the DOM
+function attachSearchInputListeners() {
+    const searchInputs = document.querySelectorAll('input');
+    searchInputs.forEach(input => {
+        ['input', 'keyup', 'change', 'search'].forEach(evtType => {
+            input.removeEventListener(evtType, handleSearchEvent);
+            input.addEventListener(evtType, handleSearchEvent);
+        });
     });
 }
 
+function handleSearchEvent(e) {
+    if (!e || !e.target) return;
+    const val = e.target.value !== undefined ? e.target.value : (e.target.innerText || '');
+    currentSearchQuery = String(val).toLowerCase().trim();
+    applyDatabankFilters();
+}
+
 function setupDatabankEventListeners() {
-    if (window._databankListenersAttached) return;
-    window._databankListenersAttached = true;
+    // 1. Global Document Event Delegation for Inputs
+    document.addEventListener('input', handleSearchEvent, true);
+    document.addEventListener('keyup', handleSearchEvent, true);
 
-    // 1. Global fallback listener for input/keyup events
-    const handleGlobalInput = (e) => {
-        if (e.target && e.target.tagName === 'INPUT') {
-            currentSearchQuery = e.target.value.toLowerCase().trim();
-            applyDatabankFilters();
-        }
-    };
-    document.addEventListener('input', handleGlobalInput);
-    document.addEventListener('keyup', handleGlobalInput);
-
-    // 2. Universal Category Filter Click Handler
+    // 2. Global Category Filter Click Handler
     document.addEventListener('click', (e) => {
         const targetBtn = e.target.closest('button, div, span, a');
         if (!targetBtn) return;
@@ -1098,9 +1088,9 @@ function setupDatabankEventListeners() {
     });
 }
 
-// Auto-initialize event listeners immediately on load
+// Auto-run event listeners
 setupDatabankEventListeners();
-document.addEventListener('DOMContentLoaded', bindSearchInputsDirectly);
+document.addEventListener('DOMContentLoaded', attachSearchInputListeners);
 
 async function fetchTradingSystems() {
     const gridContainer = document.getElementById('systems-grid') || document.getElementById('systemsGrid');
@@ -1145,30 +1135,25 @@ function applyDatabankFilters() {
     const gridContainer = document.getElementById('systems-grid') || document.getElementById('systemsGrid');
     if (!gridContainer) return;
 
-    const query = currentSearchQuery.toLowerCase().trim();
+    const query = currentSearchQuery;
 
     const filtered = cachedSystems.filter(sys => {
-        const name = String(sys.system_name || sys.title || sys.name || '').toLowerCase();
-        const desc = String(sys.short_description || sys.full_description || sys.summary || sys.description || '').toLowerCase();
-        const category = String(sys.category || '').toLowerCase();
-        const tags = String(sys.tags || sys.tag || '').toLowerCase();
+        // Deep string conversion of the entire system object for guaranteed searching
+        const fullSystemDataString = JSON.stringify(sys).toLowerCase();
+        const category = String(sys.category || fullSystemDataString).toLowerCase();
 
-        // 1. Filter Category
+        // 1. Category Filter Logic
         let matchesCategory = false;
         if (currentCategoryFilter === 'ALL') {
             matchesCategory = true;
         } else if (currentCategoryFilter === 'CRYPTO') {
-            matchesCategory = category.includes('crypto') || desc.includes('btc') || name.includes('btc') || desc.includes('crypto');
+            matchesCategory = category.includes('crypto') || fullSystemDataString.includes('btc') || fullSystemDataString.includes('crypto');
         } else if (currentCategoryFilter === 'EQUITIES') {
-            matchesCategory = category.includes('equity') || category.includes('stock') || category.includes('equities') || desc.includes('equity') || desc.includes('stock');
+            matchesCategory = category.includes('equity') || category.includes('stock') || category.includes('equities') || fullSystemDataString.includes('equity');
         }
 
-        // 2. Filter Search Query
-        const matchesSearch = !query || 
-                              name.includes(query) || 
-                              desc.includes(query) ||
-                              category.includes(query) ||
-                              tags.includes(query);
+        // 2. Search Query Logic (Searches across ALL object attributes)
+        const matchesSearch = !query || fullSystemDataString.includes(query);
 
         return matchesCategory && matchesSearch;
     });
@@ -1193,7 +1178,7 @@ function renderSystemGrid(systems, container) {
 
         card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <h4 style="color: #fff; margin: 0 0 8px 0;">${sys.system_name || sys.title || sys.name}</h4>
+                <h4 style="color: #fff; margin: 0 0 8px 0;">${sys.system_name || sys.title || sys.name || 'Trading Strategy'}</h4>
                 <span class="tag" style="border: 1px solid #00ffff; padding: 2px 6px; font-size: 11px; color: #00ffff; border-radius: 3px;">${sys.category || 'Quantitative'}</span>
             </div>
             <p style="font-size: 13px; color: #aaa; margin-bottom: 12px; line-height: 1.4;">${sys.short_description || sys.summary || (sys.full_description ? sys.full_description.substring(0, 100) + '...' : 'No summary.')}</p>
@@ -1219,7 +1204,7 @@ async function viewSystemDetail(sys) {
             &#9664; BACK TO SYSTEM LIST
         </button>
 
-        <h2 style="color: #fff; margin: 0 0 8px 0; font-family: 'Share Tech Mono', monospace;">${sys.system_name || sys.title || sys.name}</h2>
+        <h2 style="color: #fff; margin: 0 0 8px 0; font-family: 'Share Tech Mono', monospace;">${sys.system_name || sys.title || sys.name || 'Trading Strategy'}</h2>
         <span class="tag" style="border: 1px solid #00ffff; padding: 3px 8px; font-size: 11px; color: #00ffff; border-radius: 3px;">${sys.category || 'Quantitative'}</span>
 
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0;">
