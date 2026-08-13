@@ -1213,7 +1213,7 @@ function renderSystemGrid(systems, container) {
 }
 
 // ==========================================
-// SYSTEM DETAIL VIEW (EXPANDED CONSOLE & EDITORIAL FORMATTER)
+// SYSTEM DETAIL VIEW (MOBILE RESPONSIVE FIXED)
 // ==========================================
 
 async function viewSystemDetail(sys) {
@@ -1225,6 +1225,7 @@ async function viewSystemDetail(sys) {
     if (listView) listView.style.display = 'none';
     detailView.style.display = 'block';
 
+    const isMobile = window.innerWidth <= 768;
     const rawDescription = sys.full_description || sys.description || sys.short_description || '';
 
     detailView.innerHTML = `
@@ -1246,41 +1247,41 @@ async function viewSystemDetail(sys) {
             }
         </style>
 
-        <button onclick="showDatabankList()" style="background: transparent; color: #00f0ff; border: 1px solid #00f0ff; padding: 6px 12px; cursor: pointer; font-size: 0.85rem; font-family: 'Share Tech Mono', monospace; margin-bottom: 1rem; border-radius: 4px; transition: 0.2s;">
+        <button onclick="showDatabankList()" style="background: transparent; color: #00f0ff; border: 1px solid #00f0ff; padding: 5px 10px; cursor: pointer; font-size: ${isMobile ? '0.75rem' : '0.85rem'}; font-family: 'Share Tech Mono', monospace; margin-bottom: 0.75rem; border-radius: 4px; transition: 0.2s;">
             &#9664; BACK TO SYSTEM LIST
         </button>
 
-        <h2 style="color: #fff; margin: 0 0 6px 0; font-family: 'Share Tech Mono', monospace; font-size: 1.5rem; letter-spacing: 1px;">
+        <h2 style="color: #fff; margin: 0 0 4px 0; font-family: 'Share Tech Mono', monospace; font-size: ${isMobile ? '1.1rem' : '1.5rem'}; letter-spacing: 1px;">
             ${sys.system_name || sys.title || sys.name || 'Trading Strategy'}
         </h2>
-        <span class="tag" style="border: 1px solid #00ffff; padding: 2px 8px; font-size: 11px; color: #00ffff; border-radius: 3px; font-family: 'Share Tech Mono', monospace;">
+        <span class="tag" style="border: 1px solid #00ffff; padding: 2px 6px; font-size: 10px; color: #00ffff; border-radius: 3px; font-family: 'Share Tech Mono', monospace;">
             ${sys.category || 'Crypto'}
         </span>
 
-        <!-- STATS HEADER GRID -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1rem 0 1.25rem 0;">
-            <div style="background: rgba(0, 240, 255, 0.05); padding: 0.75rem 1rem; border-left: 3px solid #00f0ff; border-radius: 4px;">
-                <div style="font-size: 0.7rem; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;">WIN RATE</div>
-                <div style="font-size: 1.4rem; color: #fff; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.win_rate ?? 'N/A'}%</div>
+        <!-- RESPONSIVE STATS HEADER GRID -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: ${isMobile ? '0.4rem' : '1rem'}; margin: 0.75rem 0;">
+            <div style="background: rgba(0, 240, 255, 0.05); padding: ${isMobile ? '0.4rem 0.5rem' : '0.75rem 1rem'}; border-left: 3px solid #00f0ff; border-radius: 4px;">
+                <div style="font-size: ${isMobile ? '0.6rem' : '0.7rem'}; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 0.5px;">WIN RATE</div>
+                <div style="font-size: ${isMobile ? '0.95rem' : '1.4rem'}; color: #fff; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.win_rate ?? 'N/A'}%</div>
             </div>
-            <div style="background: rgba(0, 255, 102, 0.05); padding: 0.75rem 1rem; border-left: 3px solid #00ff66; border-radius: 4px;">
-                <div style="font-size: 0.7rem; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;">NET RETURN</div>
-                <div style="font-size: 1.4rem; color: #00ff66; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.net_return ?? 'N/A'}%</div>
+            <div style="background: rgba(0, 255, 102, 0.05); padding: ${isMobile ? '0.4rem 0.5rem' : '0.75rem 1rem'}; border-left: 3px solid #00ff66; border-radius: 4px;">
+                <div style="font-size: ${isMobile ? '0.6rem' : '0.7rem'}; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 0.5px;">NET RETURN</div>
+                <div style="font-size: ${isMobile ? '0.95rem' : '1.4rem'}; color: #00ff66; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.net_return ?? 'N/A'}%</div>
             </div>
-            <div style="background: rgba(255, 0, 85, 0.05); padding: 0.75rem 1rem; border-left: 3px solid #ff0055; border-radius: 4px;">
-                <div style="font-size: 0.7rem; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;">MAX DRAWDOWN</div>
-                <div style="font-size: 1.4rem; color: #ff0055; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.drawdown ?? sys.max_drawdown ?? 'N/A'}%</div>
+            <div style="background: rgba(255, 0, 85, 0.05); padding: ${isMobile ? '0.4rem 0.5rem' : '0.75rem 1rem'}; border-left: 3px solid #ff0055; border-radius: 4px;">
+                <div style="font-size: ${isMobile ? '0.6rem' : '0.7rem'}; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 0.5px;">MAX DD</div>
+                <div style="font-size: ${isMobile ? '0.95rem' : '1.4rem'}; color: #ff0055; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.drawdown ?? sys.max_drawdown ?? 'N/A'}%</div>
             </div>
         </div>
 
-        <!-- TALLER EDITORIAL CONSOLE BOX (460PX HEIGHT) -->
-        <div class="cyber-scroll" style="max-height: 460px; min-height: 320px; overflow-y: auto; padding: 1.25rem 1.5rem; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 6px; margin-bottom: 1.25rem;">
+        <!-- RESPONSIVE CONSOLE BOX (LIGHTER HEIGHT FOR MOBILE) -->
+        <div class="cyber-scroll" style="max-height: ${isMobile ? '240px' : '460px'}; min-height: ${isMobile ? '180px' : '320px'}; overflow-y: auto; padding: ${isMobile ? '0.75rem 0.85rem' : '1.25rem 1.5rem'}; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 6px; margin-bottom: 0.85rem;">
             ${formatStrategyText(rawDescription)}
         </div>
 
         <!-- ACTION BUTTON -->
         ${sys.report_url ? `
-            <a href="${sys.report_url}" target="_blank" download style="display: inline-block; background: #00f0ff; color: #040912; padding: 10px 20px; text-decoration: none; font-weight: bold; font-family: 'Share Tech Mono', monospace; border-radius: 4px; border: 1px solid #00f0ff; font-size: 0.9rem;">
+            <a href="${sys.report_url}" target="_blank" download style="display: inline-block; background: #00f0ff; color: #040912; padding: ${isMobile ? '8px 14px' : '10px 20px'}; text-decoration: none; font-weight: bold; font-family: 'Share Tech Mono', monospace; border-radius: 4px; border: 1px solid #00f0ff; font-size: ${isMobile ? '0.75rem' : '0.9rem'};">
                 <i class="fa-solid fa-file-pdf"></i> DOWNLOAD FULL PDF REPORT
             </a>
         ` : ''}
