@@ -1342,3 +1342,117 @@ function formatStrategyText(text) {
 
     return outHtml;
 }
+
+
+// ==========================================
+// USDC CRYPTO PAYMENT SYSTEM CONTROLLER
+// ==========================================
+
+// 1. Config: Define your receiving wallet addresses
+const CRYPTO_WALLETS = {
+    solana: "2C3P2uoRTUq9WVggAHhUBwA5EJ7Em8WEQJgQA5hsaWo7",
+    ethereum: "0x13581166EE5CDD412358209539d94F2b79D94341"
+};
+
+let currentCryptoState = {
+    planName: "",
+    amount: 0,
+    credits: 0,
+    network: "solana"
+};
+
+// 2. Open Crypto Modal
+function openCryptoModal(planName, amount, credits) {
+    currentCryptoState.planName = planName;
+    currentCryptoState.amount = amount;
+    currentCryptoState.credits = credits;
+    currentCryptoState.network = "solana"; // Default network
+
+    // Update UI elements
+    document.getElementById('crypto-plan-title').innerText = `PAY FOR ${planName.toUpperCase()} WITH USDC`;
+    document.getElementById('crypto-amount-due').innerText = `$${amount}.00 USDC`;
+    document.getElementById('tx-hash-input').value = "";
+
+    // Show modal & set up network display
+    document.getElementById('crypto-modal-overlay').style.display = 'flex';
+    switchCryptoNetwork('solana');
+}
+
+// 3. Close Crypto Modal
+function closeCryptoModal() {
+    document.getElementById('crypto-modal-overlay').style.display = 'none';
+}
+
+// 4. Switch Network (Solana <-> Ethereum)
+function switchCryptoNetwork(network) {
+    currentCryptoState.network = network;
+    const tabSol = document.getElementById('tab-solana');
+    const tabEth = document.getElementById('tab-ethereum');
+    const walletAddressEl = document.getElementById('crypto-wallet-address');
+    const qrCodeEl = document.getElementById('crypto-qr-code');
+
+    const selectedAddress = CRYPTO_WALLETS[network];
+    walletAddressEl.innerText = selectedAddress;
+
+    if (network === 'solana') {
+        tabSol.style.background = '#00f0ff';
+        tabSol.style.color = '#000';
+        tabEth.style.background = 'transparent';
+        tabEth.style.color = '#00f0ff';
+    } else {
+        tabEth.style.background = '#00f0ff';
+        tabEth.style.color = '#000';
+        tabSol.style.background = 'transparent';
+        tabSol.style.color = '#00f0ff';
+    }
+
+    // Generate Dynamic QR Code using public API
+    const qrData = encodeURIComponent(selectedAddress);
+    qrCodeEl.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}`;
+}
+
+// 5. Copy Address to Clipboard
+function copyWalletAddress() {
+    const address = document.getElementById('crypto-wallet-address').innerText;
+    navigator.clipboard.writeText(address).then(() => {
+        alert("Wallet address copied to clipboard!");
+    }).catch(err => {
+        console.error("Failed to copy address: ", err);
+    });
+}
+
+// 6. Submit TxID for Verification
+async function submitTransactionForVerification() {
+    const txHash = document.getElementById('tx-hash-input').value.trim();
+    const btn = document.getElementById('verify-payment-btn');
+
+    if (!txHash) {
+        alert("Please paste your transaction hash (TxID) before submitting.");
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> VERIFYING ON-CHAIN...`;
+
+    try {
+        // Replace with your backend verification endpoint or Supabase function call
+        console.log("Submitting Tx Verification:", {
+            ...currentCryptoState,
+            txHash
+        });
+
+        // Simulated success delay
+        setTimeout(() => {
+            alert(`Payment submitted successfully! ${currentCryptoState.credits} credits will be unlocked upon block confirmation.`);
+            btn.disabled = false;
+            btn.innerHTML = `VERIFY PAYMENT & UNLOCK CREDITS <i class="fa-solid fa-bolt"></i>`;
+            closeCryptoModal();
+        }, 1500);
+
+    } catch (error) {
+        console.error("Verification failed:", error);
+        alert("An error occurred during verification. Please contact support.");
+        btn.disabled = false;
+        btn.innerHTML = `VERIFY PAYMENT & UNLOCK CREDITS <i class="fa-solid fa-bolt"></i>`;
+    }
+}

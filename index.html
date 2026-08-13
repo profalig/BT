@@ -433,6 +433,7 @@
             </div>
 
             <div class="pricing-grid">
+                <!-- START PACK ($29) -->
                 <div class="tier-card">
                     <div class="tier-name">START PACK</div>
                     <div class="tier-price">$29</div>
@@ -443,9 +444,15 @@
                         <li><i class="fa-solid fa-check"></i> Basic Metrics Log</li>
                         <li><i class="fa-solid fa-xmark unavailable"></i> Tick-level Deep Analysis</li>
                     </ul>
-                    <button class="tier-btn select-tier-btn" data-plan="Start Pack" data-price-id="price_1U16NFCWCAQzKASWoUezwHKg" data-credits="3" data-mode="payment">GET START PACK</button>
+                    <button class="tier-btn select-tier-btn" data-plan="Start Pack" data-price-id="price_1U16NFCWCAQzKASWoUezwHKg" data-credits="3" data-mode="payment">PAY WITH CARD ($29)</button>
+                    
+                    <!-- NEW CRYPTO BUTTON -->
+                    <button class="tier-btn crypto-pay-btn" onclick="openCryptoModal('Start Pack', 29, 3)" style="margin-top: 8px; border-color: #00ff66; color: #00ff66; background: rgba(0, 255, 102, 0.05); font-weight: bold;">
+                        <i class="fa-solid fa-coins"></i> PAY WITH USDC
+                    </button>
                 </div>
 
+                <!-- PRO PACK ($79) -->
                 <div class="tier-card featured">
                     <div class="popular-badge">MOST POPULAR</div>
                     <div class="tier-name" style="color: #00f0ff;">PRO PACK</div>
@@ -457,9 +464,15 @@
                         <li><i class="fa-solid fa-check"></i> 99.9% Tick Data Accuracy</li>
                         <li><i class="fa-solid fa-check"></i> PDF Report Data Export</li>
                     </ul>
-                    <button class="tier-btn featured-btn select-tier-btn" data-plan="Pro Pack" data-price-id="price_1U16Q9CWCAQzKASWjG2gvbvf" data-credits="10" data-mode="payment"><i class="fa-solid fa-bolt"></i> GET PRO PACK</button>
+                    <button class="tier-btn featured-btn select-tier-btn" data-plan="Pro Pack" data-price-id="price_1U16Q9CWCAQzKASWjG2gvbvf" data-credits="10" data-mode="payment"><i class="fa-solid fa-bolt"></i> PAY WITH CARD ($79)</button>
+
+                    <!-- NEW CRYPTO BUTTON -->
+                    <button class="tier-btn crypto-pay-btn" onclick="openCryptoModal('Pro Pack', 79, 10)" style="margin-top: 8px; border-color: #00ff66; color: #00ff66; background: rgba(0, 255, 102, 0.1); font-weight: bold;">
+                        <i class="fa-solid fa-coins"></i> PAY WITH USDC
+                    </button>
                 </div>
 
+                <!-- QUANT MONTHLY PASS ($199) -->
                 <div class="tier-card">
                     <div class="tier-name" style="color: #ffd700;">QUANT MONTHLY PASS</div>
                     <div class="tier-price" style="color: #ffd700;">$199 <span>/ mo</span></div>
@@ -470,9 +483,76 @@
                         <li><i class="fa-solid fa-check"></i> 1-on-1 Quant Desk Support</li>
                         <li><i class="fa-solid fa-check"></i> Databank Priority Access</li>
                     </ul>
-                    <button class="tier-btn select-tier-btn" data-plan="Quant Monthly Pass" data-price-id="price_1U16RuCWCAQzKASW1SCBeQhn" data-credits="40" data-mode="subscription" style="border-color:#ffd700; color:#ffd700;"><i class="fa-solid fa-crown"></i> UNLOCK MONTHLY PASS</button>
+                    <button class="tier-btn select-tier-btn" data-plan="Quant Monthly Pass" data-price-id="price_1U16RuCWCAQzKASW1SCBeQhn" data-credits="40" data-mode="subscription" style="border-color:#ffd700; color:#ffd700;"><i class="fa-solid fa-crown"></i> CARD SUB ($199)</button>
+
+                    <!-- NEW CRYPTO BUTTON -->
+                    <button class="tier-btn crypto-pay-btn" onclick="openCryptoModal('Quant Monthly Pass', 199, 40)" style="margin-top: 8px; border-color: #ffd700; color: #ffd700; background: rgba(255, 215, 0, 0.05); font-weight: bold;">
+                        <i class="fa-solid fa-coins"></i> PAY WITH USDC
+                    </button>
                 </div>
             </div>
+        </div>
+    </div>
+	
+	<!-- CRYPTO PAYMENT HUD MODAL -->
+    <div id="crypto-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(2, 6, 12, 0.88); backdrop-filter: blur(8px); z-index: 10000; align-items: center; justify-content: center; padding: 20px;">
+        <div class="subscription-modal-card" style="max-width: 480px; width: 100%; position: relative;">
+            <button id="close-crypto-btn" onclick="closeCryptoModal()" class="abort-btn"><i class="fa-solid fa-xmark"></i></button>
+            <div class="corner-bracket top-left"></div>
+            <div class="corner-bracket top-right"></div>
+            <div class="corner-bracket bottom-left"></div>
+            <div class="corner-bracket bottom-right"></div>
+
+            <!-- Header -->
+            <div style="border-bottom: 1px solid rgba(0,240,255,0.2); padding-bottom: 10px; margin-bottom: 15px;">
+                <div class="modal-status-tag">// ON-CHAIN PAYMENT UPLINK</div>
+                <h2 id="crypto-plan-title" style="color: #00f0ff; margin: 5px 0 0 0; font-family: 'Share Tech Mono', monospace; font-size: 1.4rem;">PAY WITH USDC</h2>
+            </div>
+
+            <!-- Amount Display -->
+            <div style="text-align: center; background: rgba(0,255,102,0.05); border: 1px solid rgba(0,255,102,0.3); padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+                <span style="color: #aaa; font-size: 0.75rem; letter-spacing: 1px;">TOTAL DUE:</span>
+                <div id="crypto-amount-due" style="color: #00ff66; font-size: 1.8rem; font-weight: bold; font-family: 'Share Tech Mono', monospace;">
+                    $0.00 USDC
+                </div>
+            </div>
+
+            <!-- Network Selection Tabs -->
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button id="tab-solana" class="net-tab active" onclick="switchCryptoNetwork('solana')" style="flex: 1; padding: 10px; background: #00f0ff; color: #000; border: 1px solid #00f0ff; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: 'Share Tech Mono', monospace;">
+                    SOLANA (SPL)
+                </button>
+                <button id="tab-ethereum" class="net-tab" onclick="switchCryptoNetwork('ethereum')" style="flex: 1; padding: 10px; background: transparent; color: #00f0ff; border: 1px solid #00f0ff; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: 'Share Tech Mono', monospace;">
+                    ETHEREUM (ERC-20)
+                </button>
+            </div>
+
+            <!-- QR Code & Address Display Box -->
+            <div style="text-align: center; background: rgba(0,0,0,0.6); border: 1px solid rgba(0,240,255,0.2); padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                <!-- Dynamic QR Code -->
+                <img id="crypto-qr-code" src="" alt="Scan QR Code" style="width: 150px; height: 150px; border-radius: 6px; border: 2px solid #00f0ff; margin-bottom: 10px;">
+
+                <!-- Address String -->
+                <div style="font-size: 0.75rem; color: #aaa; margin-bottom: 6px;">SEND ONLY USDC TO THIS ADDRESS:</div>
+                <div id="crypto-wallet-address" style="font-size: 0.75rem; color: #ffffff; word-break: break-all; font-family: 'Share Tech Mono', monospace; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 4px; margin-bottom: 8px;">
+                    <!-- Address injected via JS -->
+                </div>
+
+                <button onclick="copyWalletAddress()" style="background: transparent; color: #00f0ff; border: 1px dashed #00f0ff; padding: 6px 14px; font-size: 0.75rem; cursor: pointer; border-radius: 4px; font-family: 'Share Tech Mono', monospace;">
+                    <i class="fa-solid fa-copy"></i> COPY ADDRESS
+                </button>
+            </div>
+
+            <!-- Transaction Hash Verification Input -->
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; color: #aaa; font-size: 0.75rem; margin-bottom: 5px;">PASTE TRANSACTION HASH (TxID) AFTER SENDING:</label>
+                <input type="text" id="tx-hash-input" placeholder="e.g. 5Kj9x... or 0x8f2a..." style="width: 100%; padding: 10px; background: rgba(0,0,0,0.8); border: 1px solid #00f0ff; color: #fff; font-family: 'Share Tech Mono', monospace; border-radius: 4px; box-sizing: border-box;">
+            </div>
+
+            <!-- Submit Button -->
+            <button id="verify-payment-btn" onclick="submitTransactionForVerification()" style="width: 100%; padding: 12px; background: #00ff66; color: #000; border: none; font-weight: bold; font-family: 'Share Tech Mono', monospace; font-size: 0.95rem; cursor: pointer; border-radius: 4px;">
+                VERIFY PAYMENT & UNLOCK CREDITS <i class="fa-solid fa-bolt"></i>
+            </button>
         </div>
     </div>
 
