@@ -1338,3 +1338,8 @@ function formatStrategyText(text) {
 
     return outHtml;
 }
+
+// Suppress default HTML5 browser validation popups globally
+document.addEventListener('invalid', (e) => {
+  e.preventDefault();
+}, true); // 'true' enables event capture because 'invalid' events do not bubble
