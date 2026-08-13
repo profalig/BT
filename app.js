@@ -1029,9 +1029,9 @@ function showDatabankList() {
     if (detailView) detailView.style.display = 'none';
 }
 
-// FORCE UNLOCK INPUT FIELD (Fixes click blocking, z-index, text color & key interception)
+// FORCE UNLOCK INPUT FIELD (Scoped strictly to Databank search input)
 function unlockAndStyleSearchInput() {
-    const inputs = document.querySelectorAll('input');
+    const inputs = document.querySelectorAll('.search-filter-bar input, #databank-search');
     
     inputs.forEach(input => {
         // Unlock HTML attributes
@@ -1040,18 +1040,18 @@ function unlockAndStyleSearchInput() {
         input.disabled = false;
         input.readOnly = false;
 
-        // Force clickable & visible styling directly via JS
+        // Force clickable & visible styling
         input.style.setProperty('pointer-events', 'auto', 'important');
         input.style.setProperty('position', 'relative', 'important');
         input.style.setProperty('z-index', '999999', 'important');
-        input.style.setProperty('color', '#ffffff', 'important'); // Visible white text
-        input.style.setProperty('caret-color', '#00f0ff', 'important'); // Bright cyan typing cursor
+        input.style.setProperty('color', '#ffffff', 'important');
+        input.style.setProperty('caret-color', '#00f0ff', 'important');
         input.style.setProperty('background', 'rgba(0, 0, 0, 0.6)', 'important');
         input.style.setProperty('border', '1px solid #00f0ff', 'important');
         input.style.setProperty('user-select', 'text', 'important');
         input.style.setProperty('-webkit-user-select', 'text', 'important');
 
-        // Stop 3D/Canvas global listeners from swallowing key presses
+        // Prevent 3D/Canvas global listeners from swallowing key presses
         const stopPropagation = (e) => e.stopPropagation();
         input.onkeydown = stopPropagation;
         input.onkeyup = stopPropagation;
@@ -1159,7 +1159,7 @@ function applyDatabankFilters() {
         const fullSystemDataString = JSON.stringify(sys).toLowerCase();
         const sysCat = String(sys.category || '').toLowerCase();
 
-        // 1. Category Filter Logic
+        // Category Filter Logic
         let matchesCategory = false;
         if (currentCategoryFilter === 'ALL') {
             matchesCategory = true;
@@ -1170,7 +1170,7 @@ function applyDatabankFilters() {
                 (sysCat === '' && (fullSystemDataString.includes('eur') || fullSystemDataString.includes('gbp') || fullSystemDataString.includes('jpy')));
         }
 
-        // 2. Search Query Logic
+        // Search Query Logic
         const matchesSearch = !query || fullSystemDataString.includes(query);
 
         return matchesCategory && matchesSearch;
@@ -1209,78 +1209,42 @@ function renderSystemGrid(systems, container) {
 }
 
 // ==========================================
-// SYSTEM DETAIL VIEW (EXPANDED CONSOLE & EDITORIAL FORMATTER)
+// SYSTEM DETAIL VIEW (COMPLETED IMPLEMENTATION)
 // ==========================================
-
 async function viewSystemDetail(sys) {
     const listView = document.getElementById('databank-list-view') || document.getElementById('systemsGrid');
     let detailView = document.getElementById('databank-detail-view') || document.getElementById('systemDetailView');
 
-    if (!detailView) return;
-
     if (listView) listView.style.display = 'none';
-    detailView.style.display = 'block';
-
-    const rawDescription = sys.full_description || sys.description || sys.short_description || '';
-
-    detailView.innerHTML = `
-        <style>
-            .cyber-scroll::-webkit-scrollbar {
-                width: 6px;
-            }
-            .cyber-scroll::-webkit-scrollbar-track {
-                background: rgba(0, 0, 0, 0.6);
-                border-radius: 3px;
-            }
-            .cyber-scroll::-webkit-scrollbar-thumb {
-                background: #00f0ff;
-                border-radius: 3px;
-                box-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
-            }
-            .cyber-scroll::-webkit-scrollbar-thumb:hover {
-                background: #00ff66;
-            }
-        </style>
-
-        <button onclick="showDatabankList()" style="background: transparent; color: #00f0ff; border: 1px solid #00f0ff; padding: 6px 12px; cursor: pointer; font-size: 0.85rem; font-family: 'Share Tech Mono', monospace; margin-bottom: 1rem; border-radius: 4px; transition: 0.2s;">
-            &#9664; BACK TO SYSTEM LIST
-        </button>
-
-        <h2 style="color: #fff; margin: 0 0 6px 0; font-family: 'Share Tech Mono', monospace; font-size: 1.5rem; letter-spacing: 1px;">
-            ${sys.system_name || sys.title || sys.name || 'Trading Strategy'}
-        </h2>
-        <span class="tag" style="border: 1px solid #00ffff; padding: 2px 8px; font-size: 11px; color: #00ffff; border-radius: 3px; font-family: 'Share Tech Mono', monospace;">
-            ${sys.category || 'Crypto'}
-        </span>
-
-        <!-- STATS HEADER GRID -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1rem 0 1.25rem 0;">
-            <div style="background: rgba(0, 240, 255, 0.05); padding: 0.75rem 1rem; border-left: 3px solid #00f0ff; border-radius: 4px;">
-                <div style="font-size: 0.7rem; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;">WIN RATE</div>
-                <div style="font-size: 1.4rem; color: #fff; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.win_rate ?? 'N/A'}%</div>
+    if (detailView) {
+        detailView.style.display = 'block';
+        detailView.innerHTML = `
+            <button class="back-btn" onclick="showDatabankList()">← BACK TO SYSTEM LIST</button>
+            <div style="border-bottom: 1px solid #00ffff; padding-bottom: 10px; margin-bottom: 15px;">
+                <h3 style="color: #00ffff; margin: 0 0 5px 0;">${sys.system_name || sys.title || 'Trading System'}</h3>
+                <span class="tag">${sys.category || 'Quantitative'}</span>
             </div>
-            <div style="background: rgba(0, 255, 102, 0.05); padding: 0.75rem 1rem; border-left: 3px solid #00ff66; border-radius: 4px;">
-                <div style="font-size: 0.7rem; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;">NET RETURN</div>
-                <div style="font-size: 1.4rem; color: #00ff66; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.net_return ?? 'N/A'}%</div>
+            <p style="color: #ccc; line-height: 1.6; margin-bottom: 20px;">${sys.full_description || sys.short_description || 'No detailed description available.'}</p>
+            <div class="detail-metrics">
+                <div class="metric-box">
+                    <span>WIN RATE</span>
+                    <strong>${sys.win_rate ?? 'N/A'}%</strong>
+                </div>
+                <div class="metric-box">
+                    <span>NET RETURN</span>
+                    <strong>${sys.net_return ?? 'N/A'}%</strong>
+                </div>
+                <div class="metric-box">
+                    <span>MAX DRAWDOWN</span>
+                    <strong>${sys.max_drawdown ?? 'N/A'}%</strong>
+                </div>
             </div>
-            <div style="background: rgba(255, 0, 85, 0.05); padding: 0.75rem 1rem; border-left: 3px solid #ff0055; border-radius: 4px;">
-                <div style="font-size: 0.7rem; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;">MAX DRAWDOWN</div>
-                <div style="font-size: 1.4rem; color: #ff0055; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.drawdown ?? sys.max_drawdown ?? 'N/A'}%</div>
+            <div class="detail-actions">
+                <button class="action-btn primary" onclick="closeDatabankModal()">LOAD IN BACKTEST MACHINE</button>
+                <button class="action-btn secondary" onclick="showDatabankList()">CLOSE DETAIL</button>
             </div>
-        </div>
-
-        <!-- TALLER EDITORIAL CONSOLE BOX (460PX HEIGHT) -->
-        <div class="cyber-scroll" style="max-height: 460px; min-height: 320px; overflow-y: auto; padding: 1.25rem 1.5rem; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 6px; margin-bottom: 1.25rem;">
-            ${formatStrategyText(rawDescription)}
-        </div>
-
-        <!-- ACTION BUTTON -->
-        ${sys.report_url ? `
-            <a href="${sys.report_url}" target="_blank" download style="display: inline-block; background: #00f0ff; color: #040912; padding: 10px 20px; text-decoration: none; font-weight: bold; font-family: 'Share Tech Mono', monospace; border-radius: 4px; border: 1px solid #00f0ff; font-size: 0.9rem;">
-                <i class="fa-solid fa-file-pdf"></i> DOWNLOAD FULL PDF REPORT
-            </a>
-        ` : ''}
-    `;
+        `;
+    }
 }
 
 // DYNAMIC EDITORIAL PARSER: Adapts to whatever layout you write in Supabase
