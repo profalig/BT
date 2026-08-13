@@ -1288,46 +1288,57 @@ async function viewSystemDetail(sys) {
     `;
 }
 
-// EDITORIAL PARSER: Clean, minimalist document hierarchy
+// DYNAMIC EDITORIAL PARSER: Adapts to whatever layout you write in Supabase
 function formatStrategyText(text) {
     if (!text) return `<p style="color: #666;">No detailed documentation attached.</p>`;
 
-    let src = text;
-
-    // 1. Mark Major Section Titles
-    const headerRegex = /(Core Indicators|Entry Rules Long \(Buy\) Conditions|Entry Rules Long|Short \(Sell\) Conditions|Entry Rules Short|Risk Management \(Dynamic SL & TP\)|Risk Management)/gi;
-    src = src.replace(headerRegex, '\n\n###SECTION###$1\n');
-
-    // 2. Mark List Items & Rules (- 1. , - 2. , - Stop Loss , - Take Profit, etc.)
-    src = src.replace(/\s*-\s*(\d+\.)/g, '\n###BULLET###$1');
-    src = src.replace(/\s*-\s*(Stop Loss \(SL\)|Take Profit \(TP\)|For Longs|For Shorts|Why this works)/gi, '\n###BULLET###$1');
-
-    // 3. Process into clean HTML blocks
-    const lines = src.split('\n').map(l => l.trim()).filter(Boolean);
+    // Split text into individual lines from Supabase
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     let outHtml = '';
 
     lines.forEach(line => {
-        if (line.startsWith('###SECTION###')) {
-            const title = line.replace('###SECTION###', '').trim();
+        // 1. DYNAMIC HEADER DETECTION:
+        // Matches lines starting with # or ##, short lines ending with ':', or common header names
+        const isMarkdownHeader = /^#{1,6}\s+/.test(line);
+        const isColonHeader = !line.startsWith('-') && !line.startsWith('*') && line.endsWith(':') && line.length < 65;
+        const isKnownHeader = !line.startsWith('-') && !line.startsWith('*') && (
+            /^(Core Indicators|Entry Rules|Long \(Buy\) Conditions|Short \(Sell\) Conditions|Risk Management|Exit Rules)/i.test(line)
+        ) && line.length < 65;
+
+        if (isMarkdownHeader || isColonHeader || isKnownHeader) {
+            // Clean up title text (strip # and trailing colon for a clean HUD title look)
+            const cleanTitle = line.replace(/^#{1,6}\s+/, '').replace(/:$/, '').trim();
             outHtml += `
-                <h4 style="color: #00f0ff; margin: 1.5rem 0 0.5rem 0; font-family: 'Share Tech Mono', monospace; font-size: 0.88rem; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 4px; letter-spacing: 1px; text-transform: uppercase;">
-                    ${title}
+                <h4 style="color: #00f0ff; margin: 1.4rem 0 0.5rem 0; font-family: 'Share Tech Mono', monospace; font-size: 0.88rem; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 4px; letter-spacing: 1px; text-transform: uppercase;">
+                    ${cleanTitle}
                 </h4>`;
-        } else if (line.startsWith('###BULLET###')) {
-            let body = line.replace('###BULLET###', '').trim();
-            
-            // Clean off-white bold labels without neon green
-            body = body.replace(/^([^:]+:)/, '<strong style="color: #e2e8f0; font-weight: 600;">$1</strong>');
-            
-            // Minimalist indented list line without background boxes, borders, or arrows
+            return;
+        }
+
+        // 2. BULLET POINT DETECTION:
+        if (line.startsWith('-') || line.startsWith('*')) {
+            let content = line.replace(/^[-*]\s*/, '').trim();
+
+            // Support markdown bold **text** or auto-bold labels before a colon
+            content = content.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #e2e8f0; font-weight: 600;">$1</strong>');
+            if (!content.startsWith('<strong')) {
+                content = content.replace(/^([^:]+:)/, '<strong style="color: #e2e8f0; font-weight: 600;">$1</strong>');
+            }
+
             outHtml += `
                 <div style="margin: 6px 0 6px 12px; line-height: 1.6; color: #94a3b8; font-size: 0.88rem; font-family: system-ui, -apple-system, sans-serif;">
-                    ${body}
+                    <span style="color: #00f0ff; margin-right: 6px;">•</span>${content}
                 </div>`;
-        } else {
-            let styledLine = line.replace(/^([^:]+:)/, '<strong style="color: #e2e8f0; font-weight: 600;">$1</strong>');
-            outHtml += `<p style="margin: 6px 0; color: #94a3b8; line-height: 1.6; font-size: 0.88rem; font-family: system-ui, -apple-system, sans-serif;">${styledLine}</p>`;
+            return;
         }
+
+        // 3. REGULAR PARAGRAPH TEXT:
+        let content = line.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #e2e8f0; font-weight: 600;">$1</strong>');
+        if (!content.startsWith('<strong')) {
+            content = content.replace(/^([^:]+:)/, '<strong style="color: #e2e8f0; font-weight: 600;">$1</strong>');
+        }
+
+        outHtml += `<p style="margin: 6px 0; color: #94a3b8; line-height: 1.6; font-size: 0.88rem; font-family: system-ui, -apple-system, sans-serif;">${content}</p>`;
     });
 
     return outHtml;
