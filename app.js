@@ -1083,19 +1083,19 @@ function setupDatabankEventListeners() {
     if (window._databankListenersAttached) return;
     window._databankListenersAttached = true;
 
-    // Global Category Filter Click Handler
+    // Global Category Filter Click Handler (ALL / CRYPTO / FOREX)
     document.addEventListener('click', (e) => {
         const targetBtn = e.target.closest('button, div, span, a');
         if (!targetBtn) return;
 
         const text = targetBtn.innerText.trim().toUpperCase();
-        if (['ALL', 'CRYPTO', 'EQUITIES'].includes(text)) {
+        if (['ALL', 'CRYPTO', 'FOREX'].includes(text)) {
             const parentContainer = targetBtn.parentElement;
             if (parentContainer) {
                 const siblings = parentContainer.querySelectorAll('button, div, span, a');
                 siblings.forEach(el => {
                     const elText = el.innerText.trim().toUpperCase();
-                    if (['ALL', 'CRYPTO', 'EQUITIES'].includes(elText)) {
+                    if (['ALL', 'CRYPTO', 'FOREX'].includes(elText)) {
                         el.style.background = 'transparent';
                         el.style.color = '#00f0ff';
                         el.classList.remove('active');
@@ -1167,15 +1167,17 @@ function applyDatabankFilters() {
         const fullSystemDataString = JSON.stringify(sys).toLowerCase();
         const category = String(sys.category || fullSystemDataString).toLowerCase();
 
+        // 1. Category Filter Logic (Crypto vs Forex)
         let matchesCategory = false;
         if (currentCategoryFilter === 'ALL') {
             matchesCategory = true;
         } else if (currentCategoryFilter === 'CRYPTO') {
-            matchesCategory = category.includes('crypto') || fullSystemDataString.includes('btc') || fullSystemDataString.includes('crypto');
-        } else if (currentCategoryFilter === 'EQUITIES') {
-            matchesCategory = category.includes('equity') || category.includes('stock') || category.includes('equities') || fullSystemDataString.includes('equity');
+            matchesCategory = category.includes('crypto') || fullSystemDataString.includes('btc') || fullSystemDataString.includes('eth');
+        } else if (currentCategoryFilter === 'FOREX') {
+            matchesCategory = category.includes('forex') || category.includes('fx') || fullSystemDataString.includes('eur') || fullSystemDataString.includes('usd') || fullSystemDataString.includes('gbp') || fullSystemDataString.includes('jpy');
         }
 
+        // 2. Search Query Logic
         const matchesSearch = !query || fullSystemDataString.includes(query);
 
         return matchesCategory && matchesSearch;
