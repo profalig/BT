@@ -1214,7 +1214,7 @@ function renderSystemGrid(systems, container) {
 }
 
 // ==========================================
-// SYSTEM DETAIL VIEW (FORMATTED & SCROLLABLE)
+// SYSTEM DETAIL VIEW (EXPANDED CONSOLE & EDITORIAL FORMATTER)
 // ==========================================
 
 async function viewSystemDetail(sys) {
@@ -1230,12 +1230,11 @@ async function viewSystemDetail(sys) {
 
     detailView.innerHTML = `
         <style>
-            /* Custom Cyberpunk Scrollbar for Detail View */
             .cyber-scroll::-webkit-scrollbar {
                 width: 6px;
             }
             .cyber-scroll::-webkit-scrollbar-track {
-                background: rgba(0, 0, 0, 0.5);
+                background: rgba(0, 0, 0, 0.6);
                 border-radius: 3px;
             }
             .cyber-scroll::-webkit-scrollbar-thumb {
@@ -1248,11 +1247,11 @@ async function viewSystemDetail(sys) {
             }
         </style>
 
-        <button onclick="showDatabankList()" style="background: transparent; color: #00f0ff; border: 1px solid #00f0ff; padding: 6px 12px; cursor: pointer; font-size: 0.85rem; font-family: 'Share Tech Mono', monospace; margin-bottom: 1.25rem; border-radius: 4px; transition: 0.2s;">
+        <button onclick="showDatabankList()" style="background: transparent; color: #00f0ff; border: 1px solid #00f0ff; padding: 6px 12px; cursor: pointer; font-size: 0.85rem; font-family: 'Share Tech Mono', monospace; margin-bottom: 1rem; border-radius: 4px; transition: 0.2s;">
             &#9664; BACK TO SYSTEM LIST
         </button>
 
-        <h2 style="color: #fff; margin: 0 0 8px 0; font-family: 'Share Tech Mono', monospace; font-size: 1.5rem; letter-spacing: 1px;">
+        <h2 style="color: #fff; margin: 0 0 6px 0; font-family: 'Share Tech Mono', monospace; font-size: 1.5rem; letter-spacing: 1px;">
             ${sys.system_name || sys.title || sys.name || 'Trading Strategy'}
         </h2>
         <span class="tag" style="border: 1px solid #00ffff; padding: 2px 8px; font-size: 11px; color: #00ffff; border-radius: 3px; font-family: 'Share Tech Mono', monospace;">
@@ -1260,23 +1259,23 @@ async function viewSystemDetail(sys) {
         </span>
 
         <!-- STATS HEADER GRID -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.25rem 0 1.5rem 0;">
-            <div style="background: rgba(0, 240, 255, 0.05); padding: 0.85rem 1rem; border-left: 3px solid #00f0ff; border-radius: 4px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1rem 0 1.25rem 0;">
+            <div style="background: rgba(0, 240, 255, 0.05); padding: 0.75rem 1rem; border-left: 3px solid #00f0ff; border-radius: 4px;">
                 <div style="font-size: 0.7rem; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;">WIN RATE</div>
                 <div style="font-size: 1.4rem; color: #fff; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.win_rate ?? 'N/A'}%</div>
             </div>
-            <div style="background: rgba(0, 255, 102, 0.05); padding: 0.85rem 1rem; border-left: 3px solid #00ff66; border-radius: 4px;">
+            <div style="background: rgba(0, 255, 102, 0.05); padding: 0.75rem 1rem; border-left: 3px solid #00ff66; border-radius: 4px;">
                 <div style="font-size: 0.7rem; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;">NET RETURN</div>
                 <div style="font-size: 1.4rem; color: #00ff66; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.net_return ?? 'N/A'}%</div>
             </div>
-            <div style="background: rgba(255, 0, 85, 0.05); padding: 0.85rem 1rem; border-left: 3px solid #ff0055; border-radius: 4px;">
+            <div style="background: rgba(255, 0, 85, 0.05); padding: 0.75rem 1rem; border-left: 3px solid #ff0055; border-radius: 4px;">
                 <div style="font-size: 0.7rem; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;">MAX DRAWDOWN</div>
                 <div style="font-size: 1.4rem; color: #ff0055; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.drawdown ?? sys.max_drawdown ?? 'N/A'}%</div>
             </div>
         </div>
 
-        <!-- SCROLLABLE FORMATTED DOCUMENTATION BOX -->
-        <div class="cyber-scroll" style="max-height: 280px; overflow-y: auto; padding: 1.25rem; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 240, 255, 0.15); border-radius: 6px; margin-bottom: 1.5rem;">
+        <!-- TALLER EDITORIAL CONSOLE BOX (460PX HEIGHT) -->
+        <div class="cyber-scroll" style="max-height: 460px; min-height: 320px; overflow-y: auto; padding: 1.25rem 1.5rem; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 6px; margin-bottom: 1.25rem;">
             ${formatStrategyText(rawDescription)}
         </div>
 
@@ -1289,18 +1288,47 @@ async function viewSystemDetail(sys) {
     `;
 }
 
-// HELPER: Convert raw single-paragraph text into structured HUD sections & bullet points
+// EDITORIAL PARSER: Converts dense paragraph strings into structured HUD documentation
 function formatStrategyText(text) {
     if (!text) return `<p style="color: #666;">No detailed documentation attached.</p>`;
 
-    // Insert section breaks before common section titles
-    let formatted = text
-        .replace(/(Core Indicators|Entry Rules Long \(Buy\) Conditions|Short \(Sell\) Conditions|Risk Management \(Dynamic SL & TP\)|Why this works:)/gi, 
-            `<h4 style="color: #00f0ff; margin: 1.2rem 0 0.5rem 0; font-family: 'Share Tech Mono', monospace; font-size: 0.95rem; border-bottom: 1px dashed rgba(0, 240, 255, 0.25); padding-bottom: 4px; letter-spacing: 1px; text-transform: uppercase;">$1</h4>`)
-        
-        // Format bullet points with neon green indicators
-        .replace(/ - (\d+\.)/g, `<div style="margin: 4px 0 4px 12px;"><span style="color: #00ff66; font-family: 'Share Tech Mono', monospace; font-weight: bold;">▶ $1</span>`)
-        .replace(/ - /g, `<br/><span style="color: #00f0ff;">•</span> `);
+    let src = text;
 
-    return `<div style="line-height: 1.6; color: #d1d5db; font-size: 0.88rem; font-family: system-ui, -apple-system, sans-serif;">${formatted}</div>`;
+    // 1. Mark Major Section Titles
+    const headerRegex = /(Core Indicators|Entry Rules Long \(Buy\) Conditions|Entry Rules Long|Short \(Sell\) Conditions|Entry Rules Short|Risk Management \(Dynamic SL & TP\)|Risk Management)/gi;
+    src = src.replace(headerRegex, '\n\n###SECTION###$1\n');
+
+    // 2. Mark List Items & Rules (- 1. , - 2. , - Stop Loss , - Take Profit, etc.)
+    src = src.replace(/\s*-\s*(\d+\.)/g, '\n###BULLET###$1');
+    src = src.replace(/\s*-\s*(Stop Loss \(SL\)|Take Profit \(TP\)|For Longs|For Shorts|Why this works)/gi, '\n###BULLET###$1');
+
+    // 3. Process into styled HTML blocks
+    const lines = src.split('\n').map(l => l.trim()).filter(Boolean);
+    let outHtml = '';
+
+    lines.forEach(line => {
+        if (line.startsWith('###SECTION###')) {
+            const title = line.replace('###SECTION###', '').trim();
+            outHtml += `
+                <h4 style="color: #00f0ff; margin: 1.5rem 0 0.75rem 0; font-family: 'Share Tech Mono', monospace; font-size: 0.95rem; border-bottom: 1px dashed rgba(0, 240, 255, 0.3); padding-bottom: 6px; letter-spacing: 1px; text-transform: uppercase;">
+                    ${title}
+                </h4>`;
+        } else if (line.startsWith('###BULLET###')) {
+            let body = line.replace('###BULLET###', '').trim();
+            
+            // Highlight rule titles (text before colon) in bright green
+            body = body.replace(/^([^:]+:)/, '<strong style="color: #00ff66; font-family: \'Share Tech Mono\', monospace; font-size: 0.9rem;">$1</strong>');
+            
+            outHtml += `
+                <div style="margin: 6px 0; padding: 8px 12px; background: rgba(0, 240, 255, 0.03); border-left: 3px solid #00f0ff; border-radius: 3px; line-height: 1.6; color: #e2e8f0; font-size: 0.9rem;">
+                    <span style="color: #00f0ff; margin-right: 8px;">▶</span>${body}
+                </div>`;
+        } else {
+            // Standard body text or secondary notes
+            let styledLine = line.replace(/^([^:]+:)/, '<strong style="color: #00f0ff; font-family: \'Share Tech Mono\', monospace;">$1</strong>');
+            outHtml += `<p style="margin: 8px 0; color: #a0aec0; line-height: 1.6; font-size: 0.9rem;">${styledLine}</p>`;
+        }
+    });
+
+    return outHtml;
 }
