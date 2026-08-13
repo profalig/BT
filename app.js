@@ -329,6 +329,9 @@ function showTacticalModal(title, message, isSuccess = true) {
 function openSubscriptionModal() {
     const subModal = document.getElementById('subscription-modal-overlay');
     if (subModal) subModal.classList.add('active');
+
+    // Wake up Render server in the background so Checkout is instant
+    fetch('https://backtest-worker-fs1a.onrender.com', { mode: 'no-cors' }).catch(() => {});
 }
 
 function closeSubscriptionModal() {
