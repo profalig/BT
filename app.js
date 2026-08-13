@@ -1,5 +1,3 @@
-HTMLInputElement.prototype.reportValidity = function() { return this.checkValidity(); };
-
 // ==========================================
 // PLANET DATA & ORBIT ENGINE CONFIGURATION
 // ==========================================
@@ -1111,6 +1109,16 @@ function setupDatabankEventListeners() {
 setupDatabankEventListeners();
 document.addEventListener('DOMContentLoaded', unlockAndStyleSearchInput);
 window.addEventListener('load', unlockAndStyleSearchInput);
+
+// Run unlocking routines when DOM loads and on window clicks
+setupDatabankEventListeners();
+document.addEventListener('DOMContentLoaded', unlockAndStyleSearchInput);
+window.addEventListener('load', unlockAndStyleSearchInput);
+
+// FIX: Prevent browser validation popup ("Please fill out this field")
+document.addEventListener('invalid', (e) => e.preventDefault(), true);
+
+async function fetchTradingSystems() {
 
 async function fetchTradingSystems() {
     const gridContainer = document.getElementById('systems-grid') || document.getElementById('systemsGrid');
