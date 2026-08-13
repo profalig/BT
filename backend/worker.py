@@ -27,6 +27,91 @@ if not SUPABASE_KEY:
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ==========================================
+# ON-CHAIN CRYPTO VERIFICATION HELPERS
+# ==========================================
+USDC_MINT_SOLANA = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+USDC_CONTRACT_ETH = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+
+# ⚠️ REPLACE THESE WITH YOUR EXACT RECEIVING WALLETS
+MY_SOLANA_WALLET = "2C3P2uoRTUq9WVggAHhUBwA5EJ7Em8WEQJgQA5hsaWo7"  # Put full Solana wallet here
+MY_ETH_WALLET = "0x13581166EE5CDD412358209539d94F2b79D94341"     # Put full Ethereum wallet here
+
+def verify_solana_usdc_tx(tx_hash, required_usdc_amount):
+    """Verify Solana USDC transaction directly on Mainnet RPC"""
+    url = "https://api.mainnet-beta.solana.com"
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getParsedTransaction",
+        "params": [tx_hash, {"encoding": "jsonParsed", "maxSupportedTransactionVersion": 0}]
+    }
+    try:
+        response = requests.post(url, json=payload, timeout=10).json()
+        result = response.get("result")
+        if not result or result.get("meta", {}).get("err") is not None:
+            return False, "Transaction not found or failed on Solana blockchain."
+
+        post_balances = result["meta"].get("postTokenBalances", [])
+        pre_balances = result["meta"].get("preTokenBalances", [])
+
+        received_amount = 0.0
+        for post in post_balances:
+            if post.get("mint") == USDC_MINT_SOLANA and post.get("owner") == MY_SOLANA_WALLET:
+                account_index = post.get("accountIndex")
+                post_amt = float(post["uiTokenAmount"]["uiAmount"] or 0)
+                
+                pre_amt = 0.0
+                for pre in pre_balances:
+                    if pre.get("accountIndex") == account_index:
+                        pre_amt = float(pre["uiTokenAmount"]["uiAmount"] or 0)
+                        break
+                
+                received_amount += (post_amt - pre_amt)
+
+        if received_amount >= required_usdc_amount:
+            return True, f"Verified transfer of {received_amount} USDC."
+        else:
+            return False, f"Insufficient USDC received. Got {received_amount}, expected {required_usdc_amount}."
+
+    except Exception as e:
+        return False, f"Solana RPC Error: {str(e)}"
+
+
+def verify_ethereum_usdc_tx(tx_hash, required_usdc_amount):
+    """Verify Ethereum ERC-20 USDC transaction via public RPC"""
+    url = "https://eth.llamarpc.com"
+    payload = {
+        "jsonrpc": "2.0",
+        "method": "eth_getTransactionReceipt",
+        "params": [tx_hash],
+        "id": 1
+    }
+    try:
+        res = requests.post(url, json=payload, timeout=10).json()
+        receipt = res.get("result")
+        
+        if not receipt or receipt.get("status") != "0x1":
+            return False, "Transaction not found or failed on Ethereum."
+
+        transfer_topic = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+        target_address_padded = "0x" + MY_ETH_WALLET.lower().replace("0x", "").zfill(64)
+
+        for log in receipt.get("logs", []):
+            if log.get("address", "").lower() == USDC_CONTRACT_ETH:
+                topics = log.get("topics", [])
+                if len(topics) >= 3 and topics[0] == transfer_topic and topics[2].lower() == target_address_padded:
+                    raw_val = int(log.get("data", "0x0"), 16)
+                    usdc_received = raw_val / 10**6
+                    
+                    if usdc_received >= required_usdc_amount:
+                        return True, f"Verified transfer of {usdc_received} USDC."
+
+        return False, "No matching USDC transfer to your wallet address found in transaction logs."
+
+    except Exception as e:
+        return False, f"Ethereum RPC Error: {str(e)}"
+
+# ==========================================
 # 2. HTTP SERVER & STRIPE WEBHOOK HANDLER
 # ==========================================
 class WebhookAndHealthHandler(BaseHTTPRequestHandler):
@@ -177,6 +262,97 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps({"received": True}).encode("utf-8"))
+            
+        # ----------------------------------------------------
+        # ROUTE 3: AUTOMATED ON-CHAIN USDC VERIFICATION
+        # ----------------------------------------------------
+        elif self.path == "/verify-crypto-payment":
+            try:
+                data = json.loads(body.decode("utf-8"))
+                user_id = data.get("userId")
+                tx_hash = data.get("txHash", "").strip()
+                network = data.get("network", "solana").lower()
+                credits_to_add = int(data.get("creditsToAdd", 0))
+                price_usdc = float(data.get("priceUsdc", 0.0))
+                plan_name = data.get("planName", "USDC Plan")
+
+                if not user_id or not tx_hash:
+                    self.send_response(400)
+                    self._set_cors_headers()
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Missing user ID or Tx Hash."}).encode("utf-8"))
+                    return
+
+                # 1. Anti-Replay Check: Ensure hash hasn't been used before
+                tx_check = supabase.table("processed_crypto_txs").select("tx_hash").eq("tx_hash", tx_hash).execute()
+                if tx_check.data and len(tx_check.data) > 0:
+                    self.send_response(400)
+                    self._set_cors_headers()
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "This transaction hash has already been redeemed!"}).encode("utf-8"))
+                    return
+
+                # 2. Automated On-Chain Verification
+                if network == "solana":
+                    is_valid, reason = verify_solana_usdc_tx(tx_hash, price_usdc)
+                elif network == "ethereum":
+                    is_valid, reason = verify_ethereum_usdc_tx(tx_hash, price_usdc)
+                else:
+                    is_valid, reason = False, "Unsupported blockchain network."
+
+                if not is_valid:
+                    self.send_response(400)
+                    self._set_cors_headers()
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": f"Verification failed: {reason}"}).encode("utf-8"))
+                    return
+
+                # 3. Mark Hash as Used
+                supabase.table("processed_crypto_txs").insert({
+                    "tx_hash": tx_hash,
+                    "user_id": user_id,
+                    "network": network,
+                    "credits_added": credits_to_add
+                }).execute()
+
+                # 4. Grant Credits to User Profile
+                res = supabase.table("user_profiles").select("credits").eq("id", user_id).execute()
+                if res.data and len(res.data) > 0:
+                    current_credits = res.data[0].get("credits", 0)
+                    new_credits = current_credits + credits_to_add
+                    supabase.table("user_profiles").update({"credits": new_credits}).eq("id", user_id).execute()
+                else:
+                    new_credits = credits_to_add
+                    supabase.table("user_profiles").insert({"id": user_id, "credits": new_credits}).execute()
+
+                # 5. Telegram Notification
+                explorer_url = f"https://solscan.io/tx/{tx_hash}" if network == "solana" else f"https://etherscan.io/tx/{tx_hash}"
+                send_telegram_alert(
+                    f"⚡ <b>AUTOMATED USDC PAYMENT VERIFIED!</b>\n\n"
+                    f"👤 <b>User ID:</b> <code>{user_id}</code>\n"
+                    f"📦 <b>Plan:</b> {plan_name}\n"
+                    f"💳 <b>Credits Added:</b> +{credits_to_add} (Total: {new_credits})\n"
+                    f"🌐 <b>Network:</b> {network.upper()}\n"
+                    f"🔗 <b>Tx:</b> <a href='{explorer_url}'>View on Explorer</a>"
+                )
+
+                # 6. Success Response
+                self.send_response(200)
+                self._set_cors_headers()
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "success": True, 
+                    "credits": new_credits,
+                    "message": "Payment verified on-chain! Credits added."
+                }).encode("utf-8"))
+
+            except Exception as e:
+                print(f"❌ Crypto Endpoint Exception: {e}")
+                self.send_response(500)
+                self._set_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
 
         else:
             self.send_response(404)

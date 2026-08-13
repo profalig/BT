@@ -1421,7 +1421,7 @@ function copyWalletAddress() {
     });
 }
 
-// 6. Submit TxID for Verification
+// Updated submitTransactionForVerification with Live Backend Fetch
 async function submitTransactionForVerification() {
     const txHash = document.getElementById('tx-hash-input').value.trim();
     const btn = document.getElementById('verify-payment-btn');
@@ -1431,28 +1431,52 @@ async function submitTransactionForVerification() {
         return;
     }
 
+    if (!supabaseClient) {
+        alert("Supabase client is offline. Please refresh.");
+        return;
+    }
+
+    // Grab current user session to send userId to backend
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session || !session.user) {
+        alert("Please sign in before verifying crypto payments.");
+        return;
+    }
+
+    const originalBtnHtml = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> VERIFYING ON-CHAIN...`;
 
     try {
-        // Replace with your backend verification endpoint or Supabase function call
-        console.log("Submitting Tx Verification:", {
-            ...currentCryptoState,
-            txHash
+        const backendServerUrl = 'https://backtest-worker-fs1a.onrender.com';
+        const response = await fetch(`${backendServerUrl}/verify-crypto-payment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: session.user.id,
+                txHash: txHash,
+                network: currentCryptoState.network,
+                creditsToAdd: currentCryptoState.credits,
+                priceUsdc: currentCryptoState.amount,
+                planName: currentCryptoState.planName
+            })
         });
 
-        // Simulated success delay
-        setTimeout(() => {
-            alert(`Payment submitted successfully! ${currentCryptoState.credits} credits will be unlocked upon block confirmation.`);
-            btn.disabled = false;
-            btn.innerHTML = `VERIFY PAYMENT & UNLOCK CREDITS <i class="fa-solid fa-bolt"></i>`;
-            closeCryptoModal();
-        }, 1500);
+        const data = await response.json();
+
+        if (!response.ok || data.error) {
+            throw new Error(data.error || 'Verification failed on-chain.');
+        }
+
+        alert(`Payment verified! ${data.message || 'Credits added successfully.'}`);
+        closeCryptoModal();
+        window.location.reload(); // Reload to refresh credit balance badge
 
     } catch (error) {
-        console.error("Verification failed:", error);
-        alert("An error occurred during verification. Please contact support.");
+        console.error("Verification error:", error);
+        alert(`Verification Error: ${error.message}`);
+    } finally {
         btn.disabled = false;
-        btn.innerHTML = `VERIFY PAYMENT & UNLOCK CREDITS <i class="fa-solid fa-bolt"></i>`;
+        btn.innerHTML = originalBtnHtml;
     }
 }
