@@ -1213,6 +1213,10 @@ function renderSystemGrid(systems, container) {
     });
 }
 
+// ==========================================
+// SYSTEM DETAIL VIEW (FORMATTED & SCROLLABLE)
+// ==========================================
+
 async function viewSystemDetail(sys) {
     const listView = document.getElementById('databank-list-view') || document.getElementById('systemsGrid');
     let detailView = document.getElementById('databank-detail-view') || document.getElementById('systemDetailView');
@@ -1222,35 +1226,81 @@ async function viewSystemDetail(sys) {
     if (listView) listView.style.display = 'none';
     detailView.style.display = 'block';
 
+    const rawDescription = sys.full_description || sys.description || sys.short_description || '';
+
     detailView.innerHTML = `
-        <button onclick="showDatabankList()" style="background: transparent; color: #00f0ff; border: 1px solid #00f0ff; padding: 6px 12px; cursor: pointer; font-size: 0.85rem; font-family: 'Share Tech Mono', monospace; margin-bottom: 1.5rem; border-radius: 4px;">
+        <style>
+            /* Custom Cyberpunk Scrollbar for Detail View */
+            .cyber-scroll::-webkit-scrollbar {
+                width: 6px;
+            }
+            .cyber-scroll::-webkit-scrollbar-track {
+                background: rgba(0, 0, 0, 0.5);
+                border-radius: 3px;
+            }
+            .cyber-scroll::-webkit-scrollbar-thumb {
+                background: #00f0ff;
+                border-radius: 3px;
+                box-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+            }
+            .cyber-scroll::-webkit-scrollbar-thumb:hover {
+                background: #00ff66;
+            }
+        </style>
+
+        <button onclick="showDatabankList()" style="background: transparent; color: #00f0ff; border: 1px solid #00f0ff; padding: 6px 12px; cursor: pointer; font-size: 0.85rem; font-family: 'Share Tech Mono', monospace; margin-bottom: 1.25rem; border-radius: 4px; transition: 0.2s;">
             &#9664; BACK TO SYSTEM LIST
         </button>
 
-        <h2 style="color: #fff; margin: 0 0 8px 0; font-family: 'Share Tech Mono', monospace;">${sys.system_name || sys.title || sys.name || 'Trading Strategy'}</h2>
-        <span class="tag" style="border: 1px solid #00ffff; padding: 3px 8px; font-size: 11px; color: #00ffff; border-radius: 3px;">${sys.category || 'Quantitative'}</span>
+        <h2 style="color: #fff; margin: 0 0 8px 0; font-family: 'Share Tech Mono', monospace; font-size: 1.5rem; letter-spacing: 1px;">
+            ${sys.system_name || sys.title || sys.name || 'Trading Strategy'}
+        </h2>
+        <span class="tag" style="border: 1px solid #00ffff; padding: 2px 8px; font-size: 11px; color: #00ffff; border-radius: 3px; font-family: 'Share Tech Mono', monospace;">
+            ${sys.category || 'Crypto'}
+        </span>
 
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0;">
-            <div style="background: rgba(0, 240, 255, 0.08); padding: 1rem; border-left: 3px solid #00f0ff; border-radius: 4px;">
-                <div style="font-size: 0.75rem; color: #888; font-family: 'Share Tech Mono', monospace;">WIN RATE</div>
-                <div style="font-size: 1.5rem; color: #fff; font-weight: bold;">${sys.win_rate ?? 'N/A'}%</div>
+        <!-- STATS HEADER GRID -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.25rem 0 1.5rem 0;">
+            <div style="background: rgba(0, 240, 255, 0.05); padding: 0.85rem 1rem; border-left: 3px solid #00f0ff; border-radius: 4px;">
+                <div style="font-size: 0.7rem; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;">WIN RATE</div>
+                <div style="font-size: 1.4rem; color: #fff; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.win_rate ?? 'N/A'}%</div>
             </div>
-            <div style="background: rgba(0, 255, 102, 0.08); padding: 1rem; border-left: 3px solid #00ff66; border-radius: 4px;">
-                <div style="font-size: 0.75rem; color: #888; font-family: 'Share Tech Mono', monospace;">NET RETURN</div>
-                <div style="font-size: 1.5rem; color: #00ff66; font-weight: bold;">${sys.net_return ?? 'N/A'}%</div>
+            <div style="background: rgba(0, 255, 102, 0.05); padding: 0.85rem 1rem; border-left: 3px solid #00ff66; border-radius: 4px;">
+                <div style="font-size: 0.7rem; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;">NET RETURN</div>
+                <div style="font-size: 1.4rem; color: #00ff66; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.net_return ?? 'N/A'}%</div>
             </div>
-            <div style="background: rgba(255, 0, 85, 0.08); padding: 1rem; border-left: 3px solid #ff0055; border-radius: 4px;">
-                <div style="font-size: 0.75rem; color: #888; font-family: 'Share Tech Mono', monospace;">MAX DRAWDOWN</div>
-                <div style="font-size: 1.5rem; color: #ff0055; font-weight: bold;">${sys.drawdown ?? sys.max_drawdown ?? 'N/A'}%</div>
+            <div style="background: rgba(255, 0, 85, 0.05); padding: 0.85rem 1rem; border-left: 3px solid #ff0055; border-radius: 4px;">
+                <div style="font-size: 0.7rem; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;">MAX DRAWDOWN</div>
+                <div style="font-size: 1.4rem; color: #ff0055; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.drawdown ?? sys.max_drawdown ?? 'N/A'}%</div>
             </div>
         </div>
 
-        <p style="color: #a0aec0; line-height: 1.6; font-size: 0.95rem; margin-bottom: 2rem;">${sys.full_description || sys.description || 'No detailed documentation attached.'}</p>
+        <!-- SCROLLABLE FORMATTED DOCUMENTATION BOX -->
+        <div class="cyber-scroll" style="max-height: 280px; overflow-y: auto; padding: 1.25rem; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 240, 255, 0.15); border-radius: 6px; margin-bottom: 1.5rem;">
+            ${formatStrategyText(rawDescription)}
+        </div>
 
+        <!-- ACTION BUTTON -->
         ${sys.report_url ? `
-            <a href="${sys.report_url}" target="_blank" download style="display: inline-block; background: #00f0ff; color: #040912; padding: 12px 24px; text-decoration: none; font-weight: bold; font-family: 'Share Tech Mono', monospace; border-radius: 4px; border: 1px solid #00f0ff;">
+            <a href="${sys.report_url}" target="_blank" download style="display: inline-block; background: #00f0ff; color: #040912; padding: 10px 20px; text-decoration: none; font-weight: bold; font-family: 'Share Tech Mono', monospace; border-radius: 4px; border: 1px solid #00f0ff; font-size: 0.9rem;">
                 <i class="fa-solid fa-file-pdf"></i> DOWNLOAD FULL PDF REPORT
             </a>
         ` : ''}
     `;
+}
+
+// HELPER: Convert raw single-paragraph text into structured HUD sections & bullet points
+function formatStrategyText(text) {
+    if (!text) return `<p style="color: #666;">No detailed documentation attached.</p>`;
+
+    // Insert section breaks before common section titles
+    let formatted = text
+        .replace(/(Core Indicators|Entry Rules Long \(Buy\) Conditions|Short \(Sell\) Conditions|Risk Management \(Dynamic SL & TP\)|Why this works:)/gi, 
+            `<h4 style="color: #00f0ff; margin: 1.2rem 0 0.5rem 0; font-family: 'Share Tech Mono', monospace; font-size: 0.95rem; border-bottom: 1px dashed rgba(0, 240, 255, 0.25); padding-bottom: 4px; letter-spacing: 1px; text-transform: uppercase;">$1</h4>`)
+        
+        // Format bullet points with neon green indicators
+        .replace(/ - (\d+\.)/g, `<div style="margin: 4px 0 4px 12px;"><span style="color: #00ff66; font-family: 'Share Tech Mono', monospace; font-weight: bold;">▶ $1</span>`)
+        .replace(/ - /g, `<br/><span style="color: #00f0ff;">•</span> `);
+
+    return `<div style="line-height: 1.6; color: #d1d5db; font-size: 0.88rem; font-family: system-ui, -apple-system, sans-serif;">${formatted}</div>`;
 }
