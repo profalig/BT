@@ -1007,7 +1007,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// SYSTEM DATABANK ENGINE (UNIVERSAL DELEGATION)
+// SYSTEM DATABANK ENGINE (SEARCH & FILTERS FIXED)
 // ==========================================
 
 let cachedSystems = [];
@@ -1019,6 +1019,7 @@ function openDatabankModal() {
     if (modal) modal.classList.remove('hidden');
     showDatabankList();
     setupDatabankEventListeners();
+    bindSearchInputsDirectly();
     fetchTradingSystems();
 }
 
@@ -1034,18 +1035,38 @@ function showDatabankList() {
     if (detailView) detailView.style.display = 'none';
 }
 
-function setupDatabankEventListeners() {
-    // Listen globally on the document so it works regardless of HTML element types (div, button, span)
-    if (document.dataset && document.dataset.databankListenersAttached) return;
-    if (document.dataset) document.dataset.databankListenersAttached = "true";
+// Direct binding to all search inputs in the DOM
+function bindSearchInputsDirectly() {
+    const inputs = document.querySelectorAll('input');
+    inputs.forEach(input => {
+        if (!input.dataset.searchBound) {
+            input.dataset.searchBound = "true";
+            
+            const handleSearch = (e) => {
+                currentSearchQuery = e.target.value.toLowerCase().trim();
+                applyDatabankFilters();
+            };
 
-    // 1. Universal Search Field Input Handler
-    document.addEventListener('input', (e) => {
-        if (e.target && (e.target.tagName === 'INPUT' || e.target.type === 'text')) {
+            input.addEventListener('input', handleSearch);
+            input.addEventListener('keyup', handleSearch);
+            input.addEventListener('change', handleSearch);
+        }
+    });
+}
+
+function setupDatabankEventListeners() {
+    if (window._databankListenersAttached) return;
+    window._databankListenersAttached = true;
+
+    // 1. Global fallback listener for input/keyup events
+    const handleGlobalInput = (e) => {
+        if (e.target && e.target.tagName === 'INPUT') {
             currentSearchQuery = e.target.value.toLowerCase().trim();
             applyDatabankFilters();
         }
-    });
+    };
+    document.addEventListener('input', handleGlobalInput);
+    document.addEventListener('keyup', handleGlobalInput);
 
     // 2. Universal Category Filter Click Handler
     document.addEventListener('click', (e) => {
@@ -1054,7 +1075,6 @@ function setupDatabankEventListeners() {
 
         const text = targetBtn.innerText.trim().toUpperCase();
         if (['ALL', 'CRYPTO', 'EQUITIES'].includes(text)) {
-            // Reset active styles for sibling filters
             const parentContainer = targetBtn.parentElement;
             if (parentContainer) {
                 const siblings = parentContainer.querySelectorAll('button, div, span, a');
@@ -1068,7 +1088,6 @@ function setupDatabankEventListeners() {
                 });
             }
 
-            // Highlight the clicked filter button
             targetBtn.style.background = '#00f0ff';
             targetBtn.style.color = '#000000';
             targetBtn.classList.add('active');
@@ -1081,6 +1100,7 @@ function setupDatabankEventListeners() {
 
 // Auto-initialize event listeners immediately on load
 setupDatabankEventListeners();
+document.addEventListener('DOMContentLoaded', bindSearchInputsDirectly);
 
 async function fetchTradingSystems() {
     const gridContainer = document.getElementById('systems-grid') || document.getElementById('systemsGrid');
@@ -1125,10 +1145,13 @@ function applyDatabankFilters() {
     const gridContainer = document.getElementById('systems-grid') || document.getElementById('systemsGrid');
     if (!gridContainer) return;
 
+    const query = currentSearchQuery.toLowerCase().trim();
+
     const filtered = cachedSystems.filter(sys => {
         const name = String(sys.system_name || sys.title || sys.name || '').toLowerCase();
         const desc = String(sys.short_description || sys.full_description || sys.summary || sys.description || '').toLowerCase();
         const category = String(sys.category || '').toLowerCase();
+        const tags = String(sys.tags || sys.tag || '').toLowerCase();
 
         // 1. Filter Category
         let matchesCategory = false;
@@ -1140,11 +1163,12 @@ function applyDatabankFilters() {
             matchesCategory = category.includes('equity') || category.includes('stock') || category.includes('equities') || desc.includes('equity') || desc.includes('stock');
         }
 
-        // 2. Filter Search Input Query
-        const matchesSearch = !currentSearchQuery || 
-                              name.includes(currentSearchQuery) || 
-                              desc.includes(currentSearchQuery) ||
-                              category.includes(currentSearchQuery);
+        // 2. Filter Search Query
+        const matchesSearch = !query || 
+                              name.includes(query) || 
+                              desc.includes(query) ||
+                              category.includes(query) ||
+                              tags.includes(query);
 
         return matchesCategory && matchesSearch;
     });
