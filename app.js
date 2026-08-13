@@ -1288,7 +1288,7 @@ async function viewSystemDetail(sys) {
     `;
 }
 
-// EDITORIAL PARSER: Converts dense paragraph strings into structured HUD documentation
+// EDITORIAL PARSER: Clean, minimalist document hierarchy
 function formatStrategyText(text) {
     if (!text) return `<p style="color: #666;">No detailed documentation attached.</p>`;
 
@@ -1302,7 +1302,7 @@ function formatStrategyText(text) {
     src = src.replace(/\s*-\s*(\d+\.)/g, '\n###BULLET###$1');
     src = src.replace(/\s*-\s*(Stop Loss \(SL\)|Take Profit \(TP\)|For Longs|For Shorts|Why this works)/gi, '\n###BULLET###$1');
 
-    // 3. Process into styled HTML blocks
+    // 3. Process into clean HTML blocks
     const lines = src.split('\n').map(l => l.trim()).filter(Boolean);
     let outHtml = '';
 
@@ -1310,23 +1310,23 @@ function formatStrategyText(text) {
         if (line.startsWith('###SECTION###')) {
             const title = line.replace('###SECTION###', '').trim();
             outHtml += `
-                <h4 style="color: #00f0ff; margin: 1.5rem 0 0.75rem 0; font-family: 'Share Tech Mono', monospace; font-size: 0.95rem; border-bottom: 1px dashed rgba(0, 240, 255, 0.3); padding-bottom: 6px; letter-spacing: 1px; text-transform: uppercase;">
+                <h4 style="color: #00f0ff; margin: 1.5rem 0 0.5rem 0; font-family: 'Share Tech Mono', monospace; font-size: 0.88rem; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 4px; letter-spacing: 1px; text-transform: uppercase;">
                     ${title}
                 </h4>`;
         } else if (line.startsWith('###BULLET###')) {
             let body = line.replace('###BULLET###', '').trim();
             
-            // Highlight rule titles (text before colon) in bright green
-            body = body.replace(/^([^:]+:)/, '<strong style="color: #00ff66; font-family: \'Share Tech Mono\', monospace; font-size: 0.9rem;">$1</strong>');
+            // Clean off-white bold labels without neon green
+            body = body.replace(/^([^:]+:)/, '<strong style="color: #e2e8f0; font-weight: 600;">$1</strong>');
             
+            // Minimalist indented list line without background boxes, borders, or arrows
             outHtml += `
-                <div style="margin: 6px 0; padding: 8px 12px; background: rgba(0, 240, 255, 0.03); border-left: 3px solid #00f0ff; border-radius: 3px; line-height: 1.6; color: #e2e8f0; font-size: 0.9rem;">
-                    <span style="color: #00f0ff; margin-right: 8px;">▶</span>${body}
+                <div style="margin: 6px 0 6px 12px; line-height: 1.6; color: #94a3b8; font-size: 0.88rem; font-family: system-ui, -apple-system, sans-serif;">
+                    ${body}
                 </div>`;
         } else {
-            // Standard body text or secondary notes
-            let styledLine = line.replace(/^([^:]+:)/, '<strong style="color: #00f0ff; font-family: \'Share Tech Mono\', monospace;">$1</strong>');
-            outHtml += `<p style="margin: 8px 0; color: #a0aec0; line-height: 1.6; font-size: 0.9rem;">${styledLine}</p>`;
+            let styledLine = line.replace(/^([^:]+:)/, '<strong style="color: #e2e8f0; font-weight: 600;">$1</strong>');
+            outHtml += `<p style="margin: 6px 0; color: #94a3b8; line-height: 1.6; font-size: 0.88rem; font-family: system-ui, -apple-system, sans-serif;">${styledLine}</p>`;
         }
     });
 
