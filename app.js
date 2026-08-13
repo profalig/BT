@@ -1007,13 +1007,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// SYSTEM DATABANK ENGINE (UNIFIED & FIXED)
+// SYSTEM DATABANK ENGINE (WITH LIVE SEARCH & FILTERS)
 // ==========================================
+
+let cachedSystems = [];
+let currentCategoryFilter = 'ALL';
+let currentSearchQuery = '';
 
 function openDatabankModal() {
     const modal = document.getElementById('databank-modal') || document.getElementById('hud-modal');
     if (modal) modal.classList.remove('hidden');
     showDatabankList();
+    setupDatabankControls();
     fetchTradingSystems();
 }
 
@@ -1027,6 +1032,40 @@ function showDatabankList() {
     const detailView = document.getElementById('databank-detail-view') || document.getElementById('systemDetailView');
     if (listView) listView.style.display = 'grid';
     if (detailView) detailView.style.display = 'none';
+}
+
+function setupDatabankControls() {
+    // Attach listener to search input
+    const searchInput = document.querySelector('input[placeholder*="Search"]');
+    if (searchInput && !searchInput.dataset.initialized) {
+        searchInput.dataset.initialized = "true";
+        searchInput.addEventListener('input', (e) => {
+            currentSearchQuery = e.target.value.toLowerCase().trim();
+            applyDatabankFilters();
+        });
+    }
+
+    // Attach listeners to category filter buttons
+    const filterContainer = searchInput?.parentElement?.parentElement || document;
+    const filterBtns = filterContainer.querySelectorAll('button, .filter-btn');
+
+    filterBtns.forEach(btn => {
+        const text = btn.innerText.trim().toUpperCase();
+        if (['ALL', 'CRYPTO', 'EQUITIES'].includes(text) && !btn.dataset.initialized) {
+            btn.dataset.initialized = "true";
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => {
+                    b.style.background = 'transparent';
+                    b.style.color = '#00f0ff';
+                });
+                btn.style.background = '#00f0ff';
+                btn.style.color = '#000';
+
+                currentCategoryFilter = text;
+                applyDatabankFilters();
+            });
+        }
+    });
 }
 
 async function fetchTradingSystems() {
@@ -1060,11 +1099,36 @@ async function fetchTradingSystems() {
             .order('created_at', { ascending: false });
 
         if (error) throw error;
-        renderSystemGrid(systems, gridContainer);
+        cachedSystems = systems || [];
+        applyDatabankFilters();
     } catch (err) {
         console.error('Error fetching systems:', err.message);
         gridContainer.innerHTML = `<p style="color: #ff3366; grid-column: 1 / -1;">Failed to load systems from vault.</p>`;
     }
+}
+
+function applyDatabankFilters() {
+    const gridContainer = document.getElementById('systems-grid') || document.getElementById('systemsGrid');
+    if (!gridContainer) return;
+
+    const filtered = cachedSystems.filter(sys => {
+        const name = (sys.system_name || sys.title || sys.name || '').toLowerCase();
+        const desc = (sys.short_description || sys.full_description || sys.summary || '').toLowerCase();
+        const category = (sys.category || '').toUpperCase();
+
+        const matchesCategory = (currentCategoryFilter === 'ALL') || 
+                                (category.includes(currentCategoryFilter)) ||
+                                (currentCategoryFilter === 'EQUITIES' && (category.includes('EQUITY') || category.includes('STOCK')));
+
+        const matchesSearch = !currentSearchQuery || 
+                              name.includes(currentSearchQuery) || 
+                              desc.includes(currentSearchQuery) ||
+                              category.toLowerCase().includes(currentSearchQuery);
+
+        return matchesCategory && matchesSearch;
+    });
+
+    renderSystemGrid(filtered, gridContainer);
 }
 
 function renderSystemGrid(systems, container) {
@@ -1072,7 +1136,7 @@ function renderSystemGrid(systems, container) {
     container.innerHTML = "";
 
     if (!systems || systems.length === 0) {
-        container.innerHTML = `<p style="color: #888; grid-column: 1 / -1;">No trading systems currently listed in the databank.</p>`;
+        container.innerHTML = `<p style="color: #888; grid-column: 1 / -1; padding: 20px 0;">No matching trading systems found in the vault.</p>`;
         return;
     }
 
