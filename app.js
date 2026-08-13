@@ -1068,8 +1068,9 @@ function unlockAndStyleSearchInput() {
             currentSearchQuery = e.target.value.toLowerCase().trim();
             applyDatabankFilters();
         };
-	killValidationPopups();
     });
+
+    killValidationPopups();
 }
 
 function setupDatabankEventListeners() {
@@ -1106,12 +1107,7 @@ function setupDatabankEventListeners() {
     });
 }
 
-// Run unlocking routines when DOM loads and on window clicks
-setupDatabankEventListeners();
-document.addEventListener('DOMContentLoaded', unlockAndStyleSearchInput);
-window.addEventListener('load', unlockAndStyleSearchInput);
-
-// Remove 'required' and disable native validation on all inputs
+// Strip 'required' and set noValidate on all forms/inputs
 function killValidationPopups() {
   document.querySelectorAll('input, textarea').forEach(el => {
     el.removeAttribute('required');
@@ -1120,9 +1116,20 @@ function killValidationPopups() {
   });
 }
 
-// Execute immediately when DOM loads
-document.addEventListener('DOMContentLoaded', killValidationPopups);
-window.addEventListener('load', killValidationPopups);
+// Globally intercept & suppress native browser validation tooltip popups
+document.addEventListener('invalid', (e) => e.preventDefault(), true);
+
+// Run unlocking routines on DOM load and window load
+setupDatabankEventListeners();
+document.addEventListener('DOMContentLoaded', () => {
+    unlockAndStyleSearchInput();
+    killValidationPopups();
+});
+window.addEventListener('load', () => {
+    unlockAndStyleSearchInput();
+    killValidationPopups();
+});
+
 async function fetchTradingSystems() {
     const gridContainer = document.getElementById('systems-grid') || document.getElementById('systemsGrid');
     if (!gridContainer) return;
