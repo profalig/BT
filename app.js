@@ -1007,7 +1007,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// SYSTEM DATABANK ENGINE (DEEP SEARCH & CAPTURE FIX)
+// SYSTEM DATABANK ENGINE (SEARCH INPUT UNLOCK & OVERLAY FIX)
 // ==========================================
 
 let cachedSystems = [];
@@ -1018,8 +1018,10 @@ function openDatabankModal() {
     const modal = document.getElementById('databank-modal') || document.getElementById('hud-modal');
     if (modal) modal.classList.remove('hidden');
     showDatabankList();
+    
+    // Force unlock & style search input immediately
+    unlockAndStyleSearchInput();
     setupDatabankEventListeners();
-    attachSearchInputListeners();
     fetchTradingSystems();
 }
 
@@ -1035,30 +1037,53 @@ function showDatabankList() {
     if (detailView) detailView.style.display = 'none';
 }
 
-// Direct backup attachment for any search input in the DOM
-function attachSearchInputListeners() {
-    const searchInputs = document.querySelectorAll('input');
-    searchInputs.forEach(input => {
-        ['input', 'keyup', 'change', 'search'].forEach(evtType => {
-            input.removeEventListener(evtType, handleSearchEvent);
-            input.addEventListener(evtType, handleSearchEvent);
-        });
+// FORCE UNLOCK INPUT FIELD (Fixes click blocking, z-index, text color & key interception)
+function unlockAndStyleSearchInput() {
+    const inputs = document.querySelectorAll('input');
+    
+    inputs.forEach(input => {
+        // Unlock HTML attributes
+        input.removeAttribute('disabled');
+        input.removeAttribute('readonly');
+        input.disabled = false;
+        input.readOnly = false;
+
+        // Force clickable & visible styling directly via JS
+        input.style.setProperty('pointer-events', 'auto', 'important');
+        input.style.setProperty('position', 'relative', 'important');
+        input.style.setProperty('z-index', '999999', 'important');
+        input.style.setProperty('color', '#ffffff', 'important'); // Visible white text
+        input.style.setProperty('caret-color', '#00f0ff', 'important'); // Bright cyan typing cursor
+        input.style.setProperty('background', 'rgba(0, 0, 0, 0.6)', 'important');
+        input.style.setProperty('border', '1px solid #00f0ff', 'important');
+        input.style.setProperty('user-select', 'text', 'important');
+        input.style.setProperty('-webkit-user-select', 'text', 'important');
+
+        // Stop 3D/Canvas global listeners from swallowing key presses
+        const stopPropagation = (e) => e.stopPropagation();
+        input.onkeydown = stopPropagation;
+        input.onkeyup = stopPropagation;
+        input.onkeypress = stopPropagation;
+
+        // Ensure clicking explicitly focuses the box
+        input.onclick = (e) => {
+            e.stopPropagation();
+            input.focus();
+        };
+
+        // Live filtering listener
+        input.oninput = (e) => {
+            currentSearchQuery = e.target.value.toLowerCase().trim();
+            applyDatabankFilters();
+        };
     });
 }
 
-function handleSearchEvent(e) {
-    if (!e || !e.target) return;
-    const val = e.target.value !== undefined ? e.target.value : (e.target.innerText || '');
-    currentSearchQuery = String(val).toLowerCase().trim();
-    applyDatabankFilters();
-}
-
 function setupDatabankEventListeners() {
-    // 1. Global Document Event Delegation for Inputs
-    document.addEventListener('input', handleSearchEvent, true);
-    document.addEventListener('keyup', handleSearchEvent, true);
+    if (window._databankListenersAttached) return;
+    window._databankListenersAttached = true;
 
-    // 2. Global Category Filter Click Handler
+    // Global Category Filter Click Handler
     document.addEventListener('click', (e) => {
         const targetBtn = e.target.closest('button, div, span, a');
         if (!targetBtn) return;
@@ -1088,9 +1113,10 @@ function setupDatabankEventListeners() {
     });
 }
 
-// Auto-run event listeners
+// Run unlocking routines when DOM loads and on window clicks
 setupDatabankEventListeners();
-document.addEventListener('DOMContentLoaded', attachSearchInputListeners);
+document.addEventListener('DOMContentLoaded', unlockAndStyleSearchInput);
+window.addEventListener('load', unlockAndStyleSearchInput);
 
 async function fetchTradingSystems() {
     const gridContainer = document.getElementById('systems-grid') || document.getElementById('systemsGrid');
@@ -1138,11 +1164,9 @@ function applyDatabankFilters() {
     const query = currentSearchQuery;
 
     const filtered = cachedSystems.filter(sys => {
-        // Deep string conversion of the entire system object for guaranteed searching
         const fullSystemDataString = JSON.stringify(sys).toLowerCase();
         const category = String(sys.category || fullSystemDataString).toLowerCase();
 
-        // 1. Category Filter Logic
         let matchesCategory = false;
         if (currentCategoryFilter === 'ALL') {
             matchesCategory = true;
@@ -1152,7 +1176,6 @@ function applyDatabankFilters() {
             matchesCategory = category.includes('equity') || category.includes('stock') || category.includes('equities') || fullSystemDataString.includes('equity');
         }
 
-        // 2. Search Query Logic (Searches across ALL object attributes)
         const matchesSearch = !query || fullSystemDataString.includes(query);
 
         return matchesCategory && matchesSearch;
