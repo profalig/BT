@@ -64,7 +64,7 @@ let isHyperZoomed = false;
 let cam = { x: 0, y: 0, scale: 1 };
 let targetCam = { x: 0, y: 0, scale: 1 };
 
-// CAMERA RENDER ENGINE (OPTIMIZED FOR MOBILE PIXEL DENSITY & HD ZOOM)
+// CAMERA RENDER ENGINE
 function renderEngine(time) {
     orbits.forEach(o => {
         if (!o.orbitEl || !o.planetEl) return;
@@ -202,9 +202,7 @@ if (abortConsoleBtn) {
     });
 }
 
-// ==========================================
 // CONSTELLATION PARALLAX & VIDEO HOVER ENGINE
-// ==========================================
 const bullConstellation = document.querySelector('.bull-constellation');
 const bearConstellation = document.querySelector('.bear-constellation');
 
@@ -263,9 +261,7 @@ if (btcSun && solarSystem) {
     });
 }
 
-// ==========================================
-// DENSE BLACKBOARD GENERATOR ENGINE
-// ==========================================
+// BLACKBOARD GENERATOR
 function generateBlackboard() {
     const canvas = document.getElementById('blackboard-bg');
     if (!canvas) return;
@@ -307,9 +303,7 @@ function generateBlackboard() {
 generateBlackboard();
 window.addEventListener('resize', generateBlackboard);
 
-// ==========================================
 // TACTICAL HUD MODAL TRIGGER
-// ==========================================
 function showTacticalModal(title, message, isSuccess = true) {
     const modalOverlay = document.getElementById('tactical-modal-overlay');
     const heading = document.getElementById('modal-heading');
@@ -331,9 +325,7 @@ function showTacticalModal(title, message, isSuccess = true) {
     if (modalOverlay) modalOverlay.classList.add('active');
 }
 
-// ==========================================
-// SUBSCRIPTION MODAL TRIGGER
-// ==========================================
+// SUBSCRIPTION MODAL TRIGGERS
 function openSubscriptionModal() {
     const subModal = document.getElementById('subscription-modal-overlay');
     if (subModal) subModal.classList.add('active');
@@ -344,9 +336,12 @@ function closeSubscriptionModal() {
     if (subModal) subModal.classList.remove('active');
 }
 
-// ==========================================
+function openAuthModal() {
+    const authModal = document.getElementById('auth-modal-overlay');
+    if (authModal) authModal.classList.add('active');
+}
+
 // SUPABASE CLIENT INITIALIZATION
-// ==========================================
 const SUPABASE_URL = 'https://woxswhiayrkecspebuwb.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndveHN3aGlheXJrZWNzcGVidXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTc5ODYsImV4cCI6MjEwMDk5Mzk4Nn0.faEmt5_tw6dN9Cs-pKJHa9D0yyEBbAl4oT0Y9QWYuFg';
 
@@ -355,9 +350,7 @@ if (window.supabase) {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
-// ==========================================
-// USER PROFILE & FREE CREDIT ENGINE
-// ==========================================
+// USER PROFILE ENGINE
 async function fetchOrCreateUserProfile(user) {
     if (!supabaseClient || !user) return null;
 
@@ -393,9 +386,7 @@ async function fetchOrCreateUserProfile(user) {
     }
 }
 
-// ==========================================
-// AGENT PROFILE & PERMANENT HISTORY ENGINE
-// ==========================================
+// AGENT PROFILE & REPORTS MODAL
 async function openUserReportsModal() {
     if (!supabaseClient) {
         showTacticalModal('SYSTEM ERROR', 'Supabase client is not initialized.', false);
@@ -531,9 +522,7 @@ async function openUserReportsModal() {
     }
 }
 
-// ==========================================
 // MOBILE HUD TOUCH EXPANSION ENGINE
-// ==========================================
 document.addEventListener('click', (e) => {
     const isMobile = window.innerWidth <= 768;
     if (!isMobile) return;
@@ -563,9 +552,7 @@ document.addEventListener('click', (e) => {
     }
 }, true);
 
-// ==========================================
-// APPLICATION INITIALIZATION & AUTHENTICATION ENGINE
-// ==========================================
+// APPLICATION INITIALIZATION & AUTHENTICATION
 let authMode = 'signin';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -591,7 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navSubBtn) navSubBtn.addEventListener('click', openSubscriptionModal);
     if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
 
-    // STRIPE CHECKOUT INTEGRATION LOGIC
+    // STRIPE CHECKOUT INTEGRATION
     document.querySelectorAll('.select-tier-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const button = e.currentTarget;
@@ -678,7 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // BACKTEST SUBMISSION WITH CREDIT VERIFICATION & DEDUCTION
+    // BACKTEST SUBMISSION ENGINE
     if (systemSubmitForm) {
         systemSubmitForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1020,32 +1007,49 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// SYSTEM DATABANK ENGINE (SUPABASE)
+// SYSTEM DATABANK ENGINE (UNIFIED & FIXED)
 // ==========================================
 
-// --- 1. MODAL & VIEW MANAGEMENT ---
 function openDatabankModal() {
-  const modal = document.getElementById('databank-modal');
-  if(modal) modal.classList.remove('hidden');
-  
-  showDatabankList();
-  fetchTradingSystems(); // Ping database for fresh data when opened
+    const modal = document.getElementById('databank-modal') || document.getElementById('hud-modal');
+    if (modal) modal.classList.remove('hidden');
+    showDatabankList();
+    fetchTradingSystems();
 }
 
 function closeDatabankModal() {
-  const modal = document.getElementById('databank-modal');
-  if(modal) modal.classList.add('hidden');
+    const modal = document.getElementById('databank-modal') || document.getElementById('hud-modal');
+    if (modal) modal.classList.add('hidden');
 }
 
 function showDatabankList() {
-  document.getElementById('databank-list-view').classList.remove('hidden');
-  document.getElementById('databank-detail-view').classList.add('hidden');
+    const listView = document.getElementById('databank-list-view') || document.getElementById('systemsGrid');
+    const detailView = document.getElementById('databank-detail-view') || document.getElementById('systemDetailView');
+    if (listView) listView.style.display = 'grid';
+    if (detailView) detailView.style.display = 'none';
 }
 
-// --- 2. FETCH DATA FROM SUPABASE ---
 async function fetchTradingSystems() {
+    const gridContainer = document.getElementById('systems-grid') || document.getElementById('systemsGrid');
+    if (!gridContainer) return;
+
     if (!supabaseClient) {
-        console.error("Supabase client not initialized.");
+        gridContainer.innerHTML = `<p style="color: #ff3366;">Supabase client offline.</p>`;
+        return;
+    }
+
+    const { data: { session } } = await supabaseClient.auth.getSession();
+
+    if (!session) {
+        gridContainer.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: #00f0ff;">
+                <h3 style="margin-bottom: 1rem;">ACCESS RESTRICTED</h3>
+                <p style="color: #a0a0a0; margin-bottom: 1.5rem;">Please sign in or create an account to access the System Databank.</p>
+                <button onclick="openAuthModal()" style="background: #00f0ff; color: #000; border: none; padding: 0.75rem 1.5rem; font-weight: bold; cursor: pointer; border-radius: 4px;">
+                    SIGN IN / SIGN UP
+                </button>
+            </div>
+        `;
         return;
     }
 
@@ -1056,55 +1060,80 @@ async function fetchTradingSystems() {
             .order('created_at', { ascending: false });
 
         if (error) throw error;
-        renderSystemGrid(systems);
-    } catch (error) {
-        console.error("Error fetching systems:", error.message);
+        renderSystemGrid(systems, gridContainer);
+    } catch (err) {
+        console.error('Error fetching systems:', err.message);
+        gridContainer.innerHTML = `<p style="color: #ff3366; grid-column: 1 / -1;">Failed to load systems from vault.</p>`;
     }
 }
 
-// --- 3. RENDERING THE GRID ---
-function renderSystemGrid(systems) {
-  const container = document.getElementById('systems-grid');
-  if (!container) return;
-  container.innerHTML = ""; // Clear out old content
+function renderSystemGrid(systems, container) {
+    if (!container) return;
+    container.innerHTML = "";
 
-  systems.forEach(system => {
-    const card = document.createElement('div');
-    card.className = 'system-card';
-    card.onclick = () => showSystemDetail(system); // Pass the database row to the detail view
-    
-    // Inject database row values into the card UI
-    card.innerHTML = `
-      <h4>${system.system_name}</h4>
-      <span class="tag">${system.category}</span>
-      <p style="margin-top: 10px;">${system.short_description}</p>
-      <div style="font-size: 11px; color: #00ffff;">WIN: ${system.win_rate}% | NET: ${system.net_return}%</div>
-    `;
-    
-    container.appendChild(card);
-  });
+    if (!systems || systems.length === 0) {
+        container.innerHTML = `<p style="color: #888; grid-column: 1 / -1;">No trading systems currently listed in the databank.</p>`;
+        return;
+    }
+
+    systems.forEach(sys => {
+        const card = document.createElement('div');
+        card.className = 'system-card';
+        card.style.cssText = 'border: 1px solid rgba(0, 240, 255, 0.2); padding: 15px; cursor: pointer; background: rgba(0, 240, 255, 0.02); border-radius: 4px;';
+        card.onclick = () => viewSystemDetail(sys);
+
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <h4 style="color: #fff; margin: 0 0 8px 0;">${sys.system_name || sys.title || sys.name}</h4>
+                <span class="tag" style="border: 1px solid #00ffff; padding: 2px 6px; font-size: 11px; color: #00ffff; border-radius: 3px;">${sys.category || 'Quantitative'}</span>
+            </div>
+            <p style="font-size: 13px; color: #aaa; margin-bottom: 12px; line-height: 1.4;">${sys.short_description || sys.summary || (sys.full_description ? sys.full_description.substring(0, 100) + '...' : 'No summary.')}</p>
+            <div style="font-size: 12px; color: #00ffff; font-family: 'Share Tech Mono', monospace;">
+                WIN: ${sys.win_rate ?? 'N/A'}% | NET: ${sys.net_return ?? 'N/A'}%
+            </div>
+        `;
+        container.appendChild(card);
+    });
 }
 
-// --- 4. SHOW DETAIL VIEW ---
-function showSystemDetail(system) {
-  // Toggle the UI panels
-  document.getElementById('databank-list-view').classList.add('hidden');
-  document.getElementById('databank-detail-view').classList.remove('hidden');
+async function viewSystemDetail(sys) {
+    const listView = document.getElementById('databank-list-view') || document.getElementById('systemsGrid');
+    let detailView = document.getElementById('databank-detail-view') || document.getElementById('systemDetailView');
 
-  // Populate the specific HTML IDs with the database values
-  document.getElementById('detail-system-name').innerText = system.system_name;
-  document.getElementById('detail-category').innerText = system.category;
-  document.getElementById('detail-win-rate').innerText = `${system.win_rate}%`;
-  document.getElementById('detail-net-return').innerText = `${system.net_return}%`;
-  document.getElementById('detail-drawdown').innerText = `${system.drawdown}%`;
-  document.getElementById('detail-description').innerText = system.full_description || "No description provided.";
+    if (!detailView) return;
 
-  // Handle the PDF Download Link
-  const downloadBtn = document.getElementById('detail-report-btn');
-  if (system.report_url) {
-      downloadBtn.href = system.report_url;
-      downloadBtn.style.display = 'inline-block';
-  } else {
-      downloadBtn.style.display = 'none'; // Hide button if no link exists
-  }
+    if (listView) listView.style.display = 'none';
+    detailView.style.display = 'block';
+
+    detailView.innerHTML = `
+        <button onclick="showDatabankList()" style="background: transparent; color: #00f0ff; border: 1px solid #00f0ff; padding: 6px 12px; cursor: pointer; font-size: 0.85rem; font-family: 'Share Tech Mono', monospace; margin-bottom: 1.5rem; border-radius: 4px;">
+            &#9664; BACK TO SYSTEM LIST
+        </button>
+
+        <h2 style="color: #fff; margin: 0 0 8px 0; font-family: 'Share Tech Mono', monospace;">${sys.system_name || sys.title || sys.name}</h2>
+        <span class="tag" style="border: 1px solid #00ffff; padding: 3px 8px; font-size: 11px; color: #00ffff; border-radius: 3px;">${sys.category || 'Quantitative'}</span>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0;">
+            <div style="background: rgba(0, 240, 255, 0.08); padding: 1rem; border-left: 3px solid #00f0ff; border-radius: 4px;">
+                <div style="font-size: 0.75rem; color: #888; font-family: 'Share Tech Mono', monospace;">WIN RATE</div>
+                <div style="font-size: 1.5rem; color: #fff; font-weight: bold;">${sys.win_rate ?? 'N/A'}%</div>
+            </div>
+            <div style="background: rgba(0, 255, 102, 0.08); padding: 1rem; border-left: 3px solid #00ff66; border-radius: 4px;">
+                <div style="font-size: 0.75rem; color: #888; font-family: 'Share Tech Mono', monospace;">NET RETURN</div>
+                <div style="font-size: 1.5rem; color: #00ff66; font-weight: bold;">${sys.net_return ?? 'N/A'}%</div>
+            </div>
+            <div style="background: rgba(255, 0, 85, 0.08); padding: 1rem; border-left: 3px solid #ff0055; border-radius: 4px;">
+                <div style="font-size: 0.75rem; color: #888; font-family: 'Share Tech Mono', monospace;">MAX DRAWDOWN</div>
+                <div style="font-size: 1.5rem; color: #ff0055; font-weight: bold;">${sys.drawdown ?? sys.max_drawdown ?? 'N/A'}%</div>
+            </div>
+        </div>
+
+        <p style="color: #a0aec0; line-height: 1.6; font-size: 0.95rem; margin-bottom: 2rem;">${sys.full_description || sys.description || 'No detailed documentation attached.'}</p>
+
+        ${sys.report_url ? `
+            <a href="${sys.report_url}" target="_blank" download style="display: inline-block; background: #00f0ff; color: #040912; padding: 12px 24px; text-decoration: none; font-weight: bold; font-family: 'Share Tech Mono', monospace; border-radius: 4px; border: 1px solid #00f0ff;">
+                <i class="fa-solid fa-file-pdf"></i> DOWNLOAD FULL PDF REPORT
+            </a>
+        ` : ''}
+    `;
 }

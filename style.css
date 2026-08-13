@@ -219,6 +219,48 @@ body {
     box-shadow: 0 0 12px rgba(255, 215, 0, 0.15);
 }
 
+/* HUD Dock Bar & Slots */
+.hud-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hud-slot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(8, 20, 38, 0.6);
+    border: 1px solid rgba(0, 240, 255, 0.25);
+    color: #a3c7e6;
+    padding: 6px 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.hud-slot:hover {
+    background: rgba(0, 240, 255, 0.15);
+    color: #00f0ff;
+    border-color: rgba(0, 240, 255, 0.6);
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+}
+
+.hud-slot.credits { color: #ffd700; border-color: rgba(255, 215, 0, 0.35); }
+.hud-slot.logout { color: #ff4d88; border-color: rgba(255, 0, 85, 0.3); }
+.hud-slot.logout:hover { background: #ff0055; color: #fff; }
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    background-color: #00ff66;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #00ff66;
+}
+
 /* ==========================================
    BACKGROUND MATRIX & SPACE LAYERS
    ========================================== */
@@ -1375,6 +1417,13 @@ body.landed .constellation {
     box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
 }
 
+/* Ensure modal content container handles scroll correctly */
+.modal-body, #systemsGrid, #systemDetailView {
+    max-height: 70vh;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #00f0ff #071927;
+}
 /* ==========================================
    RESPONSIVE OVERRIDES
    ========================================== */
