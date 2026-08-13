@@ -512,7 +512,59 @@
             </div>
         </div>
     </div>
-
+	    	<!-- SYSTEM DATABANK MODAL -->
+    <div id="databank-modal" class="hud-modal hidden">
+      <div class="hud-modal-content">
+        
+        <!-- Header -->
+        <div class="databank-header">
+          <h2>SEC-02 // SYSTEM DATABANK</h2>
+          <button class="close-btn" onclick="closeDatabankModal()">[X]</button>
+        </div>
+    
+        <!-- View 1: List / Grid -->
+        <div id="databank-list-view" class="databank-view">
+          <div class="search-filter-bar">
+            <input type="text" id="databank-search" placeholder="Search systems..." disabled>
+            <div class="filter-tags">
+              <span class="tag active">ALL</span>
+              <span class="tag">CRYPTO</span>
+              <span class="tag">EQUITIES</span>
+            </div>
+          </div>
+          <!-- Javascript will inject system cards here -->
+          <div id="system-cards-container" class="system-grid"></div>
+        </div>
+    
+        <!-- View 2: Detail View (Initially Hidden) -->
+        <div id="databank-detail-view" class="databank-view hidden">
+          <button class="back-btn" onclick="showDatabankList()">&#9664; BACK TO LIST</button>
+          
+          <div class="detail-header">
+            <h3 id="detail-title">System Name</h3>
+            <span id="detail-category" class="tag">Category</span>
+          </div>
+          
+          <div class="detail-metrics">
+            <div class="metric-box"><span>WIN RATE</span><strong id="detail-win">--%</strong></div>
+            <div class="metric-box"><span>PROFIT FACTOR</span><strong id="detail-pf">--</strong></div>
+            <div class="metric-box"><span>DRAWDOWN</span><strong id="detail-dd">--%</strong></div>
+          </div>
+    
+          <div class="detail-description">
+            <h4>MODEL DESCRIPTION</h4>
+            <p id="detail-desc">Full description goes here...</p>
+          </div>
+    
+          <div class="detail-actions">
+            <button id="btn-download-report" class="action-btn primary">DOWNLOAD PDF REPORT</button>
+            <button id="btn-load-core" class="action-btn secondary">LOAD INTO CORE</button>
+          </div>
+        </div>
+    
+      </div>
+    </div>
+	
     <script src="app.js"></script>
     <script>
         // ELEGANT "INVISIBLE PEN" WRITING ENGINE

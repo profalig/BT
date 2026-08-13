@@ -178,7 +178,7 @@ actionBtn.addEventListener('click', () => {
             if (gasAtmosphere) gasAtmosphere.classList.add('active');
         }, 800);
     } else if (activePlanetData.id === 'databank') {
-        showTacticalModal('SYSTEM DATABANK', 'The System Databank is currently under active development. High-edge quantitative strategy models will be released soon.', true);
+        openDatabankModal();
     } else if (activePlanetData.id === 'campus') {
         showTacticalModal('BACKTESTING CAMPUS', 'Enrolling now for the upcoming Quantitative Engineering cohort. Contact our engineering desk via SEC-04 to apply.', true);
     }
@@ -1018,3 +1018,86 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// --- 1. DUMMY DATA FOR FRONTEND TESTING ---
+const dummySystems = [
+  {
+    id: "sys-001",
+    name: "BTC Volatility Expansion",
+    category: "CRYPTO",
+    shortDesc: "Captures momentum bursts on 1H timeframes using ATR breakouts.",
+    fullDesc: "This model relies on the Average True Range (ATR) to establish dynamic bands. When Bitcoin price action violently breaks these bands during high-volume sessions, the system initiates a trend-following position. Exit logic is trailed dynamically.",
+    metrics: { winRate: "62.4%", profitFactor: "1.85", drawdown: "12.1%" },
+    reportUrl: "#dummy-pdf-link" 
+  },
+  {
+    id: "sys-002",
+    name: "Equities Mean Reversion",
+    category: "EQUITIES",
+    shortDesc: "Fades extreme S&P 500 gaps at the NY open.",
+    fullDesc: "Identifies statistically significant overnight gaps in index futures. If the gap exceeds 2 standard deviations, the model enters a fading position targeting the previous day's VWAP.",
+    metrics: { winRate: "71.2%", profitFactor: "1.42", drawdown: "8.5%" },
+    reportUrl: "#dummy-pdf-link"
+  }
+];
+
+// --- 2. MODAL & VIEW MANAGEMENT ---
+function openDatabankModal() {
+  document.getElementById('databank-modal').classList.remove('hidden');
+  showDatabankList(); // Ensure we always open to the list first
+  renderSystemGrid();
+}
+
+function closeDatabankModal() {
+  document.getElementById('databank-modal').classList.add('hidden');
+}
+
+function showDatabankList() {
+  document.getElementById('databank-list-view').classList.remove('hidden');
+  document.getElementById('databank-detail-view').classList.add('hidden');
+}
+
+function showSystemDetail(systemId) {
+  // Hide list, show detail
+  document.getElementById('databank-list-view').classList.add('hidden');
+  document.getElementById('databank-detail-view').classList.remove('hidden');
+
+  // Find system data
+  const system = dummySystems.find(s => s.id === systemId);
+  
+  // Populate UI
+  document.getElementById('detail-title').innerText = system.name;
+  document.getElementById('detail-category').innerText = system.category;
+  document.getElementById('detail-win').innerText = system.metrics.winRate;
+  document.getElementById('detail-pf').innerText = system.metrics.profitFactor;
+  document.getElementById('detail-dd').innerText = system.metrics.drawdown;
+  document.getElementById('detail-desc').innerText = system.fullDesc;
+
+  // Set up download button action
+  const downloadBtn = document.getElementById('btn-download-report');
+  downloadBtn.onclick = () => {
+    alert(`Initiating download for: ${system.name} report... (Supabase link will go here)`);
+    // Later, this will be: window.open(system.reportUrl, '_blank');
+  };
+}
+
+// --- 3. RENDERING THE LIST ---
+function renderSystemGrid() {
+  const container = document.getElementById('system-cards-container');
+  container.innerHTML = ""; // Clear existing
+
+  dummySystems.forEach(system => {
+    const card = document.createElement('div');
+    card.className = 'system-card';
+    card.onclick = () => showSystemDetail(system.id);
+    
+    card.innerHTML = `
+      <h4>${system.name}</h4>
+      <span class="tag">${system.category}</span>
+      <p style="margin-top: 10px;">${system.shortDesc}</p>
+      <div style="font-size: 11px; color: #00ffff;">WIN: ${system.metrics.winRate} | PF: ${system.metrics.profitFactor}</div>
+    `;
+    
+    container.appendChild(card);
+  });
+}
