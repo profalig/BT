@@ -233,8 +233,21 @@ def notify_new_submissions():
         system_name = job.get("system_name", "Untitled System")
         rules = job.get("rules", "No rules specified.")
         user_email = job.get("email", "unknown@agent.com")
+        user_id = job.get("user_id")
 
         print(f"\n--- New Request Received: Job #{job_id} [{system_name}] ---")
+
+        # SECURELY DEDUCT 1 CREDIT ON BACKEND
+        if user_id:
+            try:
+                u_res = supabase.table("user_profiles").select("credits").eq("id", user_id).execute()
+                if u_res.data and len(u_res.data) > 0:
+                    current_credits = u_res.data[0].get("credits", 0)
+                    new_credits = max(0, current_credits - 1)
+                    supabase.table("user_profiles").update({"credits": new_credits}).eq("id", user_id).execute()
+                    print(f"💳 Credit Deducted: User {user_id} now has {new_credits} credit(s).")
+            except Exception as e:
+                print(f"⚠️ Failed to deduct credit for User {user_id}: {e}")
 
         new_job_alert = (
             f"📥 <b>NEW BACKTEST REQUEST RECEIVED!</b>\n\n"

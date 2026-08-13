@@ -9,7 +9,7 @@ const planetData = {
     },
     databank: {
         tag: "VAULT // SEC-02", title: "System Databank", color: "#00ffff",
-        desc: "Welcome to the System Databank—our curated vault of quantitative trading strategies. Every week, our engineering team researches, refines, and releases new algorithmic models across Crypto and Forex markets.<br><br>These concepts demonstrate verified surface-level profitability and serve as high-potential blueprints. Users are encouraged to run them through our Backtest Machine for deep statistical verification, multi-regime stress testing, and trade log analysis before live deployment.",
+        desc: "Welcome to the System Databank, our curated vault of quantitative trading strategies. Every week, our engineering team researches, refines, and releases new algorithmic models across Crypto and Forex markets.<br><br>These concepts demonstrate verified surface-level profitability and serve as high-potential blueprints. Users are encouraged to run them through our Backtest Machine for deep statistical verification, multi-regime stress testing, and trade log analysis before live deployment.",
         stats: [{ label: "STATUS", val: "ONLINE" }, { label: "UPDATES", val: "Weekly" }, { label: "COVERAGE", val: "Crypto / FX" }, { label: "VALIDATION", val: "Required" }]
     },
     about: {
@@ -726,16 +726,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (subError) throw subError;
 
-                const newCredits = currentCredits - 1;
-                const { error: profileUpdateError } = await supabaseClient
-                    .from('user_profiles')
-                    .update({ credits: newCredits })
-                    .eq('id', userId);
-
-                if (profileUpdateError) {
-                    console.error("Credit deduction error:", profileUpdateError);
-                }
-
+                // Optimistically update UI locally
+                const newCredits = Math.max(0, currentCredits - 1);
                 updateCreditBadgeUI(newCredits);
 
                 showTacticalModal(
