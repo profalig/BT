@@ -1019,37 +1019,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// --- 1. DUMMY DATA FOR FRONTEND TESTING ---
-const dummySystems = [
-  {
-    id: "sys-001",
-    name: "BTC Volatility Expansion",
-    category: "CRYPTO",
-    shortDesc: "Captures momentum bursts on 1H timeframes using ATR breakouts.",
-    fullDesc: "This model relies on the Average True Range (ATR) to establish dynamic bands. When Bitcoin price action violently breaks these bands during high-volume sessions, the system initiates a trend-following position. Exit logic is trailed dynamically.",
-    metrics: { winRate: "62.4%", profitFactor: "1.85", drawdown: "12.1%" },
-    reportUrl: "#dummy-pdf-link" 
-  },
-  {
-    id: "sys-002",
-    name: "Equities Mean Reversion",
-    category: "EQUITIES",
-    shortDesc: "Fades extreme S&P 500 gaps at the NY open.",
-    fullDesc: "Identifies statistically significant overnight gaps in index futures. If the gap exceeds 2 standard deviations, the model enters a fading position targeting the previous day's VWAP.",
-    metrics: { winRate: "71.2%", profitFactor: "1.42", drawdown: "8.5%" },
-    reportUrl: "#dummy-pdf-link"
-  }
-];
+// ==========================================
+// SYSTEM DATABANK ENGINE (SUPABASE)
+// ==========================================
 
-// --- 2. MODAL & VIEW MANAGEMENT ---
+// --- 1. MODAL & VIEW MANAGEMENT ---
 function openDatabankModal() {
-  document.getElementById('databank-modal').classList.remove('hidden');
-  showDatabankList(); // Ensure we always open to the list first
-  renderSystemGrid();
+  const modal = document.getElementById('databank-modal');
+  if(modal) modal.classList.remove('hidden');
+  
+  showDatabankList();
+  fetchTradingSystems(); // Ping database for fresh data when opened
 }
 
 function closeDatabankModal() {
-  document.getElementById('databank-modal').classList.add('hidden');
+  const modal = document.getElementById('databank-modal');
+  if(modal) modal.classList.add('hidden');
 }
 
 function showDatabankList() {
@@ -1057,47 +1042,69 @@ function showDatabankList() {
   document.getElementById('databank-detail-view').classList.add('hidden');
 }
 
-function showSystemDetail(systemId) {
-  // Hide list, show detail
-  document.getElementById('databank-list-view').classList.add('hidden');
-  document.getElementById('databank-detail-view').classList.remove('hidden');
+// --- 2. FETCH DATA FROM SUPABASE ---
+async function fetchTradingSystems() {
+    if (!supabaseClient) {
+        console.error("Supabase client not initialized.");
+        return;
+    }
 
-  // Find system data
-  const system = dummySystems.find(s => s.id === systemId);
-  
-  // Populate UI
-  document.getElementById('detail-title').innerText = system.name;
-  document.getElementById('detail-category').innerText = system.category;
-  document.getElementById('detail-win').innerText = system.metrics.winRate;
-  document.getElementById('detail-pf').innerText = system.metrics.profitFactor;
-  document.getElementById('detail-dd').innerText = system.metrics.drawdown;
-  document.getElementById('detail-desc').innerText = system.fullDesc;
+    try {
+        const { data: systems, error } = await supabaseClient
+            .from('trading_systems')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-  // Set up download button action
-  const downloadBtn = document.getElementById('btn-download-report');
-  downloadBtn.onclick = () => {
-    alert(`Initiating download for: ${system.name} report... (Supabase link will go here)`);
-    // Later, this will be: window.open(system.reportUrl, '_blank');
-  };
+        if (error) throw error;
+        renderSystemGrid(systems);
+    } catch (error) {
+        console.error("Error fetching systems:", error.message);
+    }
 }
 
-// --- 3. RENDERING THE LIST ---
-function renderSystemGrid() {
-  const container = document.getElementById('system-cards-container');
-  container.innerHTML = ""; // Clear existing
+// --- 3. RENDERING THE GRID ---
+function renderSystemGrid(systems) {
+  const container = document.getElementById('systems-grid');
+  if (!container) return;
+  container.innerHTML = ""; // Clear out old content
 
-  dummySystems.forEach(system => {
+  systems.forEach(system => {
     const card = document.createElement('div');
     card.className = 'system-card';
-    card.onclick = () => showSystemDetail(system.id);
+    card.onclick = () => showSystemDetail(system); // Pass the database row to the detail view
     
+    // Inject database row values into the card UI
     card.innerHTML = `
-      <h4>${system.name}</h4>
+      <h4>${system.system_name}</h4>
       <span class="tag">${system.category}</span>
-      <p style="margin-top: 10px;">${system.shortDesc}</p>
-      <div style="font-size: 11px; color: #00ffff;">WIN: ${system.metrics.winRate} | PF: ${system.metrics.profitFactor}</div>
+      <p style="margin-top: 10px;">${system.short_description}</p>
+      <div style="font-size: 11px; color: #00ffff;">WIN: ${system.win_rate}% | NET: ${system.net_return}%</div>
     `;
     
     container.appendChild(card);
   });
+}
+
+// --- 4. SHOW DETAIL VIEW ---
+function showSystemDetail(system) {
+  // Toggle the UI panels
+  document.getElementById('databank-list-view').classList.add('hidden');
+  document.getElementById('databank-detail-view').classList.remove('hidden');
+
+  // Populate the specific HTML IDs with the database values
+  document.getElementById('detail-system-name').innerText = system.system_name;
+  document.getElementById('detail-category').innerText = system.category;
+  document.getElementById('detail-win-rate').innerText = `${system.win_rate}%`;
+  document.getElementById('detail-net-return').innerText = `${system.net_return}%`;
+  document.getElementById('detail-drawdown').innerText = `${system.drawdown}%`;
+  document.getElementById('detail-description').innerText = system.full_description || "No description provided.";
+
+  // Handle the PDF Download Link
+  const downloadBtn = document.getElementById('detail-report-btn');
+  if (system.report_url) {
+      downloadBtn.href = system.report_url;
+      downloadBtn.style.display = 'inline-block';
+  } else {
+      downloadBtn.style.display = 'none'; // Hide button if no link exists
+  }
 }

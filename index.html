@@ -533,31 +533,31 @@
             </div>
           </div>
           <!-- Javascript will inject system cards here -->
-          <div id="system-cards-container" class="system-grid"></div>
+          <div id="systems-grid" class="systems-grid"></div>
         </div>
     
-        <!-- View 2: Detail View (Initially Hidden) -->
+          <!-- View 2: Detail View (Initially Hidden) -->
         <div id="databank-detail-view" class="databank-view hidden">
           <button class="back-btn" onclick="showDatabankList()">&#9664; BACK TO LIST</button>
           
           <div class="detail-header">
-            <h3 id="detail-title">System Name</h3>
+            <h3 id="detail-system-name">System Name</h3>
             <span id="detail-category" class="tag">Category</span>
           </div>
           
           <div class="detail-metrics">
-            <div class="metric-box"><span>WIN RATE</span><strong id="detail-win">--%</strong></div>
-            <div class="metric-box"><span>PROFIT FACTOR</span><strong id="detail-pf">--</strong></div>
-            <div class="metric-box"><span>DRAWDOWN</span><strong id="detail-dd">--%</strong></div>
+            <div class="metric-box"><span>WIN RATE</span><strong id="detail-win-rate">--%</strong></div>
+            <div class="metric-box"><span>NET RETURN</span><strong id="detail-net-return">--%</strong></div>
+            <div class="metric-box"><span>DRAWDOWN</span><strong id="detail-drawdown">--%</strong></div>
           </div>
-    
+        
           <div class="detail-description">
             <h4>MODEL DESCRIPTION</h4>
-            <p id="detail-desc">Full description goes here...</p>
+            <p id="detail-description">Full description goes here...</p>
           </div>
-    
+        
           <div class="detail-actions">
-            <button id="btn-download-report" class="action-btn primary">DOWNLOAD PDF REPORT</button>
+            <a href="#" id="detail-report-btn" class="action-btn primary" target="_blank" style="text-decoration: none;">DOWNLOAD PDF REPORT</a>
             <button id="btn-load-core" class="action-btn secondary">LOAD INTO CORE</button>
           </div>
         </div>
