@@ -1007,7 +1007,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// SYSTEM DATABANK ENGINE (WITH LIVE SEARCH & FILTERS)
+// SYSTEM DATABANK ENGINE (UNIVERSAL DELEGATION)
 // ==========================================
 
 let cachedSystems = [];
@@ -1018,7 +1018,7 @@ function openDatabankModal() {
     const modal = document.getElementById('databank-modal') || document.getElementById('hud-modal');
     if (modal) modal.classList.remove('hidden');
     showDatabankList();
-    setupDatabankControls();
+    setupDatabankEventListeners();
     fetchTradingSystems();
 }
 
@@ -1034,39 +1034,53 @@ function showDatabankList() {
     if (detailView) detailView.style.display = 'none';
 }
 
-function setupDatabankControls() {
-    // Attach listener to search input
-    const searchInput = document.querySelector('input[placeholder*="Search"]');
-    if (searchInput && !searchInput.dataset.initialized) {
-        searchInput.dataset.initialized = "true";
-        searchInput.addEventListener('input', (e) => {
+function setupDatabankEventListeners() {
+    // Listen globally on the document so it works regardless of HTML element types (div, button, span)
+    if (document.dataset && document.dataset.databankListenersAttached) return;
+    if (document.dataset) document.dataset.databankListenersAttached = "true";
+
+    // 1. Universal Search Field Input Handler
+    document.addEventListener('input', (e) => {
+        if (e.target && (e.target.tagName === 'INPUT' || e.target.type === 'text')) {
             currentSearchQuery = e.target.value.toLowerCase().trim();
             applyDatabankFilters();
-        });
-    }
+        }
+    });
 
-    // Attach listeners to category filter buttons
-    const filterContainer = searchInput?.parentElement?.parentElement || document;
-    const filterBtns = filterContainer.querySelectorAll('button, .filter-btn');
+    // 2. Universal Category Filter Click Handler
+    document.addEventListener('click', (e) => {
+        const targetBtn = e.target.closest('button, div, span, a');
+        if (!targetBtn) return;
 
-    filterBtns.forEach(btn => {
-        const text = btn.innerText.trim().toUpperCase();
-        if (['ALL', 'CRYPTO', 'EQUITIES'].includes(text) && !btn.dataset.initialized) {
-            btn.dataset.initialized = "true";
-            btn.addEventListener('click', () => {
-                filterBtns.forEach(b => {
-                    b.style.background = 'transparent';
-                    b.style.color = '#00f0ff';
+        const text = targetBtn.innerText.trim().toUpperCase();
+        if (['ALL', 'CRYPTO', 'EQUITIES'].includes(text)) {
+            // Reset active styles for sibling filters
+            const parentContainer = targetBtn.parentElement;
+            if (parentContainer) {
+                const siblings = parentContainer.querySelectorAll('button, div, span, a');
+                siblings.forEach(el => {
+                    const elText = el.innerText.trim().toUpperCase();
+                    if (['ALL', 'CRYPTO', 'EQUITIES'].includes(elText)) {
+                        el.style.background = 'transparent';
+                        el.style.color = '#00f0ff';
+                        el.classList.remove('active');
+                    }
                 });
-                btn.style.background = '#00f0ff';
-                btn.style.color = '#000';
+            }
 
-                currentCategoryFilter = text;
-                applyDatabankFilters();
-            });
+            // Highlight the clicked filter button
+            targetBtn.style.background = '#00f0ff';
+            targetBtn.style.color = '#000000';
+            targetBtn.classList.add('active');
+
+            currentCategoryFilter = text;
+            applyDatabankFilters();
         }
     });
 }
+
+// Auto-initialize event listeners immediately on load
+setupDatabankEventListeners();
 
 async function fetchTradingSystems() {
     const gridContainer = document.getElementById('systems-grid') || document.getElementById('systemsGrid');
@@ -1112,18 +1126,25 @@ function applyDatabankFilters() {
     if (!gridContainer) return;
 
     const filtered = cachedSystems.filter(sys => {
-        const name = (sys.system_name || sys.title || sys.name || '').toLowerCase();
-        const desc = (sys.short_description || sys.full_description || sys.summary || '').toLowerCase();
-        const category = (sys.category || '').toUpperCase();
+        const name = String(sys.system_name || sys.title || sys.name || '').toLowerCase();
+        const desc = String(sys.short_description || sys.full_description || sys.summary || sys.description || '').toLowerCase();
+        const category = String(sys.category || '').toLowerCase();
 
-        const matchesCategory = (currentCategoryFilter === 'ALL') || 
-                                (category.includes(currentCategoryFilter)) ||
-                                (currentCategoryFilter === 'EQUITIES' && (category.includes('EQUITY') || category.includes('STOCK')));
+        // 1. Filter Category
+        let matchesCategory = false;
+        if (currentCategoryFilter === 'ALL') {
+            matchesCategory = true;
+        } else if (currentCategoryFilter === 'CRYPTO') {
+            matchesCategory = category.includes('crypto') || desc.includes('btc') || name.includes('btc') || desc.includes('crypto');
+        } else if (currentCategoryFilter === 'EQUITIES') {
+            matchesCategory = category.includes('equity') || category.includes('stock') || category.includes('equities') || desc.includes('equity') || desc.includes('stock');
+        }
 
+        // 2. Filter Search Input Query
         const matchesSearch = !currentSearchQuery || 
                               name.includes(currentSearchQuery) || 
                               desc.includes(currentSearchQuery) ||
-                              category.toLowerCase().includes(currentSearchQuery);
+                              category.includes(currentSearchQuery);
 
         return matchesCategory && matchesSearch;
     });
@@ -1136,7 +1157,7 @@ function renderSystemGrid(systems, container) {
     container.innerHTML = "";
 
     if (!systems || systems.length === 0) {
-        container.innerHTML = `<p style="color: #888; grid-column: 1 / -1; padding: 20px 0;">No matching trading systems found in the vault.</p>`;
+        container.innerHTML = `<p style="color: #888; grid-column: 1 / -1; padding: 20px 0; text-align: center;">No matching trading systems found in the vault.</p>`;
         return;
     }
 
