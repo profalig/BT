@@ -1031,16 +1031,7 @@ function showDatabankList() {
 
 // FORCE UNLOCK INPUT FIELD (Fixes click blocking, z-index, text color & key interception)
 function unlockAndStyleSearchInput() {
-  const searchInput = document.querySelector('#system-search'); // Or your input's selector
-
-  if (searchInput) {
-    // Option A: Remove required attribute dynamically
-    searchInput.removeAttribute('required');
-
-    // Option B: Prevent its native validation bubble
-    searchInput.addEventListener('invalid', (e) => e.preventDefault());
-  }
-}
+    const inputs = document.querySelectorAll('input');
     
     inputs.forEach(input => {
         // Unlock HTML attributes
