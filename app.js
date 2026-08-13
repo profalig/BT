@@ -1029,11 +1029,12 @@ function showDatabankList() {
     if (detailView) detailView.style.display = 'none';
 }
 
-// FORCE UNLOCK INPUT FIELD (Fixes click blocking, z-index, text color & key interception)
+// FORCE UNLOCK INPUT FIELD (Target ONLY the Databank Search Bar)
 function unlockAndStyleSearchInput() {
-    const inputs = document.querySelectorAll('input');
+    // Restrict selector strictly to Databank search inputs so other form inputs are not affected
+    const searchInputs = document.querySelectorAll('#databank-modal input, #databank-list-view input, #systemsGrid input, input[placeholder*="Search"]');
     
-    inputs.forEach(input => {
+    searchInputs.forEach(input => {
         // Unlock HTML attributes
         input.removeAttribute('disabled');
         input.removeAttribute('readonly');
@@ -1069,8 +1070,6 @@ function unlockAndStyleSearchInput() {
             applyDatabankFilters();
         };
     });
-
-    killValidationPopups();
 }
 
 function setupDatabankEventListeners() {
@@ -1107,28 +1106,10 @@ function setupDatabankEventListeners() {
     });
 }
 
-// Strip 'required' and set noValidate on all forms/inputs
-function killValidationPopups() {
-  document.querySelectorAll('input, textarea').forEach(el => {
-    el.removeAttribute('required');
-    el.required = false;
-    if (el.form) el.form.noValidate = true;
-  });
-}
-
-// Globally intercept & suppress native browser validation tooltip popups
-document.addEventListener('invalid', (e) => e.preventDefault(), true);
-
-// Run unlocking routines on DOM load and window load
+// Run unlocking routines when DOM loads and on window clicks
 setupDatabankEventListeners();
-document.addEventListener('DOMContentLoaded', () => {
-    unlockAndStyleSearchInput();
-    killValidationPopups();
-});
-window.addEventListener('load', () => {
-    unlockAndStyleSearchInput();
-    killValidationPopups();
-});
+document.addEventListener('DOMContentLoaded', unlockAndStyleSearchInput);
+window.addEventListener('load', unlockAndStyleSearchInput);
 
 async function fetchTradingSystems() {
     const gridContainer = document.getElementById('systems-grid') || document.getElementById('systemsGrid');
