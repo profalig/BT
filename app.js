@@ -1165,16 +1165,17 @@ function applyDatabankFilters() {
 
     const filtered = cachedSystems.filter(sys => {
         const fullSystemDataString = JSON.stringify(sys).toLowerCase();
-        const category = String(sys.category || fullSystemDataString).toLowerCase();
+        const sysCat = String(sys.category || '').toLowerCase();
 
-        // 1. Category Filter Logic (Crypto vs Forex)
+        // 1. Category Filter Logic
         let matchesCategory = false;
         if (currentCategoryFilter === 'ALL') {
             matchesCategory = true;
         } else if (currentCategoryFilter === 'CRYPTO') {
-            matchesCategory = category.includes('crypto') || fullSystemDataString.includes('btc') || fullSystemDataString.includes('eth');
+            matchesCategory = sysCat.includes('crypto') || fullSystemDataString.includes('btc') || fullSystemDataString.includes('eth');
         } else if (currentCategoryFilter === 'FOREX') {
-            matchesCategory = category.includes('forex') || category.includes('fx') || fullSystemDataString.includes('eur') || fullSystemDataString.includes('usd') || fullSystemDataString.includes('gbp') || fullSystemDataString.includes('jpy');
+            matchesCategory = sysCat.includes('forex') || sysCat.includes('fx') || 
+                (sysCat === '' && (fullSystemDataString.includes('eur') || fullSystemDataString.includes('gbp') || fullSystemDataString.includes('jpy')));
         }
 
         // 2. Search Query Logic
