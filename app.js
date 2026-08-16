@@ -385,9 +385,9 @@ async function applyPromoCode() {
     }
 
     try {
-        // Query your single 'discount_code' table
+        // Query your single 'discount_codes' table
         const { data: promoData, error } = await supabaseClient
-            .from('discount_code') 
+            .from('discount_codes') 
             .select('*')
             .eq('code', codeStr)
             .maybeSingle();
