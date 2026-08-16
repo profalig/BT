@@ -354,7 +354,7 @@ if (window.supabase) {
 }
 
 // ==========================================
-// PROMO CODE & DISCOUNT ENGINE
+// PROMO CODE & DISCOUNT ENGINE (CUSTOM SCHEMA)
 // ==========================================
 let activePromo = null; 
 
@@ -385,11 +385,11 @@ async function applyPromoCode() {
     }
 
     try {
+        // Query your single 'discount_code' table
         const { data: promoData, error } = await supabaseClient
-            .from('discount_codes')
+            .from('discount_code') 
             .select('*')
             .eq('code', codeStr)
-            .eq('is_active', true)
             .maybeSingle();
 
         if (error) throw error;
@@ -397,34 +397,28 @@ async function applyPromoCode() {
         if (!promoData) {
             activePromo = null;
             promoStatus.style.color = '#ff0055';
-            promoStatus.innerHTML = '<i class="fa-solid fa-xmark"></i> Invalid or expired promo code.';
+            promoStatus.innerHTML = '<i class="fa-solid fa-xmark"></i> Invalid promo code.';
             resetTierButtonPrices();
             return;
         }
 
-        // Check Expiration Date
-        if (promoData.expires_at && new Date(promoData.expires_at) < new Date()) {
+        // Check if code is already burned/used
+        if (promoData.is_used === true) {
             activePromo = null;
             promoStatus.style.color = '#ff0055';
-            promoStatus.innerHTML = '<i class="fa-solid fa-clock"></i> Promo code has expired.';
-            resetTierButtonPrices();
-            return;
-        }
-
-        // Check Usage Limit
-        if (promoData.max_uses !== null && promoData.max_uses !== undefined && promoData.times_used >= promoData.max_uses) {
-            activePromo = null;
-            promoStatus.style.color = '#ff0055';
-            promoStatus.innerHTML = '<i class="fa-solid fa-ban"></i> Promo code usage limit reached.';
+            promoStatus.innerHTML = '<i class="fa-solid fa-ban"></i> This promo code has already been used.';
             resetTierButtonPrices();
             return;
         }
 
         // Promo is Valid!
         activePromo = promoData;
-        const discountText = promoData.discount_percent 
-            ? `${promoData.discount_percent}% OFF` 
-            : `$${promoData.discount_amount} OFF`;
+        const typeStr = String(promoData.discount_type || '').toLowerCase();
+        const isPercentage = typeStr === 'percentage' || typeStr === 'percent';
+        
+        const discountText = isPercentage 
+            ? `${promoData.discount_value}% OFF` 
+            : `$${promoData.discount_value} OFF`;
 
         promoStatus.style.color = '#00ff66';
         promoStatus.innerHTML = `<i class="fa-solid fa-circle-check"></i> Code <b>${promoData.code}</b> applied! (${discountText})`;
@@ -445,12 +439,17 @@ async function applyPromoCode() {
 
 function calculateDiscountedPrice(basePrice) {
     if (!activePromo) return basePrice;
+    
     let finalPrice = basePrice;
-    if (activePromo.discount_percent) {
-        finalPrice = basePrice * (1 - activePromo.discount_percent / 100);
-    } else if (activePromo.discount_amount) {
-        finalPrice = basePrice - activePromo.discount_amount;
+    const val = parseFloat(activePromo.discount_value || 0);
+    const typeStr = String(activePromo.discount_type || '').toLowerCase();
+
+    if (typeStr === 'percentage' || typeStr === 'percent') {
+        finalPrice = basePrice * (1 - val / 100);
+    } else if (typeStr === 'fixed') {
+        finalPrice = basePrice - val;
     }
+
     return Math.max(0, Math.round(finalPrice * 100) / 100);
 }
 
