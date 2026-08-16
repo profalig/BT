@@ -112,6 +112,46 @@ def verify_ethereum_usdc_tx(tx_hash, required_usdc_amount):
         return False, f"Ethereum RPC Error: {str(e)}"
 
 # ==========================================
+# DISCOUNT CODE HELPER
+# ==========================================
+def get_discounted_price(discount_code, base_price):
+    """
+    Validates the code securely via Supabase and calculates the new price.
+    Returns: (final_price, applied_code_string)
+    Raises ValueError if code is invalid or already used.
+    """
+    if not discount_code or not str(discount_code).strip():
+        return float(base_price), None
+
+    clean_code = str(discount_code).strip().upper()
+    
+    # 1. Fetch code from Supabase
+    res = supabase.table("discount_codes").select("*").eq("code", clean_code).execute()
+    
+    if not res.data or len(res.data) == 0:
+        raise ValueError("Invalid discount code.")
+        
+    code_data = res.data[0]
+    
+    # 2. Check if already used to prevent double-spending
+    if code_data.get("is_used"):
+        raise ValueError("This discount code has already been claimed.")
+
+    # 3. Calculate new price safely
+    d_type = code_data.get("discount_type")
+    d_value = float(code_data.get("discount_value", 0))
+    base_price_float = float(base_price)
+    
+    if d_type == "percentage":
+        new_price = base_price_float * (1 - (d_value / 100.0))
+    elif d_type == "fixed":
+        new_price = max(0.0, base_price_float - d_value)
+    else:
+        new_price = base_price_float
+
+    return round(new_price, 2), clean_code
+
+# ==========================================
 # 2. HTTP SERVER & STRIPE WEBHOOK HANDLER
 # ==========================================
 class WebhookAndHealthHandler(BaseHTTPRequestHandler):
@@ -146,24 +186,61 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
         if self.path == "/create-checkout-session":
             try:
                 data = json.loads(body.decode("utf-8"))
-                price_id = data.get("priceId")
+                price_id = data.get("priceId") # Keep as fallback
                 user_id = data.get("userId")
                 credits_to_add = data.get("creditsToAdd", 0)
                 checkout_mode = data.get("mode", "payment")
+                
+                # New fields to handle discounts from frontend
+                base_price_usd = data.get("basePriceUsd")
+                plan_name = data.get("planName", "Quant Plan")
+                discount_code = data.get("discountCode", "").strip()
 
                 origin = self.headers.get("Origin", "https://your-frontend-domain.com")
 
-                session = stripe.checkout.Session.create(
-                    line_items=[{
+                # 1. Apply Discount Math if a code is provided
+                applied_code = None
+                if discount_code and base_price_usd is not None:
+                    try:
+                        final_price_usd, applied_code = get_discounted_price(discount_code, base_price_usd)
+                    except ValueError as ve:
+                        self.send_response(400)
+                        self._set_cors_headers()
+                        self.end_headers()
+                        self.wfile.write(json.dumps({"error": str(ve)}).encode("utf-8"))
+                        return
+
+                # 2. Build Line Items (Dynamic price vs Hardcoded Stripe ID)
+                if applied_code and base_price_usd is not None:
+                    final_price_cents = int(final_price_usd * 100)
+                    line_items = [{
+                        "price_data": {
+                            "currency": "usd",
+                            "product_data": {
+                                "name": plan_name,
+                                "description": f"Promo Code Applied: {applied_code}"
+                            },
+                            "unit_amount": final_price_cents,
+                        },
+                        "quantity": 1,
+                    }]
+                else:
+                    # Fallback to standard price ID if no discount is used
+                    line_items = [{
                         "price": price_id,
                         "quantity": 1,
-                    }],
+                    }]
+
+                # 3. Create Session with Metadata
+                session = stripe.checkout.Session.create(
+                    line_items=line_items,
                     mode=checkout_mode,
                     success_url=f"{origin}?payment=success",
                     cancel_url=f"{origin}?payment=cancelled",
                     client_reference_id=user_id,
                     metadata={
-                        "credits": str(credits_to_add)
+                        "credits": str(credits_to_add),
+                        "used_discount_code": applied_code or ""
                     }
                 )
 
@@ -171,8 +248,7 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                 self._set_cors_headers()
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
-                response_data = json.dumps({"url": session.url})
-                self.wfile.write(response_data.encode("utf-8"))
+                self.wfile.write(json.dumps({"url": session.url}).encode("utf-8"))
 
             except Exception as e:
                 print(f"❌ Error creating checkout session: {e}")
@@ -252,6 +328,15 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
 
                         print(f"🎉 SUCCESS: Granted {credits_purchased} credits to User {user_id}. Total: {new_credits}")
 
+                        # --- NEW: Burn the discount code if one was used ---
+                        used_code = metadata.get("used_discount_code") if hasattr(metadata, "get") else getattr(metadata, "used_discount_code", None)
+                        if used_code:
+                            try:
+                                supabase.table("discount_codes").update({"is_used": True}).eq("code", used_code).execute()
+                                print(f"🔥 Burned discount code: {used_code}")
+                            except Exception as e:
+                                print(f"❌ Failed to burn discount code {used_code}: {e}")
+
                     except Exception as e:
                         print(f"❌ Supabase Credit Update Failed: {e}")
                 else:
@@ -273,8 +358,9 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                 tx_hash = data.get("txHash", "").strip()
                 network = data.get("network", "solana").lower()
                 credits_to_add = int(data.get("creditsToAdd", 0))
-                price_usdc = float(data.get("priceUsdc", 0.0))
+                base_price_usdc = float(data.get("priceUsdc", 0.0))
                 plan_name = data.get("planName", "USDC Plan")
+                discount_code = data.get("discountCode", "").strip()
 
                 if not user_id or not tx_hash:
                     self.send_response(400)
@@ -283,7 +369,17 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                     self.wfile.write(json.dumps({"error": "Missing user ID or Tx Hash."}).encode("utf-8"))
                     return
 
-                # 1. Anti-Replay Check: Ensure hash hasn't been used before
+                # 1. Calculate Expected Discounted Price
+                try:
+                    expected_usdc, applied_code = get_discounted_price(discount_code, base_price_usdc)
+                except ValueError as ve:
+                    self.send_response(400)
+                    self._set_cors_headers()
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": str(ve)}).encode("utf-8"))
+                    return
+
+                # 2. Anti-Replay Check: Ensure hash hasn't been used before
                 tx_check = supabase.table("processed_crypto_txs").select("tx_hash").eq("tx_hash", tx_hash).execute()
                 if tx_check.data and len(tx_check.data) > 0:
                     self.send_response(400)
@@ -292,11 +388,11 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                     self.wfile.write(json.dumps({"error": "This transaction hash has already been redeemed!"}).encode("utf-8"))
                     return
 
-                # 2. Automated On-Chain Verification
+                # 3. Automated On-Chain Verification (using the discounted expected_usdc)
                 if network == "solana":
-                    is_valid, reason = verify_solana_usdc_tx(tx_hash, price_usdc)
+                    is_valid, reason = verify_solana_usdc_tx(tx_hash, expected_usdc)
                 elif network == "ethereum":
-                    is_valid, reason = verify_ethereum_usdc_tx(tx_hash, price_usdc)
+                    is_valid, reason = verify_ethereum_usdc_tx(tx_hash, expected_usdc)
                 else:
                     is_valid, reason = False, "Unsupported blockchain network."
 
@@ -307,7 +403,7 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                     self.wfile.write(json.dumps({"error": f"Verification failed: {reason}"}).encode("utf-8"))
                     return
 
-                # 3. Mark Hash as Used
+                # 4. Mark Hash as Used
                 supabase.table("processed_crypto_txs").insert({
                     "tx_hash": tx_hash,
                     "user_id": user_id,
@@ -315,7 +411,7 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                     "credits_added": credits_to_add
                 }).execute()
 
-                # 4. Grant Credits to User Profile
+                # 5. Grant Credits to User Profile
                 res = supabase.table("user_profiles").select("credits").eq("id", user_id).execute()
                 if res.data and len(res.data) > 0:
                     current_credits = res.data[0].get("credits", 0)
@@ -325,7 +421,15 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                     new_credits = credits_to_add
                     supabase.table("user_profiles").insert({"id": user_id, "credits": new_credits}).execute()
 
-                # 5. Telegram Notification
+                # 6. Burn the discount code now that crypto payment is verified
+                if applied_code:
+                    try:
+                        supabase.table("discount_codes").update({"is_used": True}).eq("code", applied_code).execute()
+                        print(f"🔥 Burned crypto discount code: {applied_code}")
+                    except Exception as e:
+                        print(f"❌ Failed to burn discount code {applied_code}: {e}")
+
+                # 7. Telegram Notification
                 explorer_url = f"https://solscan.io/tx/{tx_hash}" if network == "solana" else f"https://etherscan.io/tx/{tx_hash}"
                 send_telegram_alert(
                     f"⚡ <b>AUTOMATED USDC PAYMENT VERIFIED!</b>\n\n"
@@ -336,7 +440,7 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                     f"🔗 <b>Tx:</b> <a href='{explorer_url}'>View on Explorer</a>"
                 )
 
-                # 6. Success Response
+                # 8. Success Response
                 self.send_response(200)
                 self._set_cors_headers()
                 self.send_header("Content-Type", "application/json")

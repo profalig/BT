@@ -353,6 +353,142 @@ if (window.supabase) {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
+// ==========================================
+// PROMO CODE & DISCOUNT ENGINE
+// ==========================================
+let activePromo = null; 
+
+async function applyPromoCode() {
+    const promoInput = document.getElementById('promo-code-input');
+    const promoStatus = document.getElementById('promo-status-msg');
+    const applyBtn = document.getElementById('apply-promo-btn');
+
+    if (!promoInput || !promoStatus) return;
+
+    const codeStr = promoInput.value.trim().toUpperCase();
+
+    if (!codeStr) {
+        promoStatus.style.color = '#ff0055';
+        promoStatus.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Please enter a promo code.';
+        return;
+    }
+
+    if (!supabaseClient) {
+        promoStatus.style.color = '#ff0055';
+        promoStatus.innerHTML = '<i class="fa-solid fa-wifi"></i> Supabase client offline.';
+        return;
+    }
+
+    if (applyBtn) {
+        applyBtn.disabled = true;
+        applyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> CHECKING...';
+    }
+
+    try {
+        const { data: promoData, error } = await supabaseClient
+            .from('discount_codes')
+            .select('*')
+            .eq('code', codeStr)
+            .eq('is_active', true)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (!promoData) {
+            activePromo = null;
+            promoStatus.style.color = '#ff0055';
+            promoStatus.innerHTML = '<i class="fa-solid fa-xmark"></i> Invalid or expired promo code.';
+            resetTierButtonPrices();
+            return;
+        }
+
+        // Check Expiration Date
+        if (promoData.expires_at && new Date(promoData.expires_at) < new Date()) {
+            activePromo = null;
+            promoStatus.style.color = '#ff0055';
+            promoStatus.innerHTML = '<i class="fa-solid fa-clock"></i> Promo code has expired.';
+            resetTierButtonPrices();
+            return;
+        }
+
+        // Check Usage Limit
+        if (promoData.max_uses !== null && promoData.max_uses !== undefined && promoData.times_used >= promoData.max_uses) {
+            activePromo = null;
+            promoStatus.style.color = '#ff0055';
+            promoStatus.innerHTML = '<i class="fa-solid fa-ban"></i> Promo code usage limit reached.';
+            resetTierButtonPrices();
+            return;
+        }
+
+        // Promo is Valid!
+        activePromo = promoData;
+        const discountText = promoData.discount_percent 
+            ? `${promoData.discount_percent}% OFF` 
+            : `$${promoData.discount_amount} OFF`;
+
+        promoStatus.style.color = '#00ff66';
+        promoStatus.innerHTML = `<i class="fa-solid fa-circle-check"></i> Code <b>${promoData.code}</b> applied! (${discountText})`;
+
+        updateTierButtonPricesWithDiscount();
+
+    } catch (err) {
+        console.error('Promo Verification Error:', err);
+        promoStatus.style.color = '#ff0055';
+        promoStatus.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Verification error: ${err.message}`;
+    } finally {
+        if (applyBtn) {
+            applyBtn.disabled = false;
+            applyBtn.innerHTML = 'APPLY';
+        }
+    }
+}
+
+function calculateDiscountedPrice(basePrice) {
+    if (!activePromo) return basePrice;
+    let finalPrice = basePrice;
+    if (activePromo.discount_percent) {
+        finalPrice = basePrice * (1 - activePromo.discount_percent / 100);
+    } else if (activePromo.discount_amount) {
+        finalPrice = basePrice - activePromo.discount_amount;
+    }
+    return Math.max(0, Math.round(finalPrice * 100) / 100);
+}
+
+function updateTierButtonPricesWithDiscount() {
+    document.querySelectorAll('.select-tier-btn').forEach(btn => {
+        const basePrice = parseFloat(btn.getAttribute('data-price-usd') || '0');
+        if (!basePrice) return;
+
+        const discountedPrice = calculateDiscountedPrice(basePrice);
+        const plan = btn.getAttribute('data-plan') || '';
+
+        if (activePromo && discountedPrice < basePrice) {
+            if (plan === 'Start Pack') {
+                btn.innerHTML = `<span style="text-decoration: line-through; opacity: 0.5; margin-right: 6px;">$${basePrice}</span> PAY WITH CARD ($${discountedPrice})`;
+            } else if (plan === 'Pro Pack') {
+                btn.innerHTML = `<i class="fa-solid fa-bolt"></i> <span style="text-decoration: line-through; opacity: 0.5; margin-right: 6px;">$${basePrice}</span> PAY WITH CARD ($${discountedPrice})`;
+            } else if (plan === 'Quant Monthly Pass') {
+                btn.innerHTML = `<i class="fa-solid fa-crown"></i> <span style="text-decoration: line-through; opacity: 0.5; margin-right: 6px;">$${basePrice}</span> CARD SUB ($${discountedPrice})`;
+            }
+        }
+    });
+}
+
+function resetTierButtonPrices() {
+    document.querySelectorAll('.select-tier-btn').forEach(btn => {
+        const basePrice = btn.getAttribute('data-price-usd') || '';
+        const plan = btn.getAttribute('data-plan') || '';
+
+        if (plan === 'Start Pack') {
+            btn.innerHTML = `PAY WITH CARD ($${basePrice})`;
+        } else if (plan === 'Pro Pack') {
+            btn.innerHTML = `<i class="fa-solid fa-bolt"></i> PAY WITH CARD ($${basePrice})`;
+        } else if (plan === 'Quant Monthly Pass') {
+            btn.innerHTML = `<i class="fa-solid fa-crown"></i> CARD SUB ($${basePrice})`;
+        }
+    });
+}
+
 // USER PROFILE ENGINE
 async function fetchOrCreateUserProfile(user) {
     if (!supabaseClient || !user) return null;
@@ -578,10 +714,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const authCorner = document.getElementById('auth-corner');
     const googleBtn = document.getElementById('google-auth-btn');
 
+    const applyPromoBtn = document.getElementById('apply-promo-btn');
+    if (applyPromoBtn) {
+        applyPromoBtn.addEventListener('click', applyPromoCode);
+    }
+
     if (navSubBtn) navSubBtn.addEventListener('click', openSubscriptionModal);
     if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
 
-    // STRIPE CHECKOUT INTEGRATION
+    // STRIPE CHECKOUT INTEGRATION WITH PROMO CODE PAYLOAD
     document.querySelectorAll('.select-tier-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const button = e.currentTarget;
@@ -589,6 +730,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const creditsToAdd = button.getAttribute('data-credits') || '0';
             const mode = button.getAttribute('data-mode') || 'subscription';
             const planName = button.getAttribute('data-plan') || 'Plan';
+            const basePriceUsd = parseFloat(button.getAttribute('data-price-usd') || '0');
 
             if (!priceId || priceId.includes('ID_HERE')) {
                 showTacticalModal('CONFIGURATION NOTICE', `Stripe Price ID for ${planName} is missing. Update the <code>data-price-id</code> attribute in index.html.`, false);
@@ -622,7 +764,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         priceId: priceId,
                         userId: session.user.id,
                         creditsToAdd: parseInt(creditsToAdd, 10),
-                        mode: mode
+                        mode: mode,
+                        promoCode: activePromo ? activePromo.code : null,
+                        basePriceUsd: basePriceUsd
                     })
                 });
 
@@ -1002,7 +1146,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// SYSTEM DATABANK ENGINE (SEARCH INPUT UNLOCK & OVERLAY FIX)
+// SYSTEM DATABANK ENGINE
 // ==========================================
 
 let cachedSystems = [];
@@ -1014,7 +1158,6 @@ function openDatabankModal() {
     if (modal) modal.classList.remove('hidden');
     showDatabankList();
     
-    // Force unlock & style search input immediately
     unlockAndStyleSearchInput();
     setupDatabankEventListeners();
     fetchTradingSystems();
@@ -1032,42 +1175,35 @@ function showDatabankList() {
     if (detailView) detailView.style.display = 'none';
 }
 
-// FORCE UNLOCK INPUT FIELD (Target ONLY the Databank Search Bar)
 function unlockAndStyleSearchInput() {
-    // Restrict selector strictly to Databank search inputs so other form inputs are not affected
     const searchInputs = document.querySelectorAll('#databank-modal input, #databank-list-view input, #systemsGrid input, input[placeholder*="Search"]');
     
     searchInputs.forEach(input => {
-        // Unlock HTML attributes
         input.removeAttribute('disabled');
         input.removeAttribute('readonly');
         input.disabled = false;
         input.readOnly = false;
 
-        // Force clickable & visible styling directly via JS
         input.style.setProperty('pointer-events', 'auto', 'important');
         input.style.setProperty('position', 'relative', 'important');
         input.style.setProperty('z-index', '999999', 'important');
-        input.style.setProperty('color', '#ffffff', 'important'); // Visible white text
-        input.style.setProperty('caret-color', '#00f0ff', 'important'); // Bright cyan typing cursor
+        input.style.setProperty('color', '#ffffff', 'important');
+        input.style.setProperty('caret-color', '#00f0ff', 'important');
         input.style.setProperty('background', 'rgba(0, 0, 0, 0.6)', 'important');
         input.style.setProperty('border', '1px solid #00f0ff', 'important');
         input.style.setProperty('user-select', 'text', 'important');
         input.style.setProperty('-webkit-user-select', 'text', 'important');
 
-        // Stop 3D/Canvas global listeners from swallowing key presses
         const stopPropagation = (e) => e.stopPropagation();
         input.onkeydown = stopPropagation;
         input.onkeyup = stopPropagation;
         input.onkeypress = stopPropagation;
 
-        // Ensure clicking explicitly focuses the box
         input.onclick = (e) => {
             e.stopPropagation();
             input.focus();
         };
 
-        // Live filtering listener
         input.oninput = (e) => {
             currentSearchQuery = e.target.value.toLowerCase().trim();
             applyDatabankFilters();
@@ -1079,7 +1215,6 @@ function setupDatabankEventListeners() {
     if (window._databankListenersAttached) return;
     window._databankListenersAttached = true;
 
-    // Global Category Filter Click Handler (ALL / CRYPTO / FOREX)
     document.addEventListener('click', (e) => {
         const targetBtn = e.target.closest('button, div, span, a');
         if (!targetBtn) return;
@@ -1109,7 +1244,6 @@ function setupDatabankEventListeners() {
     });
 }
 
-// Run unlocking routines when DOM loads and on window clicks
 setupDatabankEventListeners();
 document.addEventListener('DOMContentLoaded', unlockAndStyleSearchInput);
 window.addEventListener('load', unlockAndStyleSearchInput);
@@ -1163,7 +1297,6 @@ function applyDatabankFilters() {
         const fullSystemDataString = JSON.stringify(sys).toLowerCase();
         const sysCat = String(sys.category || '').toLowerCase();
 
-        // 1. Category Filter Logic
         let matchesCategory = false;
         if (currentCategoryFilter === 'ALL') {
             matchesCategory = true;
@@ -1174,7 +1307,6 @@ function applyDatabankFilters() {
                 (sysCat === '' && (fullSystemDataString.includes('eur') || fullSystemDataString.includes('gbp') || fullSystemDataString.includes('jpy')));
         }
 
-        // 2. Search Query Logic
         const matchesSearch = !query || fullSystemDataString.includes(query);
 
         return matchesCategory && matchesSearch;
@@ -1213,7 +1345,7 @@ function renderSystemGrid(systems, container) {
 }
 
 // ==========================================
-// SYSTEM DETAIL VIEW (MOBILE RESPONSIVE FIXED)
+// SYSTEM DETAIL VIEW
 // ==========================================
 
 async function viewSystemDetail(sys) {
@@ -1258,7 +1390,6 @@ async function viewSystemDetail(sys) {
             ${sys.category || 'Crypto'}
         </span>
 
-        <!-- RESPONSIVE STATS HEADER GRID -->
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: ${isMobile ? '0.4rem' : '1rem'}; margin: 0.75rem 0;">
             <div style="background: rgba(0, 240, 255, 0.05); padding: ${isMobile ? '0.4rem 0.5rem' : '0.75rem 1rem'}; border-left: 3px solid #00f0ff; border-radius: 4px;">
                 <div style="font-size: ${isMobile ? '0.6rem' : '0.7rem'}; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 0.5px;">WIN RATE</div>
@@ -1274,12 +1405,10 @@ async function viewSystemDetail(sys) {
             </div>
         </div>
 
-        <!-- RESPONSIVE CONSOLE BOX (LIGHTER HEIGHT FOR MOBILE) -->
         <div class="cyber-scroll" style="max-height: ${isMobile ? '240px' : '460px'}; min-height: ${isMobile ? '180px' : '320px'}; overflow-y: auto; padding: ${isMobile ? '0.75rem 0.85rem' : '1.25rem 1.5rem'}; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 6px; margin-bottom: 0.85rem;">
             ${formatStrategyText(rawDescription)}
         </div>
 
-        <!-- ACTION BUTTON -->
         ${sys.report_url ? `
             <a href="${sys.report_url}" target="_blank" download style="display: inline-block; background: #00f0ff; color: #040912; padding: ${isMobile ? '8px 14px' : '10px 20px'}; text-decoration: none; font-weight: bold; font-family: 'Share Tech Mono', monospace; border-radius: 4px; border: 1px solid #00f0ff; font-size: ${isMobile ? '0.75rem' : '0.9rem'};">
                 <i class="fa-solid fa-file-pdf"></i> DOWNLOAD FULL PDF REPORT
@@ -1288,17 +1417,13 @@ async function viewSystemDetail(sys) {
     `;
 }
 
-// DYNAMIC EDITORIAL PARSER: Adapts to whatever layout you write in Supabase
 function formatStrategyText(text) {
     if (!text) return `<p style="color: #666;">No detailed documentation attached.</p>`;
 
-    // Split text into individual lines from Supabase
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     let outHtml = '';
 
     lines.forEach(line => {
-        // 1. DYNAMIC HEADER DETECTION:
-        // Matches lines starting with # or ##, short lines ending with ':', or common header names
         const isMarkdownHeader = /^#{1,6}\s+/.test(line);
         const isColonHeader = !line.startsWith('-') && !line.startsWith('*') && line.endsWith(':') && line.length < 65;
         const isKnownHeader = !line.startsWith('-') && !line.startsWith('*') && (
@@ -1306,7 +1431,6 @@ function formatStrategyText(text) {
         ) && line.length < 65;
 
         if (isMarkdownHeader || isColonHeader || isKnownHeader) {
-            // Clean up title text (strip # and trailing colon for a clean HUD title look)
             const cleanTitle = line.replace(/^#{1,6}\s+/, '').replace(/:$/, '').trim();
             outHtml += `
                 <h4 style="color: #00f0ff; margin: 1.4rem 0 0.5rem 0; font-family: 'Share Tech Mono', monospace; font-size: 0.88rem; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 4px; letter-spacing: 1px; text-transform: uppercase;">
@@ -1315,11 +1439,8 @@ function formatStrategyText(text) {
             return;
         }
 
-        // 2. BULLET POINT DETECTION:
         if (line.startsWith('-') || line.startsWith('*')) {
             let content = line.replace(/^[-*]\s*/, '').trim();
-
-            // Support markdown bold **text** or auto-bold labels before a colon
             content = content.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #e2e8f0; font-weight: 600;">$1</strong>');
             if (!content.startsWith('<strong')) {
                 content = content.replace(/^([^:]+:)/, '<strong style="color: #e2e8f0; font-weight: 600;">$1</strong>');
@@ -1332,7 +1453,6 @@ function formatStrategyText(text) {
             return;
         }
 
-        // 3. REGULAR PARAGRAPH TEXT:
         let content = line.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #e2e8f0; font-weight: 600;">$1</strong>');
         if (!content.startsWith('<strong')) {
             content = content.replace(/^([^:]+:)/, '<strong style="color: #e2e8f0; font-weight: 600;">$1</strong>');
@@ -1344,12 +1464,10 @@ function formatStrategyText(text) {
     return outHtml;
 }
 
-
 // ==========================================
 // USDC CRYPTO PAYMENT SYSTEM CONTROLLER
 // ==========================================
 
-// 1. Config: Define your receiving wallet addresses
 const CRYPTO_WALLETS = {
     solana: "2C3P2uoRTUq9WVggAHhUBwA5EJ7Em8WEQJgQA5hsaWo7",
     ethereum: "0x13581166EE5CDD412358209539d94F2b79D94341"
@@ -1358,33 +1476,53 @@ const CRYPTO_WALLETS = {
 let currentCryptoState = {
     planName: "",
     amount: 0,
+    finalAmount: 0,
     credits: 0,
     network: "solana"
 };
 
-// 2. Open Crypto Modal
 function openCryptoModal(planName, amount, credits) {
+    const finalAmount = calculateDiscountedPrice(amount);
+
     currentCryptoState.planName = planName;
     currentCryptoState.amount = amount;
+    currentCryptoState.finalAmount = finalAmount;
     currentCryptoState.credits = credits;
-    currentCryptoState.network = "solana"; // Default network
+    currentCryptoState.network = "solana";
 
-    // Update UI elements
-    document.getElementById('crypto-plan-title').innerText = `PAY FOR ${planName.toUpperCase()} WITH USDC`;
-    document.getElementById('crypto-amount-due').innerText = `$${amount}.00 USDC`;
-    document.getElementById('tx-hash-input').value = "";
+    const titleEl = document.getElementById('crypto-plan-title');
+    const origAmountEl = document.getElementById('crypto-original-amount');
+    const amountDueEl = document.getElementById('crypto-amount-due');
 
-    // Show modal & set up network display
-    document.getElementById('crypto-modal-overlay').style.display = 'flex';
+    if (titleEl) titleEl.innerText = `PAY FOR ${planName.toUpperCase()} WITH USDC`;
+    
+    if (origAmountEl) {
+        if (activePromo && finalAmount < amount) {
+            origAmountEl.style.display = 'inline';
+            origAmountEl.innerText = `$${amount}.00 USDC`;
+        } else {
+            origAmountEl.style.display = 'none';
+        }
+    }
+
+    if (amountDueEl) {
+        amountDueEl.innerText = `$${finalAmount}.00 USDC`;
+    }
+
+    const txInput = document.getElementById('tx-hash-input');
+    if (txInput) txInput.value = "";
+
+    const overlay = document.getElementById('crypto-modal-overlay');
+    if (overlay) overlay.style.display = 'flex';
+
     switchCryptoNetwork('solana');
 }
 
-// 3. Close Crypto Modal
 function closeCryptoModal() {
-    document.getElementById('crypto-modal-overlay').style.display = 'none';
+    const overlay = document.getElementById('crypto-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
 }
 
-// 4. Switch Network (Solana <-> Ethereum)
 function switchCryptoNetwork(network) {
     currentCryptoState.network = network;
     const tabSol = document.getElementById('tab-solana');
@@ -1393,28 +1531,31 @@ function switchCryptoNetwork(network) {
     const qrCodeEl = document.getElementById('crypto-qr-code');
 
     const selectedAddress = CRYPTO_WALLETS[network];
-    walletAddressEl.innerText = selectedAddress;
+    if (walletAddressEl) walletAddressEl.innerText = selectedAddress;
 
-    if (network === 'solana') {
-        tabSol.style.background = '#00f0ff';
-        tabSol.style.color = '#000';
-        tabEth.style.background = 'transparent';
-        tabEth.style.color = '#00f0ff';
-    } else {
-        tabEth.style.background = '#00f0ff';
-        tabEth.style.color = '#000';
-        tabSol.style.background = 'transparent';
-        tabSol.style.color = '#00f0ff';
+    if (tabSol && tabEth) {
+        if (network === 'solana') {
+            tabSol.style.background = '#00f0ff';
+            tabSol.style.color = '#000';
+            tabEth.style.background = 'transparent';
+            tabEth.style.color = '#00f0ff';
+        } else {
+            tabEth.style.background = '#00f0ff';
+            tabEth.style.color = '#000';
+            tabSol.style.background = 'transparent';
+            tabSol.style.color = '#00f0ff';
+        }
     }
 
-    // Generate Dynamic QR Code using public API
-    const qrData = encodeURIComponent(selectedAddress);
-    qrCodeEl.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}`;
+    if (qrCodeEl) {
+        const qrData = encodeURIComponent(selectedAddress);
+        qrCodeEl.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}`;
+    }
 }
 
-// 5. Copy Address to Clipboard
 function copyWalletAddress() {
-    const address = document.getElementById('crypto-wallet-address').innerText;
+    const address = document.getElementById('crypto-wallet-address')?.innerText;
+    if (!address) return;
     navigator.clipboard.writeText(address).then(() => {
         alert("Wallet address copied to clipboard!");
     }).catch(err => {
@@ -1422,9 +1563,8 @@ function copyWalletAddress() {
     });
 }
 
-// Updated submitTransactionForVerification with Live Backend Fetch
 async function submitTransactionForVerification() {
-    const txHash = document.getElementById('tx-hash-input').value.trim();
+    const txHash = document.getElementById('tx-hash-input')?.value.trim();
     const btn = document.getElementById('verify-payment-btn');
 
     if (!txHash) {
@@ -1437,16 +1577,17 @@ async function submitTransactionForVerification() {
         return;
     }
 
-    // Grab current user session to send userId to backend
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session || !session.user) {
         alert("Please sign in before verifying crypto payments.");
         return;
     }
 
-    const originalBtnHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> VERIFYING ON-CHAIN...`;
+    const originalBtnHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> VERIFYING ON-CHAIN...`;
+    }
 
     try {
         const backendServerUrl = 'https://backtest-worker-fs1a.onrender.com';
@@ -1458,8 +1599,9 @@ async function submitTransactionForVerification() {
                 txHash: txHash,
                 network: currentCryptoState.network,
                 creditsToAdd: currentCryptoState.credits,
-                priceUsdc: currentCryptoState.amount,
-                planName: currentCryptoState.planName
+                priceUsdc: currentCryptoState.finalAmount || currentCryptoState.amount,
+                planName: currentCryptoState.planName,
+                promoCode: activePromo ? activePromo.code : null
             })
         });
 
@@ -1471,13 +1613,15 @@ async function submitTransactionForVerification() {
 
         alert(`Payment verified! ${data.message || 'Credits added successfully.'}`);
         closeCryptoModal();
-        window.location.reload(); // Reload to refresh credit balance badge
+        window.location.reload();
 
     } catch (error) {
         console.error("Verification error:", error);
         alert(`Verification Error: ${error.message}`);
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalBtnHtml;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalBtnHtml;
+        }
     }
 }
