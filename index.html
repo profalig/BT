@@ -211,7 +211,8 @@
 </head>
 <body>
 
-    <!-- AUTHENTICATION & SUBSCRIPTION CORNER (HUD DOCK) -->
+    <canvas id="webgl-canvas"></canvas>
+	<!-- AUTHENTICATION & SUBSCRIPTION CORNER (HUD DOCK) -->
     <div id="auth-corner">
         <div class="hud-bar">
             <!-- 1. AGENT / SIGN IN -->
@@ -432,16 +433,6 @@
                 <p>Select your operational tier to unlock hyper-threaded compute clusters, priority backtests, and deep tick data metrics.</p>
             </div>
 
-	    <!-- PROMO / DISCOUNT CODE SECTION -->
-            <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center; justify-content: center; background: rgba(0, 240, 255, 0.05); padding: 12px; border: 1px dashed rgba(0, 240, 255, 0.3); border-radius: 6px;">
-                <i class="fa-solid fa-ticket" style="color: #00f0ff; font-size: 1.2rem;"></i>
-                <input type="text" id="promo-code-input" placeholder="ENTER PROMO CODE" style="background: rgba(4, 12, 20, 0.9); border: 1px solid #00f0ff; color: #00ff66; padding: 8px 12px; font-family: 'Share Tech Mono', monospace; font-size: 0.9rem; text-transform: uppercase; border-radius: 4px; width: 180px; text-align: center; letter-spacing: 1px;">
-                <button id="apply-promo-btn" type="button" style="background: #00f0ff; color: #040912; border: none; padding: 8px 14px; font-family: 'Share Tech Mono', monospace; font-weight: bold; cursor: pointer; border-radius: 4px; transition: all 0.2s ease;">
-                    APPLY
-                </button>
-                <span id="promo-status-msg" style="font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; margin-left: 5px;"></span>
-            </div>
-
             <div class="pricing-grid">
                 <!-- START PACK ($29) -->
                 <div class="tier-card">
@@ -522,7 +513,6 @@
             <!-- Amount Display -->
             <div style="text-align: center; background: rgba(0,255,102,0.05); border: 1px solid rgba(0,255,102,0.3); padding: 12px; border-radius: 6px; margin-bottom: 15px;">
                 <span style="color: #aaa; font-size: 0.75rem; letter-spacing: 1px;">TOTAL DUE:</span>
-                <div id="crypto-original-amount" style="color: #888; font-size: 1rem; text-decoration: line-through; font-family: 'Share Tech Mono', monospace; display: none;"></div>
                 <div id="crypto-amount-due" style="color: #00ff66; font-size: 1.8rem; font-weight: bold; font-family: 'Share Tech Mono', monospace;">
                     $0.00 USDC
                 </div>
@@ -656,7 +646,14 @@
       </div>
     </div>
 	
-    <script src="app.js"></script>
+	
+	<!-- 3D & Animation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/lenis@1.1.9/dist/lenis.min.js"></script>
+	
+	<script src="app.js"></script>
     <script>
         // ELEGANT "INVISIBLE PEN" WRITING ENGINE
         async function runBlockWriting(elements, holdTime = 3200, fadeTime = 800) {

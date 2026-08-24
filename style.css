@@ -1,3 +1,25 @@
+/* ==========================================
+   3D CANVAS & LAYER Z-INDEX OVERRIDES
+   ========================================== */
+#webgl-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Force UI elements above the WebGL background */
+.hud-nav, 
+.mothership-container, 
+.modal-overlay,
+.handwritten-text {
+  position: relative;
+  z-index: 10;
+}
+
 * {
     margin: 0;
     padding: 0;
