@@ -202,16 +202,62 @@ if (abortConsoleBtn) {
     });
 }
 
-// SOLAR SYSTEM HOVER LABELS
+// CONSTELLATION PARALLAX & VIDEO HOVER ENGINE
+const bullConstellation = document.querySelector('.bull-constellation');
+const bearConstellation = document.querySelector('.bear-constellation');
+
+document.addEventListener('mousemove', (e) => {
+    const x = (e.clientX / window.innerWidth - 0.5) * 2; 
+    const y = (e.clientY / window.innerHeight - 0.5) * 2;
+    if (bullConstellation && bearConstellation) {
+        bullConstellation.style.setProperty('--parallax-x', `${-x * 60}px`);
+        bullConstellation.style.setProperty('--parallax-y', `${-y * 60}px`);
+        bearConstellation.style.setProperty('--parallax-x', `${-x * 60}px`);
+        bearConstellation.style.setProperty('--parallax-y', `${-y * 60}px`);
+    }
+});
+
+const triggerAttack = (constellation) => {
+    if (!constellation) return;
+    constellation.classList.add('highlight');
+    const vid = constellation.querySelector('.beast-vid');
+    if (vid) {
+        if (vid.pauseTimeout) { clearTimeout(vid.pauseTimeout); vid.pauseTimeout = null; }
+        vid.currentTime = 0; 
+        vid.play().catch(() => {}); 
+    }
+};
+
+const resetAttack = (constellation) => {
+    if (!constellation) return;
+    constellation.classList.remove('highlight');
+    const vid = constellation.querySelector('.beast-vid');
+    if (vid) {
+        if (vid.pauseTimeout) clearTimeout(vid.pauseTimeout);
+        vid.pauseTimeout = setTimeout(() => { vid.pause(); }, 400);
+    }
+};
+
+orbits.forEach(o => {
+    if (!o.planetEl) return;
+    o.planetEl.addEventListener('mouseenter', () => {
+        if (['backtest', 'campus'].includes(o.id)) triggerAttack(bullConstellation);
+        else if (['databank', 'contact'].includes(o.id)) triggerAttack(bearConstellation);
+        else { triggerAttack(bullConstellation); triggerAttack(bearConstellation); }
+    });
+    o.planetEl.addEventListener('mouseleave', () => { resetAttack(bullConstellation); resetAttack(bearConstellation); });
+});
+
 const btcSun = document.getElementById('sun');
 const solarSystem = document.getElementById('solar-system');
-
 if (btcSun && solarSystem) {
     btcSun.addEventListener('mouseenter', () => {
         solarSystem.classList.add('show-labels');
+        triggerAttack(bullConstellation); triggerAttack(bearConstellation);
     });
     btcSun.addEventListener('mouseleave', () => {
         solarSystem.classList.remove('show-labels');
+        resetAttack(bullConstellation); resetAttack(bearConstellation);
     });
 }
 
