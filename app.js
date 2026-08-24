@@ -16,17 +16,14 @@ function raf(time) {
 }
 requestAnimationFrame(raf);
 
-// 3. Three.js Core Setup
+/* ==========================================
+   3D ENGINE, LIGHTS & OBJECTS SETUP
+   ========================================== */
 const canvas = document.querySelector('#webgl-canvas');
 const scene = new THREE.Scene();
 
-const camera = new THREE.PerspectiveCamera(
-  60, 
-  window.innerWidth / window.innerHeight, 
-  0.1, 
-  1000
-);
-camera.position.z = 20;
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.z = 25;
 
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
@@ -36,15 +33,59 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-// 4. Handle Viewport Resizing
+// 1. LIGHTING
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+scene.add(ambientLight);
+
+const sunLight = new THREE.PointLight(0xffb700, 3, 100);
+sunLight.position.set(0, 0, 0);
+scene.add(sunLight);
+
+// 2. CENTRAL BITCOIN SUN
+const sunGeometry = new THREE.SphereGeometry(2.5, 32, 32);
+const sunMaterial = new THREE.MeshBasicMaterial({
+  color: 0xffa500,
+  wireframe: true // Tactical sci-fi wireframe core
+});
+const sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
+scene.add(sunMesh);
+
+// 3. BACKGROUND STARFIELD PARTICLES
+const particleCount = 1200;
+const particleGeometry = new THREE.BufferGeometry();
+const positions = new Float32Array(particleCount * 3);
+
+for (let i = 0; i < particleCount * 3; i += 3) {
+  positions[i] = (Math.random() - 0.5) * 100;
+  positions[i + 1] = (Math.random() - 0.5) * 100;
+  positions[i + 2] = (Math.random() - 0.5) * 100;
+}
+
+particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+const particleMaterial = new THREE.PointsMaterial({
+  color: 0x00f0ff,
+  size: 0.15,
+  transparent: true,
+  opacity: 0.6
+});
+
+const starfield = new THREE.Points(particleGeometry, particleMaterial);
+scene.add(starfield);
+
+// 4. RESIZE HANDLER
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// 5. Main Render Loop
+// 5. ANIMATION LOOP
 function animate() {
+  // Gentle self-rotation for 3D elements
+  sunMesh.rotation.y += 0.005;
+  starfield.rotation.y -= 0.0005;
+
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
 }
