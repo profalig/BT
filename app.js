@@ -29,6 +29,8 @@ const planetData = {
     }
 };
 
+const TILT_DEG = 60; // must always match the rotateX angle used on #solar-system / .btc-sun / .planet in style.css
+
 const orbitConfig = [
     { id: 'backtest', selector: '.orbit-1', duration: 25, reverse: false },
     { id: 'databank', selector: '.orbit-2', duration: 35, reverse: true },
@@ -73,7 +75,7 @@ function renderEngine(time) {
         if (o.reverse) o.currentAngle = -o.currentAngle;
         
         o.orbitEl.style.transform = `rotate(${o.currentAngle}deg)`;
-        o.planetEl.style.transform = `translateX(-50%) rotate(${-o.currentAngle}deg)`;
+        o.planetEl.style.transform = `translateX(-50%) rotate(${-o.currentAngle}deg) rotateX(${-TILT_DEG}deg)`;
     });
 
     const isMobile = window.innerWidth <= 768;
@@ -237,14 +239,14 @@ function generateBlackboard() {
         "PV = nRT", "V = (4/3)πr³", "lim(x→∞) (1 + 1/x)^x = e", "sin²θ + cos²θ = 1"
     ];
     
-    const density = Math.floor((window.innerWidth * window.innerHeight) / 7500); 
+    const density = Math.floor((window.innerWidth * window.innerHeight) / 14000);
     for (let i = 0; i < density; i++) {
         const text = formulas[Math.floor(Math.random() * formulas.length)];
         const x = Math.random() * window.innerWidth;
         const y = Math.random() * window.innerHeight;
         const fontSize = Math.random() * 12 + 14; 
         ctx.font = `italic ${fontSize}px 'Times New Roman', serif`;
-        const alpha = Math.random() * 0.12 + 0.03; 
+        const alpha = Math.random() * 0.05 + 0.015; 
         const colorRand = Math.random();
         if (colorRand > 0.98) ctx.fillStyle = `rgba(0, 240, 255, ${alpha})`; 
         else if (colorRand > 0.96) ctx.fillStyle = `rgba(255, 0, 85, ${alpha})`; 
