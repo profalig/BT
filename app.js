@@ -3,27 +3,27 @@
 // ==========================================
 const planetData = {
     backtest: {
-        tag: "ENGINE // SEC-01", title: "Backtest Machine", color: "#00ff66",
+        tag: "ENGINE // SEC-01", title: "Backtest Machine", color: "#34e7a6",
         desc: "Submit your system architecture to our core. We conduct a highly accurate, multi-threaded data analysis and return a comprehensive intelligence report.<br><br>Understand your system's edge across multiple market regimes with precise metrics: absolute win/loss rates, maximum drawdown stress-tests, full trade logs, and deep statistical reliability checks.",
         stats: [{ label: "TICK ACCURACY", val: "99.9%" }, { label: "METRICS", val: "30+ Stats" }, { label: "STRESS TEST", val: "Regime Based" }, { label: "REPORTS", val: "Deep Data" }]
     },
     databank: {
         tag: "VAULT // SEC-02", title: "System Databank", color: "#00ffff",
-        desc: "Welcome to the System Databank, our curated vault of quantitative trading strategies. Every week, our engineering team researches, refines, and releases new algorithmic models across Crypto and Forex markets.<br><br>These concepts demonstrate verified surface-level profitability and serve as high-potential blueprints. Users are encouraged to run them through our Backtest Machine for deep statistical verification, multi-regime stress testing, and trade log analysis before live deployment.",
-        stats: [{ label: "STATUS", val: "ONLINE" }, { label: "UPDATES", val: "Weekly" }, { label: "COVERAGE", val: "Crypto / FX" }, { label: "VALIDATION", val: "Required" }]
+        desc: "Here we present quantitative trading systems that demonstrate high potential and surface-level profitability. However, initial light-layer ideas are just the beginning.<br><br>These concepts must be rigorously checked by the user in our Backtest Machine for deep statistical data analysis before being considered reliable for live trading. This magnificent databank is currently under active development by our engineering team.",
+        stats: [{ label: "STATUS", val: "Under Dev" }, { label: "SYSTEMS", val: "Curating" }, { label: "VALIDATION", val: "Required" }, { label: "POTENTIAL", val: "High" }]
     },
     about: {
-        tag: "IDENTITY // SEC-03", title: "About The Factory", color: "#b700ff",
+        tag: "IDENTITY // SEC-03", title: "About The Factory", color: "#b58cff",
         desc: "We are professional quantitative backtesters delivering relentless, institutional-grade market data across multi-year historical cycles (2023, 2024, 2025, 2026 and beyond). Our numbers don't just come out of thin air—we give you itemized, trade-by-trade logs for every single buy and sell order, including wins, losses, and exact execution times.<br><br>Since deep historical lower-timeframe charts are nearly impossible to pull manually, we bring complete transparency to your screen. We calculate exact monthly and annual profits, proving how an initial balance with 2% risk scales over 1, 2, or 4 years. From maximum drawdown charts and win/loss ratios to consecutive loss streaks, we expose every dimension of your strategy so you know with 100% mathematical certainty that your system is truly profitable.",
         stats: [{ label: "OUTPUT", val: "Detailed Report" }, { label: "RECORDS", val: "Trade Log" }, { label: "DATA", val: "Historical Backtest" }, { label: "METRICS", val: "Compounding Analysis" }]
     },
     contact: {
-        tag: "COMMS // SEC-04", title: "Contact Us", color: "#ff0055",
-        desc: "Direct comm-link to the engineering desk. Reach out for quantitative system discussions, data analytics, or professional networking.<br><br><span style='color:#00f0ff'>Email:</span> backtest.factory@gmail.com<br><span style='color:#00f0ff'>Telegram:</span> @Dr_AliSadeghi<br><span style='color:#00f0ff'>Instagram:</span> backtest.factory",
+        tag: "COMMS // SEC-04", title: "Contact Us", color: "#ff4d6a",
+        desc: "Direct comm-link to the engineering desk. Reach out for quantitative system discussions, data analytics, or professional networking.<br><br><span style='color:#4cd6ff'>Email:</span> backtest.factory@gmail.com<br><span style='color:#4cd6ff'>Telegram:</span> @Dr_AliSadeghi<br><span style='color:#4cd6ff'>Instagram:</span> backtest.factory",
         stats: [{ label: "COMM LINK", val: "Encrypted" }, { label: "RESPONSE", val: "Active" }, { label: "LOCATION", val: "Italy" }, { label: "NETWORK", val: "Open" }]
     },
     campus: {
-        tag: "ACADEMY // SEC-05", title: "Backtesting Campus", color: "#ffd700",
+        tag: "ACADEMY // SEC-05", title: "Backtesting Campus", color: "#e8c878",
         desc: "The ultimate training ground for quantitative analysis. Our campus is built to teach deep data analysis, AI applications, statistical studies, and high-level data fetching.<br><br>This curriculum is designed specifically for those who want to become professional backtesters, robust coders, and system engineers in the trading industry and beyond.",
         stats: [{ label: "CURRICULUM", val: "Data & AI" }, { label: "SKILLS", val: "Stats / Python" }, { label: "TARGET", val: "Pro Quants" }, { label: "STATUS", val: "Enrolling" }]
     }
@@ -64,7 +64,7 @@ let isHyperZoomed = false;
 let cam = { x: 0, y: 0, scale: 1 };
 let targetCam = { x: 0, y: 0, scale: 1 };
 
-// CAMERA RENDER ENGINE
+// CAMERA RENDER ENGINE (OPTIMIZED FOR MOBILE PIXEL DENSITY & HD ZOOM)
 function renderEngine(time) {
     orbits.forEach(o => {
         if (!o.orbitEl || !o.planetEl) return;
@@ -114,51 +114,178 @@ function renderEngine(time) {
 }
 requestAnimationFrame(renderEngine);
 
+// Shared "land on planet" logic - used by direct clicks AND the scroll-to-zoom
+// navigation engine below, so both entry points stay perfectly in sync.
+function selectPlanet(o) {
+    if (!o || !o.planetEl) return;
+    if (document.body.classList.contains('warping') || isHyperZoomed) return;
+
+    orbits.forEach(orbit => orbit.planetEl && orbit.planetEl.classList.remove('active'));
+
+    activePlanetData = o;
+    o.planetEl.classList.add('active');
+    document.body.classList.add('warping');
+
+    const data = planetData[o.id];
+
+    document.getElementById('module-tag').innerText = data.tag;
+    document.getElementById('module-tag').style.color = data.color;
+    document.getElementById('module-title').innerText = data.title;
+    document.getElementById('module-title').style.color = data.color;
+    document.getElementById('module-desc').innerHTML = data.desc;
+
+    moduleDetails.style.borderLeftColor = data.color;
+    actionBtn.style.borderColor = data.color;
+    actionBtn.style.color = data.color;
+
+    document.getElementById('stats-grid').innerHTML = data.stats.map(s => `
+        <div class="stat-card">
+            <span class="stat-title">${s.label}</span>
+            <span class="stat-value" style="color: ${data.color}">${s.val}</span>
+        </div>
+    `).join('');
+
+    if (o.id === 'contact' || o.id === 'about') {
+        actionBtn.style.display = 'none';
+    } else {
+        actionBtn.style.display = 'flex';
+    }
+
+    setTimeout(() => document.body.classList.add('landed'), 500);
+    updateChapterUI(o.id);
+}
+
+function returnToOverview() {
+    document.body.classList.remove('landed');
+    if (activePlanetData && activePlanetData.planetEl) activePlanetData.planetEl.classList.remove('active');
+    activePlanetData = null;
+    setTimeout(() => { document.body.classList.remove('warping'); }, 800);
+    updateChapterUI(null);
+}
+
 orbits.forEach(o => {
     if (!o.planetEl) return;
     o.planetEl.addEventListener('click', () => {
-        if (document.body.classList.contains('warping') || isHyperZoomed) return;
-
-        orbits.forEach(orbit => orbit.planetEl && orbit.planetEl.classList.remove('active'));
-        
-        activePlanetData = o;
-        o.planetEl.classList.add('active'); 
-        document.body.classList.add('warping');
-
-        const data = planetData[o.id];
-        
-        document.getElementById('module-tag').innerText = data.tag;
-        document.getElementById('module-tag').style.color = data.color;
-        document.getElementById('module-title').innerText = data.title;
-        document.getElementById('module-title').style.color = data.color;
-        document.getElementById('module-desc').innerHTML = data.desc; 
-        
-        moduleDetails.style.borderLeftColor = data.color;
-        actionBtn.style.borderColor = data.color;
-        actionBtn.style.color = data.color;
-
-        document.getElementById('stats-grid').innerHTML = data.stats.map(s => `
-            <div class="stat-card">
-                <span class="stat-title">${s.label}</span>
-                <span class="stat-value" style="color: ${data.color}">${s.val}</span>
-            </div>
-        `).join('');
-
-        if (o.id === 'contact' || o.id === 'about') {
-            actionBtn.style.display = 'none';
-        } else {
-            actionBtn.style.display = 'flex';
-        }
-
-        setTimeout(() => document.body.classList.add('landed'), 500);
+        scrollChapter = scrollSequence.indexOf(o.id);
+        selectPlanet(o);
     });
 });
 
 returnBtn.addEventListener('click', () => {
-    document.body.classList.remove('landed');
-    if (activePlanetData && activePlanetData.planetEl) activePlanetData.planetEl.classList.remove('active');
-    activePlanetData = null; 
-    setTimeout(() => { document.body.classList.remove('warping'); }, 800);
+    scrollChapter = -1;
+    returnToOverview();
+});
+
+// ==========================================
+// SCROLL-TO-ZOOM NAVIGATION ENGINE
+// Converts wheel / touch gestures into a cinematic, chapter-based
+// flight through SEC-01 -> SEC-05 (mirrors the existing orbit order),
+// reusing the exact same land/undock logic as a direct planet click.
+// ==========================================
+const scrollSequence = orbitConfig.map(c => c.id); // ['backtest','databank','about','contact','campus']
+const orbitsById = {};
+orbits.forEach(o => { orbitsById[o.id] = o; });
+
+let scrollChapter = -1;      // -1 = overview, 0..4 = index into scrollSequence
+let scrollAccum = 0;
+let scrollLocked = false;
+const SCROLL_STEP = 110;         // wheel-delta units needed to advance one chapter
+const TOUCH_STEP_DIVISOR = 2.4;  // touch drag px -> equivalent wheel units
+const CHAPTER_LOCKOUT_MS = 900;  // matches the existing land/undock transition timing
+
+const chapterNav = document.getElementById('chapter-nav');
+const chapterDots = chapterNav ? Array.from(chapterNav.querySelectorAll('.chapter-dot')) : [];
+const scrollHint = document.getElementById('scroll-hint');
+let hasNavigatedByScroll = false;
+
+function dismissScrollHint() {
+    if (hasNavigatedByScroll || !scrollHint) return;
+    hasNavigatedByScroll = true;
+    scrollHint.classList.add('is-hidden');
+}
+
+function updateChapterUI(activeId) {
+    chapterDots.forEach(dot => dot.classList.toggle('active', dot.dataset.id === activeId));
+    if (chapterNav) chapterNav.classList.toggle('overview', !activeId);
+}
+
+function isScrollNavLocked() {
+    return isHyperZoomed ||
+        document.getElementById('auth-modal-overlay')?.classList.contains('active') ||
+        document.getElementById('tactical-modal-overlay')?.classList.contains('active') ||
+        document.getElementById('subscription-modal-overlay')?.classList.contains('active') ||
+        document.getElementById('gas-giant-atmosphere')?.classList.contains('active');
+}
+
+function advanceChapter(direction) {
+    if (scrollLocked || isScrollNavLocked() || document.body.classList.contains('warping')) return;
+    dismissScrollHint();
+
+    if (direction > 0) {
+        if (scrollChapter >= scrollSequence.length - 1) return; // already at final planet
+        scrollChapter += 1;
+        scrollLocked = true;
+        selectPlanet(orbitsById[scrollSequence[scrollChapter]]);
+    } else {
+        if (scrollChapter <= -1) return; // already at overview, nothing further out
+        scrollChapter -= 1;
+        scrollLocked = true;
+        if (scrollChapter < 0) {
+            returnToOverview();
+        } else {
+            selectPlanet(orbitsById[scrollSequence[scrollChapter]]);
+        }
+    }
+    setTimeout(() => { scrollLocked = false; }, CHAPTER_LOCKOUT_MS);
+}
+
+function handleScrollDelta(delta) {
+    scrollAccum += delta;
+    if (Math.abs(scrollAccum) < SCROLL_STEP) return;
+    const direction = scrollAccum > 0 ? 1 : -1;
+    scrollAccum = 0;
+    advanceChapter(direction);
+}
+
+const SCROLLABLE_SELECTOR = '.subscription-modal-card, .auth-modal-card, .tactical-modal-card, .submission-console, textarea, input';
+
+window.addEventListener('wheel', (e) => {
+    if (e.target.closest && e.target.closest(SCROLLABLE_SELECTOR)) return; // let modal/inputs scroll natively
+    if (isScrollNavLocked()) return;
+    e.preventDefault();
+    handleScrollDelta(e.deltaY);
+}, { passive: false });
+
+let touchStartY = null;
+window.addEventListener('touchstart', (e) => {
+    if (e.target.closest && e.target.closest(SCROLLABLE_SELECTOR)) { touchStartY = null; return; }
+    touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+window.addEventListener('touchmove', (e) => {
+    if (touchStartY === null || isScrollNavLocked()) return;
+    const currentY = e.touches[0].clientY;
+    const delta = (touchStartY - currentY) / TOUCH_STEP_DIVISOR;
+    touchStartY = currentY;
+    e.preventDefault();
+    handleScrollDelta(delta);
+}, { passive: false });
+
+updateChapterUI(null); // sync rail with initial overview state on load
+
+// Chapter rail is also directly clickable for quick navigation.
+chapterDots.forEach(dot => {
+    dot.addEventListener('click', () => {
+        if (isScrollNavLocked() || document.body.classList.contains('warping')) return;
+        const id = dot.dataset.id;
+        const idx = scrollSequence.indexOf(id);
+        if (idx === -1 || idx === scrollChapter) return;
+        dismissScrollHint();
+        scrollChapter = idx;
+        scrollLocked = true;
+        selectPlanet(orbitsById[id]);
+        setTimeout(() => { scrollLocked = false; }, CHAPTER_LOCKOUT_MS);
+    });
 });
 
 // INITIALIZE MODULE BUTTON LOGIC
@@ -178,7 +305,7 @@ actionBtn.addEventListener('click', () => {
             if (gasAtmosphere) gasAtmosphere.classList.add('active');
         }, 800);
     } else if (activePlanetData.id === 'databank') {
-        openDatabankModal();
+        showTacticalModal('SYSTEM DATABANK', 'The System Databank is currently under active development. High-edge quantitative strategy models will be released soon.', true);
     } else if (activePlanetData.id === 'campus') {
         showTacticalModal('BACKTESTING CAMPUS', 'Enrolling now for the upcoming Quantitative Engineering cohort. Contact our engineering desk via SEC-04 to apply.', true);
     }
@@ -202,7 +329,9 @@ if (abortConsoleBtn) {
     });
 }
 
+// ==========================================
 // CONSTELLATION PARALLAX & VIDEO HOVER ENGINE
+// ==========================================
 const bullConstellation = document.querySelector('.bull-constellation');
 const bearConstellation = document.querySelector('.bear-constellation');
 
@@ -261,7 +390,9 @@ if (btcSun && solarSystem) {
     });
 }
 
-// BLACKBOARD GENERATOR
+// ==========================================
+// DENSE BLACKBOARD GENERATOR ENGINE
+// ==========================================
 function generateBlackboard() {
     const canvas = document.getElementById('blackboard-bg');
     if (!canvas) return;
@@ -294,8 +425,8 @@ function generateBlackboard() {
         ctx.font = `italic ${fontSize}px 'Times New Roman', serif`;
         const alpha = Math.random() * 0.12 + 0.03; 
         const colorRand = Math.random();
-        if (colorRand > 0.98) ctx.fillStyle = `rgba(0, 240, 255, ${alpha})`; 
-        else if (colorRand > 0.96) ctx.fillStyle = `rgba(255, 0, 85, ${alpha})`; 
+        if (colorRand > 0.98) ctx.fillStyle = `rgba(76, 214, 255, ${alpha})`; 
+        else if (colorRand > 0.96) ctx.fillStyle = `rgba(255, 77, 106, ${alpha})`; 
         else ctx.fillStyle = `rgba(255, 255, 255, ${alpha + 0.04})`; 
         ctx.fillText(text, x, y);
     }
@@ -303,7 +434,9 @@ function generateBlackboard() {
 generateBlackboard();
 window.addEventListener('resize', generateBlackboard);
 
+// ==========================================
 // TACTICAL HUD MODAL TRIGGER
+// ==========================================
 function showTacticalModal(title, message, isSuccess = true) {
     const modalOverlay = document.getElementById('tactical-modal-overlay');
     const heading = document.getElementById('modal-heading');
@@ -315,23 +448,22 @@ function showTacticalModal(title, message, isSuccess = true) {
     if (msg) msg.innerHTML = message;
 
     if (!isSuccess) {
-        if (statusTag) { statusTag.innerText = '// TRANSMISSION STATUS: ERROR'; statusTag.style.color = '#ff0055'; }
-        if (card) card.style.borderColor = 'rgba(255, 0, 85, 0.5)';
+        if (statusTag) { statusTag.innerText = '// TRANSMISSION STATUS: ERROR'; statusTag.style.color = '#ff4d6a'; }
+        if (card) card.style.borderColor = 'rgba(255, 77, 106, 0.5)';
     } else {
-        if (statusTag) { statusTag.innerText = '// TRANSMISSION STATUS: SECURED'; statusTag.style.color = '#00ff66'; }
-        if (card) card.style.borderColor = 'rgba(0, 255, 102, 0.4)';
+        if (statusTag) { statusTag.innerText = '// TRANSMISSION STATUS: SECURED'; statusTag.style.color = '#34e7a6'; }
+        if (card) card.style.borderColor = 'rgba(52, 231, 166, 0.4)';
     }
 
     if (modalOverlay) modalOverlay.classList.add('active');
 }
 
-// SUBSCRIPTION MODAL TRIGGERS
+// ==========================================
+// SUBSCRIPTION MODAL TRIGGER
+// ==========================================
 function openSubscriptionModal() {
     const subModal = document.getElementById('subscription-modal-overlay');
     if (subModal) subModal.classList.add('active');
-
-    // Wake up Render server in the background so Checkout is instant
-    fetch('https://backtest-worker-fs1a.onrender.com', { mode: 'no-cors' }).catch(() => {});
 }
 
 function closeSubscriptionModal() {
@@ -339,12 +471,9 @@ function closeSubscriptionModal() {
     if (subModal) subModal.classList.remove('active');
 }
 
-function openAuthModal() {
-    const authModal = document.getElementById('auth-modal-overlay');
-    if (authModal) authModal.classList.add('active');
-}
-
+// ==========================================
 // SUPABASE CLIENT INITIALIZATION
+// ==========================================
 const SUPABASE_URL = 'https://woxswhiayrkecspebuwb.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndveHN3aGlheXJrZWNzcGVidXdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTc5ODYsImV4cCI6MjEwMDk5Mzk4Nn0.faEmt5_tw6dN9Cs-pKJHa9D0yyEBbAl4oT0Y9QWYuFg';
 
@@ -353,7 +482,9 @@ if (window.supabase) {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
-// USER PROFILE ENGINE
+// ==========================================
+// USER PROFILE & FREE CREDIT ENGINE
+// ==========================================
 async function fetchOrCreateUserProfile(user) {
     if (!supabaseClient || !user) return null;
 
@@ -389,7 +520,9 @@ async function fetchOrCreateUserProfile(user) {
     }
 }
 
-// AGENT PROFILE & REPORTS MODAL
+// ==========================================
+// AGENT PROFILE & PERMANENT HISTORY ENGINE
+// ==========================================
 async function openUserReportsModal() {
     if (!supabaseClient) {
         showTacticalModal('SYSTEM ERROR', 'Supabase client is not initialized.', false);
@@ -429,7 +562,7 @@ async function openUserReportsModal() {
         const pendingCount = totalSubmissions - completedCount;
 
         const profileHeaderHtml = `
-            <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+            <div style="background: rgba(76, 214, 255, 0.05); border: 1px solid rgba(76, 214, 255, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 10px; margin-bottom: 12px;">
                     <div>
                         <div style="font-size: 0.75em; color: #888; letter-spacing: 1px;">// CLEARANCE LEVEL: AGENT</div>
@@ -439,26 +572,26 @@ async function openUserReportsModal() {
                     </div>
                     <div style="text-align: right; font-size: 0.85em; color: #aaa;">
                         <div><i class="fa-solid fa-envelope"></i> ${userEmail}</div>
-                        <div style="color: #00ff66; margin-top: 2px;">● COMM-LINK ACTIVE</div>
+                        <div style="color: #34e7a6; margin-top: 2px;">● COMM-LINK ACTIVE</div>
                     </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center;">
-                    <div style="background: rgba(255, 215, 0, 0.1); padding: 8px; border-radius: 4px; border: 1px solid rgba(255, 215, 0, 0.3);">
-                        <div style="font-size: 0.7em; color: #ffd700;">CREDITS</div>
-                        <div style="font-size: 1.2em; font-weight: bold; color: #ffd700;">${availableCredits}</div>
+                    <div style="background: rgba(232, 200, 120, 0.1); padding: 8px; border-radius: 4px; border: 1px solid rgba(232, 200, 120, 0.3);">
+                        <div style="font-size: 0.7em; color: #e8c878;">CREDITS</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #e8c878;">${availableCredits}</div>
                     </div>
                     <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
                         <div style="font-size: 0.7em; color: #888;">TOTAL RUNS</div>
                         <div style="font-size: 1.2em; font-weight: bold; color: #ffffff;">${totalSubmissions}</div>
                     </div>
-                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(0, 255, 102, 0.15);">
+                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(52, 231, 166, 0.15);">
                         <div style="font-size: 0.7em; color: #888;">COMPLETED</div>
-                        <div style="font-size: 1.2em; font-weight: bold; color: #00ff66;">${completedCount}</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #34e7a6;">${completedCount}</div>
                     </div>
-                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(0, 240, 255, 0.15);">
+                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(76, 214, 255, 0.15);">
                         <div style="font-size: 0.7em; color: #888;">IN QUEUE</div>
-                        <div style="font-size: 1.2em; font-weight: bold; color: #00f0ff;">${pendingCount}</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #4cd6ff;">${pendingCount}</div>
                     </div>
                 </div>
             </div>
@@ -487,16 +620,16 @@ async function openUserReportsModal() {
             let downloadBtn;
 
             if (reportUrl) {
-                statusBadge = `<span style="color:#00ff66; font-weight:bold;">[ COMPLETED ]</span>`;
-                downloadBtn = `<a href="${reportUrl}" target="_blank" download style="color:#00f0ff; text-decoration:underline; font-weight:bold;"><i class="fa-solid fa-file-pdf"></i> DOWNLOAD PDF REPORT</a>`;
+                statusBadge = `<span style="color:#34e7a6; font-weight:bold;">[ COMPLETED ]</span>`;
+                downloadBtn = `<a href="${reportUrl}" target="_blank" download style="color:#4cd6ff; text-decoration:underline; font-weight:bold;"><i class="fa-solid fa-file-pdf"></i> DOWNLOAD PDF REPORT</a>`;
             } else if (['completed', 'complete', 'done', 'success'].includes(rawStatus)) {
-                statusBadge = `<span style="color:#00ff66; font-weight:bold;">[ COMPLETED ]</span>`;
-                downloadBtn = `<span style="color:#ffd700;"><i class="fa-solid fa-triangle-exclamation"></i> Link pending in database</span>`;
+                statusBadge = `<span style="color:#34e7a6; font-weight:bold;">[ COMPLETED ]</span>`;
+                downloadBtn = `<span style="color:#e8c878;"><i class="fa-solid fa-triangle-exclamation"></i> Link pending in database</span>`;
             } else if (['failed', 'error', 'rejected'].includes(rawStatus)) {
-                statusBadge = `<span style="color:#ff0055; font-weight:bold;">[ FAILED ]</span>`;
-                downloadBtn = `<span style="color:#ff0055;"><i class="fa-solid fa-circle-xmark"></i> Execution Error</span>`;
+                statusBadge = `<span style="color:#ff4d6a; font-weight:bold;">[ FAILED ]</span>`;
+                downloadBtn = `<span style="color:#ff4d6a;"><i class="fa-solid fa-circle-xmark"></i> Execution Error</span>`;
             } else {
-                statusBadge = `<span style="color:#ffd700; font-weight:bold;">[ PROCESSING ]</span>`;
+                statusBadge = `<span style="color:#e8c878; font-weight:bold;">[ PROCESSING ]</span>`;
                 downloadBtn = `<span style="color:#888;"><i class="fa-solid fa-spinner fa-spin"></i> Analyzing Tick Data...</span>`;
             }
 
@@ -525,7 +658,9 @@ async function openUserReportsModal() {
     }
 }
 
+// ==========================================
 // MOBILE HUD TOUCH EXPANSION ENGINE
+// ==========================================
 document.addEventListener('click', (e) => {
     const isMobile = window.innerWidth <= 768;
     if (!isMobile) return;
@@ -555,7 +690,9 @@ document.addEventListener('click', (e) => {
     }
 }, true);
 
-// APPLICATION INITIALIZATION & AUTHENTICATION
+// ==========================================
+// APPLICATION INITIALIZATION & AUTHENTICATION ENGINE
+// ==========================================
 let authMode = 'signin';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -581,7 +718,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (navSubBtn) navSubBtn.addEventListener('click', openSubscriptionModal);
     if (closeSubBtn) closeSubBtn.addEventListener('click', closeSubscriptionModal);
 
-    // STRIPE CHECKOUT INTEGRATION
+    // STRIPE CHECKOUT INTEGRATION LOGIC
     document.querySelectorAll('.select-tier-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const button = e.currentTarget;
@@ -668,7 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // BACKTEST SUBMISSION ENGINE
+    // BACKTEST SUBMISSION WITH CREDIT VERIFICATION & DEDUCTION
     if (systemSubmitForm) {
         systemSubmitForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -729,8 +866,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (subError) throw subError;
 
-                // Optimistically update UI locally
-                const newCredits = Math.max(0, currentCredits - 1);
+                const newCredits = currentCredits - 1;
+                const { error: profileUpdateError } = await supabaseClient
+                    .from('user_profiles')
+                    .update({ credits: newCredits })
+                    .eq('id', userId);
+
+                if (profileUpdateError) {
+                    console.error("Credit deduction error:", profileUpdateError);
+                }
+
                 updateCreditBadgeUI(newCredits);
 
                 showTacticalModal(
@@ -1000,484 +1145,3 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-
-// ==========================================
-// SYSTEM DATABANK ENGINE (SEARCH INPUT UNLOCK & OVERLAY FIX)
-// ==========================================
-
-let cachedSystems = [];
-let currentCategoryFilter = 'ALL';
-let currentSearchQuery = '';
-
-function openDatabankModal() {
-    const modal = document.getElementById('databank-modal') || document.getElementById('hud-modal');
-    if (modal) modal.classList.remove('hidden');
-    showDatabankList();
-    
-    // Force unlock & style search input immediately
-    unlockAndStyleSearchInput();
-    setupDatabankEventListeners();
-    fetchTradingSystems();
-}
-
-function closeDatabankModal() {
-    const modal = document.getElementById('databank-modal') || document.getElementById('hud-modal');
-    if (modal) modal.classList.add('hidden');
-}
-
-function showDatabankList() {
-    const listView = document.getElementById('databank-list-view') || document.getElementById('systemsGrid');
-    const detailView = document.getElementById('databank-detail-view') || document.getElementById('systemDetailView');
-    if (listView) listView.style.display = 'grid';
-    if (detailView) detailView.style.display = 'none';
-}
-
-// FORCE UNLOCK INPUT FIELD (Target ONLY the Databank Search Bar)
-function unlockAndStyleSearchInput() {
-    // Restrict selector strictly to Databank search inputs so other form inputs are not affected
-    const searchInputs = document.querySelectorAll('#databank-modal input, #databank-list-view input, #systemsGrid input, input[placeholder*="Search"]');
-    
-    searchInputs.forEach(input => {
-        // Unlock HTML attributes
-        input.removeAttribute('disabled');
-        input.removeAttribute('readonly');
-        input.disabled = false;
-        input.readOnly = false;
-
-        // Force clickable & visible styling directly via JS
-        input.style.setProperty('pointer-events', 'auto', 'important');
-        input.style.setProperty('position', 'relative', 'important');
-        input.style.setProperty('z-index', '999999', 'important');
-        input.style.setProperty('color', '#ffffff', 'important'); // Visible white text
-        input.style.setProperty('caret-color', '#00f0ff', 'important'); // Bright cyan typing cursor
-        input.style.setProperty('background', 'rgba(0, 0, 0, 0.6)', 'important');
-        input.style.setProperty('border', '1px solid #00f0ff', 'important');
-        input.style.setProperty('user-select', 'text', 'important');
-        input.style.setProperty('-webkit-user-select', 'text', 'important');
-
-        // Stop 3D/Canvas global listeners from swallowing key presses
-        const stopPropagation = (e) => e.stopPropagation();
-        input.onkeydown = stopPropagation;
-        input.onkeyup = stopPropagation;
-        input.onkeypress = stopPropagation;
-
-        // Ensure clicking explicitly focuses the box
-        input.onclick = (e) => {
-            e.stopPropagation();
-            input.focus();
-        };
-
-        // Live filtering listener
-        input.oninput = (e) => {
-            currentSearchQuery = e.target.value.toLowerCase().trim();
-            applyDatabankFilters();
-        };
-    });
-}
-
-function setupDatabankEventListeners() {
-    if (window._databankListenersAttached) return;
-    window._databankListenersAttached = true;
-
-    // Global Category Filter Click Handler (ALL / CRYPTO / FOREX)
-    document.addEventListener('click', (e) => {
-        const targetBtn = e.target.closest('button, div, span, a');
-        if (!targetBtn) return;
-
-        const text = targetBtn.innerText.trim().toUpperCase();
-        if (['ALL', 'CRYPTO', 'FOREX'].includes(text)) {
-            const parentContainer = targetBtn.parentElement;
-            if (parentContainer) {
-                const siblings = parentContainer.querySelectorAll('button, div, span, a');
-                siblings.forEach(el => {
-                    const elText = el.innerText.trim().toUpperCase();
-                    if (['ALL', 'CRYPTO', 'FOREX'].includes(elText)) {
-                        el.style.background = 'transparent';
-                        el.style.color = '#00f0ff';
-                        el.classList.remove('active');
-                    }
-                });
-            }
-
-            targetBtn.style.background = '#00f0ff';
-            targetBtn.style.color = '#000000';
-            targetBtn.classList.add('active');
-
-            currentCategoryFilter = text;
-            applyDatabankFilters();
-        }
-    });
-}
-
-// Run unlocking routines when DOM loads and on window clicks
-setupDatabankEventListeners();
-document.addEventListener('DOMContentLoaded', unlockAndStyleSearchInput);
-window.addEventListener('load', unlockAndStyleSearchInput);
-
-async function fetchTradingSystems() {
-    const gridContainer = document.getElementById('systems-grid') || document.getElementById('systemsGrid');
-    if (!gridContainer) return;
-
-    if (!supabaseClient) {
-        gridContainer.innerHTML = `<p style="color: #ff3366;">Supabase client offline.</p>`;
-        return;
-    }
-
-    const { data: { session } } = await supabaseClient.auth.getSession();
-
-    if (!session) {
-        gridContainer.innerHTML = `
-            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: #00f0ff;">
-                <h3 style="margin-bottom: 1rem;">ACCESS RESTRICTED</h3>
-                <p style="color: #a0a0a0; margin-bottom: 1.5rem;">Please sign in or create an account to access the System Databank.</p>
-                <button onclick="openAuthModal()" style="background: #00f0ff; color: #000; border: none; padding: 0.75rem 1.5rem; font-weight: bold; cursor: pointer; border-radius: 4px;">
-                    SIGN IN / SIGN UP
-                </button>
-            </div>
-        `;
-        return;
-    }
-
-    try {
-        const { data: systems, error } = await supabaseClient
-            .from('trading_systems')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        cachedSystems = systems || [];
-        applyDatabankFilters();
-    } catch (err) {
-        console.error('Error fetching systems:', err.message);
-        gridContainer.innerHTML = `<p style="color: #ff3366; grid-column: 1 / -1;">Failed to load systems from vault.</p>`;
-    }
-}
-
-function applyDatabankFilters() {
-    const gridContainer = document.getElementById('systems-grid') || document.getElementById('systemsGrid');
-    if (!gridContainer) return;
-
-    const query = currentSearchQuery;
-
-    const filtered = cachedSystems.filter(sys => {
-        const fullSystemDataString = JSON.stringify(sys).toLowerCase();
-        const sysCat = String(sys.category || '').toLowerCase();
-
-        // 1. Category Filter Logic
-        let matchesCategory = false;
-        if (currentCategoryFilter === 'ALL') {
-            matchesCategory = true;
-        } else if (currentCategoryFilter === 'CRYPTO') {
-            matchesCategory = sysCat.includes('crypto') || fullSystemDataString.includes('btc') || fullSystemDataString.includes('eth');
-        } else if (currentCategoryFilter === 'FOREX') {
-            matchesCategory = sysCat.includes('forex') || sysCat.includes('fx') || 
-                (sysCat === '' && (fullSystemDataString.includes('eur') || fullSystemDataString.includes('gbp') || fullSystemDataString.includes('jpy')));
-        }
-
-        // 2. Search Query Logic
-        const matchesSearch = !query || fullSystemDataString.includes(query);
-
-        return matchesCategory && matchesSearch;
-    });
-
-    renderSystemGrid(filtered, gridContainer);
-}
-
-function renderSystemGrid(systems, container) {
-    if (!container) return;
-    container.innerHTML = "";
-
-    if (!systems || systems.length === 0) {
-        container.innerHTML = `<p style="color: #888; grid-column: 1 / -1; padding: 20px 0; text-align: center;">No matching trading systems found in the vault.</p>`;
-        return;
-    }
-
-    systems.forEach(sys => {
-        const card = document.createElement('div');
-        card.className = 'system-card';
-        card.style.cssText = 'border: 1px solid rgba(0, 240, 255, 0.2); padding: 15px; cursor: pointer; background: rgba(0, 240, 255, 0.02); border-radius: 4px;';
-        card.onclick = () => viewSystemDetail(sys);
-
-        card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <h4 style="color: #fff; margin: 0 0 8px 0;">${sys.system_name || sys.title || sys.name || 'Trading Strategy'}</h4>
-                <span class="tag" style="border: 1px solid #00ffff; padding: 2px 6px; font-size: 11px; color: #00ffff; border-radius: 3px;">${sys.category || 'Quantitative'}</span>
-            </div>
-            <p style="font-size: 13px; color: #aaa; margin-bottom: 12px; line-height: 1.4;">${sys.short_description || sys.summary || (sys.full_description ? sys.full_description.substring(0, 100) + '...' : 'No summary.')}</p>
-            <div style="font-size: 12px; color: #00ffff; font-family: 'Share Tech Mono', monospace;">
-                WIN: ${sys.win_rate ?? 'N/A'}% | NET: ${sys.net_return ?? 'N/A'}%
-            </div>
-        `;
-        container.appendChild(card);
-    });
-}
-
-// ==========================================
-// SYSTEM DETAIL VIEW (MOBILE RESPONSIVE FIXED)
-// ==========================================
-
-async function viewSystemDetail(sys) {
-    const listView = document.getElementById('databank-list-view') || document.getElementById('systemsGrid');
-    let detailView = document.getElementById('databank-detail-view') || document.getElementById('systemDetailView');
-
-    if (!detailView) return;
-
-    if (listView) listView.style.display = 'none';
-    detailView.style.display = 'block';
-
-    const isMobile = window.innerWidth <= 768;
-    const rawDescription = sys.full_description || sys.description || sys.short_description || '';
-
-    detailView.innerHTML = `
-        <style>
-            .cyber-scroll::-webkit-scrollbar {
-                width: 6px;
-            }
-            .cyber-scroll::-webkit-scrollbar-track {
-                background: rgba(0, 0, 0, 0.6);
-                border-radius: 3px;
-            }
-            .cyber-scroll::-webkit-scrollbar-thumb {
-                background: #00f0ff;
-                border-radius: 3px;
-                box-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
-            }
-            .cyber-scroll::-webkit-scrollbar-thumb:hover {
-                background: #00ff66;
-            }
-        </style>
-
-        <button onclick="showDatabankList()" style="background: transparent; color: #00f0ff; border: 1px solid #00f0ff; padding: 5px 10px; cursor: pointer; font-size: ${isMobile ? '0.75rem' : '0.85rem'}; font-family: 'Share Tech Mono', monospace; margin-bottom: 0.75rem; border-radius: 4px; transition: 0.2s;">
-            &#9664; BACK TO SYSTEM LIST
-        </button>
-
-        <h2 style="color: #fff; margin: 0 0 4px 0; font-family: 'Share Tech Mono', monospace; font-size: ${isMobile ? '1.1rem' : '1.5rem'}; letter-spacing: 1px;">
-            ${sys.system_name || sys.title || sys.name || 'Trading Strategy'}
-        </h2>
-        <span class="tag" style="border: 1px solid #00ffff; padding: 2px 6px; font-size: 10px; color: #00ffff; border-radius: 3px; font-family: 'Share Tech Mono', monospace;">
-            ${sys.category || 'Crypto'}
-        </span>
-
-        <!-- RESPONSIVE STATS HEADER GRID -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: ${isMobile ? '0.4rem' : '1rem'}; margin: 0.75rem 0;">
-            <div style="background: rgba(0, 240, 255, 0.05); padding: ${isMobile ? '0.4rem 0.5rem' : '0.75rem 1rem'}; border-left: 3px solid #00f0ff; border-radius: 4px;">
-                <div style="font-size: ${isMobile ? '0.6rem' : '0.7rem'}; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 0.5px;">WIN RATE</div>
-                <div style="font-size: ${isMobile ? '0.95rem' : '1.4rem'}; color: #fff; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.win_rate ?? 'N/A'}%</div>
-            </div>
-            <div style="background: rgba(0, 255, 102, 0.05); padding: ${isMobile ? '0.4rem 0.5rem' : '0.75rem 1rem'}; border-left: 3px solid #00ff66; border-radius: 4px;">
-                <div style="font-size: ${isMobile ? '0.6rem' : '0.7rem'}; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 0.5px;">NET RETURN</div>
-                <div style="font-size: ${isMobile ? '0.95rem' : '1.4rem'}; color: #00ff66; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.net_return ?? 'N/A'}%</div>
-            </div>
-            <div style="background: rgba(255, 0, 85, 0.05); padding: ${isMobile ? '0.4rem 0.5rem' : '0.75rem 1rem'}; border-left: 3px solid #ff0055; border-radius: 4px;">
-                <div style="font-size: ${isMobile ? '0.6rem' : '0.7rem'}; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 0.5px;">MAX DD</div>
-                <div style="font-size: ${isMobile ? '0.95rem' : '1.4rem'}; color: #ff0055; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.drawdown ?? sys.max_drawdown ?? 'N/A'}%</div>
-            </div>
-        </div>
-
-        <!-- RESPONSIVE CONSOLE BOX (LIGHTER HEIGHT FOR MOBILE) -->
-        <div class="cyber-scroll" style="max-height: ${isMobile ? '240px' : '460px'}; min-height: ${isMobile ? '180px' : '320px'}; overflow-y: auto; padding: ${isMobile ? '0.75rem 0.85rem' : '1.25rem 1.5rem'}; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 6px; margin-bottom: 0.85rem;">
-            ${formatStrategyText(rawDescription)}
-        </div>
-
-        <!-- ACTION BUTTON -->
-        ${sys.report_url ? `
-            <a href="${sys.report_url}" target="_blank" download style="display: inline-block; background: #00f0ff; color: #040912; padding: ${isMobile ? '8px 14px' : '10px 20px'}; text-decoration: none; font-weight: bold; font-family: 'Share Tech Mono', monospace; border-radius: 4px; border: 1px solid #00f0ff; font-size: ${isMobile ? '0.75rem' : '0.9rem'};">
-                <i class="fa-solid fa-file-pdf"></i> DOWNLOAD FULL PDF REPORT
-            </a>
-        ` : ''}
-    `;
-}
-
-// DYNAMIC EDITORIAL PARSER: Adapts to whatever layout you write in Supabase
-function formatStrategyText(text) {
-    if (!text) return `<p style="color: #666;">No detailed documentation attached.</p>`;
-
-    // Split text into individual lines from Supabase
-    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-    let outHtml = '';
-
-    lines.forEach(line => {
-        // 1. DYNAMIC HEADER DETECTION:
-        // Matches lines starting with # or ##, short lines ending with ':', or common header names
-        const isMarkdownHeader = /^#{1,6}\s+/.test(line);
-        const isColonHeader = !line.startsWith('-') && !line.startsWith('*') && line.endsWith(':') && line.length < 65;
-        const isKnownHeader = !line.startsWith('-') && !line.startsWith('*') && (
-            /^(Core Indicators|Entry Rules|Long \(Buy\) Conditions|Short \(Sell\) Conditions|Risk Management|Exit Rules)/i.test(line)
-        ) && line.length < 65;
-
-        if (isMarkdownHeader || isColonHeader || isKnownHeader) {
-            // Clean up title text (strip # and trailing colon for a clean HUD title look)
-            const cleanTitle = line.replace(/^#{1,6}\s+/, '').replace(/:$/, '').trim();
-            outHtml += `
-                <h4 style="color: #00f0ff; margin: 1.4rem 0 0.5rem 0; font-family: 'Share Tech Mono', monospace; font-size: 0.88rem; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 4px; letter-spacing: 1px; text-transform: uppercase;">
-                    ${cleanTitle}
-                </h4>`;
-            return;
-        }
-
-        // 2. BULLET POINT DETECTION:
-        if (line.startsWith('-') || line.startsWith('*')) {
-            let content = line.replace(/^[-*]\s*/, '').trim();
-
-            // Support markdown bold **text** or auto-bold labels before a colon
-            content = content.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #e2e8f0; font-weight: 600;">$1</strong>');
-            if (!content.startsWith('<strong')) {
-                content = content.replace(/^([^:]+:)/, '<strong style="color: #e2e8f0; font-weight: 600;">$1</strong>');
-            }
-
-            outHtml += `
-                <div style="margin: 6px 0 6px 12px; line-height: 1.6; color: #94a3b8; font-size: 0.88rem; font-family: system-ui, -apple-system, sans-serif;">
-                    <span style="color: #00f0ff; margin-right: 6px;">•</span>${content}
-                </div>`;
-            return;
-        }
-
-        // 3. REGULAR PARAGRAPH TEXT:
-        let content = line.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #e2e8f0; font-weight: 600;">$1</strong>');
-        if (!content.startsWith('<strong')) {
-            content = content.replace(/^([^:]+:)/, '<strong style="color: #e2e8f0; font-weight: 600;">$1</strong>');
-        }
-
-        outHtml += `<p style="margin: 6px 0; color: #94a3b8; line-height: 1.6; font-size: 0.88rem; font-family: system-ui, -apple-system, sans-serif;">${content}</p>`;
-    });
-
-    return outHtml;
-}
-
-
-// ==========================================
-// USDC CRYPTO PAYMENT SYSTEM CONTROLLER
-// ==========================================
-
-// 1. Config: Define your receiving wallet addresses
-const CRYPTO_WALLETS = {
-    solana: "2C3P2uoRTUq9WVggAHhUBwA5EJ7Em8WEQJgQA5hsaWo7",
-    ethereum: "0x13581166EE5CDD412358209539d94F2b79D94341"
-};
-
-let currentCryptoState = {
-    planName: "",
-    amount: 0,
-    credits: 0,
-    network: "solana"
-};
-
-// 2. Open Crypto Modal
-function openCryptoModal(planName, amount, credits) {
-    currentCryptoState.planName = planName;
-    currentCryptoState.amount = amount;
-    currentCryptoState.credits = credits;
-    currentCryptoState.network = "solana"; // Default network
-
-    // Update UI elements
-    document.getElementById('crypto-plan-title').innerText = `PAY FOR ${planName.toUpperCase()} WITH USDC`;
-    document.getElementById('crypto-amount-due').innerText = `$${amount}.00 USDC`;
-    document.getElementById('tx-hash-input').value = "";
-
-    // Show modal & set up network display
-    document.getElementById('crypto-modal-overlay').style.display = 'flex';
-    switchCryptoNetwork('solana');
-}
-
-// 3. Close Crypto Modal
-function closeCryptoModal() {
-    document.getElementById('crypto-modal-overlay').style.display = 'none';
-}
-
-// 4. Switch Network (Solana <-> Ethereum)
-function switchCryptoNetwork(network) {
-    currentCryptoState.network = network;
-    const tabSol = document.getElementById('tab-solana');
-    const tabEth = document.getElementById('tab-ethereum');
-    const walletAddressEl = document.getElementById('crypto-wallet-address');
-    const qrCodeEl = document.getElementById('crypto-qr-code');
-
-    const selectedAddress = CRYPTO_WALLETS[network];
-    walletAddressEl.innerText = selectedAddress;
-
-    if (network === 'solana') {
-        tabSol.style.background = '#00f0ff';
-        tabSol.style.color = '#000';
-        tabEth.style.background = 'transparent';
-        tabEth.style.color = '#00f0ff';
-    } else {
-        tabEth.style.background = '#00f0ff';
-        tabEth.style.color = '#000';
-        tabSol.style.background = 'transparent';
-        tabSol.style.color = '#00f0ff';
-    }
-
-    // Generate Dynamic QR Code using public API
-    const qrData = encodeURIComponent(selectedAddress);
-    qrCodeEl.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}`;
-}
-
-// 5. Copy Address to Clipboard
-function copyWalletAddress() {
-    const address = document.getElementById('crypto-wallet-address').innerText;
-    navigator.clipboard.writeText(address).then(() => {
-        alert("Wallet address copied to clipboard!");
-    }).catch(err => {
-        console.error("Failed to copy address: ", err);
-    });
-}
-
-// Updated submitTransactionForVerification with Live Backend Fetch
-async function submitTransactionForVerification() {
-    const txHash = document.getElementById('tx-hash-input').value.trim();
-    const btn = document.getElementById('verify-payment-btn');
-
-    if (!txHash) {
-        alert("Please paste your transaction hash (TxID) before submitting.");
-        return;
-    }
-
-    if (!supabaseClient) {
-        alert("Supabase client is offline. Please refresh.");
-        return;
-    }
-
-    // Grab current user session to send userId to backend
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session || !session.user) {
-        alert("Please sign in before verifying crypto payments.");
-        return;
-    }
-
-    const originalBtnHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> VERIFYING ON-CHAIN...`;
-
-    try {
-        const backendServerUrl = 'https://backtest-worker-fs1a.onrender.com';
-        const response = await fetch(`${backendServerUrl}/verify-crypto-payment`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: session.user.id,
-                txHash: txHash,
-                network: currentCryptoState.network,
-                creditsToAdd: currentCryptoState.credits,
-                priceUsdc: currentCryptoState.amount,
-                planName: currentCryptoState.planName
-            })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || data.error) {
-            throw new Error(data.error || 'Verification failed on-chain.');
-        }
-
-        alert(`Payment verified! ${data.message || 'Credits added successfully.'}`);
-        closeCryptoModal();
-        window.location.reload(); // Reload to refresh credit balance badge
-
-    } catch (error) {
-        console.error("Verification error:", error);
-        alert(`Verification Error: ${error.message}`);
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalBtnHtml;
-    }
-}

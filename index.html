@@ -3,7 +3,7 @@
 <head>
     <base href="/">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>System & Backtest Factory</title>
 
     <!-- Open Graph / Facebook / Instagram / iMessage Previews -->
@@ -42,9 +42,9 @@
             gap: 8px;
             padding: 6px 10px;
             background: rgba(4, 12, 20, 0.95);
-            border: 1px solid #00f0ff;
+            border: 1px solid #4cd6ff;
             border-radius: 10px;
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.25), inset 0 0 10px rgba(0, 240, 255, 0.1);
+            box-shadow: 0 0 15px rgba(76, 214, 255, 0.25), inset 0 0 10px rgba(76, 214, 255, 0.1);
             font-family: 'Share Tech Mono', monospace;
         }
 
@@ -64,10 +64,10 @@
         }
 
         /* Color Themes for Slots */
-        .hud-slot.agent    { --theme-color: #00ff88; --glow: rgba(0, 255, 136, 0.4); }
-        .hud-slot.credits  { --theme-color: #facc15; --glow: rgba(250, 204, 21, 0.4); }
-        .hud-slot.subs     { --theme-color: #eab308; --glow: rgba(234, 179, 8, 0.4); }
-        .hud-slot.reports  { --theme-color: #38bdf8; --glow: rgba(56, 189, 248, 0.4); }
+        .hud-slot.agent    { --theme-color: #34e7a6; --glow: rgba(52, 231, 166, 0.4); }
+        .hud-slot.credits  { --theme-color: #e8c878; --glow: rgba(232, 200, 120, 0.4); }
+        .hud-slot.subs     { --theme-color: #c9a54d; --glow: rgba(201, 165, 77, 0.4); }
+        .hud-slot.reports  { --theme-color: #6fd8ff; --glow: rgba(111, 216, 255, 0.4); }
         .hud-slot.logout   { --theme-color: #f43f5e; --glow: rgba(244, 63, 94, 0.4); }
 
         /* Sci-Fi Sweeping Light Flare */
@@ -102,9 +102,9 @@
         .status-dot {
             width: 6px;
             height: 6px;
-            background-color: #00ff88;
+            background-color: #34e7a6;
             border-radius: 50%;
-            box-shadow: 0 0 8px #00ff88;
+            box-shadow: 0 0 8px #34e7a6;
             flex-shrink: 0;
         }
 
@@ -205,7 +205,7 @@
             text-shadow: 
                 0 0 2px #fff,
                 0 0 8px #ff007f,
-                0 0 15px #ff0055;
+                0 0 15px #ff4d6a;
         }
     </style>
 </head>
@@ -318,14 +318,14 @@
                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
             </defs>
-            <polygon class="engine-flame" points="25,43 -10,50 25,57" fill="#ff0055" filter="url(#magentaGlow)"/>
-            <path d="M45,35 L15,10 L75,38 Z" fill="#040912" stroke="#00f0ff" stroke-width="1.5" />
-            <path d="M45,65 L15,90 L75,62 Z" fill="#040912" stroke="#00f0ff" stroke-width="1.5" />
-            <path d="M25,30 L160,45 L185,50 L160,55 L25,70 L50,50 Z" fill="url(#shipHull)" stroke="#00f0ff" stroke-width="2" />
-            <polygon points="100,43 140,47 140,53 100,57" fill="#00f0ff" filter="url(#cyanGlow)" />
+            <polygon class="engine-flame" points="25,43 -10,50 25,57" fill="#ff4d6a" filter="url(#magentaGlow)"/>
+            <path d="M45,35 L15,10 L75,38 Z" fill="#040912" stroke="#4cd6ff" stroke-width="1.5" />
+            <path d="M45,65 L15,90 L75,62 Z" fill="#040912" stroke="#4cd6ff" stroke-width="1.5" />
+            <path d="M25,30 L160,45 L185,50 L160,55 L25,70 L50,50 Z" fill="url(#shipHull)" stroke="#4cd6ff" stroke-width="2" />
+            <polygon points="100,43 140,47 140,53 100,57" fill="#4cd6ff" filter="url(#cyanGlow)" />
             <circle cx="185" cy="50" r="4" fill="#ffffff" filter="url(#cyanGlow)" />
-            <path d="M165,35 L175,45 L165,48 Z" fill="#ff0055" opacity="0.8" />
-            <path d="M165,65 L175,55 L165,52 Z" fill="#ff0055" opacity="0.8" />
+            <path d="M165,35 L175,45 L165,48 Z" fill="#ff4d6a" opacity="0.8" />
+            <path d="M165,65 L175,55 L165,52 Z" fill="#ff4d6a" opacity="0.8" />
         </svg>
         <div class="tractor-beam-title">
             <h1>SYSTEM & BACKTEST<br><span>FACTORY</span></h1>
@@ -356,6 +356,21 @@
             <div class="stats-grid" id="stats-grid"></div>
             <button class="action-btn" id="module-action-btn">INITIALIZE MODULE <i class="fa-solid fa-chevron-right"></i></button>
         </div>
+    </div>
+
+    <!-- SCROLL-TO-ZOOM CHAPTER RAIL -->
+    <nav id="chapter-nav" class="overview">
+        <div class="chapter-dot active" data-id="backtest"><span class="dot-core"></span><span class="dot-tag">SEC-01 // BACKTEST</span></div>
+        <div class="chapter-dot" data-id="databank"><span class="dot-core"></span><span class="dot-tag">SEC-02 // DATABANK</span></div>
+        <div class="chapter-dot" data-id="about"><span class="dot-core"></span><span class="dot-tag">SEC-03 // ABOUT</span></div>
+        <div class="chapter-dot" data-id="contact"><span class="dot-core"></span><span class="dot-tag">SEC-04 // CONTACT</span></div>
+        <div class="chapter-dot" data-id="campus"><span class="dot-core"></span><span class="dot-tag">SEC-05 // CAMPUS</span></div>
+    </nav>
+
+    <!-- SCROLL-TO-ZOOM ONBOARDING HINT -->
+    <div id="scroll-hint">
+        <span class="scroll-hint-label">SCROLL TO NAVIGATE SYSTEMS</span>
+        <i class="fa-solid fa-chevron-down"></i>
     </div>
 
     <!-- GAS GIANT FORM ATMOSPHERE -->
@@ -398,11 +413,11 @@
             
             <div class="launch-stage">
                 <svg class="rocket-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M50,10 C55,30 65,55 65,75 C65,85 58,90 50,90 C42,90 35,85 35,75 C35,55 45,30 50,10 Z" fill="#040912" stroke="#00ff66" stroke-width="2"/>
-                    <polygon points="35,65 20,82 35,80" fill="#00ff66" />
-                    <polygon points="65,65 80,82 65,80" fill="#00ff66" />
-                    <polygon points="50,90 42,105 50,98 58,105" fill="#ff0055" class="rocket-flame" />
-                    <circle cx="50" cy="45" r="4" fill="#00f0ff" />
+                    <path d="M50,10 C55,30 65,55 65,75 C65,85 58,90 50,90 C42,90 35,85 35,75 C35,55 45,30 50,10 Z" fill="#040912" stroke="#34e7a6" stroke-width="2"/>
+                    <polygon points="35,65 20,82 35,80" fill="#34e7a6" />
+                    <polygon points="65,65 80,82 65,80" fill="#34e7a6" />
+                    <polygon points="50,90 42,105 50,98 58,105" fill="#ff4d6a" class="rocket-flame" />
+                    <circle cx="50" cy="45" r="4" fill="#4cd6ff" />
                 </svg>
                 <div class="hyper-rings">
                     <span></span><span></span><span></span>
@@ -433,7 +448,6 @@
             </div>
 
             <div class="pricing-grid">
-                <!-- START PACK ($29) -->
                 <div class="tier-card">
                     <div class="tier-name">START PACK</div>
                     <div class="tier-price">$29</div>
@@ -444,19 +458,13 @@
                         <li><i class="fa-solid fa-check"></i> Basic Metrics Log</li>
                         <li><i class="fa-solid fa-xmark unavailable"></i> Tick-level Deep Analysis</li>
                     </ul>
-                    <button class="tier-btn select-tier-btn" data-plan="Start Pack" data-price-id="price_1U16NFCWCAQzKASWoUezwHKg" data-credits="3" data-mode="payment">PAY WITH CARD ($29)</button>
-                    
-                    <!-- NEW CRYPTO BUTTON -->
-                    <button class="tier-btn crypto-pay-btn" onclick="openCryptoModal('Start Pack', 29, 3)" style="margin-top: 8px; border-color: #00ff66; color: #00ff66; background: rgba(0, 255, 102, 0.05); font-weight: bold;">
-                        <i class="fa-solid fa-coins"></i> PAY WITH USDC
-                    </button>
+                    <button class="tier-btn select-tier-btn" data-plan="Start Pack" data-price-id="price_1U16NFCWCAQzKASWoUezwHKg" data-credits="3" data-mode="payment">GET START PACK</button>
                 </div>
 
-                <!-- PRO PACK ($79) -->
                 <div class="tier-card featured">
                     <div class="popular-badge">MOST POPULAR</div>
-                    <div class="tier-name" style="color: #00f0ff;">PRO PACK</div>
-                    <div class="tier-price" style="color: #00f0ff;">$79</div>
+                    <div class="tier-name" style="color: #4cd6ff;">PRO PACK</div>
+                    <div class="tier-price" style="color: #4cd6ff;">$79</div>
                     <p class="tier-desc">High-performance engine pack for serious system traders.</p>
                     <ul class="tier-features">
                         <li><i class="fa-solid fa-check"></i> Pack of 10 Backtests</li>
@@ -464,18 +472,12 @@
                         <li><i class="fa-solid fa-check"></i> 99.9% Tick Data Accuracy</li>
                         <li><i class="fa-solid fa-check"></i> PDF Report Data Export</li>
                     </ul>
-                    <button class="tier-btn featured-btn select-tier-btn" data-plan="Pro Pack" data-price-id="price_1U16Q9CWCAQzKASWjG2gvbvf" data-credits="10" data-mode="payment"><i class="fa-solid fa-bolt"></i> PAY WITH CARD ($79)</button>
-
-                    <!-- NEW CRYPTO BUTTON -->
-                    <button class="tier-btn crypto-pay-btn" onclick="openCryptoModal('Pro Pack', 79, 10)" style="margin-top: 8px; border-color: #00ff66; color: #00ff66; background: rgba(0, 255, 102, 0.1); font-weight: bold;">
-                        <i class="fa-solid fa-coins"></i> PAY WITH USDC
-                    </button>
+                    <button class="tier-btn featured-btn select-tier-btn" data-plan="Pro Pack" data-price-id="price_1U16Q9CWCAQzKASWjG2gvbvf" data-credits="10" data-mode="payment"><i class="fa-solid fa-bolt"></i> GET PRO PACK</button>
                 </div>
 
-                <!-- QUANT MONTHLY PASS ($199) -->
                 <div class="tier-card">
-                    <div class="tier-name" style="color: #ffd700;">QUANT MONTHLY PASS</div>
-                    <div class="tier-price" style="color: #ffd700;">$199 <span>/ mo</span></div>
+                    <div class="tier-name" style="color: #e8c878;">QUANT MONTHLY PASS</div>
+                    <div class="tier-price" style="color: #e8c878;">$199 <span>/ mo</span></div>
                     <p class="tier-desc">Full access monthly pass for dedicated quant engineers & funds.</p>
                     <ul class="tier-features">
                         <li><i class="fa-solid fa-check"></i> Maximum 40 Backtests</li>
@@ -483,76 +485,9 @@
                         <li><i class="fa-solid fa-check"></i> 1-on-1 Quant Desk Support</li>
                         <li><i class="fa-solid fa-check"></i> Databank Priority Access</li>
                     </ul>
-                    <button class="tier-btn select-tier-btn" data-plan="Quant Monthly Pass" data-price-id="price_1U16RuCWCAQzKASW1SCBeQhn" data-credits="40" data-mode="subscription" style="border-color:#ffd700; color:#ffd700;"><i class="fa-solid fa-crown"></i> CARD SUB ($199)</button>
-
-                    <!-- NEW CRYPTO BUTTON -->
-                    <button class="tier-btn crypto-pay-btn" onclick="openCryptoModal('Quant Monthly Pass', 199, 40)" style="margin-top: 8px; border-color: #ffd700; color: #ffd700; background: rgba(255, 215, 0, 0.05); font-weight: bold;">
-                        <i class="fa-solid fa-coins"></i> PAY WITH USDC
-                    </button>
+                    <button class="tier-btn select-tier-btn" data-plan="Quant Monthly Pass" data-price-id="price_1U16RuCWCAQzKASW1SCBeQhn" data-credits="40" data-mode="subscription" style="border-color:#e8c878; color:#e8c878;"><i class="fa-solid fa-crown"></i> UNLOCK MONTHLY PASS</button>
                 </div>
             </div>
-        </div>
-    </div>
-	
-	<!-- CRYPTO PAYMENT HUD MODAL -->
-    <div id="crypto-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(2, 6, 12, 0.88); backdrop-filter: blur(8px); z-index: 10000; align-items: center; justify-content: center; padding: 20px;">
-        <div class="subscription-modal-card" style="max-width: 480px; width: 100%; position: relative;">
-            <button id="close-crypto-btn" onclick="closeCryptoModal()" class="abort-btn"><i class="fa-solid fa-xmark"></i></button>
-            <div class="corner-bracket top-left"></div>
-            <div class="corner-bracket top-right"></div>
-            <div class="corner-bracket bottom-left"></div>
-            <div class="corner-bracket bottom-right"></div>
-
-            <!-- Header -->
-            <div style="border-bottom: 1px solid rgba(0,240,255,0.2); padding-bottom: 10px; margin-bottom: 15px;">
-                <div class="modal-status-tag">// ON-CHAIN PAYMENT UPLINK</div>
-                <h2 id="crypto-plan-title" style="color: #00f0ff; margin: 5px 0 0 0; font-family: 'Share Tech Mono', monospace; font-size: 1.4rem;">PAY WITH USDC</h2>
-            </div>
-
-            <!-- Amount Display -->
-            <div style="text-align: center; background: rgba(0,255,102,0.05); border: 1px solid rgba(0,255,102,0.3); padding: 12px; border-radius: 6px; margin-bottom: 15px;">
-                <span style="color: #aaa; font-size: 0.75rem; letter-spacing: 1px;">TOTAL DUE:</span>
-                <div id="crypto-amount-due" style="color: #00ff66; font-size: 1.8rem; font-weight: bold; font-family: 'Share Tech Mono', monospace;">
-                    $0.00 USDC
-                </div>
-            </div>
-
-            <!-- Network Selection Tabs -->
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <button id="tab-solana" class="net-tab active" onclick="switchCryptoNetwork('solana')" style="flex: 1; padding: 10px; background: #00f0ff; color: #000; border: 1px solid #00f0ff; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: 'Share Tech Mono', monospace;">
-                    SOLANA (SPL)
-                </button>
-                <button id="tab-ethereum" class="net-tab" onclick="switchCryptoNetwork('ethereum')" style="flex: 1; padding: 10px; background: transparent; color: #00f0ff; border: 1px solid #00f0ff; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: 'Share Tech Mono', monospace;">
-                    ETHEREUM (ERC-20)
-                </button>
-            </div>
-
-            <!-- QR Code & Address Display Box -->
-            <div style="text-align: center; background: rgba(0,0,0,0.6); border: 1px solid rgba(0,240,255,0.2); padding: 15px; border-radius: 6px; margin-bottom: 15px;">
-                <!-- Dynamic QR Code -->
-                <img id="crypto-qr-code" src="" alt="Scan QR Code" style="width: 150px; height: 150px; border-radius: 6px; border: 2px solid #00f0ff; margin-bottom: 10px;">
-
-                <!-- Address String -->
-                <div style="font-size: 0.75rem; color: #aaa; margin-bottom: 6px;">SEND ONLY USDC TO THIS ADDRESS:</div>
-                <div id="crypto-wallet-address" style="font-size: 0.75rem; color: #ffffff; word-break: break-all; font-family: 'Share Tech Mono', monospace; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 4px; margin-bottom: 8px;">
-                    <!-- Address injected via JS -->
-                </div>
-
-                <button onclick="copyWalletAddress()" style="background: transparent; color: #00f0ff; border: 1px dashed #00f0ff; padding: 6px 14px; font-size: 0.75rem; cursor: pointer; border-radius: 4px; font-family: 'Share Tech Mono', monospace;">
-                    <i class="fa-solid fa-copy"></i> COPY ADDRESS
-                </button>
-            </div>
-
-            <!-- Transaction Hash Verification Input -->
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; color: #aaa; font-size: 0.75rem; margin-bottom: 5px;">PASTE TRANSACTION HASH (TxID) AFTER SENDING:</label>
-                <input type="text" id="tx-hash-input" placeholder="e.g. 5Kj9x... or 0x8f2a..." style="width: 100%; padding: 10px; background: rgba(0,0,0,0.8); border: 1px solid #00f0ff; color: #fff; font-family: 'Share Tech Mono', monospace; border-radius: 4px; box-sizing: border-box;">
-            </div>
-
-            <!-- Submit Button -->
-            <button id="verify-payment-btn" onclick="submitTransactionForVerification()" style="width: 100%; padding: 12px; background: #00ff66; color: #000; border: none; font-weight: bold; font-family: 'Share Tech Mono', monospace; font-size: 0.95rem; cursor: pointer; border-radius: 4px;">
-                VERIFY PAYMENT & UNLOCK CREDITS <i class="fa-solid fa-bolt"></i>
-            </button>
         </div>
     </div>
 
@@ -592,59 +527,7 @@
             </div>
         </div>
     </div>
-	    	<!-- SYSTEM DATABANK MODAL -->
-    <div id="databank-modal" class="hud-modal hidden">
-      <div class="hud-modal-content">
-        
-        <!-- Header -->
-        <div class="databank-header">
-          <h2>SEC-02 // SYSTEM DATABANK</h2>
-          <button class="close-btn" onclick="closeDatabankModal()">[X]</button>
-        </div>
-    
-        <!-- View 1: List / Grid -->
-        <div id="databank-list-view" class="databank-view">
-          <div class="search-filter-bar">
-            <input type="text" id="databank-search" placeholder="Search systems..." disabled>
-            <div class="filter-tags">
-              <span class="tag active">ALL</span>
-              <span class="tag">CRYPTO</span>
-              <span class="tag">FOREX</span>
-            </div>
-          </div>
-          <!-- Javascript will inject system cards here -->
-          <div id="systems-grid" class="systems-grid"></div>
-        </div>
-    
-          <!-- View 2: Detail View (Initially Hidden) -->
-        <div id="databank-detail-view" class="databank-view hidden">
-          <button class="back-btn" onclick="showDatabankList()">&#9664; BACK TO LIST</button>
-          
-          <div class="detail-header">
-            <h3 id="detail-system-name">System Name</h3>
-            <span id="detail-category" class="tag">Category</span>
-          </div>
-          
-          <div class="detail-metrics">
-            <div class="metric-box"><span>WIN RATE</span><strong id="detail-win-rate">--%</strong></div>
-            <div class="metric-box"><span>NET RETURN</span><strong id="detail-net-return">--%</strong></div>
-            <div class="metric-box"><span>DRAWDOWN</span><strong id="detail-drawdown">--%</strong></div>
-          </div>
-        
-          <div class="detail-description">
-            <h4>MODEL DESCRIPTION</h4>
-            <p id="detail-description">Full description goes here...</p>
-          </div>
-        
-          <div class="detail-actions">
-            <a href="#" id="detail-report-btn" class="action-btn primary" target="_blank" style="text-decoration: none;">DOWNLOAD PDF REPORT</a>
-            <button id="btn-load-core" class="action-btn secondary">LOAD INTO CORE</button>
-          </div>
-        </div>
-    
-      </div>
-    </div>
-	
+
     <script src="app.js"></script>
     <script>
         // ELEGANT "INVISIBLE PEN" WRITING ENGINE
