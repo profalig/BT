@@ -250,26 +250,20 @@ body.warping #planet-nav-hud {
     top: 25px;
     right: 35px;
     z-index: 1000;
-    background: rgba(4, 12, 24, 0.85);
-    border: 1px solid rgba(0, 240, 255, 0.3);
-    border-radius: 6px;
-    padding: 6px 10px;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(0, 240, 255, 0.05);
-    transition: opacity 0.5s ease, border-color 0.3s ease, box-shadow 0.3s ease, visibility 0.5s ease;
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
 }
 
-#auth-corner:hover {
-    border-color: rgba(0, 240, 255, 0.5);
-    box-shadow: 0 8px 35px rgba(0, 240, 255, 0.15), inset 0 0 20px rgba(0, 240, 255, 0.08);
-}
+
 
 .dock-bracket {
     position: absolute;
     width: 6px;
     height: 6px;
-    border: 2px solid #00f0ff;
+    border: 2px solid #d2d5db;
     pointer-events: none;
 }
 
@@ -296,13 +290,13 @@ body.warping #planet-nav-hud {
 .dock-divider {
     width: 1px;
     height: 20px;
-    background: linear-gradient(180deg, transparent, rgba(0, 240, 255, 0.35), transparent);
+    background: linear-gradient(180deg, transparent, rgba(210, 213, 219, 0.35), transparent);
     margin: 0 2px;
 }
 
 .auth-btn {
     background: rgba(8, 20, 38, 0.6);
-    border: 1px solid rgba(0, 240, 255, 0.25);
+    border: 1px solid rgba(210, 213, 219, 0.25);
     color: #a3c7e6;
     padding: 8px 16px;
     font-family: 'Share Tech Mono', monospace;
@@ -324,10 +318,10 @@ body.warping #planet-nav-hud {
 }
 
 .auth-btn:hover {
-    background: rgba(0, 240, 255, 0.15);
-    color: #00f0ff;
-    border-color: rgba(0, 240, 255, 0.6);
-    box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+    background: rgba(210, 213, 219, 0.15);
+    color: #d2d5db;
+    border-color: rgba(210, 213, 219, 0.6);
+    box-shadow: 0 0 15px rgba(210, 213, 219, 0.3);
     transform: translateY(-1px);
 }
 
@@ -357,17 +351,17 @@ body.warping #planet-nav-hud {
 /* Sign-Up CTA Button */
 .auth-btn.sign-up.cta-btn {
     background: linear-gradient(135deg, rgba(255, 214, 170, 0.2) 0%, rgba(255, 176, 102, 0.15) 100%);
-    border-color: #00f0ff;
+    border-color: #d2d5db;
     color: #ffffff;
     font-weight: bold;
-    text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+    text-shadow: 0 0 8px rgba(210, 213, 219, 0.5);
 }
 
 .auth-btn.sign-up.cta-btn:hover {
     background: linear-gradient(135deg, #ffd6aa 0%, #ffb066 100%);
     color: #040912;
     text-shadow: none;
-    box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+    box-shadow: 0 0 20px rgba(210, 213, 219, 0.6);
     border-color: #ffb066;
 }
 
@@ -442,7 +436,7 @@ body.warping #planet-nav-hud {
     align-items: center;
     gap: 8px;
     background: rgba(8, 20, 38, 0.6);
-    border: 1px solid rgba(0, 240, 255, 0.25);
+    border: 1px solid rgba(210, 213, 219, 0.25);
     color: #a3c7e6;
     padding: 6px 12px;
     font-family: 'Share Tech Mono', monospace;
@@ -454,10 +448,10 @@ body.warping #planet-nav-hud {
 }
 
 .hud-slot:hover {
-    background: rgba(0, 240, 255, 0.15);
-    color: #00f0ff;
-    border-color: rgba(0, 240, 255, 0.6);
-    box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+    background: rgba(210, 213, 219, 0.15);
+    color: #d2d5db;
+    border-color: rgba(210, 213, 219, 0.6);
+    box-shadow: 0 0 15px rgba(210, 213, 219, 0.3);
 }
 
 .hud-slot.credits { color: #ffd700; border-color: rgba(255, 215, 0, 0.35); }
@@ -608,10 +602,10 @@ body.warping #planet-nav-hud {
 .tractor-beam-title {
     position: relative;
     padding: 15px 35px;
-    border-left: 5px dashed #00f0ff;
-    background: linear-gradient(90deg, rgba(0, 240, 255, 0.25) 0%, rgba(0, 240, 255, 0.05) 40%, transparent 100%);
+    border-left: 5px dashed #d2d5db;
+    background: linear-gradient(90deg, rgba(210, 213, 219, 0.25) 0%, rgba(210, 213, 219, 0.05) 40%, transparent 100%);
     border-radius: 4px;
-    box-shadow: -15px 0 35px rgba(0, 240, 255, 0.2);
+    box-shadow: -15px 0 35px rgba(210, 213, 219, 0.2);
     overflow: hidden;
 }
 
@@ -619,7 +613,7 @@ body.warping #planet-nav-hud {
     content: '';
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 240, 255, 0.1) 3px, transparent 4px);
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(210, 213, 219, 0.1) 3px, transparent 4px);
     pointer-events: none;
     animation: scanline 4s linear infinite;
     will-change: transform;
@@ -637,7 +631,7 @@ body.warping #planet-nav-hud {
     color: #ffffff;
     letter-spacing: 2px;
     line-height: 1.1;
-    text-shadow: 0 0 10px #00f0ff, 0 0 25px rgba(0, 240, 255, 0.6);
+    text-shadow: 0 0 10px #d2d5db, 0 0 25px rgba(210, 213, 219, 0.6);
     margin: 0;
     position: relative;
     z-index: 2;
@@ -646,7 +640,7 @@ body.warping #planet-nav-hud {
 .tractor-beam-title h1 span {
     display: block;
     font-size: 2rem;
-    color: #00f0ff;
+    color: #d2d5db;
     letter-spacing: 12px;
     text-shadow: none;
 }
@@ -871,12 +865,25 @@ body.warping #spaceship-title-container {
 }
 
 .vault-node.energised { opacity: 1; filter: grayscale(0); }
-.vault-node:hover { transform: translate(-50%, -50%) scale(1.1); }
+.vault-node.focused:hover { transform: translate(-50%, -50%) scale(1.1); }
 
-/* A dormant node is never a dead click target — scroll on, or use the rail. */
-.vault-node:not(.energised) {
+/* The focused node advertises that it, specifically, is the live target. */
+.vault-node.focused .node-face {
+    border-color: rgba(255, 214, 170, 0.95);
+    box-shadow: 0 0 38px rgba(255, 190, 130, 0.5), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+/* Only the node the camera is parked on is clickable. At the core overview
+   nothing is — you scroll to a module or use the right-hand rail, which is
+   what makes the zoom-scroll meaningful rather than decorative. */
+.vault-node {
     pointer-events: none;
     cursor: default;
+}
+
+.vault-node.focused {
+    pointer-events: auto;
+    cursor: pointer;
 }
 
 .node-face {
@@ -921,7 +928,7 @@ body.warping #spaceship-title-container {
     animation: core-spin 14s linear infinite;
 }
 .vault-node.energised .node-ring { opacity: 0.55; }
-.vault-node:hover .node-ring { opacity: 1; border-color: rgba(255, 214, 170, 0.7); }
+.vault-node.focused:hover .node-ring { opacity: 1; border-color: rgba(255, 214, 170, 0.7); }
 
 .node-label {
     position: absolute;
@@ -943,7 +950,7 @@ body.warping #spaceship-title-container {
     pointer-events: none;
 }
 .vault-node.energised .node-label { opacity: 0.85; }
-.vault-node:hover .node-label { opacity: 1; color: #fff; border-color: rgba(255, 214, 170, 0.6); }
+.vault-node.focused:hover .node-label { opacity: 1; color: #fff; border-color: rgba(255, 214, 170, 0.6); }
 
 .vault-node.active .node-label,
 .vault-node.active .node-ring { opacity: 0 !important; }
@@ -969,8 +976,8 @@ body.warping #spaceship-title-container {
     width: 32%;             /* Reduced from 40% */
     max-width: 420px;       /* Reduced from 550px for a tighter horizontal profile */
     background: rgba(4, 9, 18, 0.95);
-    border: 1px solid rgba(0, 240, 255, 0.3);
-    border-left: 4px solid #00f0ff;
+    border: 1px solid rgba(210, 213, 219, 0.3);
+    border-left: 4px solid #d2d5db;
     padding: 25px 30px;     /* Compacted internal padding */
     opacity: 0;
     transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
@@ -989,7 +996,7 @@ body.in-space .corner-bracket { border-color: rgba(210, 213, 219, 0.7); }
 .module-tag {
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.8rem;
-    color: #00f0ff;
+    color: #d2d5db;
     letter-spacing: 2px;
     display: block;
     margin-bottom: 8px;
@@ -1621,8 +1628,8 @@ body.in-space .tier-btn.featured-btn:hover {
     width: 90%;
     max-width: 440px;
     background: rgba(6, 16, 26, 0.95);
-    border: 1px solid rgba(0, 240, 255, 0.4);
-    box-shadow: 0 0 35px rgba(0, 240, 255, 0.25);
+    border: 1px solid rgba(210, 213, 219, 0.4);
+    box-shadow: 0 0 35px rgba(210, 213, 219, 0.25);
     padding: 35px 30px;
     transform: scale(0.9);
     transition: transform 0.3s ease;
@@ -1692,7 +1699,7 @@ body.in-space .auth-tab.active {
     left: 0;
     width: 100%;
     height: 1px;
-    background: rgba(0, 240, 255, 0.2);
+    background: rgba(210, 213, 219, 0.2);
     z-index: 1;
 }
 
@@ -1749,7 +1756,7 @@ body.in-space .oauth-btn:hover {
     max-height: 70vh;
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: #00f0ff #071927;
+    scrollbar-color: #d2d5db #071927;
 }
 
 /* ==========================================
@@ -1796,6 +1803,207 @@ body.in-space .oauth-btn:hover {
         right: 50%;
         transform: translateX(50%);
     }
+}
+
+/* ==========================================
+   ROTATE GATE + TOUCH SCROLL TUTORIAL
+   ========================================== */
+#rotate-gate,
+#touch-tutorial {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    text-align: center;
+    background:
+        radial-gradient(ellipse 70% 60% at 50% 40%, rgba(38, 22, 10, 0.96) 0%, rgba(6, 5, 4, 0.99) 70%),
+        #050403;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+#rotate-gate.show,
+#touch-tutorial.show { display: flex; }
+
+.rotate-inner, .tut-card {
+    max-width: 340px;
+    animation: gate-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes gate-rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.rotate-icon { width: 108px; height: 108px; margin-bottom: 6px; }
+.rotate-phone {
+    fill: none;
+    stroke: #ffd6aa;
+    stroke-width: 3;
+    transform-origin: 60px 50px;
+    animation: rotate-tip 2.6s ease-in-out infinite;
+}
+.rotate-speaker { stroke: #ffd6aa; stroke-width: 2.4; stroke-linecap: round;
+    transform-origin: 60px 50px; animation: rotate-tip 2.6s ease-in-out infinite; }
+.rotate-arrow { fill: none; stroke: rgba(255, 176, 102, 0.75); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+@keyframes rotate-tip {
+    0%, 55%  { transform: rotate(0deg); }
+    80%,100% { transform: rotate(-90deg); }
+}
+
+.rotate-title, .tut-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.05rem;
+    letter-spacing: 3px;
+    color: #fff3e4;
+    margin-bottom: 10px;
+}
+
+.rotate-copy, .tut-copy {
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: rgba(240, 226, 210, 0.72);
+    margin-bottom: 22px;
+}
+
+#rotate-dismiss, #tut-next {
+    background: transparent;
+    border: 1px solid rgba(255, 176, 102, 0.6);
+    color: #ffd6aa;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 2px;
+    padding: 11px 26px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+#rotate-dismiss { border-color: rgba(255, 176, 102, 0.3); color: rgba(255, 214, 170, 0.6); font-size: 0.68rem; }
+#tut-next:active, #rotate-dismiss:active { background: rgba(255, 176, 102, 0.18); }
+
+/* Animated swipe glyph */
+.tut-glyph { position: relative; height: 84px; margin-bottom: 14px; }
+.tut-finger {
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    width: 20px;
+    height: 20px;
+    margin-left: -10px;
+    border-radius: 50%;
+    background: #ffd6aa;
+    box-shadow: 0 0 20px rgba(255, 190, 130, 0.85);
+    animation: tut-swipe 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.tut-trail {
+    position: absolute;
+    left: 50%;
+    bottom: 14px;
+    width: 2px;
+    height: 54px;
+    margin-left: -1px;
+    background: linear-gradient(to top, rgba(255, 190, 130, 0.55), transparent);
+    animation: tut-trail 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes tut-swipe {
+    0%       { transform: translateY(0);     opacity: 0; }
+    15%      { opacity: 1; }
+    70%,100% { transform: translateY(-56px); opacity: 0; }
+}
+@keyframes tut-trail {
+    0%       { transform: scaleY(0); transform-origin: bottom; opacity: 0; }
+    30%      { opacity: 1; }
+    70%,100% { transform: scaleY(1); transform-origin: bottom; opacity: 0; }
+}
+
+.tut-dots { display: flex; gap: 7px; justify-content: center; margin-bottom: 20px; }
+.tut-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255, 214, 170, 0.28);
+    transition: all 0.3s ease;
+}
+.tut-dot.active { background: #ffd6aa; box-shadow: 0 0 10px rgba(255,190,130,0.8); transform: scale(1.25); }
+
+/* ==========================================
+   SHORT / LANDSCAPE VIEWPORTS (phones held sideways)
+   The module panel and the submission console both carry more content than
+   fits in ~375px of height, so here they get bounded and made scrollable
+   rather than running off the bottom of the screen.
+   ========================================== */
+@media (max-height: 560px) {
+
+    /* Panel: pinned to the right, full available height, scrolls internally. */
+    .module-details {
+        width: 48% !important;
+        max-width: 430px !important;
+        top: 8px;
+        bottom: 8px;
+        padding: 14px 18px !important;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+
+    body.landed .module-details {
+        right: 10px !important;
+        transform: none !important;
+    }
+
+    .module-details h2 { font-size: 1.1rem !important; margin-bottom: 6px; }
+    .module-details p  { font-size: 0.74rem !important; line-height: 1.45; margin-bottom: 10px; }
+    .module-tag        { font-size: 0.62rem; margin-bottom: 4px; }
+    .stats-grid        { gap: 6px; margin-bottom: 10px; }
+    .stat-card         { padding: 5px 8px; }
+    .stat-title        { font-size: 0.55rem; }
+    .stat-value        { font-size: 0.78rem; }
+    .action-btn        { padding: 9px; font-size: 0.72rem; }
+
+    /* Return button shrinks into the corner so it can't collide with the
+       panel's heading — this was overlapping the title in landscape. */
+    #return-btn {
+        top: 8px !important;
+        left: 8px !important;
+        padding: 6px 10px !important;
+        font-size: 0.62rem !important;
+        letter-spacing: 1px !important;
+    }
+
+    /* Submission console: was taller than the screen and unscrollable. */
+    .submission-console {
+        max-height: calc(100vh - 16px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        padding: 16px 18px !important;
+        max-width: 560px;
+    }
+    .console-header h2 { font-size: 1.1rem; margin-bottom: 6px; }
+    .console-header p  { font-size: 0.74rem; line-height: 1.4; margin-bottom: 12px; }
+    .input-group       { margin-bottom: 10px; }
+    .input-group label { font-size: 0.65rem; margin-bottom: 4px; }
+    .input-group input, .input-group textarea { padding: 8px 10px; }
+    /* The rows="6" attribute makes this taller than the whole viewport in
+       landscape — override the computed height directly. */
+    #system-rules      { height: 62px !important; min-height: 0 !important; resize: vertical; }
+    .submit-system-btn { padding: 10px; font-size: 0.85rem; }
+    #abort-console-btn { top: 10px; right: 10px; padding: 4px 9px; font-size: 0.7rem; }
+
+    /* Other modals get the same treatment. */
+    .tactical-modal-card,
+    .subscription-modal-card,
+    .auth-modal-card {
+        max-height: calc(100vh - 16px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 18px 20px !important;
+    }
+    .launch-stage { width: 54px; height: 54px; margin-bottom: 8px; }
+    .rocket-svg   { width: 38px; height: 38px; }
+    .hud-modal-content { max-height: calc(100vh - 16px); overflow-y: auto; padding: 14px !important; }
+    .system-grid  { max-height: none; }
 }
 
 /* ==========================================

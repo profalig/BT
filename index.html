@@ -251,6 +251,37 @@
 </head>
 <body>
 
+    <!-- ROTATE-YOUR-PHONE GATE (portrait phones only) -->
+    <div id="rotate-gate" aria-hidden="true">
+        <div class="rotate-inner">
+            <svg class="rotate-icon" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                <rect class="rotate-phone" x="43" y="18" width="34" height="62" rx="5"/>
+                <line class="rotate-speaker" x1="55" y1="27" x2="65" y2="27"/>
+                <path class="rotate-arrow" d="M28 84 A 34 34 0 0 0 92 84"/>
+                <polyline class="rotate-arrow" points="22,74 28,85 39,79"/>
+            </svg>
+            <div class="rotate-title">TURN YOUR DEVICE</div>
+            <p class="rotate-copy">This journey is built wide.<br>Rotate to landscape to step inside.</p>
+            <button id="rotate-dismiss">CONTINUE ANYWAY</button>
+        </div>
+    </div>
+
+    <!-- SCROLL TUTORIAL (touch devices) -->
+    <div id="touch-tutorial" aria-hidden="true">
+        <div class="tut-card">
+            <div class="tut-glyph">
+                <span class="tut-finger"></span>
+                <span class="tut-trail"></span>
+            </div>
+            <div class="tut-title" id="tut-title">SWIPE UP SLOWLY</div>
+            <p class="tut-copy" id="tut-copy">Your scroll is the camera. Take it gently — the package opens as you move.</p>
+            <div class="tut-dots">
+                <span class="tut-dot active"></span><span class="tut-dot"></span><span class="tut-dot"></span>
+            </div>
+            <button id="tut-next">BEGIN</button>
+        </div>
+    </div>
+
     <!-- INTRO SCENE: DESK -> BOX FLAPS OPEN -> DIVE INTO SPACE -->
     <section id="intro-scene">
         <div id="intro-sticky">

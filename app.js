@@ -29,6 +29,109 @@ const planetData = {
     }
 };
 
+// ==========================================
+// MOBILE ONBOARDING: ROTATE GATE -> SCROLL TUTORIAL
+// Touch devices get walked in: first "turn your phone" (the whole journey is
+// composed wide), then a short scroll primer, because the entire site is
+// scroll-driven and that isn't obvious from a still first frame.
+// ==========================================
+(function initMobileOnboarding() {
+    const gate = document.getElementById('rotate-gate');
+    const tut = document.getElementById('touch-tutorial');
+    if (!gate || !tut) return;
+
+    const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches
+        || navigator.maxTouchPoints > 0;
+    if (!isTouch) return;
+
+    const STEPS = [
+        {
+            title: 'SWIPE UP SLOWLY',
+            copy: 'Your scroll is the camera. Take it gently — the package on the desk opens as you move.',
+            cta: 'NEXT'
+        },
+        {
+            title: 'KEEP GOING, GO DEEPER',
+            copy: 'Past the box the floor drops away. Keep swiping to fall through the light and reach the Core.',
+            cta: 'NEXT'
+        },
+        {
+            title: 'PICK A MODULE',
+            copy: 'Five modules orbit the Core. Scroll to bring one into focus and tap it — or jump straight there from the rail on the right.',
+            cta: 'ENTER'
+        }
+    ];
+
+    const titleEl = document.getElementById('tut-title');
+    const copyEl = document.getElementById('tut-copy');
+    const nextBtn = document.getElementById('tut-next');
+    const dots = [...tut.querySelectorAll('.tut-dot')];
+    let step = 0;
+    let tutorialDone = sessionStorage.getItem('bf_tut_done') === '1';
+
+    function renderStep() {
+        const s = STEPS[step];
+        titleEl.textContent = s.title;
+        copyEl.textContent = s.copy;
+        nextBtn.textContent = s.cta;
+        dots.forEach((d, i) => d.classList.toggle('active', i === step));
+    }
+
+    function isPortrait() {
+        return window.matchMedia('(orientation: portrait)').matches;
+    }
+
+    let gateDismissed = false;
+
+    // Scroll is locked while either overlay is up, so the user can't blunder
+    // past the intro without seeing the first frame of it.
+    function lockScroll(on) {
+        document.body.style.overflow = on ? 'hidden' : '';
+    }
+
+    function showTutorial() {
+        if (tutorialDone) { lockScroll(false); return; }
+        step = 0;
+        renderStep();
+        tut.classList.add('show');
+        lockScroll(true);
+    }
+
+    function update() {
+        if (isPortrait() && !gateDismissed) {
+            gate.classList.add('show');
+            tut.classList.remove('show');
+            lockScroll(true);
+        } else {
+            gate.classList.remove('show');
+            if (!tutorialDone && !tut.classList.contains('show')) showTutorial();
+            else if (tutorialDone) lockScroll(false);
+        }
+    }
+
+    document.getElementById('rotate-dismiss').addEventListener('click', () => {
+        gateDismissed = true;
+        update();
+    });
+
+    nextBtn.addEventListener('click', () => {
+        step++;
+        if (step >= STEPS.length) {
+            tutorialDone = true;
+            sessionStorage.setItem('bf_tut_done', '1');
+            tut.classList.remove('show');
+            lockScroll(false);
+        } else {
+            renderStep();
+        }
+    });
+
+    // Rotating the device re-evaluates the gate.
+    window.addEventListener('orientationchange', () => setTimeout(update, 220));
+    window.addEventListener('resize', update);
+    update();
+})();
+
 function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
 
@@ -305,17 +408,25 @@ let showcaseIndex = -1;
         });
     }
 
-    // At the core stage the whole board is powered: every node lit and
-    // clickable, so the core reads as a finished machine and is a real menu.
-    // Once the tour moves on to individual nodes it energises cumulatively.
-    // Only energised nodes accept clicks (see .vault-node:not(.energised)
-    // in the stylesheet) — a dim node is never a dead click target.
+    // Two separate states, deliberately decoupled:
+    //
+    //   .energised — purely visual. At the core stage the whole board is lit
+    //                so it reads as a finished machine.
+    //   .focused   — the only state that accepts clicks, and only ever the
+    //                one node the camera is actually parked on.
+    //
+    // Nothing is clickable at the core overview. That's the point: if you
+    // could open any module straight from the core, the zoom-scroll would be
+    // decorative. To reach a module you either scroll to it or use the rail.
     function setEnergised(uptoIndex) {
-        const allOn = uptoIndex < 0; // -1 === the core overview
+        const atCore = uptoIndex < 0; // -1 === the core overview
         orbits.forEach((o, i) => {
-            const on = allOn || i <= uptoIndex;
-            if (o.planetEl) o.planetEl.classList.toggle('energised', on);
-            if (o.traceEl) o.traceEl.classList.toggle('live', on);
+            const lit = atCore || i <= uptoIndex;
+            if (o.planetEl) {
+                o.planetEl.classList.toggle('energised', lit);
+                o.planetEl.classList.toggle('focused', !atCore && i === uptoIndex);
+            }
+            if (o.traceEl) o.traceEl.classList.toggle('live', lit);
         });
     }
 
