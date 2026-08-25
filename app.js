@@ -3,55 +3,253 @@
 // ==========================================
 const planetData = {
     backtest: {
-        tag: "ENGINE // SEC-01", title: "Backtest Machine", color: "#00ff66",
+        tag: "ENGINE // SEC-01", title: "Backtest Machine", color: "#ffd9ac",
         desc: "Submit your system architecture to our core. We conduct a highly accurate, multi-threaded data analysis and return a comprehensive intelligence report.<br><br>Understand your system's edge across multiple market regimes with precise metrics: absolute win/loss rates, maximum drawdown stress-tests, full trade logs, and deep statistical reliability checks.",
         stats: [{ label: "TICK ACCURACY", val: "99.9%" }, { label: "METRICS", val: "30+ Stats" }, { label: "STRESS TEST", val: "Regime Based" }, { label: "REPORTS", val: "Deep Data" }]
     },
     databank: {
-        tag: "VAULT // SEC-02", title: "System Databank", color: "#00ffff",
+        tag: "VAULT // SEC-02", title: "System Databank", color: "#e4e6ea",
         desc: "Welcome to the System Databank, our curated vault of quantitative trading strategies. Every week, our engineering team researches, refines, and releases new algorithmic models across Crypto and Forex markets.<br><br>These concepts demonstrate verified surface-level profitability and serve as high-potential blueprints. Users are encouraged to run them through our Backtest Machine for deep statistical verification, multi-regime stress testing, and trade log analysis before live deployment.",
         stats: [{ label: "STATUS", val: "ONLINE" }, { label: "UPDATES", val: "Weekly" }, { label: "COVERAGE", val: "Crypto / FX" }, { label: "VALIDATION", val: "Required" }]
     },
     about: {
-        tag: "IDENTITY // SEC-03", title: "About The Factory", color: "#b700ff",
+        tag: "IDENTITY // SEC-03", title: "About The Factory", color: "#d2d5db",
         desc: "We are professional quantitative backtesters delivering relentless, institutional-grade market data across multi-year historical cycles (2023, 2024, 2025, 2026 and beyond). Our numbers don't just come out of thin air—we give you itemized, trade-by-trade logs for every single buy and sell order, including wins, losses, and exact execution times.<br><br>Since deep historical lower-timeframe charts are nearly impossible to pull manually, we bring complete transparency to your screen. We calculate exact monthly and annual profits, proving how an initial balance with 2% risk scales over 1, 2, or 4 years. From maximum drawdown charts and win/loss ratios to consecutive loss streaks, we expose every dimension of your strategy so you know with 100% mathematical certainty that your system is truly profitable.",
         stats: [{ label: "OUTPUT", val: "Detailed Report" }, { label: "RECORDS", val: "Trade Log" }, { label: "DATA", val: "Historical Backtest" }, { label: "METRICS", val: "Compounding Analysis" }]
     },
     contact: {
-        tag: "COMMS // SEC-04", title: "Contact Us", color: "#ff0055",
-        desc: "Direct comm-link to the engineering desk. Reach out for quantitative system discussions, data analytics, or professional networking.<br><br><span style='color:#00f0ff'>Email:</span> backtest.factory@gmail.com<br><span style='color:#00f0ff'>Telegram:</span> @Dr_AliSadeghi<br><span style='color:#00f0ff'>Instagram:</span> backtest.factory",
+        tag: "COMMS // SEC-04", title: "Contact Us", color: "#f0e2cf",
+        desc: "Direct comm-link to the engineering desk. Reach out for quantitative system discussions, data analytics, or professional networking.<br><br><span style='color:#ffd9ac'>Email:</span> backtest.factory@gmail.com<br><span style='color:#ffd9ac'>Telegram:</span> @Dr_AliSadeghi<br><span style='color:#ffd9ac'>Instagram:</span> backtest.factory",
         stats: [{ label: "COMM LINK", val: "Encrypted" }, { label: "RESPONSE", val: "Active" }, { label: "LOCATION", val: "Italy" }, { label: "NETWORK", val: "Open" }]
     },
     campus: {
-        tag: "ACADEMY // SEC-05", title: "Backtesting Campus", color: "#ffd700",
+        tag: "ACADEMY // SEC-05", title: "Backtesting Campus", color: "#ffe9c4",
         desc: "The ultimate training ground for quantitative analysis. Our campus is built to teach deep data analysis, AI applications, statistical studies, and high-level data fetching.<br><br>This curriculum is designed specifically for those who want to become professional backtesters, robust coders, and system engineers in the trading industry and beyond.",
         stats: [{ label: "CURRICULUM", val: "Data & AI" }, { label: "SKILLS", val: "Stats / Python" }, { label: "TARGET", val: "Pro Quants" }, { label: "STATUS", val: "Enrolling" }]
     }
 };
 
-const orbitConfig = [
-    { id: 'backtest', selector: '.orbit-1', duration: 25, reverse: false },
-    { id: 'databank', selector: '.orbit-2', duration: 35, reverse: true },
-    { id: 'about',    selector: '.orbit-3', duration: 45, reverse: false },
-    { id: 'contact',  selector: '.orbit-4', duration: 55, reverse: true },
-    { id: 'campus',   selector: '.orbit-5', duration: 65, reverse: false }
-];
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
 
-const orbits = orbitConfig.map(c => ({
-    ...c,
-    orbitEl: document.querySelector(c.selector),
-    planetEl: document.querySelector(`${c.selector} .planet`),
-    currentAngle: 0,
-    radius: 0
+// INTRO SCENE SCROLL ENGINE
+// The desk sequence is real footage scrubbed by scroll position: the candle
+// flames, the steam and the box opening are all baked into the frames, so
+// none of it is faked with CSS overlays any more.
+(function initIntroScene() {
+    const introScene = document.getElementById('intro-scene');
+    const introSticky = document.getElementById('intro-sticky');
+    const deskScene = document.getElementById('desk-scene');
+    const deskVideo = document.getElementById('desk-video');
+    const scrollHint = document.getElementById('scroll-hint');
+    const lidFlash = document.getElementById('lid-flash');
+    const spaceMatrixEl = document.getElementById('space-matrix');
+    const viewportEl = document.getElementById('spaceship-viewport');
+    const navHud = document.getElementById('planet-nav-hud');
+    const tunnel = document.getElementById('descent-tunnel');
+    const gates = tunnel ? [...tunnel.querySelectorAll('.gate')] : [];
+    if (!introScene || !deskVideo || !deskScene) return;
+
+    // Pick the encode before anything requests the file: full-res on
+    // desktop, a much lighter one on phones so they aren't pulling 13MB
+    // over cellular for a hero animation.
+    deskVideo.src = window.innerWidth <= 768
+        ? deskVideo.dataset.srcSm
+        : deskVideo.dataset.srcHd;
+
+    // The intro is now a deep, staged journey (#intro-scene is 560vh). These
+    // fractions carve it into phases. SCRUB_END stays small on purpose: the
+    // clip is only ~5s, so it gets a short slice (~6 wheel notches) and all
+    // the extra depth goes to the dive and the descent instead.
+    //
+    //   0.00 - 0.14  box opens        (video scrub)
+    //   0.14 - 0.24  hold on the open box, let the eye settle
+    //   0.22 - 0.56  dive down into the box
+    //   0.38 - 0.95  descent through the light-gates
+    //   0.88 - 1.00  arrival, hand off to the vault
+    const SCRUB_END = 0.14;
+    const ZOOM_START = 0.22, ZOOM_END = 0.56;
+    const TUNNEL_START = 0.38, TUNNEL_END = 0.95;
+    const REVEAL_START = 0.88, REVEAL_END = 1.0;
+
+    let targetTime = 0;   // where the scroll wants the clip to be
+    let shownTime = -1;   // where we last actually seeked it
+    let duration = 0;
+    let progress = 0;
+
+    function readScroll() {
+        const rect = introScene.getBoundingClientRect();
+        const total = introScene.offsetHeight - window.innerHeight;
+        const scrolled = Math.min(Math.max(-rect.top, 0), total);
+        progress = total > 0 ? scrolled / total : 0;
+        if (duration) targetTime = clamp01(progress / SCRUB_END) * duration;
+    }
+
+    function updateIntro() {
+        readScroll();
+
+        if (lidFlash) {
+            // Flash peaks as the flaps finish swinging open.
+            const flashPeak = 0.62, flashWidth = 0.12;
+            const flashProgress = Math.max(0, 1 - Math.abs(progress - flashPeak) / flashWidth);
+            lidFlash.style.opacity = flashProgress * 0.5;
+        }
+
+        // DIVE ZOOM into the open box, centred on the box in frame.
+        const zoomProgress = clamp01((progress - ZOOM_START) / (ZOOM_END - ZOOM_START));
+        const zoomEase = Math.pow(zoomProgress, 1.7);
+        deskScene.style.transform = `scale(${1 + zoomEase * 15})`;
+
+        // DESCENT TUNNEL: once the camera is inside the box, fly the gates
+        // past to sell the impossible depth, then hand off to the vault.
+        if (tunnel) {
+            const tunProgress = clamp01((progress - TUNNEL_START) / (TUNNEL_END - TUNNEL_START));
+            const fadeIn  = clamp01(tunProgress / 0.18);
+            const fadeOut = clamp01((tunProgress - 0.8) / 0.2);
+            tunnel.style.opacity = fadeIn * (1 - fadeOut);
+
+            const GAP = 430;
+            const travel = tunProgress * (GAP * gates.length + 900);
+            gates.forEach((g, i) => {
+                const z = -GAP * i + travel;
+                // Fade a gate out as it rushes past the camera plane, and in
+                // as it emerges from the darkness far below.
+                const near = clamp01((z - 40) / 260);
+                g.style.transform = `translateZ(${z}px) rotate(${i * 7 + tunProgress * 26}deg)`;
+                g.style.opacity = (1 - near) * clamp01((z + 3400) / 900);
+            });
+        }
+
+        const revealProgress = clamp01((progress - REVEAL_START) / (REVEAL_END - REVEAL_START));
+        introSticky.style.opacity = 1 - revealProgress;
+        if (spaceMatrixEl) spaceMatrixEl.style.opacity = revealProgress;
+        if (viewportEl) viewportEl.style.opacity = revealProgress;
+        if (navHud) {
+            navHud.style.opacity = revealProgress;
+            navHud.style.pointerEvents = revealProgress > 0.5 ? 'auto' : 'none';
+        }
+
+        if (scrollHint) scrollHint.style.opacity = progress > 0.04 ? 0 : 1;
+        introScene.style.pointerEvents = progress >= 1 ? 'none' : 'auto';
+
+        // Cozy autumn HUD at the desk, dark premium HUD once diving in.
+        document.body.classList.toggle('in-space', progress > 0.55);
+    }
+
+    // Seeking is driven from a rAF loop that eases toward the scroll target
+    // rather than being set straight from the scroll handler: scroll events
+    // fire far faster than a video can seek, and hammering currentTime makes
+    // the decoder thrash and stutter.
+    function scrubLoop() {
+        if (duration) {
+            const diff = targetTime - shownTime;
+            if (Math.abs(diff) > 0.008) {
+                shownTime += diff * 0.32;
+                deskVideo.currentTime = Math.max(0, Math.min(shownTime, duration - 0.03));
+            }
+        }
+        requestAnimationFrame(scrubLoop);
+    }
+
+    deskVideo.addEventListener('loadedmetadata', () => {
+        duration = deskVideo.duration || 0;
+        shownTime = 0;
+        deskVideo.pause();
+        readScroll();
+        updateIntro();
+    });
+
+    // Some browsers won't decode a first frame until playback is nudged.
+    deskVideo.play().then(() => deskVideo.pause()).catch(() => {});
+
+    window.addEventListener('scroll', updateIntro, { passive: true });
+    window.addEventListener('resize', updateIntro);
+    updateIntro();
+    requestAnimationFrame(scrubLoop);
+})();
+
+// ==========================================
+// PROCEDURAL STARFIELD GENERATOR
+// Paints two tileable star layers (dim/far + bright/glowing near) onto
+// canvases at runtime and drops them in as CSS background-images, so the
+// deep-space backdrop needs no external image assets.
+// ==========================================
+(function initStarfield() {
+    function generateStarLayer(size, count, opts) {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        for (let i = 0; i < count; i++) {
+            const x = Math.random() * size;
+            const y = Math.random() * size;
+            const r = opts.minR + Math.random() * (opts.maxR - opts.minR);
+            const a = opts.minA + Math.random() * (opts.maxA - opts.minA);
+            const roll = Math.random();
+            const color = roll < 0.72 ? '255,255,255' : (roll < 0.9 ? '150,215,255' : '255,224,168');
+
+            if (opts.glow) {
+                const grad = ctx.createRadialGradient(x, y, 0, x, y, r * opts.glowMult);
+                grad.addColorStop(0, `rgba(${color},${a * 0.5})`);
+                grad.addColorStop(1, `rgba(${color},0)`);
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(x, y, r * opts.glowMult, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.fillStyle = `rgba(${color},${Math.min(1, a + 0.25)})`;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        return canvas.toDataURL('image/png');
+    }
+
+    const far = document.querySelector('.starfield-far');
+    const near = document.querySelector('.starfield-near');
+
+    if (far) {
+        far.style.backgroundImage = `url(${generateStarLayer(600, 110, { minR: 0.35, maxR: 1.0, minA: 0.25, maxA: 0.6, glow: false })})`;
+    }
+    if (near) {
+        near.style.backgroundImage = `url(${generateStarLayer(820, 46, { minR: 0.8, maxR: 1.9, minA: 0.55, maxA: 1, glow: true, glowMult: 4.5 })})`;
+    }
+})();
+
+// ==========================================
+// VAULT MODULE NODES
+// Five nodes wired to the core. Order here drives the scroll tour, the
+// nav rail and which trace lights up.
+// ==========================================
+const orbits = ['backtest', 'databank', 'about', 'contact', 'campus'].map((id, i) => ({
+    id,
+    index: i,
+    planetEl: document.querySelector(`.vault-node[data-id="${id}"]`),
+    traceEl: document.querySelector(`#trace-layer .trace-live line[data-trace="${i}"]`),
+    px: 0,
+    py: 0
 }));
 
-function updateOrbitRadii() { 
-    orbits.forEach(o => { 
-        if (o.orbitEl) o.radius = o.orbitEl.offsetWidth / 2; 
-    }); 
+const vaultStage = document.getElementById('vault-stage');
+
+// Node centres in viewport pixels, relative to stage centre — used both to
+// aim the camera and to place the gravity wells under each node.
+function updateNodeOffsets() {
+    if (!vaultStage) return;
+    const s = vaultStage.getBoundingClientRect();
+    const cx = s.left + s.width / 2;
+    const cy = s.top + s.height / 2;
+    orbits.forEach(o => {
+        if (!o.planetEl) return;
+        const r = o.planetEl.getBoundingClientRect();
+        o.px = (r.left + r.width / 2) - cx;
+        o.py = (r.top + r.height / 2) - cy;
+    });
 }
-updateOrbitRadii();
-window.addEventListener('resize', updateOrbitRadii);
+updateNodeOffsets();
+window.addEventListener('resize', updateNodeOffsets);
+window.addEventListener('load', updateNodeOffsets);
 
 const viewport = document.getElementById('spaceship-viewport');
 const spaceMatrix = document.getElementById('space-matrix');
@@ -60,45 +258,196 @@ const moduleDetails = document.querySelector('.module-details');
 const actionBtn = document.getElementById('module-action-btn');
 
 let activePlanetData = null;
-let isHyperZoomed = false; 
+let isHyperZoomed = false;
 let cam = { x: 0, y: 0, scale: 1 };
 let targetCam = { x: 0, y: 0, scale: 1 };
 
+// ==========================================
+// PLANET TOUR: SCROLL-DRIVEN + SKIP HUD
+// Continuing to scroll past the intro pans/zooms the camera from one
+// planet to the next (reusing the same lerp-based camera as a manual
+// planet click). #planet-nav-hud lets you jump straight to any stop.
+// ==========================================
+let showcaseIndex = -1;
+
+(function initPlanetTour() {
+    const tourScene = document.getElementById('tour-scene');
+    const navHud = document.getElementById('planet-nav-hud');
+    if (!tourScene) return;
+
+    const STOPS = orbits.length + 1; // overview + one per planet
+    let lastActiveSlot = null;
+
+    function setActiveSlot(index) {
+        if (index === lastActiveSlot) return;
+        lastActiveSlot = index;
+        if (navHud) {
+            navHud.querySelectorAll('.tour-nav-slot').forEach(slot => {
+                slot.classList.toggle('active', Number(slot.dataset.tourIndex) === index);
+            });
+        }
+        orbits.forEach((o, i) => {
+            if (o.planetEl) o.planetEl.classList.toggle('showcasing', i === index);
+        });
+    }
+
+    // Nodes energise cumulatively: once current has reached a node it stays
+    // powered, so by the end the whole board is lit rather than one lonely
+    // node at a time.
+    function setEnergised(uptoIndex) {
+        orbits.forEach((o, i) => {
+            const on = i <= uptoIndex;
+            if (o.planetEl) o.planetEl.classList.toggle('energised', on);
+            if (o.traceEl) o.traceEl.classList.toggle('live', on);
+        });
+    }
+
+    function updateTour() {
+        const rect = tourScene.getBoundingClientRect();
+        const total = tourScene.offsetHeight - window.innerHeight;
+        const scrolled = Math.min(Math.max(-rect.top, 0), Math.max(total, 0));
+        const tourProgress = total > 0 ? scrolled / total : 0;
+
+        const stopFloat = tourProgress * STOPS;
+        const stopIndex = Math.min(STOPS - 1, Math.floor(stopFloat));
+        const planetIndex = stopIndex - 1; // -1 = the core itself
+
+        if (!document.body.classList.contains('landed') && !document.body.classList.contains('warping')) {
+            showcaseIndex = planetIndex;
+        }
+        setActiveSlot(planetIndex);
+        setEnergised(planetIndex);
+    }
+
+    window.addEventListener('scroll', updateTour, { passive: true });
+    window.addEventListener('resize', updateTour);
+    updateTour();
+
+    if (navHud) {
+        navHud.querySelectorAll('.tour-nav-slot').forEach(slot => {
+            slot.addEventListener('click', () => {
+                const idx = Number(slot.dataset.tourIndex);
+                const stop = idx + 1; // overview(-1) -> stop 0
+                const tourSceneTop = tourScene.getBoundingClientRect().top + window.scrollY;
+                const total = tourScene.offsetHeight - window.innerHeight;
+                const targetScroll = tourSceneTop + ((stop + 0.5) / STOPS) * total;
+                window.scrollTo({ top: targetScroll, behavior: 'smooth' });
+            });
+        });
+    }
+})();
+
+// ==========================================
+// GRAVITY-WARPED SPACETIME GRID
+// A dotted net drawn on a canvas that dips toward the sun and each planet,
+// simulating gravitational curvature. Positions are recomputed every frame
+// from the same camera math that places the planets themselves, so the
+// warp always tracks what's actually on screen.
+// ==========================================
+let gravityGridDraw = null;
+(function initGravityGrid() {
+    const canvas = document.getElementById('gravity-grid');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const SPACING = 52;
+    let W = 0, H = 0, cols = 0, rows = 0, dpr = 1;
+
+    function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        W = window.innerWidth;
+        H = window.innerHeight;
+        canvas.width = W * dpr;
+        canvas.height = H * dpr;
+        canvas.style.width = W + 'px';
+        canvas.style.height = H + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        cols = Math.ceil(W / SPACING) + 2;
+        rows = Math.ceil(H / SPACING) + 2;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    gravityGridDraw = function (sources) {
+        if (!W || !H) return;
+        ctx.clearRect(0, 0, W, H);
+
+        const pts = new Array(rows);
+        for (let j = 0; j < rows; j++) {
+            const row = new Array(cols);
+            const gy = j * SPACING - SPACING;
+            for (let i = 0; i < cols; i++) {
+                const gx = i * SPACING - SPACING;
+                let dx = 0, dy = 0;
+                for (let k = 0; k < sources.length; k++) {
+                    const s = sources[k];
+                    const ddx = gx - s.x, ddy = gy - s.y;
+                    const dist = Math.sqrt(ddx * ddx + ddy * ddy) + 46;
+                    const pull = Math.min(s.strength / dist, s.maxPull);
+                    dx -= (ddx / dist) * pull;
+                    dy -= (ddy / dist) * pull;
+                }
+                row[i] = [gx + dx, gy + dy];
+            }
+            pts[j] = row;
+        }
+
+        ctx.strokeStyle = 'rgba(190, 195, 205, 0.16)';
+        ctx.lineWidth = 1;
+        for (let j = 0; j < rows; j++) {
+            ctx.beginPath();
+            for (let i = 0; i < cols; i++) {
+                const [x, y] = pts[j][i];
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+        for (let i = 0; i < cols; i++) {
+            ctx.beginPath();
+            for (let j = 0; j < rows; j++) {
+                const [x, y] = pts[j][i];
+                if (j === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+
+        ctx.fillStyle = 'rgba(225, 227, 232, 0.45)';
+        for (let j = 0; j < rows; j++) {
+            for (let i = 0; i < cols; i++) {
+                const [x, y] = pts[j][i];
+                ctx.beginPath();
+                ctx.arc(x, y, 1.4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    };
+})();
+
 // CAMERA RENDER ENGINE
 function renderEngine(time) {
-    orbits.forEach(o => {
-        if (!o.orbitEl || !o.planetEl) return;
-        const progress = (time / (o.duration * 1000)) % 1;
-        o.currentAngle = progress * 360;
-        if (o.reverse) o.currentAngle = -o.currentAngle;
-        
-        o.orbitEl.style.transform = `rotate(${o.currentAngle}deg)`;
-        o.planetEl.style.transform = `translateX(-50%) rotate(${-o.currentAngle}deg)`;
-    });
-
     const isMobile = window.innerWidth <= 768;
 
     if (activePlanetData) {
         const o = activePlanetData;
-        const rad = (o.currentAngle * Math.PI) / 180;
-        const px = o.radius * Math.sin(rad);
-        const py = -o.radius * Math.cos(rad);
-        
         if (isHyperZoomed) {
-            targetCam.scale = isMobile ? 5.5 : 15;
-            targetCam.x = -px;
-            targetCam.y = -py;
+            targetCam.scale = isMobile ? 3.0 : 5.2;
+            targetCam.x = -o.px;
+            targetCam.y = -o.py;
         } else {
-            targetCam.scale = isMobile ? 1.8 : 2.8;
-            const screenOffset = isMobile ? 0 : -220; 
-            targetCam.x = (screenOffset / targetCam.scale) - px;
-            targetCam.y = -py;
+            targetCam.scale = isMobile ? 1.25 : 1.9;
+            const screenOffset = isMobile ? 0 : -220;
+            targetCam.x = (screenOffset / targetCam.scale) - o.px;
+            targetCam.y = -o.py;
         }
+    } else if (showcaseIndex >= 0 && orbits[showcaseIndex]) {
+        const o = orbits[showcaseIndex];
+        targetCam.scale = isMobile ? 1.2 : 1.75;
+        targetCam.x = -o.px;
+        targetCam.y = -o.py;
     } else {
         targetCam.x = 0; targetCam.y = 0; targetCam.scale = 1;
     }
 
-    const lerpSpeed = isHyperZoomed ? 0.05 : (activePlanetData ? 0.12 : 0.08);
+    const lerpSpeed = isHyperZoomed ? 0.05 : (activePlanetData ? 0.12 : (showcaseIndex >= 0 ? 0.06 : 0.08));
     cam.x += (targetCam.x - cam.x) * lerpSpeed;
     cam.y += (targetCam.y - cam.y) * lerpSpeed;
     cam.scale += (targetCam.scale - cam.scale) * lerpSpeed;
@@ -108,6 +457,27 @@ function renderEngine(time) {
     }
     if (spaceMatrix) {
         spaceMatrix.style.transform = `translate3d(${cam.x * 0.15}px, ${cam.y * 0.15}px, 0px)`;
+    }
+
+    if (gravityGridDraw) {
+        const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+        // The core sits at stage centre and warps space hardest; each node
+        // makes its own smaller dimple.
+        const sources = [{
+            x: cx + cam.scale * cam.x,
+            y: cy + cam.scale * cam.y,
+            strength: 15000,
+            maxPull: 46
+        }];
+        orbits.forEach(o => {
+            sources.push({
+                x: cx + cam.scale * ((o.px || 0) + cam.x),
+                y: cy + cam.scale * ((o.py || 0) + cam.y),
+                strength: 2600,
+                maxPull: 30
+            });
+        });
+        gravityGridDraw(sources);
     }
 
     requestAnimationFrame(renderEngine);
@@ -157,8 +527,11 @@ orbits.forEach(o => {
 returnBtn.addEventListener('click', () => {
     document.body.classList.remove('landed');
     if (activePlanetData && activePlanetData.planetEl) activePlanetData.planetEl.classList.remove('active');
-    activePlanetData = null; 
+    activePlanetData = null;
     setTimeout(() => { document.body.classList.remove('warping'); }, 800);
+    // Resync the scroll-driven planet tour to the current scroll position now
+    // that it's no longer overridden by a landed planet.
+    window.dispatchEvent(new Event('scroll'));
 });
 
 // INITIALIZE MODULE BUTTON LOGIC
@@ -202,62 +575,11 @@ if (abortConsoleBtn) {
     });
 }
 
-// CONSTELLATION PARALLAX & VIDEO HOVER ENGINE
-const bullConstellation = document.querySelector('.bull-constellation');
-const bearConstellation = document.querySelector('.bear-constellation');
-
-document.addEventListener('mousemove', (e) => {
-    const x = (e.clientX / window.innerWidth - 0.5) * 2; 
-    const y = (e.clientY / window.innerHeight - 0.5) * 2;
-    if (bullConstellation && bearConstellation) {
-        bullConstellation.style.setProperty('--parallax-x', `${-x * 60}px`);
-        bullConstellation.style.setProperty('--parallax-y', `${-y * 60}px`);
-        bearConstellation.style.setProperty('--parallax-x', `${-x * 60}px`);
-        bearConstellation.style.setProperty('--parallax-y', `${-y * 60}px`);
-    }
-});
-
-const triggerAttack = (constellation) => {
-    if (!constellation) return;
-    constellation.classList.add('highlight');
-    const vid = constellation.querySelector('.beast-vid');
-    if (vid) {
-        if (vid.pauseTimeout) { clearTimeout(vid.pauseTimeout); vid.pauseTimeout = null; }
-        vid.currentTime = 0; 
-        vid.play().catch(() => {}); 
-    }
-};
-
-const resetAttack = (constellation) => {
-    if (!constellation) return;
-    constellation.classList.remove('highlight');
-    const vid = constellation.querySelector('.beast-vid');
-    if (vid) {
-        if (vid.pauseTimeout) clearTimeout(vid.pauseTimeout);
-        vid.pauseTimeout = setTimeout(() => { vid.pause(); }, 400);
-    }
-};
-
-orbits.forEach(o => {
-    if (!o.planetEl) return;
-    o.planetEl.addEventListener('mouseenter', () => {
-        if (['backtest', 'campus'].includes(o.id)) triggerAttack(bullConstellation);
-        else if (['databank', 'contact'].includes(o.id)) triggerAttack(bearConstellation);
-        else { triggerAttack(bullConstellation); triggerAttack(bearConstellation); }
-    });
-    o.planetEl.addEventListener('mouseleave', () => { resetAttack(bullConstellation); resetAttack(bearConstellation); });
-});
-
-const btcSun = document.getElementById('sun');
-const solarSystem = document.getElementById('solar-system');
-if (btcSun && solarSystem) {
-    btcSun.addEventListener('mouseenter', () => {
-        solarSystem.classList.add('show-labels');
-        triggerAttack(bullConstellation); triggerAttack(bearConstellation);
-    });
-    btcSun.addEventListener('mouseleave', () => {
-        solarSystem.classList.remove('show-labels');
-        resetAttack(bullConstellation); resetAttack(bearConstellation);
+// Hovering the core reveals every node label at once.
+const vaultCore = document.getElementById('vault-core');
+if (vaultCore) {
+    vaultCore.addEventListener('mouseenter', () => {
+        orbits.forEach(o => o.planetEl && o.planetEl.classList.add('energised'));
     });
 }
 
@@ -285,23 +607,21 @@ function generateBlackboard() {
         "PV = nRT", "V = (4/3)πr³", "lim(x→∞) (1 + 1/x)^x = e", "sin²θ + cos²θ = 1"
     ];
     
-    const density = Math.floor((window.innerWidth * window.innerHeight) / 7500); 
+    const density = Math.floor((window.innerWidth * window.innerHeight) / 14000);
     for (let i = 0; i < density; i++) {
         const text = formulas[Math.floor(Math.random() * formulas.length)];
         const x = Math.random() * window.innerWidth;
         const y = Math.random() * window.innerHeight;
         const fontSize = Math.random() * 12 + 14; 
         ctx.font = `italic ${fontSize}px 'Times New Roman', serif`;
-        const alpha = Math.random() * 0.12 + 0.03; 
+        const alpha = Math.random() * 0.05 + 0.015; 
         const colorRand = Math.random();
-        if (colorRand > 0.98) ctx.fillStyle = `rgba(0, 240, 255, ${alpha})`; 
+        if (colorRand > 0.98) ctx.fillStyle = `rgba(210, 213, 219, ${alpha})`; 
         else if (colorRand > 0.96) ctx.fillStyle = `rgba(255, 0, 85, ${alpha})`; 
         else ctx.fillStyle = `rgba(255, 255, 255, ${alpha + 0.04})`; 
         ctx.fillText(text, x, y);
     }
 }
-generateBlackboard();
-window.addEventListener('resize', generateBlackboard);
 
 // TACTICAL HUD MODAL TRIGGER
 function showTacticalModal(title, message, isSuccess = true) {
@@ -318,8 +638,8 @@ function showTacticalModal(title, message, isSuccess = true) {
         if (statusTag) { statusTag.innerText = '// TRANSMISSION STATUS: ERROR'; statusTag.style.color = '#ff0055'; }
         if (card) card.style.borderColor = 'rgba(255, 0, 85, 0.5)';
     } else {
-        if (statusTag) { statusTag.innerText = '// TRANSMISSION STATUS: SECURED'; statusTag.style.color = '#00ff66'; }
-        if (card) card.style.borderColor = 'rgba(0, 255, 102, 0.4)';
+        if (statusTag) { statusTag.innerText = '// TRANSMISSION STATUS: SECURED'; statusTag.style.color = '#ffb066'; }
+        if (card) card.style.borderColor = 'rgba(255, 176, 102, 0.4)';
     }
 
     if (modalOverlay) modalOverlay.classList.add('active');
@@ -429,17 +749,17 @@ async function openUserReportsModal() {
         const pendingCount = totalSubmissions - completedCount;
 
         const profileHeaderHtml = `
-            <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+            <div style="background: rgba(210, 213, 219, 0.05); border: 1px solid rgba(210, 213, 219, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 10px; margin-bottom: 12px;">
                     <div>
                         <div style="font-size: 0.75em; color: #888; letter-spacing: 1px;">// CLEARANCE LEVEL: AGENT</div>
-                        <div style="font-size: 1.3em; font-weight: bold; color: #00ffff; letter-spacing: 1px;">
+                        <div style="font-size: 1.3em; font-weight: bold; color: #e4e6ea; letter-spacing: 1px;">
                             <i class="fa-solid fa-id-badge"></i> ${callsign}
                         </div>
                     </div>
                     <div style="text-align: right; font-size: 0.85em; color: #aaa;">
                         <div><i class="fa-solid fa-envelope"></i> ${userEmail}</div>
-                        <div style="color: #00ff66; margin-top: 2px;">● COMM-LINK ACTIVE</div>
+                        <div style="color: #ffb066; margin-top: 2px;">● COMM-LINK ACTIVE</div>
                     </div>
                 </div>
 
@@ -452,13 +772,13 @@ async function openUserReportsModal() {
                         <div style="font-size: 0.7em; color: #888;">TOTAL RUNS</div>
                         <div style="font-size: 1.2em; font-weight: bold; color: #ffffff;">${totalSubmissions}</div>
                     </div>
-                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(0, 255, 102, 0.15);">
+                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255, 176, 102, 0.15);">
                         <div style="font-size: 0.7em; color: #888;">COMPLETED</div>
-                        <div style="font-size: 1.2em; font-weight: bold; color: #00ff66;">${completedCount}</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #ffb066;">${completedCount}</div>
                     </div>
-                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(0, 240, 255, 0.15);">
+                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(210, 213, 219, 0.15);">
                         <div style="font-size: 0.7em; color: #888;">IN QUEUE</div>
-                        <div style="font-size: 1.2em; font-weight: bold; color: #00f0ff;">${pendingCount}</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #d2d5db;">${pendingCount}</div>
                     </div>
                 </div>
             </div>
@@ -487,10 +807,10 @@ async function openUserReportsModal() {
             let downloadBtn;
 
             if (reportUrl) {
-                statusBadge = `<span style="color:#00ff66; font-weight:bold;">[ COMPLETED ]</span>`;
-                downloadBtn = `<a href="${reportUrl}" target="_blank" download style="color:#00f0ff; text-decoration:underline; font-weight:bold;"><i class="fa-solid fa-file-pdf"></i> DOWNLOAD PDF REPORT</a>`;
+                statusBadge = `<span style="color:#ffb066; font-weight:bold;">[ COMPLETED ]</span>`;
+                downloadBtn = `<a href="${reportUrl}" target="_blank" download style="color:#d2d5db; text-decoration:underline; font-weight:bold;"><i class="fa-solid fa-file-pdf"></i> DOWNLOAD PDF REPORT</a>`;
             } else if (['completed', 'complete', 'done', 'success'].includes(rawStatus)) {
-                statusBadge = `<span style="color:#00ff66; font-weight:bold;">[ COMPLETED ]</span>`;
+                statusBadge = `<span style="color:#ffb066; font-weight:bold;">[ COMPLETED ]</span>`;
                 downloadBtn = `<span style="color:#ffd700;"><i class="fa-solid fa-triangle-exclamation"></i> Link pending in database</span>`;
             } else if (['failed', 'error', 'rejected'].includes(rawStatus)) {
                 statusBadge = `<span style="color:#ff0055; font-weight:bold;">[ FAILED ]</span>`;
@@ -501,9 +821,9 @@ async function openUserReportsModal() {
             }
 
             return `
-                <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(0,255,255,0.2); margin-bottom: 10px; padding: 12px 14px; border-radius: 6px; text-align: left;">
+                <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(228,230,234,0.2); margin-bottom: 10px; padding: 12px 14px; border-radius: 6px; text-align: left;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <strong style="color: #00ffff; font-size: 1.05em; letter-spacing: 0.5px;">${sub.system_name || 'UNTITLED SYSTEM'}</strong>
+                        <strong style="color: #e4e6ea; font-size: 1.05em; letter-spacing: 0.5px;">${sub.system_name || 'UNTITLED SYSTEM'}</strong>
                         ${statusBadge}
                     </div>
                     <div style="font-size: 0.8em; color: #aaa; margin: 4px 0;">SUBMITTED: ${dateStr}</div>
@@ -1049,9 +1369,9 @@ function unlockAndStyleSearchInput() {
         input.style.setProperty('position', 'relative', 'important');
         input.style.setProperty('z-index', '999999', 'important');
         input.style.setProperty('color', '#ffffff', 'important'); // Visible white text
-        input.style.setProperty('caret-color', '#00f0ff', 'important'); // Bright cyan typing cursor
+        input.style.setProperty('caret-color', '#d2d5db', 'important'); // Bright cyan typing cursor
         input.style.setProperty('background', 'rgba(0, 0, 0, 0.6)', 'important');
-        input.style.setProperty('border', '1px solid #00f0ff', 'important');
+        input.style.setProperty('border', '1px solid #d2d5db', 'important');
         input.style.setProperty('user-select', 'text', 'important');
         input.style.setProperty('-webkit-user-select', 'text', 'important');
 
@@ -1093,13 +1413,13 @@ function setupDatabankEventListeners() {
                     const elText = el.innerText.trim().toUpperCase();
                     if (['ALL', 'CRYPTO', 'FOREX'].includes(elText)) {
                         el.style.background = 'transparent';
-                        el.style.color = '#00f0ff';
+                        el.style.color = '#d2d5db';
                         el.classList.remove('active');
                     }
                 });
             }
 
-            targetBtn.style.background = '#00f0ff';
+            targetBtn.style.background = '#d2d5db';
             targetBtn.style.color = '#000000';
             targetBtn.classList.add('active');
 
@@ -1119,7 +1439,7 @@ async function fetchTradingSystems() {
     if (!gridContainer) return;
 
     if (!supabaseClient) {
-        gridContainer.innerHTML = `<p style="color: #ff3366;">Supabase client offline.</p>`;
+        gridContainer.innerHTML = `<p style="color: #e0836b;">Supabase client offline.</p>`;
         return;
     }
 
@@ -1127,10 +1447,10 @@ async function fetchTradingSystems() {
 
     if (!session) {
         gridContainer.innerHTML = `
-            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: #00f0ff;">
+            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: #d2d5db;">
                 <h3 style="margin-bottom: 1rem;">ACCESS RESTRICTED</h3>
                 <p style="color: #a0a0a0; margin-bottom: 1.5rem;">Please sign in or create an account to access the System Databank.</p>
-                <button onclick="openAuthModal()" style="background: #00f0ff; color: #000; border: none; padding: 0.75rem 1.5rem; font-weight: bold; cursor: pointer; border-radius: 4px;">
+                <button onclick="openAuthModal()" style="background: #d2d5db; color: #0a0a0b; border: none; padding: 0.75rem 1.5rem; font-weight: bold; cursor: pointer; border-radius: 4px;">
                     SIGN IN / SIGN UP
                 </button>
             </div>
@@ -1149,7 +1469,7 @@ async function fetchTradingSystems() {
         applyDatabankFilters();
     } catch (err) {
         console.error('Error fetching systems:', err.message);
-        gridContainer.innerHTML = `<p style="color: #ff3366; grid-column: 1 / -1;">Failed to load systems from vault.</p>`;
+        gridContainer.innerHTML = `<p style="color: #e0836b; grid-column: 1 / -1;">Failed to load systems from vault.</p>`;
     }
 }
 
@@ -1195,16 +1515,16 @@ function renderSystemGrid(systems, container) {
     systems.forEach(sys => {
         const card = document.createElement('div');
         card.className = 'system-card';
-        card.style.cssText = 'border: 1px solid rgba(0, 240, 255, 0.2); padding: 15px; cursor: pointer; background: rgba(0, 240, 255, 0.02); border-radius: 4px;';
+        card.style.cssText = 'border: 1px solid rgba(210, 213, 219, 0.2); padding: 15px; cursor: pointer; background: rgba(210, 213, 219, 0.02); border-radius: 4px;';
         card.onclick = () => viewSystemDetail(sys);
 
         card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <h4 style="color: #fff; margin: 0 0 8px 0;">${sys.system_name || sys.title || sys.name || 'Trading Strategy'}</h4>
-                <span class="tag" style="border: 1px solid #00ffff; padding: 2px 6px; font-size: 11px; color: #00ffff; border-radius: 3px;">${sys.category || 'Quantitative'}</span>
+                <span class="tag" style="border: 1px solid #e4e6ea; padding: 2px 6px; font-size: 11px; color: #e4e6ea; border-radius: 3px;">${sys.category || 'Quantitative'}</span>
             </div>
             <p style="font-size: 13px; color: #aaa; margin-bottom: 12px; line-height: 1.4;">${sys.short_description || sys.summary || (sys.full_description ? sys.full_description.substring(0, 100) + '...' : 'No summary.')}</p>
-            <div style="font-size: 12px; color: #00ffff; font-family: 'Share Tech Mono', monospace;">
+            <div style="font-size: 12px; color: #e4e6ea; font-family: 'Share Tech Mono', monospace;">
                 WIN: ${sys.win_rate ?? 'N/A'}% | NET: ${sys.net_return ?? 'N/A'}%
             </div>
         `;
@@ -1238,35 +1558,35 @@ async function viewSystemDetail(sys) {
                 border-radius: 3px;
             }
             .cyber-scroll::-webkit-scrollbar-thumb {
-                background: #00f0ff;
+                background: #d2d5db;
                 border-radius: 3px;
-                box-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+                box-shadow: 0 0 8px rgba(210, 213, 219, 0.5);
             }
             .cyber-scroll::-webkit-scrollbar-thumb:hover {
-                background: #00ff66;
+                background: #ffb066;
             }
         </style>
 
-        <button onclick="showDatabankList()" style="background: transparent; color: #00f0ff; border: 1px solid #00f0ff; padding: 5px 10px; cursor: pointer; font-size: ${isMobile ? '0.75rem' : '0.85rem'}; font-family: 'Share Tech Mono', monospace; margin-bottom: 0.75rem; border-radius: 4px; transition: 0.2s;">
+        <button onclick="showDatabankList()" style="background: transparent; color: #d2d5db; border: 1px solid #d2d5db; padding: 5px 10px; cursor: pointer; font-size: ${isMobile ? '0.75rem' : '0.85rem'}; font-family: 'Share Tech Mono', monospace; margin-bottom: 0.75rem; border-radius: 4px; transition: 0.2s;">
             &#9664; BACK TO SYSTEM LIST
         </button>
 
         <h2 style="color: #fff; margin: 0 0 4px 0; font-family: 'Share Tech Mono', monospace; font-size: ${isMobile ? '1.1rem' : '1.5rem'}; letter-spacing: 1px;">
             ${sys.system_name || sys.title || sys.name || 'Trading Strategy'}
         </h2>
-        <span class="tag" style="border: 1px solid #00ffff; padding: 2px 6px; font-size: 10px; color: #00ffff; border-radius: 3px; font-family: 'Share Tech Mono', monospace;">
+        <span class="tag" style="border: 1px solid #e4e6ea; padding: 2px 6px; font-size: 10px; color: #e4e6ea; border-radius: 3px; font-family: 'Share Tech Mono', monospace;">
             ${sys.category || 'Crypto'}
         </span>
 
         <!-- RESPONSIVE STATS HEADER GRID -->
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: ${isMobile ? '0.4rem' : '1rem'}; margin: 0.75rem 0;">
-            <div style="background: rgba(0, 240, 255, 0.05); padding: ${isMobile ? '0.4rem 0.5rem' : '0.75rem 1rem'}; border-left: 3px solid #00f0ff; border-radius: 4px;">
+            <div style="background: rgba(210, 213, 219, 0.05); padding: ${isMobile ? '0.4rem 0.5rem' : '0.75rem 1rem'}; border-left: 3px solid #d2d5db; border-radius: 4px;">
                 <div style="font-size: ${isMobile ? '0.6rem' : '0.7rem'}; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 0.5px;">WIN RATE</div>
                 <div style="font-size: ${isMobile ? '0.95rem' : '1.4rem'}; color: #fff; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.win_rate ?? 'N/A'}%</div>
             </div>
-            <div style="background: rgba(0, 255, 102, 0.05); padding: ${isMobile ? '0.4rem 0.5rem' : '0.75rem 1rem'}; border-left: 3px solid #00ff66; border-radius: 4px;">
+            <div style="background: rgba(255, 176, 102, 0.05); padding: ${isMobile ? '0.4rem 0.5rem' : '0.75rem 1rem'}; border-left: 3px solid #ffb066; border-radius: 4px;">
                 <div style="font-size: ${isMobile ? '0.6rem' : '0.7rem'}; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 0.5px;">NET RETURN</div>
-                <div style="font-size: ${isMobile ? '0.95rem' : '1.4rem'}; color: #00ff66; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.net_return ?? 'N/A'}%</div>
+                <div style="font-size: ${isMobile ? '0.95rem' : '1.4rem'}; color: #ffb066; font-weight: bold; font-family: 'Share Tech Mono', monospace;">${sys.net_return ?? 'N/A'}%</div>
             </div>
             <div style="background: rgba(255, 0, 85, 0.05); padding: ${isMobile ? '0.4rem 0.5rem' : '0.75rem 1rem'}; border-left: 3px solid #ff0055; border-radius: 4px;">
                 <div style="font-size: ${isMobile ? '0.6rem' : '0.7rem'}; color: #888; font-family: 'Share Tech Mono', monospace; letter-spacing: 0.5px;">MAX DD</div>
@@ -1275,13 +1595,13 @@ async function viewSystemDetail(sys) {
         </div>
 
         <!-- RESPONSIVE CONSOLE BOX (LIGHTER HEIGHT FOR MOBILE) -->
-        <div class="cyber-scroll" style="max-height: ${isMobile ? '240px' : '460px'}; min-height: ${isMobile ? '180px' : '320px'}; overflow-y: auto; padding: ${isMobile ? '0.75rem 0.85rem' : '1.25rem 1.5rem'}; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 6px; margin-bottom: 0.85rem;">
+        <div class="cyber-scroll" style="max-height: ${isMobile ? '240px' : '460px'}; min-height: ${isMobile ? '180px' : '320px'}; overflow-y: auto; padding: ${isMobile ? '0.75rem 0.85rem' : '1.25rem 1.5rem'}; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(210, 213, 219, 0.2); border-radius: 6px; margin-bottom: 0.85rem;">
             ${formatStrategyText(rawDescription)}
         </div>
 
         <!-- ACTION BUTTON -->
         ${sys.report_url ? `
-            <a href="${sys.report_url}" target="_blank" download style="display: inline-block; background: #00f0ff; color: #040912; padding: ${isMobile ? '8px 14px' : '10px 20px'}; text-decoration: none; font-weight: bold; font-family: 'Share Tech Mono', monospace; border-radius: 4px; border: 1px solid #00f0ff; font-size: ${isMobile ? '0.75rem' : '0.9rem'};">
+            <a href="${sys.report_url}" target="_blank" download style="display: inline-block; background: #d2d5db; color: #040912; padding: ${isMobile ? '8px 14px' : '10px 20px'}; text-decoration: none; font-weight: bold; font-family: 'Share Tech Mono', monospace; border-radius: 4px; border: 1px solid #d2d5db; font-size: ${isMobile ? '0.75rem' : '0.9rem'};">
                 <i class="fa-solid fa-file-pdf"></i> DOWNLOAD FULL PDF REPORT
             </a>
         ` : ''}
@@ -1309,7 +1629,7 @@ function formatStrategyText(text) {
             // Clean up title text (strip # and trailing colon for a clean HUD title look)
             const cleanTitle = line.replace(/^#{1,6}\s+/, '').replace(/:$/, '').trim();
             outHtml += `
-                <h4 style="color: #00f0ff; margin: 1.4rem 0 0.5rem 0; font-family: 'Share Tech Mono', monospace; font-size: 0.88rem; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 4px; letter-spacing: 1px; text-transform: uppercase;">
+                <h4 style="color: #d2d5db; margin: 1.4rem 0 0.5rem 0; font-family: 'Share Tech Mono', monospace; font-size: 0.88rem; border-bottom: 1px solid rgba(210, 213, 219, 0.2); padding-bottom: 4px; letter-spacing: 1px; text-transform: uppercase;">
                     ${cleanTitle}
                 </h4>`;
             return;
@@ -1327,7 +1647,7 @@ function formatStrategyText(text) {
 
             outHtml += `
                 <div style="margin: 6px 0 6px 12px; line-height: 1.6; color: #94a3b8; font-size: 0.88rem; font-family: system-ui, -apple-system, sans-serif;">
-                    <span style="color: #00f0ff; margin-right: 6px;">•</span>${content}
+                    <span style="color: #d2d5db; margin-right: 6px;">•</span>${content}
                 </div>`;
             return;
         }
@@ -1396,15 +1716,15 @@ function switchCryptoNetwork(network) {
     walletAddressEl.innerText = selectedAddress;
 
     if (network === 'solana') {
-        tabSol.style.background = '#00f0ff';
+        tabSol.style.background = '#d2d5db';
         tabSol.style.color = '#000';
         tabEth.style.background = 'transparent';
-        tabEth.style.color = '#00f0ff';
+        tabEth.style.color = '#d2d5db';
     } else {
-        tabEth.style.background = '#00f0ff';
+        tabEth.style.background = '#d2d5db';
         tabEth.style.color = '#000';
         tabSol.style.background = 'transparent';
-        tabSol.style.color = '#00f0ff';
+        tabSol.style.color = '#d2d5db';
     }
 
     // Generate Dynamic QR Code using public API

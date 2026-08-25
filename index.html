@@ -37,15 +37,48 @@
         }
 
         .hud-bar {
+            position: relative;
             display: flex;
             align-items: center;
             gap: 8px;
             padding: 6px 10px;
-            background: rgba(4, 12, 20, 0.95);
-            border: 1px solid #00f0ff;
             border-radius: 10px;
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.25), inset 0 0 10px rgba(0, 240, 255, 0.1);
             font-family: 'Share Tech Mono', monospace;
+            /* AUTUMN (default): cozy, warm glass — matches the desk scene */
+            background: rgba(32, 18, 9, 0.92);
+            border: 1px solid rgba(255, 178, 102, 0.55);
+            box-shadow: 0 0 15px rgba(255, 150, 60, 0.2), inset 0 0 10px rgba(255, 150, 60, 0.08);
+            transition: background 0.7s ease, border-color 0.7s ease, box-shadow 0.7s ease;
+        }
+
+        /* SPACE (once past the dive): dark black/gray, high-quality, shining */
+        body.in-space .hud-bar {
+            background: rgba(10, 10, 11, 0.92);
+            border-color: rgba(210, 213, 219, 0.4);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.12), inset 0 0 12px rgba(255, 255, 255, 0.06);
+        }
+
+        .hud-bar::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 11px;
+            padding: 1px;
+            background: linear-gradient(120deg, transparent 0%, rgba(220, 222, 227, 0.6) 50%, transparent 100%);
+            background-size: 250% 100%;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+            animation: hud-shine-sweep 5s linear infinite;
+            pointer-events: none;
+        }
+        body.in-space .hud-bar::before { opacity: 1; }
+
+        @keyframes hud-shine-sweep {
+            0%   { background-position: 220% 0; }
+            100% { background-position: -100% 0; }
         }
 
         .hud-slot {
@@ -55,20 +88,27 @@
             height: 38px;
             padding: 0 12px;
             border-radius: 6px;
-            background: rgba(6, 18, 30, 0.85);
+            background: rgba(14, 12, 10, 0.85);
             border: 1px solid var(--theme-color);
             overflow: hidden;
             cursor: pointer;
             color: var(--theme-color);
-            transition: all 0.25s ease-out 0s;
+            transition: all 0.25s ease-out 0s, border-color 0.6s ease, color 0.6s ease;
         }
 
-        /* Color Themes for Slots */
-        .hud-slot.agent    { --theme-color: #00ff88; --glow: rgba(0, 255, 136, 0.4); }
-        .hud-slot.credits  { --theme-color: #facc15; --glow: rgba(250, 204, 21, 0.4); }
-        .hud-slot.subs     { --theme-color: #eab308; --glow: rgba(234, 179, 8, 0.4); }
-        .hud-slot.reports  { --theme-color: #38bdf8; --glow: rgba(56, 189, 248, 0.4); }
-        .hud-slot.logout   { --theme-color: #f43f5e; --glow: rgba(244, 63, 94, 0.4); }
+        /* AUTUMN (default) slot palette — warm amber/copper/terracotta */
+        .hud-slot.agent    { --theme-color: #ffb066; --glow: rgba(255, 176, 102, 0.4); }
+        .hud-slot.credits  { --theme-color: #ffcf6b; --glow: rgba(255, 207, 107, 0.4); }
+        .hud-slot.subs     { --theme-color: #e8a34d; --glow: rgba(232, 163, 77, 0.4); }
+        .hud-slot.reports  { --theme-color: #e07a5f; --glow: rgba(224, 122, 95, 0.4); }
+        .hud-slot.logout   { --theme-color: #ff6b4a; --glow: rgba(255, 107, 74, 0.4); }
+
+        /* SPACE palette — dark black/gray, no neon color */
+        body.in-space .hud-slot.agent    { --theme-color: #e4e6ea; --glow: rgba(255, 255, 255, 0.3); }
+        body.in-space .hud-slot.credits  { --theme-color: #e4e6ea; --glow: rgba(255, 255, 255, 0.3); }
+        body.in-space .hud-slot.subs     { --theme-color: #e4e6ea; --glow: rgba(255, 255, 255, 0.3); }
+        body.in-space .hud-slot.reports  { --theme-color: #e4e6ea; --glow: rgba(255, 255, 255, 0.3); }
+        body.in-space .hud-slot.logout   { --theme-color: #9aa0aa; --glow: rgba(255, 255, 255, 0.2); }
 
         /* Sci-Fi Sweeping Light Flare */
         .hud-slot::after {
@@ -211,6 +251,62 @@
 </head>
 <body>
 
+    <!-- INTRO SCENE: DESK -> BOX FLAPS OPEN -> DIVE INTO SPACE -->
+    <section id="intro-scene">
+        <div id="intro-sticky">
+            <div id="desk-scene">
+                <!-- Scroll-scrubbed desk footage: real candle flames, real steam,
+                     and the real box opening. Scroll position drives currentTime,
+                     so scrolling down opens the box and scrolling up closes it. -->
+                <!-- src is chosen in app.js: full 1920 encode on desktop,
+                     a lighter 1024 encode on small screens. Both are encoded
+                     with a keyframe on every frame so scroll-scrubbing seeks
+                     instantly instead of decoding forward from a distant one. -->
+                <video id="desk-video"
+                       data-src-hd="images/desk-sequence-hd.mp4"
+                       data-src-sm="images/desk-sequence-sm.mp4"
+                       poster="images/desk-closed.jpg"
+                       muted playsinline preload="auto"></video>
+            </div>
+            <div id="lid-flash"></div>
+            <div id="intro-vignette"></div>
+            <div id="scroll-hint">SCROLL TO BEGIN</div>
+        </div>
+    </section>
+
+    <!-- VAULT SCROLL RANGE: the descent through the gates, the core powering
+         up, then each module node energising in turn. Purely scroll
+         real-estate — everything renders through the fixed layers above. -->
+    <section id="tour-scene"></section>
+
+    <!-- VAULT NODE NAV -->
+    <div id="planet-nav-hud">
+        <div class="tour-nav-slot active" data-tour-index="-1">
+            <span class="tour-nav-dot"></span>
+            <span class="tour-nav-label">The Core</span>
+        </div>
+        <div class="tour-nav-slot" data-tour-index="0">
+            <span class="tour-nav-dot"></span>
+            <span class="tour-nav-label">Backtest Machine</span>
+        </div>
+        <div class="tour-nav-slot" data-tour-index="1">
+            <span class="tour-nav-dot"></span>
+            <span class="tour-nav-label">System Databank</span>
+        </div>
+        <div class="tour-nav-slot" data-tour-index="2">
+            <span class="tour-nav-dot"></span>
+            <span class="tour-nav-label">About The Factory</span>
+        </div>
+        <div class="tour-nav-slot" data-tour-index="3">
+            <span class="tour-nav-dot"></span>
+            <span class="tour-nav-label">Contact Us</span>
+        </div>
+        <div class="tour-nav-slot" data-tour-index="4">
+            <span class="tour-nav-dot"></span>
+            <span class="tour-nav-label">Backtesting Campus</span>
+        </div>
+    </div>
+
     <!-- AUTHENTICATION & SUBSCRIPTION CORNER (HUD DOCK) -->
     <div id="auth-corner">
         <div class="hud-bar">
@@ -267,80 +363,130 @@
         </div>
     </div>
 
-    <!-- ELEGANT WRITING NEON TEXT (BOTTOM LEFT) -->
-    <div class="vice-text-container vice-left">
-        <div class="vice-line pink" id="vice-left-1"></div>
-        <div class="vice-line pink" id="vice-left-2"></div>
-    </div>
-
-    <!-- SPACE BACKGROUND MATRIX -->
+    <!-- PREMIUM DEEP-SPACE BACKGROUND: gravity-warped spacetime grid -->
     <div id="space-matrix">
-        <canvas id="blackboard-bg"></canvas>
-        <div class="tactical-grid"></div>
-        <div class="stars"></div>
-
-        <div class="constellation bull-constellation">
-            <div class="beast-container">
-                <img src="images/bull-pattern.png" alt="Taurus" class="beast-img">
-                <video muted playsinline class="beast-vid">
-                    <source src="images/bull-animated.webm" type="video/webm">
-                    <source src="images/bull-animated.mp4" type="video/mp4">
-                </video>
-            </div>
-        </div>
-        
-        <div class="constellation bear-constellation">
-            <div class="beast-container">
-                <img src="images/bear-pattern.png" alt="Ursa" class="beast-img">
-                <video muted playsinline class="beast-vid">
-                    <source src="images/bear-animated.webm" type="video/webm">
-                    <source src="images/bear-animated.mp4" type="video/mp4">
-                </video>
-            </div>
-        </div>
+        <div class="premium-bg"></div>
+        <div class="nebula-layer"></div>
+        <div class="starfield-layer starfield-far"></div>
+        <canvas id="gravity-grid"></canvas>
+        <div class="starfield-layer starfield-near"></div>
+        <div class="grain-overlay"></div>
     </div>
 
-    <!-- MOTHERSHIP TITLE DISPLAY -->
-    <div id="spaceship-title-container">
-        <svg class="mothership-svg" viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <linearGradient id="shipHull" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#040912" />
-                    <stop offset="50%" stop-color="#121e2d" />
-                    <stop offset="100%" stop-color="#040912" />
-                </linearGradient>
-                <filter id="cyanGlow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation="4" result="blur" />
-                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                </filter>
-                <filter id="magentaGlow" x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur stdDeviation="6" result="blur" />
-                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                </filter>
-            </defs>
-            <polygon class="engine-flame" points="25,43 -10,50 25,57" fill="#ff0055" filter="url(#magentaGlow)"/>
-            <path d="M45,35 L15,10 L75,38 Z" fill="#040912" stroke="#00f0ff" stroke-width="1.5" />
-            <path d="M45,65 L15,90 L75,62 Z" fill="#040912" stroke="#00f0ff" stroke-width="1.5" />
-            <path d="M25,30 L160,45 L185,50 L160,55 L25,70 L50,50 Z" fill="url(#shipHull)" stroke="#00f0ff" stroke-width="2" />
-            <polygon points="100,43 140,47 140,53 100,57" fill="#00f0ff" filter="url(#cyanGlow)" />
-            <circle cx="185" cy="50" r="4" fill="#ffffff" filter="url(#cyanGlow)" />
-            <path d="M165,35 L175,45 L165,48 Z" fill="#ff0055" opacity="0.8" />
-            <path d="M165,65 L175,55 L165,52 Z" fill="#ff0055" opacity="0.8" />
-        </svg>
-        <div class="tractor-beam-title">
-            <h1>SYSTEM & BACKTEST<br><span>FACTORY</span></h1>
-        </div>
+    <!-- DESCENT TUNNEL: the fall from the open box down into the vault.
+         Pure CSS 3D — light-gates rushing past sell the impossible depth. -->
+    <div id="descent-tunnel">
+        <div class="gate" style="--i:0"></div><div class="gate" style="--i:1"></div>
+        <div class="gate" style="--i:2"></div><div class="gate" style="--i:3"></div>
+        <div class="gate" style="--i:4"></div><div class="gate" style="--i:5"></div>
+        <div class="gate" style="--i:6"></div><div class="gate" style="--i:7"></div>
+        <div class="gate" style="--i:8"></div><div class="gate" style="--i:9"></div>
+        <div class="gate" style="--i:10"></div><div class="gate" style="--i:11"></div>
+        <div class="gate" style="--i:12"></div><div class="gate" style="--i:13"></div>
+        <div class="gate" style="--i:14"></div><div class="gate" style="--i:15"></div>
+        <div class="gate" style="--i:16"></div><div class="gate" style="--i:17"></div>
+        <div class="gate" style="--i:18"></div><div class="gate" style="--i:19"></div>
     </div>
 
     <!-- CAMERA VIEWPORT -->
     <div id="spaceship-viewport">
-        <section id="solar-system">
-            <div class="btc-sun" id="sun" style="background-image: url('images/btc-coin.png');"></div>
-            <div class="orbit orbit-1"><div class="planet" data-id="backtest" style="background-image: url('images/planet1.png');"><div class="target-reticle"></div><span class="planet-label">Backtest Machine</span></div></div>
-            <div class="orbit orbit-2"><div class="planet" data-id="databank" style="background-image: url('images/planet2.png');"><div class="target-reticle"></div><span class="planet-label">System Databank</span></div></div>
-            <div class="orbit orbit-3"><div class="planet" data-id="about" style="background-image: url('images/planet3.png');"><div class="target-reticle"></div><span class="planet-label">About Us</span></div></div>
-            <div class="orbit orbit-4"><div class="planet" data-id="contact" style="background-image: url('images/planet4.png');"><div class="target-reticle"></div><span class="planet-label">Contact Us</span></div></div>
-            <div class="orbit orbit-5"><div class="planet" data-id="campus" style="background-image: url('images/planet5.png');"><div class="target-reticle"></div><span class="planet-label">Backtesting Campus</span></div></div>
+        <section id="vault-stage">
+            <!-- Energy traces from the core out to each module node -->
+            <svg id="trace-layer" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <g class="trace-base">
+                    <line x1="50" y1="50" x2="50.0"  y2="16.0"/>
+                    <line x1="50" y1="50" x2="82.3"  y2="39.5"/>
+                    <line x1="50" y1="50" x2="70.0"  y2="77.5"/>
+                    <line x1="50" y1="50" x2="30.0"  y2="77.5"/>
+                    <line x1="50" y1="50" x2="17.7"  y2="39.5"/>
+                </g>
+                <g class="trace-live">
+                    <line data-trace="0" x1="50" y1="50" x2="50.0" y2="16.0"/>
+                    <line data-trace="1" x1="50" y1="50" x2="82.3" y2="39.5"/>
+                    <line data-trace="2" x1="50" y1="50" x2="70.0" y2="77.5"/>
+                    <line data-trace="3" x1="50" y1="50" x2="30.0" y2="77.5"/>
+                    <line data-trace="4" x1="50" y1="50" x2="17.7" y2="39.5"/>
+                </g>
+            </svg>
+
+            <!-- THE CORE -->
+            <div id="vault-core">
+                <svg viewBox="0 0 200 200">
+                    <circle class="core-ring ring-outer" cx="100" cy="100" r="86"/>
+                    <circle class="core-ring ring-mid"   cx="100" cy="100" r="66"/>
+                    <polygon class="core-chassis" points="100,42 150,71 150,129 100,158 50,129 50,71"/>
+                    <circle class="core-nucleus" cx="100" cy="100" r="26"/>
+                    <circle class="core-pulse"   cx="100" cy="100" r="26"/>
+                </svg>
+                <span class="core-label">THE CORE</span>
+            </div>
+
+            <!-- MODULE NODES -->
+            <div class="vault-node" data-id="backtest" style="--nx:50.0%; --ny:16.0%">
+                <div class="node-ring"></div>
+                <div class="node-face">
+                    <svg viewBox="0 0 24 24" class="node-icon">
+                        <path d="M2 18h20"/><path d="M6 15V9m0-3v2m0 7v2"/>
+                        <rect x="4.2" y="9" width="3.6" height="6" rx="0.6"/>
+                        <path d="M12 13V5m0-2v1m0 9v3"/>
+                        <rect x="10.2" y="5" width="3.6" height="8" rx="0.6"/>
+                        <path d="M18 16v-5m0-3v2m0 6v2"/>
+                        <rect x="16.2" y="11" width="3.6" height="5" rx="0.6"/>
+                    </svg>
+                </div>
+                <span class="node-label">Backtest Machine</span>
+            </div>
+
+            <div class="vault-node" data-id="databank" style="--nx:82.3%; --ny:39.5%">
+                <div class="node-ring"></div>
+                <div class="node-face">
+                    <svg viewBox="0 0 24 24" class="node-icon">
+                        <ellipse cx="12" cy="6" rx="7.5" ry="3"/>
+                        <path d="M4.5 6v6c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3V6"/>
+                        <path d="M4.5 12v6c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3v-6"/>
+                    </svg>
+                </div>
+                <span class="node-label">System Databank</span>
+            </div>
+
+            <div class="vault-node" data-id="about" style="--nx:70.0%; --ny:77.5%">
+                <div class="node-ring"></div>
+                <div class="node-face">
+                    <svg viewBox="0 0 24 24" class="node-icon">
+                        <rect x="3" y="3" width="18" height="18" rx="1.5"/>
+                        <path d="M3 9h18M9 3v18"/>
+                        <circle cx="15.5" cy="15" r="2.6"/>
+                        <path d="M15.5 12.4V9"/>
+                    </svg>
+                </div>
+                <span class="node-label">About The Factory</span>
+            </div>
+
+            <div class="vault-node" data-id="contact" style="--nx:30.0%; --ny:77.5%">
+                <div class="node-ring"></div>
+                <div class="node-face">
+                    <svg viewBox="0 0 24 24" class="node-icon">
+                        <circle cx="12" cy="17" r="2"/>
+                        <path d="M8.2 13.4a5.5 5.5 0 017.6 0"/>
+                        <path d="M5.4 10.3a9.5 9.5 0 0113.2 0"/>
+                        <path d="M2.6 7.2a13.5 13.5 0 0118.8 0"/>
+                    </svg>
+                </div>
+                <span class="node-label">Contact Us</span>
+            </div>
+
+            <div class="vault-node" data-id="campus" style="--nx:17.7%; --ny:39.5%">
+                <div class="node-ring"></div>
+                <div class="node-face">
+                    <svg viewBox="0 0 24 24" class="node-icon">
+                        <circle cx="12" cy="4.5" r="2.4"/>
+                        <circle cx="4.8" cy="18" r="2.4"/>
+                        <circle cx="19.2" cy="18" r="2.4"/>
+                        <path d="M10.3 6.3L6.5 15.9M13.7 6.3l3.8 9.6M7.2 18h9.6"/>
+                    </svg>
+                </div>
+                <span class="node-label">Backtesting Campus</span>
+            </div>
         </section>
     </div>
 
@@ -682,13 +828,7 @@
                 await new Promise(res => setTimeout(res, fadeTime + 600));
             }
         }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            runBlockWriting([
-                { id: 'vice-left-1', text: 'Test the reliability of your system', duration: 1600 },
-                { id: 'vice-left-2', text: 'Become a profitable trader', duration: 1600 }
-            ], 4500, 1000);
-        });
+		
     </script>
 </body>
 </html>

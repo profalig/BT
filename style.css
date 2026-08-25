@@ -24,11 +24,197 @@ input, textarea {
 }
 
 body {
-    background-color: #000000;
+    background-color: #050311;
     color: #ffffff;
-    overflow: hidden;
+    width: 100vw;
+}
+
+/* ==========================================
+   INTRO SCENE: DESK -> BOX -> SPACE
+   ========================================== */
+#intro-scene {
+    position: relative;
+    /* 560vh => 460vh of travel, split into distinct stages (see the phase
+       constants in app.js). The box-opening scrub still only occupies a
+       short slice of that so it stays snappy; the extra depth all goes to
+       the dive and the descent, which is where there is something to look at. */
+    height: 560vh;
+    z-index: 200;
+}
+
+#intro-sticky {
+    position: sticky;
+    top: 0;
     height: 100vh;
     width: 100vw;
+    overflow: hidden;
+    background: #050505;
+    perspective: 1800px;
+}
+
+/* Carries the desk footage as one layer that the dive-zoom scales. */
+#desk-scene {
+    position: absolute;
+    inset: 0;
+    transform-origin: 50% 52%; /* true center of the box in frame */
+    will-change: transform;
+}
+
+/* The desk footage itself. Real candle flames, real steam, and the real
+   box opening are all baked into these frames — nothing is faked with CSS
+   overlays any more, so there is nothing left to mis-align on resize. */
+#desk-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    z-index: 2;
+    display: block;
+}
+
+#lid-flash {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    pointer-events: none;
+    background: radial-gradient(circle at 50% 52%, rgba(255,230,180,0.9) 0%, transparent 35%);
+    opacity: 0;
+    mix-blend-mode: screen;
+}
+
+#intro-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 7;
+    pointer-events: none;
+    background: radial-gradient(ellipse 90% 80% at 50% 50%, transparent 55%, rgba(0,0,0,0.65) 100%);
+}
+
+#scroll-hint {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 8;
+    color: rgba(255,255,255,0.7);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 3px;
+    animation: hint-pulse 2s ease-in-out infinite;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+@keyframes hint-pulse {
+    0%, 100% { opacity: 0.3; transform: translateX(-50%) translateY(0); }
+    50%      { opacity: 0.9; transform: translateX(-50%) translateY(6px); }
+}
+
+#space-matrix,
+#spaceship-viewport {
+    opacity: 0;
+}
+
+/* ==========================================
+   PLANET TOUR SCROLL RANGE + SKIP HUD
+   ========================================== */
+#tour-scene {
+    position: relative;
+    /* 6 stops (core + 5 nodes). 300vh => 200vh of travel => ~3 wheel
+       notches per stop, which keeps the tour responsive rather than a grind. */
+    height: 300vh;
+    z-index: 1;
+    /* Pure scroll real-estate. Without this it sits over the fixed vault
+       layer and swallows every click aimed at a node. */
+    pointer-events: none;
+}
+
+#planet-nav-hud {
+    position: fixed;
+    top: 50%;
+    right: 26px;
+    transform: translateY(-50%);
+    z-index: 900;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s ease;
+}
+
+body.landed #planet-nav-hud,
+body.warping #planet-nav-hud {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.tour-nav-slot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.tour-nav-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(10, 10, 11, 0.9);
+    border: 1px solid rgba(210, 213, 219, 0.4);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.tour-nav-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(210, 213, 219, 0.65);
+    background: rgba(10, 10, 11, 0.92);
+    border: 1px solid rgba(210, 213, 219, 0.22);
+    padding: 5px 12px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateX(8px);
+    transition: opacity 0.25s ease, transform 0.25s ease, color 0.3s ease, border-color 0.3s ease;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.tour-nav-slot:hover .tour-nav-label,
+.tour-nav-slot.active .tour-nav-label {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.tour-nav-slot:hover .tour-nav-dot,
+.tour-nav-slot.active .tour-nav-dot {
+    background: #eef0f3;
+    border-color: #eef0f3;
+    box-shadow: 0 0 14px rgba(255, 255, 255, 0.75);
+    transform: scale(1.3);
+}
+
+.tour-nav-slot.active .tour-nav-label {
+    color: #f2f3f5;
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 900px) {
+    #planet-nav-hud {
+        right: 10px;
+        gap: 12px;
+    }
+    .tour-nav-label {
+        font-size: 0.6rem;
+        padding: 4px 8px;
+    }
 }
 
 /* ==========================================
@@ -145,7 +331,7 @@ body {
 
 /* Sign-Up CTA Button */
 .auth-btn.sign-up.cta-btn {
-    background: linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(0, 255, 102, 0.15) 100%);
+    background: linear-gradient(135deg, rgba(255, 214, 170, 0.2) 0%, rgba(255, 176, 102, 0.15) 100%);
     border-color: #00f0ff;
     color: #ffffff;
     font-weight: bold;
@@ -153,11 +339,11 @@ body {
 }
 
 .auth-btn.sign-up.cta-btn:hover {
-    background: linear-gradient(135deg, #00f0ff 0%, #00ff66 100%);
+    background: linear-gradient(135deg, #ffd6aa 0%, #ffb066 100%);
     color: #040912;
     text-shadow: none;
     box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
-    border-color: #00ff66;
+    border-color: #ffb066;
 }
 
 /* Logout Button */
@@ -177,12 +363,12 @@ body {
 /* Agent User Badge */
 .user-badge {
     font-family: 'Share Tech Mono', monospace;
-    color: #00ff66;
+    color: #ffb066;
     font-size: 0.8rem;
     letter-spacing: 1px;
     padding: 7px 12px;
-    background: rgba(0, 255, 102, 0.08);
-    border: 1px solid rgba(0, 255, 102, 0.3);
+    background: rgba(255, 176, 102, 0.08);
+    border: 1px solid rgba(255, 176, 102, 0.3);
     border-radius: 4px;
     display: flex;
     align-items: center;
@@ -192,9 +378,9 @@ body {
 .user-status-dot {
     width: 6px;
     height: 6px;
-    background-color: #00ff66;
+    background-color: #ffb066;
     border-radius: 50%;
-    box-shadow: 0 0 8px #00ff66;
+    box-shadow: 0 0 8px #ffb066;
     animation: statusPulse 2s infinite alternate;
 }
 
@@ -256,56 +442,108 @@ body {
 .status-dot {
     width: 6px;
     height: 6px;
-    background-color: #00ff66;
+    background-color: #ffb066;
     border-radius: 50%;
-    box-shadow: 0 0 8px #00ff66;
+    box-shadow: 0 0 8px #ffb066;
 }
 
 /* ==========================================
-   BACKGROUND MATRIX & SPACE LAYERS
+   PREMIUM WAVE BACKGROUND
    ========================================== */
 #space-matrix {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    inset: 0;
     z-index: 0;
     pointer-events: none;
-    transform: translateZ(0);
+    overflow: hidden;
+    background: #08080a;
 }
 
-#blackboard-bg {
+.premium-bg {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0; 
-    pointer-events: none;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 80% 55% at 50% 0%, rgba(255,255,255,0.035) 0%, transparent 60%),
+        radial-gradient(ellipse 100% 70% at 50% 100%, rgba(0,0,0,0.55) 0%, transparent 65%),
+        linear-gradient(160deg, #0c0c10 0%, #121218 45%, #050507 100%);
 }
 
-.stars {
+.nebula-layer {
     position: absolute;
-    width: 100%;
-    height: 100%;
-    background-image: radial-gradient(1.5px 1.5px at 20px 30px, #fff, rgba(0,0,0,0)), radial-gradient(1.5px 1.5px at 80px 70px, rgba(255,255,255,0.8), rgba(0,0,0,0));
-    background-repeat: repeat;
-    background-size: 200px 200px;
-    opacity: 0.5;
-    z-index: 1;
+    inset: 0;
+    /* Restrained monochrome wash — no colored nebula blobs, just soft
+       tonal depth. Swap this layer out once the background GIF is in. */
+    background:
+        radial-gradient(ellipse 42% 34% at 16% 22%, rgba(255, 255, 255, 0.05) 0%, transparent 70%),
+        radial-gradient(ellipse 38% 42% at 86% 78%, rgba(255, 255, 255, 0.035) 0%, transparent 70%),
+        radial-gradient(ellipse 48% 38% at 72% 12%, rgba(255, 255, 255, 0.025) 0%, transparent 70%);
+    animation: nebula-drift 75s ease-in-out infinite alternate;
     will-change: transform;
-    transform: translateZ(0);
 }
 
-.tactical-grid {
+@keyframes nebula-drift {
+    0%   { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(-2.5%, 2%) scale(1.06); }
+}
+
+.starfield-layer {
     position: absolute;
+    inset: -10%;
+    width: 120%;
+    height: 120%;
+    background-repeat: repeat;
+    pointer-events: none;
+    will-change: opacity, transform;
+}
+
+.starfield-far {
+    background-size: 600px 600px;
+    opacity: 0.55;
+    animation: star-twinkle-far 7s ease-in-out infinite, star-drift-far 140s linear infinite;
+}
+
+.starfield-near {
+    background-size: 820px 820px;
+    opacity: 0.85;
+    animation: star-twinkle-near 4.5s ease-in-out infinite, star-drift-near 200s linear infinite;
+}
+
+/* Spacetime fabric: a dotted grid that dips toward the sun and planets,
+   simulating gravitational curvature. Drawn/animated in app.js. */
+#gravity-grid {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
-    background-image: linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
-    background-size: 80px 80px;
-    z-index: 2;
-    transform: translateZ(0);
+    display: block;
+    opacity: 0.85;
+    mix-blend-mode: screen;
+}
+
+@keyframes star-twinkle-far {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 0.62; }
+}
+@keyframes star-twinkle-near {
+    0%, 100% { opacity: 0.68; }
+    50%      { opacity: 0.92; }
+}
+@keyframes star-drift-far {
+    0%   { transform: translate(0, 0); }
+    100% { transform: translate(-600px, -300px); }
+}
+@keyframes star-drift-near {
+    0%   { transform: translate(0, 0); }
+    100% { transform: translate(410px, -410px); }
+}
+
+.grain-overlay {
+    position: absolute;
+    inset: 0;
+    opacity: 0.045;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    background-size: 180px 180px;
 }
 
 /* ==========================================
@@ -412,98 +650,7 @@ body {
     letter-spacing: 1px;
 }
 
-/* ==========================================
-   CONSTELLATION BEASTS
-   ========================================== */
-.constellation {
-    --parallax-x: 0px;
-    --parallax-y: 0px;
-    position: absolute;
-    top: 50%;
-    transform: translate(calc(0px + var(--parallax-x)), calc(-50% + var(--parallax-y)));
-    opacity: 0.45;
-    transition: opacity 0.5s ease;
-    text-align: center;
-    z-index: 3;
-    mix-blend-mode: screen;
-    animation: breathe 8s infinite alternate ease-in-out;
-    will-change: transform, opacity;
-}
-
-@keyframes breathe { 0% { opacity: 0.3; } 100% { opacity: 0.6; } }
-
-.beast-container {
-    position: relative;
-    width: 60vmin;
-    height: 60vmin;
-    margin-bottom: 10px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: transparent;
-}
-
-.beast-container::after {
-    content: '';
-    position: absolute;
-    width: 80%;
-    height: 80%;
-    border-radius: 50%;
-    opacity: 0;
-    transition: opacity 0.6s ease, transform 0.6s ease;
-    pointer-events: none;
-    z-index: -1;
-    transform: scale(0.8) translateZ(0);
-}
-
-.bull-constellation.highlight .beast-container::after {
-    opacity: 1;
-    transform: scale(1.2) translateZ(0);
-    background: radial-gradient(circle, rgba(0, 255, 102, 0.45) 0%, rgba(0, 255, 102, 0) 70%);
-}
-
-.bear-constellation.highlight .beast-container::after {
-    opacity: 1;
-    transform: scale(1.2) translateZ(0);
-    background: radial-gradient(circle, rgba(255, 0, 85, 0.45) 0%, rgba(255, 0, 85, 0) 70%);
-}
-
-.beast-img, .beast-vid {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    pointer-events: none;
-    mix-blend-mode: screen;
-    will-change: transform, opacity, filter;
-    transform: translateZ(0);
-}
-
-.beast-img {
-    opacity: 1;
-    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.6s ease, opacity 0.4s ease;
-}
-
-.beast-vid {
-    opacity: 0;
-    transform: scale(1) translateZ(0);
-    filter: contrast(180%) brightness(110%);
-    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.6s ease, opacity 0.4s ease;
-}
-
-.constellation.highlight { opacity: 1 !important; }
-.constellation.highlight .beast-img { opacity: 0; }
-.bull-constellation.highlight .beast-vid, .bear-constellation.highlight .beast-vid {
-    opacity: 1;
-    filter: contrast(180%) brightness(120%);
-    transform: scale(1.35) translateZ(0);
-}
-
-.bull-constellation { left: 0%; color: #00ff66; }
-.bear-constellation { right: 0%; color: #ff0055; }
-
-body.warping .constellation, 
-body.warping .tactical-grid, 
+body.warping .tactical-grid,
 body.warping #blackboard-bg,
 body.warping #spaceship-title-container {
     opacity: 0 !important;
@@ -514,6 +661,11 @@ body.warping #spaceship-title-container {
    CAMERA VIEWPORT & SOLAR SYSTEM
    ========================================== */
 #spaceship-viewport {
+    position: fixed;
+    inset: 0;
+    /* Above #space-matrix and the #tour-scene spacer so the nodes are
+       actually reachable by the mouse. */
+    z-index: 5;
     width: 100vw;
     height: 100vh;
     display: flex;
@@ -523,142 +675,245 @@ body.warping #spaceship-title-container {
     will-change: transform;
     transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
-    perspective: 1000px;
+    perspective: 1400px;
 }
 
-#solar-system {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 10;
-    will-change: transform;
-    transform: translate3d(0, 0, 0);
-}
-
-.btc-sun {
-    position: absolute;
-    width: 13vmin;
-    height: 13vmin;
-    background-size: contain;
-    background-position: center;
-    background-repeat: no-repeat;
-    border-radius: 50%;
-    z-index: 50;
-    cursor: pointer;
-    filter: drop-shadow(0 0 18px rgba(255, 215, 0, 0.4));
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease;
-}
-
-.btc-sun:hover {
-    transform: scale(1.12);
-    filter: drop-shadow(0 0 25px rgba(255, 215, 0, 0.95)) drop-shadow(0 0 50px rgba(255, 140, 0, 0.7));
-}
-
-.orbit {
-    position: absolute;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+/* ==========================================
+   THE VAULT — DESCENT TUNNEL
+   Light-gates receding into Z. The camera flies through them on scroll,
+   which is what sells "a small box is impossibly deep inside".
+   ========================================== */
+#descent-tunnel {
+    position: fixed;
+    inset: 0;
+    /* Must sit above #intro-scene (z-index 200) — the tunnel takes over the
+       screen as the camera passes through the box opening. */
+    z-index: 250;
     pointer-events: none;
-    will-change: transform;
-    transform: translateZ(0);
-}
-
-.orbit-1 { width: 30vmin; height: 30vmin; }
-.orbit-2 { width: 45vmin; height: 45vmin; }
-.orbit-3 { width: 60vmin; height: 60vmin; }
-.orbit-4 { width: 75vmin; height: 75vmin; }
-.orbit-5 { width: 90vmin; height: 90vmin; }
-
-.planet {
-    position: absolute;
-    top: -5vmin;
-    left: 50%;
-    width: 10vmin;
-    height: 10vmin;
-    background-size: contain;
-    background-position: center;
-    background-repeat: no-repeat;
-    cursor: pointer;
-    pointer-events: auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    transform: translateX(-50%) translate3d(0, 0, 0);
-    will-change: transform;
-    backface-visibility: hidden;
-}
-
-.planet::before {
-    content: '';
-    position: absolute;
-    top: -15px;
-    left: -15px;
-    right: -15px;
-    bottom: -15px;
-    border-radius: 50%;
-}
-
-.target-reticle {
-    position: absolute;
-    width: 140%;
-    height: 140%;
-    border: 2px dashed #00f0ff;
-    border-radius: 50%;
+    perspective: 620px;
+    perspective-origin: 50% 50%;
     opacity: 0;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    animation: spin-reticle 10s linear infinite;
-    pointer-events: none;
+    background: radial-gradient(ellipse 70% 70% at 50% 50%, rgba(4,4,5,0.35) 0%, #010101 78%);
+    will-change: opacity;
+}
+
+#descent-tunnel .gate {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 62vmin;
+    height: 62vmin;
+    margin: -31vmin 0 0 -31vmin;
+    border: 1px solid rgba(255, 214, 170, 0.5);
+    border-radius: 3px;
+    box-shadow: 0 0 26px rgba(255, 190, 130, 0.28), inset 0 0 34px rgba(255, 190, 130, 0.1);
+    transform: translateZ(calc(var(--i) * -420px)) rotate(calc(var(--i) * 7deg));
     will-change: transform, opacity;
 }
 
-.planet:hover .target-reticle { 
-    opacity: 1; 
-    transform: scale(1.05) translateZ(0); 
+/* ==========================================
+   THE VAULT — CORE & MODULE NODES
+   All vector: razor sharp at any zoom, unlike the old planet bitmaps.
+   ========================================== */
+#vault-stage {
+    position: relative;
+    width: min(86vw, 86vh);
+    height: min(86vw, 86vh);
+    z-index: 10;
+    will-change: transform;
 }
 
-@keyframes spin-reticle { 
-    100% { transform: rotate(360deg) translateZ(0); } 
-}
-
-.planet-label {
+#trace-layer {
     position: absolute;
-    top: 125%;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+}
+
+#trace-layer .trace-base line {
+    stroke: rgba(210, 213, 219, 0.16);
+    stroke-width: 0.28;
+}
+
+#trace-layer .trace-live line {
+    stroke: #ffd9ac;
+    stroke-width: 0.5;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 1.6px rgba(255, 200, 140, 0.9));
+    stroke-dasharray: 4 96;
+    stroke-dashoffset: 100;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+#trace-layer .trace-live line.live {
+    opacity: 1;
+    animation: trace-pulse 1.9s linear infinite;
+}
+
+@keyframes trace-pulse {
+    0%   { stroke-dashoffset: 100; }
+    100% { stroke-dashoffset: 0; }
+}
+
+#vault-core {
+    position: absolute;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%) translateZ(0);
-    background: #040912;
-    border: 1px solid rgba(0, 240, 255, 0.4);
-    padding: 5px 14px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: bold;
+    width: 30%;
+    height: 30%;
+    transform: translate(-50%, -50%) scale(var(--core-scale, 1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    will-change: transform;
+}
+
+#vault-core svg { width: 100%; height: 100%; overflow: visible; }
+
+.core-ring {
+    fill: none;
+    stroke: rgba(210, 213, 219, 0.5);
+    stroke-width: 1.4;
+    transform-origin: 100px 100px;
+}
+.ring-outer {
+    stroke-dasharray: 10 14;
+    animation: core-spin 26s linear infinite;
+}
+.ring-mid {
+    stroke-dasharray: 3 9;
+    stroke: rgba(255, 214, 170, 0.55);
+    animation: core-spin 17s linear infinite reverse;
+}
+@keyframes core-spin { to { transform: rotate(360deg); } }
+
+.core-chassis {
+    fill: rgba(255, 255, 255, 0.03);
+    stroke: rgba(228, 230, 234, 0.7);
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+}
+
+.core-nucleus {
+    fill: #fff3e2;
+    filter: drop-shadow(0 0 22px rgba(255, 200, 140, 0.9));
+}
+
+.core-pulse {
+    fill: none;
+    stroke: rgba(255, 214, 170, 0.8);
+    stroke-width: 1.2;
+    transform-origin: 100px 100px;
+    animation: core-emit 2.8s ease-out infinite;
+}
+@keyframes core-emit {
+    0%   { transform: scale(1);   opacity: 0.85; }
+    100% { transform: scale(3.1); opacity: 0; }
+}
+
+.core-label {
+    position: absolute;
+    top: 108%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 4px;
+    color: rgba(228, 230, 234, 0.65);
+    white-space: nowrap;
+}
+
+.vault-node {
+    position: absolute;
+    left: var(--nx);
+    top: var(--ny);
+    width: 15%;
+    height: 15%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    pointer-events: auto;
+    opacity: 0.25;
+    filter: grayscale(1);
+    transition: opacity 0.6s ease, filter 0.6s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.vault-node.energised { opacity: 1; filter: grayscale(0); }
+.vault-node:hover { transform: translate(-50%, -50%) scale(1.1); }
+
+.node-face {
+    position: relative;
+    z-index: 2;
+    width: 62%;
+    height: 62%;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(160deg, rgba(22,22,25,0.96), rgba(8,8,9,0.98));
+    border: 1px solid rgba(210, 213, 219, 0.32);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+    transition: border-color 0.5s ease, box-shadow 0.5s ease;
+}
+
+.vault-node.energised .node-face {
+    border-color: rgba(255, 214, 170, 0.75);
+    box-shadow: 0 0 26px rgba(255, 190, 130, 0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.node-icon {
+    width: 52%;
+    height: 52%;
+    fill: none;
+    stroke: rgba(210, 213, 219, 0.75);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: stroke 0.5s ease;
+}
+.vault-node.energised .node-icon { stroke: #fff0dc; }
+
+.node-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px dashed rgba(210, 213, 219, 0.3);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    animation: core-spin 14s linear infinite;
+}
+.vault-node.energised .node-ring { opacity: 0.55; }
+.vault-node:hover .node-ring { opacity: 1; border-color: rgba(255, 214, 170, 0.7); }
+
+.node-label {
+    position: absolute;
+    top: 104%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 12px;
+    border-radius: 4px;
+    background: rgba(8, 8, 9, 0.92);
+    border: 1px solid rgba(210, 213, 219, 0.22);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.66rem;
+    letter-spacing: 1px;
     text-transform: uppercase;
     white-space: nowrap;
-    font-family: 'Share Tech Mono', monospace;
-    color: #ffffff;
+    color: rgba(228, 230, 234, 0.8);
     opacity: 0;
+    transition: opacity 0.35s ease;
     pointer-events: none;
-    transition: opacity 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.8);
-    will-change: opacity, transform;
 }
+.vault-node.energised .node-label { opacity: 0.85; }
+.vault-node:hover .node-label { opacity: 1; color: #fff; border-color: rgba(255, 214, 170, 0.6); }
 
-.planet:hover .planet-label {
-    opacity: 1;
-    border: 2px solid #00f0ff;
-    box-shadow: 0 0 15px rgba(0,240,255,0.6);
-    background: #000;
-}
-
-#solar-system.show-labels .planet-label { opacity: 1; border-color: rgba(0,240,255,0.5); }
-.planet.active .target-reticle, .planet.active .planet-label {
-    opacity: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-}
+.vault-node.active .node-label,
+.vault-node.active .node-ring { opacity: 0 !important; }
 
 /* ==========================================
    HUD MODULE OVERLAY & LANDED STATE VISIBILITY
@@ -690,7 +945,9 @@ body.warping #spaceship-title-container {
     will-change: transform, opacity;
 }
 
-.corner-bracket { position: absolute; width: 8px; height: 8px; border: 2px solid #00f0ff; }
+.corner-bracket { position: absolute; width: 8px; height: 8px; border: 2px solid rgba(255, 178, 102, 0.75); transition: border-color 0.6s ease; }
+body.in-space .corner-bracket { border-color: rgba(210, 213, 219, 0.7); }
+.module-details .corner-bracket, .hud-modal-content .corner-bracket { border-color: rgba(210, 213, 219, 0.7); }
 .top-left { top: -2px; left: -2px; border-right: none; border-bottom: none; }
 .top-right { top: -2px; right: -2px; border-left: none; border-bottom: none; }
 .bottom-left { bottom: -2px; left: -2px; border-right: none; border-top: none; }
@@ -743,9 +1000,9 @@ body.warping #spaceship-title-container {
     top: 40px;              /* Repositioned cleanly in top-left viewport */
     left: 40px;
     z-index: 700;           /* High z-index to guarantee button stays on top */
-    background: rgba(4, 9, 18, 0.95);
-    color: #00f0ff;
-    border: 1px solid #00f0ff;
+    background: rgba(8, 8, 9, 0.95);
+    color: #d2d5db;
+    border: 1px solid rgba(210, 213, 219, 0.6);
     padding: 10px 20px;
     border-radius: 4px;
     font-size: 0.8rem;
@@ -758,9 +1015,9 @@ body.warping #spaceship-title-container {
 }
 
 #return-btn:hover {
-    background: #00f0ff;
+    background: #d2d5db;
     color: #000;
-    box-shadow: 0 0 20px rgba(0,240,255,0.6);
+    box-shadow: 0 0 20px rgba(210,213,219,0.5);
 }
 
 .action-btn {
@@ -773,7 +1030,7 @@ body.warping #spaceship-title-container {
     text-transform: uppercase;
     background: transparent;
     color: #fff;
-    border: 1px solid #00f0ff;
+    border: 1px solid rgba(210, 213, 219, 0.6);
     cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
@@ -783,9 +1040,9 @@ body.warping #spaceship-title-container {
 }
 
 .action-btn:hover {
-    background: #00f0ff;
+    background: #d2d5db;
     color: #000;
-    box-shadow: 0 0 25px rgba(0,240,255,0.6);
+    box-shadow: 0 0 25px rgba(210,213,219,0.5);
 }
 
 /* Active Landed States */
@@ -831,8 +1088,8 @@ body.landed .constellation {
     position: relative;
     z-index: 10;
     background: rgba(4, 9, 18, 0.98) !important;
-    border: 1px solid rgba(0, 255, 102, 0.4);
-    border-top: 4px solid #00ff66;
+    border: 1px solid rgba(255, 176, 102, 0.4);
+    border-top: 4px solid #ffb066;
     padding: 40px;
     width: 90%;
     max-width: 700px;
@@ -865,7 +1122,7 @@ body.landed .constellation {
 
 .console-header h2 {
     font-family: 'Share Tech Mono', monospace;
-    color: #00ff66;
+    color: #ffb066;
     font-size: 2rem;
     margin-bottom: 15px;
     letter-spacing: 1px;
@@ -882,7 +1139,7 @@ body.landed .constellation {
 .input-group label {
     display: block;
     font-family: 'Share Tech Mono', monospace;
-    color: #00ff66;
+    color: #ffb066;
     font-size: 0.8rem;
     margin-bottom: 8px;
     letter-spacing: 1px;
@@ -891,7 +1148,7 @@ body.landed .constellation {
 .input-group input, .input-group textarea {
     width: 100%;
     background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(0, 255, 102, 0.3);
+    border: 1px solid rgba(255, 176, 102, 0.3);
     color: #fff;
     padding: 12px 15px;
     font-family: 'Inter', sans-serif;
@@ -901,15 +1158,15 @@ body.landed .constellation {
 }
 
 .input-group input:focus, .input-group textarea:focus {
-    border-color: #00ff66;
-    box-shadow: 0 0 15px rgba(0,255,102,0.2);
+    border-color: #ffb066;
+    box-shadow: 0 0 15px rgba(255,176,102,0.2);
 }
 
 .submit-system-btn {
     width: 100%;
-    background: rgba(0, 255, 102, 0.1);
-    color: #00ff66;
-    border: 1px solid #00ff66;
+    background: rgba(255, 176, 102, 0.1);
+    color: #ffb066;
+    border: 1px solid #ffb066;
     padding: 15px;
     font-family: 'Share Tech Mono', monospace;
     font-size: 1.1rem;
@@ -921,9 +1178,9 @@ body.landed .constellation {
 }
 
 .submit-system-btn:hover {
-    background: #00ff66;
+    background: #ffb066;
     color: #000;
-    box-shadow: 0 0 25px rgba(0,255,102,0.6);
+    box-shadow: 0 0 25px rgba(255,176,102,0.6);
 }
 
 /* ==========================================
@@ -956,8 +1213,8 @@ body.landed .constellation {
     width: 90%;
     max-width: 520px;
     background: rgba(6, 16, 26, 0.95);
-    border: 1px solid rgba(0, 255, 102, 0.4);
-    box-shadow: 0 0 35px rgba(0, 255, 102, 0.25), inset 0 0 15px rgba(0, 255, 102, 0.1);
+    border: 1px solid rgba(255, 176, 102, 0.4);
+    box-shadow: 0 0 35px rgba(255, 176, 102, 0.25), inset 0 0 15px rgba(255, 176, 102, 0.1);
     padding: 40px 30px;
     text-align: center;
     transform: scale(0.85);
@@ -981,7 +1238,7 @@ body.landed .constellation {
 .rocket-svg {
     width: 70px;
     height: 70px;
-    filter: drop-shadow(0 0 10px #00ff66);
+    filter: drop-shadow(0 0 10px #ffb066);
     transform: translateY(0);
 }
 
@@ -1019,11 +1276,12 @@ body.landed .constellation {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    border: 1px solid #00f0ff;
+    border: 1px solid rgba(255, 178, 102, 0.85);
     border-radius: 50%;
     animation: expandRing 2s infinite linear;
     opacity: 0;
 }
+body.in-space .hyper-rings span { border-color: rgba(210, 213, 219, 0.85); }
 
 .hyper-rings span:nth-child(1) { animation-delay: 0s; }
 .hyper-rings span:nth-child(2) { animation-delay: 0.6s; }
@@ -1036,7 +1294,7 @@ body.landed .constellation {
 
 .modal-status-tag {
     font-family: 'Share Tech Mono', monospace;
-    color: #00ff66;
+    color: #ffb066;
     font-size: 0.75rem;
     letter-spacing: 2px;
     margin-bottom: 8px;
@@ -1062,8 +1320,8 @@ body.landed .constellation {
     width: 100%;
     padding: 12px;
     background: transparent;
-    border: 1px solid #00ff66;
-    color: #00ff66;
+    border: 1px solid #ffb066;
+    color: #ffb066;
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.95rem;
     letter-spacing: 1.5px;
@@ -1072,9 +1330,9 @@ body.landed .constellation {
 }
 
 .modal-action-btn:hover {
-    background: #00ff66;
+    background: #ffb066;
     color: #040912;
-    box-shadow: 0 0 20px rgba(0, 255, 102, 0.6);
+    box-shadow: 0 0 20px rgba(255, 176, 102, 0.6);
 }
 
 /* ==========================================
@@ -1161,24 +1419,36 @@ body.landed .constellation {
 }
 
 .tier-card:hover {
-    border-color: rgba(0, 240, 255, 0.4);
+    border-color: rgba(255, 178, 102, 0.4);
     transform: translateY(-5px);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
 }
 
 .tier-card.featured {
-    background: rgba(0, 240, 255, 0.03);
-    border: 1px solid #00f0ff;
-    box-shadow: 0 0 25px rgba(0, 240, 255, 0.2);
+    background: rgba(255, 178, 102, 0.04);
+    border: 1px solid #ffb066;
+    box-shadow: 0 0 25px rgba(255, 178, 102, 0.2);
 }
+
+body.in-space .tier-card:hover { border-color: rgba(210, 213, 219, 0.4); }
+body.in-space .tier-card.featured {
+    background: rgba(210, 213, 219, 0.04);
+    border: 1px solid #d2d5db;
+    box-shadow: 0 0 25px rgba(210, 213, 219, 0.18);
+}
+
+.tier-card.featured .tier-name,
+.tier-card.featured .tier-price { color: #ffb066 !important; }
+body.in-space .tier-card.featured .tier-name,
+body.in-space .tier-card.featured .tier-price { color: #d2d5db !important; }
 
 .popular-badge {
     position: absolute;
     top: -12px;
     left: 50%;
     transform: translateX(-50%);
-    background: #00f0ff;
-    color: #000;
+    background: #ffb066;
+    color: #1a0f06;
     font-family: 'Share Tech Mono', monospace;
     font-weight: bold;
     font-size: 0.65rem;
@@ -1186,6 +1456,7 @@ body.landed .constellation {
     border-radius: 12px;
     letter-spacing: 1px;
 }
+body.in-space .popular-badge { background: #d2d5db; color: #0a0a0b; }
 
 .tier-name {
     font-family: 'Share Tech Mono', monospace;
@@ -1231,7 +1502,7 @@ body.landed .constellation {
 }
 
 .tier-features i {
-    color: #00ff66;
+    color: #ffb066;
     font-size: 0.75rem;
 }
 
@@ -1264,15 +1535,27 @@ body.landed .constellation {
 }
 
 .tier-btn.featured-btn {
-    background: rgba(0, 240, 255, 0.1);
-    border-color: #00f0ff;
-    color: #00f0ff;
+    background: rgba(255, 178, 102, 0.1);
+    border-color: #ffb066;
+    color: #ffb066;
 }
 
 .tier-btn.featured-btn:hover {
-    background: #00f0ff;
-    color: #000;
-    box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+    background: #ffb066;
+    color: #1a0f06;
+    box-shadow: 0 0 20px rgba(255, 178, 102, 0.5);
+}
+
+body.in-space .tier-btn.featured-btn {
+    background: rgba(210, 213, 219, 0.1);
+    border-color: #d2d5db;
+    color: #d2d5db;
+}
+
+body.in-space .tier-btn.featured-btn:hover {
+    background: #d2d5db;
+    color: #0a0a0b;
+    box-shadow: 0 0 20px rgba(210, 213, 219, 0.4);
 }
 
 /* ==========================================
@@ -1320,7 +1603,7 @@ body.landed .constellation {
     display: flex;
     gap: 15px;
     margin-bottom: 25px;
-    border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+    border-bottom: 1px solid rgba(255, 178, 102, 0.25);
     padding-bottom: 10px;
 }
 
@@ -1337,9 +1620,14 @@ body.landed .constellation {
 }
 
 .auth-tab.active {
-    color: #00f0ff;
-    border-bottom: 2px solid #00f0ff;
-    text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+    color: #ffb066;
+    border-bottom: 2px solid #ffb066;
+    text-shadow: 0 0 8px rgba(255, 178, 102, 0.6);
+}
+body.in-space .auth-tab.active {
+    color: #d2d5db;
+    border-bottom: 2px solid #d2d5db;
+    text-shadow: 0 0 8px rgba(210, 213, 219, 0.6);
 }
 
 .abort-btn {
@@ -1411,10 +1699,16 @@ body.landed .constellation {
 }
 
 .oauth-btn:hover {
-    border-color: #00f0ff;
-    color: #00f0ff;
-    background: rgba(0, 240, 255, 0.1);
-    box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+    border-color: #ffb066;
+    color: #ffb066;
+    background: rgba(255, 176, 102, 0.1);
+    box-shadow: 0 0 15px rgba(255, 176, 102, 0.3);
+}
+body.in-space .oauth-btn:hover {
+    border-color: #d2d5db;
+    color: #d2d5db;
+    background: rgba(210, 213, 219, 0.1);
+    box-shadow: 0 0 15px rgba(210, 213, 219, 0.3);
 }
 
 /* Ensure modal content container handles scroll correctly */
@@ -1474,8 +1768,7 @@ body.landed .constellation {
 /* ==========================================
    PERFORMANCE OVERRIDES
    ========================================== */
-body.landed .orbit,
-body.landed .constellation {
+body.landed .orbit {
     animation-play-state: paused !important;
 }
 
@@ -1506,11 +1799,9 @@ body.warping * {
 .hud-modal-content {
   width: 85%;
   max-width: 900px;
-  background: rgba(10, 15, 20, 0.95);
-  border: 1px solid #00ffff;
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+  border: 1px solid rgba(210, 213, 219, 0.4);
   padding: 20px;
-  color: #e0e0e0;
+  color: #d8dade;
   font-family: monospace;
 }
 
@@ -1518,14 +1809,14 @@ body.warping * {
 .databank-header {
   display: flex;
   justify-content: space-between;
-  border-bottom: 1px solid #00ffff;
+  border-bottom: 1px solid rgba(210, 213, 219, 0.35);
   padding-bottom: 10px;
   margin-bottom: 20px;
 }
-.databank-header h2 { margin: 0; color: #00ffff; }
+.databank-header h2 { margin: 0; color: #e4e6ea; }
 .close-btn, .back-btn {
   background: transparent;
-  color: #00ffff;
+  color: #e4e6ea;
   border: none;
   cursor: pointer;
   font-weight: bold;
@@ -1541,19 +1832,19 @@ body.warping * {
 .search-filter-bar input {
   background: transparent;
   border: 1px solid #555;
-  color: #00ffff;
+  color: #e4e6ea;
   padding: 8px;
   width: 200px;
 }
 .tag {
-  border: 1px solid #00ffff;
+  border: 1px solid rgba(210, 213, 219, 0.5);
   padding: 4px 8px;
   font-size: 12px;
   margin-right: 5px;
   border-radius: 3px;
-  color: #00ffff;
+  color: #d8dade;
 }
-.tag.active { background: #00ffff; color: #000; }
+.tag.active { background: #d8dade; color: #000; }
 
 /* Grid & Cards */
 .system-grid {
@@ -1570,7 +1861,7 @@ body.warping * {
   transition: all 0.2s;
   background: rgba(255, 255, 255, 0.02);
 }
-.system-card:hover { border-color: #00ffff; background: rgba(0, 255, 255, 0.05); }
+.system-card:hover { border-color: rgba(210, 213, 219, 0.6); background: rgba(255, 255, 255, 0.04); }
 .system-card h4 { margin: 0 0 10px 0; color: #fff; }
 .system-card p { font-size: 13px; color: #aaa; margin-bottom: 15px; }
 
@@ -1581,9 +1872,9 @@ body.warping * {
   margin: 20px 0;
 }
 .metric-box {
-  background: rgba(0, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
   padding: 15px;
-  border-left: 3px solid #00ffff;
+  border-left: 3px solid rgba(210, 213, 219, 0.6);
   flex: 1;
 }
 .metric-box span { display: block; font-size: 12px; color: #aaa; }
@@ -1596,21 +1887,17 @@ body.warping * {
 }
 .action-btn {
   padding: 12px 24px;
-  border: 1px solid #00ffff;
+  border: 1px solid rgba(210, 213, 219, 0.6);
   cursor: pointer;
   font-weight: bold;
 }
-.action-btn.primary { background: #00ffff; color: #000; }
-.action-btn.secondary { background: transparent; color: #00ffff; }
+.action-btn.primary { background: #d8dade; color: #000; }
+.action-btn.secondary { background: transparent; color: #d8dade; }
 
 /* ==========================================
    MOBILE FIXES: ZOOM LOCK & COMPACT DATABANK TAGS
    ========================================== */
 @media (max-width: 768px) {
-    .bull-constellation,
-    .bear-constellation {
-        display: none !important;
-    }
 
     /* 1. LOCK VIEWPORT & OVERFLOW ON MOBILE MODALS */
     html, body {
@@ -1659,4 +1946,139 @@ body.warping * {
         white-space: nowrap;
         margin-right: 0 !important;
     }
+}
+
+/* ==========================================
+   PREMIUM DARK GLASS PANEL SYSTEM
+   Shared "elegant, shining, dark" treatment for every dashboard/HUD
+   surface: the planet module details, all modals, and the submission
+   console. One coat of finish across the whole site.
+   ========================================== */
+.module-details,
+.tactical-modal-card,
+.subscription-modal-card,
+.auth-modal-card,
+.submission-console,
+.hud-modal-content {
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    position: relative;
+    transition: background 0.7s ease, border-color 0.7s ease, box-shadow 0.7s ease;
+}
+
+/* .module-details must stay absolutely positioned (it slides in from
+   off-screen via left/right). */
+.module-details {
+    position: absolute;
+}
+
+/* .subscription-modal-card needs its own vertical scroll for the pricing
+   grid — keep that instead of clipping it. */
+.subscription-modal-card {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* module-details + the databank are only ever reachable once already in
+   space, so they stay on the dark black/gray treatment permanently. */
+.module-details,
+.hud-modal-content {
+    background: linear-gradient(160deg, rgba(15, 15, 17, 0.97) 0%, rgba(5, 5, 6, 0.98) 100%) !important;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 45px rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Everything else opens from the HUD dock, reachable at any time — so it
+   follows the same autumn <-> space split as the dock itself. */
+.tactical-modal-card,
+.subscription-modal-card,
+.auth-modal-card,
+.submission-console {
+    background: linear-gradient(160deg, rgba(30, 18, 10, 0.97) 0%, rgba(15, 9, 5, 0.98) 100%) !important;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 45px rgba(255, 150, 60, 0.09) !important;
+}
+
+/* .tactical-modal-card's border is left alone — it's the success/error
+   status color, set inline by showTacticalModal(), not decorative chrome. */
+.subscription-modal-card,
+.auth-modal-card,
+.submission-console {
+    border-color: rgba(255, 178, 102, 0.4) !important;
+}
+
+.submission-console { border-top-color: #e8a34d !important; }
+#abort-console-btn { color: #ffb066; border-color: #ffb066; }
+#abort-console-btn:hover { background: #ffb066; color: #1a0f06; box-shadow: 0 0 15px rgba(255,176,102,0.5); }
+
+body.in-space .tactical-modal-card,
+body.in-space .subscription-modal-card,
+body.in-space .auth-modal-card,
+body.in-space .submission-console {
+    background: linear-gradient(160deg, rgba(15, 15, 17, 0.97) 0%, rgba(5, 5, 6, 0.98) 100%) !important;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 45px rgba(255, 255, 255, 0.05) !important;
+}
+
+body.in-space .subscription-modal-card,
+body.in-space .auth-modal-card,
+body.in-space .submission-console {
+    border-color: rgba(210, 213, 219, 0.35) !important;
+}
+
+body.in-space .submission-console { border-top-color: #d2d5db !important; }
+body.in-space #abort-console-btn { color: #d2d5db; border-color: #d2d5db; }
+body.in-space #abort-console-btn:hover { background: #d2d5db; color: #0a0a0b; box-shadow: 0 0 15px rgba(210,213,219,0.4); }
+
+.module-details::before,
+.tactical-modal-card::before,
+.subscription-modal-card::before,
+.auth-modal-card::before,
+.submission-console::before,
+.hud-modal-content::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.055) 50%, transparent 65%);
+    background-size: 260% 260%;
+    animation: panel-shine 8s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes panel-shine {
+    0%, 100% { background-position: 220% 220%; }
+    50%      { background-position: -60% -60%; }
+}
+
+.module-details h2,
+.tactical-modal-card h2,
+.sub-header h2,
+.auth-modal-card .auth-tab.active,
+.console-header h2 {
+    text-shadow: 0 0 18px currentColor;
+    letter-spacing: 1.5px;
+}
+
+.module-details {
+    letter-spacing: 0.2px;
+}
+
+.module-tag {
+    text-shadow: 0 0 10px currentColor;
+}
+
+.stat-card {
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.015) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    backdrop-filter: blur(6px);
+}
+
+/* ==========================================
+   SCROLL FIX (kept last on purpose)
+   ========================================== */
+html {
+    height: auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+body {
+    height: auto !important;
+    min-height: 100vh;
 }
