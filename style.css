@@ -77,10 +77,10 @@ body {
 
 #coffee-steam {
     position: absolute;
-    left: 76%;
-    top: 34%;
-    width: 60px;
-    height: 140px;
+    left: 77%;
+    top: 27%;
+    width: 90px;
+    height: 200px;
     z-index: 5;
     pointer-events: none;
     transform: translate(-50%, -100%);
@@ -89,43 +89,44 @@ body {
     position: absolute;
     bottom: 0;
     left: 50%;
-    width: 14px;
-    height: 60px;
-    background: radial-gradient(ellipse at center, rgba(255,255,255,0.5) 0%, transparent 70%);
-    filter: blur(6px);
+    width: 20px;
+    height: 90px;
+    background: radial-gradient(ellipse at center, rgba(255,255,255,0.75) 0%, transparent 70%);
+    filter: blur(7px);
     border-radius: 50%;
     opacity: 0;
-    animation: steam-rise 4.5s ease-in infinite;
+    animation: steam-rise 4s ease-in infinite;
 }
 #coffee-steam span:nth-child(1) { left: 35%; animation-delay: 0s; }
-#coffee-steam span:nth-child(2) { left: 50%; animation-delay: 1.5s; }
-#coffee-steam span:nth-child(3) { left: 65%; animation-delay: 3s; }
+#coffee-steam span:nth-child(2) { left: 50%; animation-delay: 1.3s; }
+#coffee-steam span:nth-child(3) { left: 65%; animation-delay: 2.6s; }
 @keyframes steam-rise {
     0%   { transform: translate(-50%, 0) scaleX(1); opacity: 0; }
-    15%  { opacity: 0.5; }
-    50%  { transform: translate(-60%, -70px) scaleX(1.4); opacity: 0.35; }
-    100% { transform: translate(-40%, -140px) scaleX(1.8); opacity: 0; }
+    15%  { opacity: 0.75; }
+    50%  { transform: translate(-60%, -100px) scaleX(1.6); opacity: 0.5; }
+    100% { transform: translate(-40%, -200px) scaleX(2.2); opacity: 0; }
 }
 
 .candle-flame {
     position: absolute;
-    width: 26px;
-    height: 40px;
+    width: 36px;
+    height: 54px;
     transform: translate(-50%, -100%);
     z-index: 5;
     pointer-events: none;
-    background: radial-gradient(ellipse at 50% 70%, rgba(255,200,120,0.9) 0%, rgba(255,140,40,0.5) 40%, transparent 75%);
-    filter: blur(3px);
+    background: radial-gradient(ellipse at 50% 70%, rgba(255,210,140,1) 0%, rgba(255,140,40,0.7) 40%, transparent 75%);
+    filter: blur(2px);
     border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
     animation: flame-flicker 2.6s ease-in-out infinite;
     mix-blend-mode: screen;
+    box-shadow: 0 0 30px 10px rgba(255,150,50,0.35);
 }
 .candle-flame:nth-of-type(2) { animation-duration: 3.1s; animation-delay: 0.6s; }
 @keyframes flame-flicker {
-    0%, 100% { opacity: 0.75; transform: translate(-50%, -100%) scale(1, 1); }
-    25%      { opacity: 0.9;  transform: translate(-48%, -102%) scale(1.05, 0.96); }
-    50%      { opacity: 0.65; transform: translate(-52%, -98%) scale(0.95, 1.05); }
-    75%      { opacity: 0.85; transform: translate(-50%, -101%) scale(1.02, 0.98); }
+    0%, 100% { opacity: 0.9; transform: translate(-50%, -100%) scale(1, 1); }
+    25%      { opacity: 1;   transform: translate(-47%, -103%) scale(1.08, 0.94); }
+    50%      { opacity: 0.75; transform: translate(-53%, -97%) scale(0.93, 1.07); }
+    75%      { opacity: 0.95; transform: translate(-50%, -101%) scale(1.03, 0.97); }
 }
 
 #lid-flash {
