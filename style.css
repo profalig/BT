@@ -74,6 +74,20 @@ body {
     display: block;
 }
 
+#box-glow {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0;
+    mix-blend-mode: screen;
+    /* Centred on the box in frame, matching #desk-scene's transform-origin. */
+    background:
+        radial-gradient(ellipse 26% 20% at 50% 52%, rgba(255, 236, 205, 0.95) 0%, rgba(255, 190, 120, 0.5) 32%, transparent 68%),
+        radial-gradient(ellipse 46% 36% at 50% 52%, rgba(255, 172, 94, 0.35) 0%, transparent 72%);
+    will-change: opacity, transform;
+}
+
 #lid-flash {
     position: absolute;
     inset: 0;
@@ -159,30 +173,34 @@ body.warping #planet-nav-hud {
 }
 
 .tour-nav-dot {
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background: rgba(10, 10, 11, 0.9);
-    border: 1px solid rgba(210, 213, 219, 0.4);
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(210, 213, 219, 0.7);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
     flex-shrink: 0;
     transition: all 0.3s ease;
 }
 
+/* Labels stay legible at rest rather than only on hover — this rail is the
+   primary way to reach a module without scrolling, so it has to advertise
+   itself instead of hiding. */
 .tour-nav-label {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 0.68rem;
-    letter-spacing: 1px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 1.2px;
     text-transform: uppercase;
-    color: rgba(210, 213, 219, 0.65);
-    background: rgba(10, 10, 11, 0.92);
-    border: 1px solid rgba(210, 213, 219, 0.22);
-    padding: 5px 12px;
+    color: rgba(228, 230, 234, 0.82);
+    background: rgba(10, 10, 11, 0.95);
+    border: 1px solid rgba(210, 213, 219, 0.4);
+    padding: 6px 13px;
     border-radius: 4px;
     white-space: nowrap;
-    opacity: 0;
-    transform: translateX(8px);
-    transition: opacity 0.25s ease, transform 0.25s ease, color 0.3s ease, border-color 0.3s ease;
+    opacity: 0.72;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.75);
+    transition: opacity 0.25s ease, transform 0.25s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
 }
@@ -202,8 +220,15 @@ body.warping #planet-nav-hud {
 }
 
 .tour-nav-slot.active .tour-nav-label {
-    color: #f2f3f5;
-    border-color: rgba(255, 255, 255, 0.5);
+    color: #ffffff;
+    border-color: rgba(255, 214, 170, 0.85);
+    box-shadow: 0 0 18px rgba(255, 176, 102, 0.28), 0 4px 18px rgba(0, 0, 0, 0.75);
+}
+
+.tour-nav-slot.active .tour-nav-dot {
+    background: #ffd6aa;
+    border-color: #ffd6aa;
+    box-shadow: 0 0 16px rgba(255, 214, 170, 0.9);
 }
 
 @media (max-width: 900px) {
@@ -717,8 +742,10 @@ body.warping #spaceship-title-container {
    ========================================== */
 #vault-stage {
     position: relative;
-    width: min(86vw, 86vh);
-    height: min(86vw, 86vh);
+    /* Kept clear of the right-hand nav rail so node labels and rail chips
+       don't collide at the core overview. */
+    width: min(74vw, 78vh);
+    height: min(74vw, 78vh);
     z-index: 10;
     will-change: transform;
 }
@@ -845,6 +872,12 @@ body.warping #spaceship-title-container {
 
 .vault-node.energised { opacity: 1; filter: grayscale(0); }
 .vault-node:hover { transform: translate(-50%, -50%) scale(1.1); }
+
+/* A dormant node is never a dead click target — scroll on, or use the rail. */
+.vault-node:not(.energised) {
+    pointer-events: none;
+    cursor: default;
+}
 
 .node-face {
     position: relative;

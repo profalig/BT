@@ -48,6 +48,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     const navHud = document.getElementById('planet-nav-hud');
     const tunnel = document.getElementById('descent-tunnel');
     const gates = tunnel ? [...tunnel.querySelectorAll('.gate')] : [];
+    const boxGlow = document.getElementById('box-glow');
     if (!introScene || !deskVideo || !deskScene) return;
 
     // Pick the encode before anything requests the file: full-res on
@@ -68,8 +69,12 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     //   0.38 - 0.95  descent through the light-gates
     //   0.88 - 1.00  arrival, hand off to the vault
     const SCRUB_END = 0.14;
-    const ZOOM_START = 0.22, ZOOM_END = 0.56;
-    const TUNNEL_START = 0.38, TUNNEL_END = 0.95;
+    const ZOOM_START = 0.20, ZOOM_END = 0.50;
+    const GLOW_START = 0.22, GLOW_END = 0.40;
+    // Starts earlier than the zoom ends: the tunnel takes over while the box
+    // interior is still filling with light, so we never linger on empty card-
+    // board waiting for something to happen.
+    const TUNNEL_START = 0.33, TUNNEL_END = 0.95;
     const REVEAL_START = 0.88, REVEAL_END = 1.0;
 
     let targetTime = 0;   // where the scroll wants the clip to be
@@ -99,6 +104,15 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         const zoomProgress = clamp01((progress - ZOOM_START) / (ZOOM_END - ZOOM_START));
         const zoomEase = Math.pow(zoomProgress, 1.7);
         deskScene.style.transform = `scale(${1 + zoomEase * 15})`;
+
+        // Light wells up out of the open box as the camera falls toward it,
+        // so the dive lands on "something is down there" rather than on an
+        // empty cardboard floor.
+        if (boxGlow) {
+            const glowEase = easeOutCubic(clamp01((progress - GLOW_START) / (GLOW_END - GLOW_START)));
+            boxGlow.style.opacity = glowEase;
+            boxGlow.style.transform = `scale(${1 + glowEase * 2.6})`;
+        }
 
         // DESCENT TUNNEL: once the camera is inside the box, fly the gates
         // past to sell the impossible depth, then hand off to the vault.
@@ -291,12 +305,15 @@ let showcaseIndex = -1;
         });
     }
 
-    // Nodes energise cumulatively: once current has reached a node it stays
-    // powered, so by the end the whole board is lit rather than one lonely
-    // node at a time.
+    // At the core stage the whole board is powered: every node lit and
+    // clickable, so the core reads as a finished machine and is a real menu.
+    // Once the tour moves on to individual nodes it energises cumulatively.
+    // Only energised nodes accept clicks (see .vault-node:not(.energised)
+    // in the stylesheet) — a dim node is never a dead click target.
     function setEnergised(uptoIndex) {
+        const allOn = uptoIndex < 0; // -1 === the core overview
         orbits.forEach((o, i) => {
-            const on = i <= uptoIndex;
+            const on = allOn || i <= uptoIndex;
             if (o.planetEl) o.planetEl.classList.toggle('energised', on);
             if (o.traceEl) o.traceEl.classList.toggle('live', on);
         });
