@@ -254,8 +254,6 @@ function generateBlackboard() {
         ctx.fillText(text, x, y);
     }
 }
-generateBlackboard();
-window.addEventListener('resize', generateBlackboard);
 
 // TACTICAL HUD MODAL TRIGGER
 function showTacticalModal(title, message, isSuccess = true) {
