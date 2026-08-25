@@ -57,16 +57,93 @@ body {
     object-fit: cover;
     object-position: center;
     will-change: transform, opacity;
-    transform-origin: 38% 47%; /* centers the zoom on the box opening */
+    transform-origin: 38% 47%;
 }
 
 #desk-closed { opacity: 1; z-index: 2; }
 #desk-open   { opacity: 0; z-index: 3; }
 
-#intro-vignette {
+#ambient-flicker {
     position: absolute;
     inset: 0;
     z-index: 4;
+    pointer-events: none;
+    background: rgba(255, 180, 100, 0.04);
+    mix-blend-mode: overlay;
+    animation: ambient-pulse 5s ease-in-out infinite;
+}
+@keyframes ambient-pulse {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 1; }
+}
+
+#coffee-steam {
+    position: absolute;
+    left: 76%;
+    top: 34%;
+    width: 60px;
+    height: 140px;
+    z-index: 5;
+    pointer-events: none;
+    transform: translate(-50%, -100%);
+}
+#coffee-steam span {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 14px;
+    height: 60px;
+    background: radial-gradient(ellipse at center, rgba(255,255,255,0.5) 0%, transparent 70%);
+    filter: blur(6px);
+    border-radius: 50%;
+    opacity: 0;
+    animation: steam-rise 4.5s ease-in infinite;
+}
+#coffee-steam span:nth-child(1) { left: 35%; animation-delay: 0s; }
+#coffee-steam span:nth-child(2) { left: 50%; animation-delay: 1.5s; }
+#coffee-steam span:nth-child(3) { left: 65%; animation-delay: 3s; }
+@keyframes steam-rise {
+    0%   { transform: translate(-50%, 0) scaleX(1); opacity: 0; }
+    15%  { opacity: 0.5; }
+    50%  { transform: translate(-60%, -70px) scaleX(1.4); opacity: 0.35; }
+    100% { transform: translate(-40%, -140px) scaleX(1.8); opacity: 0; }
+}
+
+.candle-flame {
+    position: absolute;
+    width: 26px;
+    height: 40px;
+    transform: translate(-50%, -100%);
+    z-index: 5;
+    pointer-events: none;
+    background: radial-gradient(ellipse at 50% 70%, rgba(255,200,120,0.9) 0%, rgba(255,140,40,0.5) 40%, transparent 75%);
+    filter: blur(3px);
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    animation: flame-flicker 2.6s ease-in-out infinite;
+    mix-blend-mode: screen;
+}
+.candle-flame:nth-of-type(2) { animation-duration: 3.1s; animation-delay: 0.6s; }
+@keyframes flame-flicker {
+    0%, 100% { opacity: 0.75; transform: translate(-50%, -100%) scale(1, 1); }
+    25%      { opacity: 0.9;  transform: translate(-48%, -102%) scale(1.05, 0.96); }
+    50%      { opacity: 0.65; transform: translate(-52%, -98%) scale(0.95, 1.05); }
+    75%      { opacity: 0.85; transform: translate(-50%, -101%) scale(1.02, 0.98); }
+}
+
+#lid-flash {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    pointer-events: none;
+    background: radial-gradient(circle at 38% 40%, rgba(255,230,180,0.9) 0%, transparent 35%);
+    opacity: 0;
+    mix-blend-mode: screen;
+}
+
+#intro-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 7;
     pointer-events: none;
     background: radial-gradient(ellipse 90% 80% at 50% 50%, transparent 55%, rgba(0,0,0,0.65) 100%);
 }
@@ -76,7 +153,7 @@ body {
     bottom: 40px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 5;
+    z-index: 8;
     color: rgba(255,255,255,0.7);
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.8rem;
@@ -85,13 +162,11 @@ body {
     pointer-events: none;
     transition: opacity 0.3s ease;
 }
-
 @keyframes hint-pulse {
     0%, 100% { opacity: 0.3; transform: translateX(-50%) translateY(0); }
     50%      { opacity: 0.9; transform: translateX(-50%) translateY(6px); }
 }
 
-/* Real solar system starts hidden — revealed as the box zoom completes */
 #space-matrix,
 #spaceship-viewport {
     opacity: 0;
@@ -1638,4 +1713,19 @@ body.warping * {
         white-space: nowrap;
         margin-right: 0 !important;
     }
+}
+
+/* ==========================================
+   SCROLL FIX (kept last on purpose)
+   ========================================== */
+html {
+    height: auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+body {
+    height: auto !important;
+    min-height: 100vh;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
 }

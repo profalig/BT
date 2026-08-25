@@ -38,6 +38,8 @@ const TILT_DEG = 60; // must always match the rotateX angle used on #solar-syste
     const deskClosed = document.getElementById('desk-closed');
     const deskOpen = document.getElementById('desk-open');
     const scrollHint = document.getElementById('scroll-hint');
+    const coffeeSteam = document.getElementById('coffee-steam');
+    const lidFlash = document.getElementById('lid-flash');
     const spaceMatrixEl = document.getElementById('space-matrix');
     const viewportEl = document.getElementById('spaceship-viewport');
     if (!introScene || !deskClosed || !deskOpen) return;
@@ -48,24 +50,27 @@ const TILT_DEG = 60; // must always match the rotateX angle used on #solar-syste
         const scrolled = Math.min(Math.max(-rect.top, 0), total);
         const progress = total > 0 ? scrolled / total : 0;
 
-        // Phase 1 (0 -> 0.35): crossfade closed box to open box
         const openProgress = Math.min(progress / 0.35, 1);
         deskClosed.style.opacity = 1 - openProgress;
         deskOpen.style.opacity = openProgress;
+        if (coffeeSteam) coffeeSteam.style.opacity = 1 - openProgress;
 
-        // Phase 2 (0.3 -> 0.85): zoom into the opening
+        if (lidFlash) {
+            const flashPeak = 0.3, flashWidth = 0.12;
+            const flashProgress = Math.max(0, 1 - Math.abs(progress - flashPeak) / flashWidth);
+            lidFlash.style.opacity = flashProgress * 0.8;
+        }
+
         const zoomProgress = Math.min(Math.max((progress - 0.3) / 0.55, 0), 1);
         deskOpen.style.transform = `scale(${1 + zoomProgress * 11})`;
         deskClosed.style.transform = `scale(${1 + zoomProgress * 2})`;
 
-        // Phase 3 (0.75 -> 1): hand off from the photo to the live solar system
         const revealProgress = Math.min(Math.max((progress - 0.75) / 0.25, 0), 1);
         introSticky.style.opacity = 1 - revealProgress;
         if (spaceMatrixEl) spaceMatrixEl.style.opacity = revealProgress;
         if (viewportEl) viewportEl.style.opacity = revealProgress;
 
         if (scrollHint) scrollHint.style.opacity = progress > 0.05 ? 0 : 1;
-
         introScene.style.pointerEvents = progress >= 1 ? 'none' : 'auto';
     }
 
