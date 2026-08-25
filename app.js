@@ -29,56 +29,6 @@ const planetData = {
     }
 };
 
-const TILT_DEG = 60; // must always match the rotateX angle used on #solar-system / .btc-sun / .planet in style.css
-
-// INTRO SCENE SCROLL ENGINE
-(function initIntroScene() {
-    const introScene = document.getElementById('intro-scene');
-    const introSticky = document.getElementById('intro-sticky');
-    const deskClosed = document.getElementById('desk-closed');
-    const deskOpen = document.getElementById('desk-open');
-    const scrollHint = document.getElementById('scroll-hint');
-    const coffeeSteam = document.getElementById('coffee-steam');
-    const lidFlash = document.getElementById('lid-flash');
-    const spaceMatrixEl = document.getElementById('space-matrix');
-    const viewportEl = document.getElementById('spaceship-viewport');
-    if (!introScene || !deskClosed || !deskOpen) return;
-
-    function updateIntro() {
-        const rect = introScene.getBoundingClientRect();
-        const total = introScene.offsetHeight - window.innerHeight;
-        const scrolled = Math.min(Math.max(-rect.top, 0), total);
-        const progress = total > 0 ? scrolled / total : 0;
-
-        const openProgress = Math.min(progress / 0.35, 1);
-        deskClosed.style.opacity = 1 - openProgress;
-        deskOpen.style.opacity = openProgress;
-        if (coffeeSteam) coffeeSteam.style.opacity = 1 - openProgress;
-
-        if (lidFlash) {
-            const flashPeak = 0.3, flashWidth = 0.12;
-            const flashProgress = Math.max(0, 1 - Math.abs(progress - flashPeak) / flashWidth);
-            lidFlash.style.opacity = flashProgress * 0.8;
-        }
-
-        const zoomProgress = Math.min(Math.max((progress - 0.3) / 0.55, 0), 1);
-        deskOpen.style.transform = `scale(${1 + zoomProgress * 11})`;
-        deskClosed.style.transform = `scale(${1 + zoomProgress * 2})`;
-
-        const revealProgress = Math.min(Math.max((progress - 0.75) / 0.25, 0), 1);
-        introSticky.style.opacity = 1 - revealProgress;
-        if (spaceMatrixEl) spaceMatrixEl.style.opacity = revealProgress;
-        if (viewportEl) viewportEl.style.opacity = revealProgress;
-
-        if (scrollHint) scrollHint.style.opacity = progress > 0.05 ? 0 : 1;
-        introScene.style.pointerEvents = progress >= 1 ? 'none' : 'auto';
-    }
-
-    window.addEventListener('scroll', updateIntro, { passive: true });
-    window.addEventListener('resize', updateIntro);
-    updateIntro();
-})();
-
 const orbitConfig = [
     { id: 'backtest', selector: '.orbit-1', duration: 25, reverse: false },
     { id: 'databank', selector: '.orbit-2', duration: 35, reverse: true },
@@ -123,7 +73,7 @@ function renderEngine(time) {
         if (o.reverse) o.currentAngle = -o.currentAngle;
         
         o.orbitEl.style.transform = `rotate(${o.currentAngle}deg)`;
-        o.planetEl.style.transform = `translateX(-50%) rotate(${-o.currentAngle}deg) rotateX(${-TILT_DEG}deg)`;
+        o.planetEl.style.transform = `translateX(-50%) rotate(${-o.currentAngle}deg)`;
     });
 
     const isMobile = window.innerWidth <= 768;
@@ -252,14 +202,62 @@ if (abortConsoleBtn) {
     });
 }
 
+// CONSTELLATION PARALLAX & VIDEO HOVER ENGINE
+const bullConstellation = document.querySelector('.bull-constellation');
+const bearConstellation = document.querySelector('.bear-constellation');
+
+document.addEventListener('mousemove', (e) => {
+    const x = (e.clientX / window.innerWidth - 0.5) * 2; 
+    const y = (e.clientY / window.innerHeight - 0.5) * 2;
+    if (bullConstellation && bearConstellation) {
+        bullConstellation.style.setProperty('--parallax-x', `${-x * 60}px`);
+        bullConstellation.style.setProperty('--parallax-y', `${-y * 60}px`);
+        bearConstellation.style.setProperty('--parallax-x', `${-x * 60}px`);
+        bearConstellation.style.setProperty('--parallax-y', `${-y * 60}px`);
+    }
+});
+
+const triggerAttack = (constellation) => {
+    if (!constellation) return;
+    constellation.classList.add('highlight');
+    const vid = constellation.querySelector('.beast-vid');
+    if (vid) {
+        if (vid.pauseTimeout) { clearTimeout(vid.pauseTimeout); vid.pauseTimeout = null; }
+        vid.currentTime = 0; 
+        vid.play().catch(() => {}); 
+    }
+};
+
+const resetAttack = (constellation) => {
+    if (!constellation) return;
+    constellation.classList.remove('highlight');
+    const vid = constellation.querySelector('.beast-vid');
+    if (vid) {
+        if (vid.pauseTimeout) clearTimeout(vid.pauseTimeout);
+        vid.pauseTimeout = setTimeout(() => { vid.pause(); }, 400);
+    }
+};
+
+orbits.forEach(o => {
+    if (!o.planetEl) return;
+    o.planetEl.addEventListener('mouseenter', () => {
+        if (['backtest', 'campus'].includes(o.id)) triggerAttack(bullConstellation);
+        else if (['databank', 'contact'].includes(o.id)) triggerAttack(bearConstellation);
+        else { triggerAttack(bullConstellation); triggerAttack(bearConstellation); }
+    });
+    o.planetEl.addEventListener('mouseleave', () => { resetAttack(bullConstellation); resetAttack(bearConstellation); });
+});
+
 const btcSun = document.getElementById('sun');
 const solarSystem = document.getElementById('solar-system');
 if (btcSun && solarSystem) {
     btcSun.addEventListener('mouseenter', () => {
         solarSystem.classList.add('show-labels');
+        triggerAttack(bullConstellation); triggerAttack(bearConstellation);
     });
     btcSun.addEventListener('mouseleave', () => {
         solarSystem.classList.remove('show-labels');
+        resetAttack(bullConstellation); resetAttack(bearConstellation);
     });
 }
 
@@ -287,14 +285,14 @@ function generateBlackboard() {
         "PV = nRT", "V = (4/3)πr³", "lim(x→∞) (1 + 1/x)^x = e", "sin²θ + cos²θ = 1"
     ];
     
-    const density = Math.floor((window.innerWidth * window.innerHeight) / 14000);
+    const density = Math.floor((window.innerWidth * window.innerHeight) / 7500); 
     for (let i = 0; i < density; i++) {
         const text = formulas[Math.floor(Math.random() * formulas.length)];
         const x = Math.random() * window.innerWidth;
         const y = Math.random() * window.innerHeight;
         const fontSize = Math.random() * 12 + 14; 
         ctx.font = `italic ${fontSize}px 'Times New Roman', serif`;
-        const alpha = Math.random() * 0.05 + 0.015; 
+        const alpha = Math.random() * 0.12 + 0.03; 
         const colorRand = Math.random();
         if (colorRand > 0.98) ctx.fillStyle = `rgba(0, 240, 255, ${alpha})`; 
         else if (colorRand > 0.96) ctx.fillStyle = `rgba(255, 0, 85, ${alpha})`; 
@@ -302,6 +300,8 @@ function generateBlackboard() {
         ctx.fillText(text, x, y);
     }
 }
+generateBlackboard();
+window.addEventListener('resize', generateBlackboard);
 
 // TACTICAL HUD MODAL TRIGGER
 function showTacticalModal(title, message, isSuccess = true) {
