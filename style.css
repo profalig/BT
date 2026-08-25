@@ -1828,6 +1828,26 @@ body.in-space .oauth-btn:hover {
 #rotate-gate.show,
 #touch-tutorial.show { display: flex; }
 
+/* On desktop the card floats OVER the hero rather than replacing it — the
+   desk photo is the hook, so it stays visible through a dimmed scrim. */
+#touch-tutorial.over-hero {
+    background: linear-gradient(180deg, rgba(4, 3, 2, 0.55) 0%, rgba(4, 3, 2, 0.82) 100%);
+    backdrop-filter: blur(3px) saturate(0.9);
+    -webkit-backdrop-filter: blur(3px) saturate(0.9);
+    animation: hero-scrim-in 0.7s ease both;
+}
+@keyframes hero-scrim-in { from { opacity: 0; } to { opacity: 1; } }
+
+#touch-tutorial.over-hero .tut-card {
+    background: rgba(8, 6, 5, 0.72);
+    border: 1px solid rgba(255, 176, 102, 0.22);
+    border-radius: 10px;
+    padding: 26px 30px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
 .rotate-inner, .tut-card {
     max-width: 340px;
     animation: gate-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;

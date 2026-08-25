@@ -30,21 +30,26 @@ const planetData = {
 };
 
 // ==========================================
-// MOBILE ONBOARDING: ROTATE GATE -> SCROLL TUTORIAL
-// Touch devices get walked in: first "turn your phone" (the whole journey is
-// composed wide), then a short scroll primer, because the entire site is
-// scroll-driven and that isn't obvious from a still first frame.
+// ONBOARDING: ROTATE GATE -> SCROLL TUTORIAL
+// The whole site is scroll-driven, which a still first frame doesn't
+// advertise, so both desktop and touch get a short primer.
+//
+// The rotate gate is touch-only. The tutorial runs everywhere, but on
+// desktop it waits a beat first: the desk photo IS the hook, and covering
+// it instantly would throw away the one moment that sells the site. So the
+// hero lands, registers, and only then does the card fade in over it.
+//
+// Shown once ever (localStorage), not once per session.
 // ==========================================
-(function initMobileOnboarding() {
+(function initOnboarding() {
     const gate = document.getElementById('rotate-gate');
     const tut = document.getElementById('touch-tutorial');
     if (!gate || !tut) return;
 
     const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches
         || navigator.maxTouchPoints > 0;
-    if (!isTouch) return;
 
-    const STEPS = [
+    const STEPS = isTouch ? [
         {
             title: 'SWIPE UP SLOWLY',
             copy: 'Your scroll is the camera. Take it gently — the package on the desk opens as you move.',
@@ -60,6 +65,22 @@ const planetData = {
             copy: 'Five modules orbit the Core. Scroll to bring one into focus and tap it — or jump straight there from the rail on the right.',
             cta: 'ENTER'
         }
+    ] : [
+        {
+            title: 'SCROLL SLOWLY',
+            copy: 'Your scroll wheel is the camera. Ease into it — the package on the desk opens as you move.',
+            cta: 'NEXT'
+        },
+        {
+            title: 'KEEP GOING, GO DEEPER',
+            copy: 'Past the box the floor drops away. Keep scrolling to fall through the light and reach the Core.',
+            cta: 'NEXT'
+        },
+        {
+            title: 'PICK A MODULE',
+            copy: 'Five modules are wired to the Core. Scroll to bring one into focus and click it — or jump straight there from the rail on the right.',
+            cta: 'ENTER'
+        }
     ];
 
     const titleEl = document.getElementById('tut-title');
@@ -67,7 +88,9 @@ const planetData = {
     const nextBtn = document.getElementById('tut-next');
     const dots = [...tut.querySelectorAll('.tut-dot')];
     let step = 0;
-    let tutorialDone = sessionStorage.getItem('bf_tut_done') === '1';
+    // Once ever, not once per session.
+    let tutorialDone = false;
+    try { tutorialDone = localStorage.getItem('bf_tut_done') === '1'; } catch (e) {}
 
     function renderStep() {
         const s = STEPS[step];
@@ -78,7 +101,7 @@ const planetData = {
     }
 
     function isPortrait() {
-        return window.matchMedia('(orientation: portrait)').matches;
+        return isTouch && window.matchMedia('(orientation: portrait)').matches;
     }
 
     let gateDismissed = false;
@@ -89,8 +112,26 @@ const planetData = {
         document.body.style.overflow = on ? 'hidden' : '';
     }
 
+    // On desktop, hold the card back so the desk photo lands first — that
+    // first impression is the hook and shouldn't open behind a modal.
+    const REVEAL_DELAY = isTouch ? 0 : 1500;
+    let revealQueued = false;
+    if (!isTouch) tut.classList.add('over-hero');
+
     function showTutorial() {
-        if (tutorialDone) { lockScroll(false); return; }
+        if (tutorialDone || tut.classList.contains('show')) { return; }
+        if (REVEAL_DELAY && !revealQueued) {
+            revealQueued = true;
+            // Scroll is locked immediately even though the card is delayed,
+            // so an eager scroller can't blow past the intro in the gap.
+            lockScroll(true);
+            setTimeout(() => {
+                if (tutorialDone) { lockScroll(false); return; }
+                step = 0; renderStep();
+                tut.classList.add('show');
+            }, REVEAL_DELAY);
+            return;
+        }
         step = 0;
         renderStep();
         tut.classList.add('show');
@@ -104,8 +145,8 @@ const planetData = {
             lockScroll(true);
         } else {
             gate.classList.remove('show');
-            if (!tutorialDone && !tut.classList.contains('show')) showTutorial();
-            else if (tutorialDone) lockScroll(false);
+            if (!tutorialDone) showTutorial();
+            else lockScroll(false);
         }
     }
 
@@ -118,7 +159,7 @@ const planetData = {
         step++;
         if (step >= STEPS.length) {
             tutorialDone = true;
-            sessionStorage.setItem('bf_tut_done', '1');
+            try { localStorage.setItem('bf_tut_done', '1'); } catch (e) {}
             tut.classList.remove('show');
             lockScroll(false);
         } else {
@@ -477,15 +518,19 @@ let gravityGridDraw = null;
     const canvas = document.getElementById('gravity-grid');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const SPACING = 52;
+    let SPACING = 52;
     let W = 0, H = 0, cols = 0, rows = 0, dpr = 1;
 
     function resize() {
-        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const mobile = window.innerWidth <= 768;
+        // Phones pay for this mesh twice over — once in the per-point physics
+        // and again in fill-rate at 2-3x device pixel ratio. Coarsen both.
+        SPACING = mobile ? 76 : 52;
+        dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.25 : 2);
         W = window.innerWidth;
         H = window.innerHeight;
-        canvas.width = W * dpr;
-        canvas.height = H * dpr;
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
         canvas.style.width = W + 'px';
         canvas.style.height = H + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -538,17 +583,31 @@ let gravityGridDraw = null;
             ctx.stroke();
         }
 
+        // One batched path of tiny squares instead of a beginPath+arc+fill per
+        // point. At ~200 points that swap alone is worth several ms a frame,
+        // and at this size a 3px square is indistinguishable from a dot.
         ctx.fillStyle = 'rgba(225, 227, 232, 0.45)';
+        ctx.beginPath();
         for (let j = 0; j < rows; j++) {
             for (let i = 0; i < cols; i++) {
                 const [x, y] = pts[j][i];
-                ctx.beginPath();
-                ctx.arc(x, y, 1.4, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.rect(x - 1.4, y - 1.4, 2.8, 2.8);
             }
         }
+        ctx.fill();
     };
 })();
+
+// Tracks whether the camera has shifted enough since the last gravity-grid
+// draw to be worth rebuilding the mesh for.
+let lastGrid = { x: NaN, y: NaN, scale: NaN };
+function camMovedSinceGridDraw() {
+    const moved = Math.abs(cam.x - lastGrid.x) > 0.35
+        || Math.abs(cam.y - lastGrid.y) > 0.35
+        || Math.abs(cam.scale - lastGrid.scale) > 0.0015;
+    if (moved) { lastGrid.x = cam.x; lastGrid.y = cam.y; lastGrid.scale = cam.scale; }
+    return moved;
+}
 
 // CAMERA RENDER ENGINE
 function renderEngine(time) {
@@ -587,7 +646,11 @@ function renderEngine(time) {
         spaceMatrix.style.transform = `translate3d(${cam.x * 0.15}px, ${cam.y * 0.15}px, 0px)`;
     }
 
-    if (gravityGridDraw) {
+    // The grid only changes when the camera does. Once the lerp settles —
+    // which is precisely when you're parked at the core reading it — this
+    // skips the whole mesh rebuild instead of burning a frame on an
+    // identical picture.
+    if (gravityGridDraw && camMovedSinceGridDraw()) {
         const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
         // The core sits at stage centre and warps space hardest; each node
         // makes its own smaller dimple.
