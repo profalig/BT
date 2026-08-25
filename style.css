@@ -26,9 +26,75 @@ input, textarea {
 body {
     background-color: #050311;
     color: #ffffff;
-    overflow: hidden;
+    overflow-x: hidden;
+    width: 100vw;
+}
+}
+
+/* ==========================================
+   INTRO SCENE: DESK -> BOX -> SPACE
+   ========================================== */
+#intro-scene {
+    position: relative;
+    height: 300vh;
+    z-index: 200;
+}
+
+#intro-sticky {
+    position: sticky;
+    top: 0;
     height: 100vh;
     width: 100vw;
+    overflow: hidden;
+    background: #050505;
+}
+
+.desk-photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    will-change: transform, opacity;
+    transform-origin: 38% 47%; /* centers the zoom on the box opening */
+}
+
+#desk-closed { opacity: 1; z-index: 2; }
+#desk-open   { opacity: 0; z-index: 3; }
+
+#intro-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    background: radial-gradient(ellipse 90% 80% at 50% 50%, transparent 55%, rgba(0,0,0,0.65) 100%);
+}
+
+#scroll-hint {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    color: rgba(255,255,255,0.7);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 3px;
+    animation: hint-pulse 2s ease-in-out infinite;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+@keyframes hint-pulse {
+    0%, 100% { opacity: 0.3; transform: translateX(-50%) translateY(0); }
+    50%      { opacity: 0.9; transform: translateX(-50%) translateY(6px); }
+}
+
+/* Real solar system starts hidden — revealed as the box zoom completes */
+#space-matrix,
+#spaceship-viewport {
+    opacity: 0;
 }
 
 /* ==========================================
