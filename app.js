@@ -212,22 +212,6 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     //   0.22 - 0.56  dive down into the box
     //   0.38 - 0.95  descent through the light-gates
     //   0.88 - 1.00  arrival, hand off to the vault
-    // object-fit:cover frames the clip differently depending on window shape.
-    // A tallish window crops the sides and the desk reads close and full; a
-    // wide, short one fits the entire 16:9 frame across and everything shrinks
-    // — which is why the same build looks "smaller" on a widescreen monitor.
-    // This adds a compensating base zoom so the composition holds everywhere.
-    const VID_W = 1920, VID_H = 1080;
-    const MAX_VISIBLE_W = 0.78;   // never reveal more than this much of the frame's width
-    let baseScale = 1;
-    function syncBaseScale() {
-        const vw = window.innerWidth, vh = window.innerHeight;
-        const cover = Math.max(vw / VID_W, vh / VID_H);
-        const visible = vw / (VID_W * cover);
-        baseScale = visible > MAX_VISIBLE_W ? visible / MAX_VISIBLE_W : 1;
-    }
-    syncBaseScale();
-
     const SCRUB_END = 0.14;
     const ZOOM_START = 0.20, ZOOM_END = 0.50;
     const GLOW_START = 0.22, GLOW_END = 0.40;
@@ -263,7 +247,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         // DIVE ZOOM into the open box, centred on the box in frame.
         const zoomProgress = clamp01((progress - ZOOM_START) / (ZOOM_END - ZOOM_START));
         const zoomEase = Math.pow(zoomProgress, 1.7);
-        deskScene.style.transform = `scale(${baseScale * (1 + zoomEase * 15)})`;
+        deskScene.style.transform = `scale(${1 + zoomEase * 15})`;
 
         // Light wells up out of the open box as the camera falls toward it,
         // so the dive lands on "something is down there" rather than on an
@@ -337,7 +321,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     deskVideo.play().then(() => deskVideo.pause()).catch(() => {});
 
     window.addEventListener('scroll', updateIntro, { passive: true });
-    window.addEventListener('resize', () => { syncBaseScale(); updateIntro(); });
+    window.addEventListener('resize', updateIntro);
     updateIntro();
     requestAnimationFrame(scrubLoop);
 })();
