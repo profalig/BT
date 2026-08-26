@@ -248,7 +248,9 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // interior is still filling with light, so we never linger on empty card-
     // board waiting for something to happen.
     const TUNNEL_START = 0.60, TUNNEL_END = 0.96;
-    const REVEAL_START = 0.90, REVEAL_END = 1.0;
+    // Deliberately overlaps the tunnel: the vault has to be fading up while
+    // the last gates are still on screen, or there is a gap with neither.
+    const REVEAL_START = 0.84, REVEAL_END = 0.99;
 
     // AMBIENT LAYER
     // While parked at the top, a separate short clip loops over the scrub
@@ -313,7 +315,10 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
             tunnel.style.opacity = fadeIn * (1 - fadeOut);
 
             const GAP = 430;
-            const travel = tunProgress * (GAP * gates.length + 900);
+            // Travel exactly far enough for the LAST gate to reach the camera
+            // as the tunnel ends. Overshooting here empties the tunnel early
+            // and leaves a stretch of plain black before the vault fades in.
+            const travel = tunProgress * (GAP * (gates.length - 1) + 300);
             gates.forEach((g, i) => {
                 const z = -GAP * i + travel;
                 // Fade a gate out as it rushes past the camera plane, and in
@@ -626,6 +631,14 @@ let gravityGridDraw = null;
     resize();
 
     gravityGridDraw = function (sources) {
+        // Self-heal the canvas size. A page opened in a background tab (or
+        // restored from a bookmark before layout settles) can run the initial
+        // resize() while innerWidth/innerHeight are still 0 — the canvas then
+        // stays 0x0 forever, because nothing fires a resize event afterwards,
+        // and the grid silently never renders.
+        if (W !== window.innerWidth || H !== window.innerHeight || !canvas.width) {
+            resize();
+        }
         if (!W || !H) return;
         ctx.clearRect(0, 0, W, H);
 
@@ -685,12 +698,26 @@ let gravityGridDraw = null;
 
 // Tracks whether the camera has shifted enough since the last gravity-grid
 // draw to be worth rebuilding the mesh for.
-let lastGrid = { x: NaN, y: NaN, scale: NaN };
+let lastGrid = { x: 0, y: 0, scale: 0 };
+// Explicit flag rather than seeding lastGrid with NaN: every comparison
+// against NaN is false, so a NaN seed makes camMovedSinceGridDraw() answer
+// "not moved" forever and the grid never paints at all.
+let forceGridDraw = true;
+// Repaint once the tab becomes visible again, covering a grid that was
+// skipped (or sized 0x0) while it was hidden.
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) forceGridDraw = true;
+});
+window.addEventListener('resize', () => { forceGridDraw = true; });
 function camMovedSinceGridDraw() {
-    const moved = Math.abs(cam.x - lastGrid.x) > 0.35
+    const moved = forceGridDraw
+        || Math.abs(cam.x - lastGrid.x) > 0.35
         || Math.abs(cam.y - lastGrid.y) > 0.35
         || Math.abs(cam.scale - lastGrid.scale) > 0.0015;
-    if (moved) { lastGrid.x = cam.x; lastGrid.y = cam.y; lastGrid.scale = cam.scale; }
+    if (moved) {
+        lastGrid.x = cam.x; lastGrid.y = cam.y; lastGrid.scale = cam.scale;
+        forceGridDraw = false;
+    }
     return moved;
 }
 
