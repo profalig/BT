@@ -339,19 +339,27 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         // Cozy autumn HUD at the desk, dark premium HUD once diving in.
         document.body.classList.toggle('in-space', progress > 0.62);
 
-        // Alive at rest, scrubbed the moment they scroll.
-        setAmbient(progress < 0.004 && !reducedMotion);
+        // Alive while parked at the top; scroll hands over to the scrub.
+        setAmbient(progress < 0.004 && !reducedMotion, true);
     }
 
-    function setAmbient(on) {
-        if (on === ambient || !ambientVideo) return;
+    //  = whole frame live (box sealed, layers identical).
+    // otherwise = masked to the outer bands, so the candles and steam stay
+    // alive while scroll drives the box in the middle of frame.
+    function setAmbient(on, full) {
+        if (ambientVideo && ambient === on) {
+            ambientVideo.classList.toggle('full', !!full);
+            return;
+        }
+        if (!ambientVideo) return;
         ambient = on;
         ambientVideo.classList.toggle('visible', on);
+        ambientVideo.classList.toggle('full', !!full);
         if (on) {
             ambientVideo.play().catch(() => {});
         } else {
             // Let the cross-fade finish before stopping, so it never cuts.
-            setTimeout(() => { if (!ambient) ambientVideo.pause(); }, 320);
+            setTimeout(() => { if (!ambient) ambientVideo.pause(); }, 400);
         }
     }
 

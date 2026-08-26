@@ -76,13 +76,19 @@ body {
 
 #desk-video { z-index: 2; }
 
-/* Sits directly over the scrub frame. Both render the identical sealed box,
-   so cross-fading between them shows no change in the scene itself — only
-   the ambient motion starting or stopping. */
+/* Sits directly over the scrub frame — same source, same framing, so the two
+   layers register pixel-for-pixel with no alignment work.
+
+   Shown only while parked at the very top, where the box is sealed in both
+   layers. Keeping it alive further into the scroll was tried and abandoned:
+   the box's flaps splay directly over the steaming mug and reach the candle,
+   and opening it relights the whole desk — so no spatial mask can separate
+   "live atmosphere" from "scroll-driven box" in this footage. Doing that
+   properly needs a second clip of the desk with the box already open. */
 #desk-ambient {
     z-index: 3;
     opacity: 0;
-    transition: opacity 0.28s ease;
+    transition: opacity 0.35s ease;
     pointer-events: none;
 }
 #desk-ambient.visible { opacity: 1; }
