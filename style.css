@@ -74,6 +74,17 @@ body {
     display: block;
 }
 
+/* The poster frame also sits on the wrapper, so if the video is still
+   downloading — or a browser refuses to paint an unplayed one — the desk is
+   on screen instead of a black hole. It is behind both video layers, so it
+   is simply covered once real frames arrive. */
+#desk-scene {
+    background-image: url('images/desk-poster.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
 #desk-video { z-index: 2; }
 
 /* Sits directly over the scrub frame — same source, same framing, so the two

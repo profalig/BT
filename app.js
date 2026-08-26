@@ -411,10 +411,42 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         updateIntro();   // starts the ambient loop when parked at the top
     }
 
+    // PRIME THE SCRUB VIDEO.
+    // We never call play() on this element — it is driven purely by seeking.
+    // Desktop decodes a frame on seek regardless, but mobile browsers
+    // generally will NOT render anything from a <video> that has never begun
+    // playback, and they routinely ignore preload="auto" to save data. The
+    // result on a phone is a video element that stays blank the whole way
+    // through the scroll. A single muted inline play()/pause() forces the
+    // decoder to produce frames, after which seeking paints normally.
+    let primed = false;
+    function primeVideo() {
+        if (primed || !deskVideo) return;
+        const p = deskVideo.play();
+        if (p && p.then) {
+            p.then(() => {
+                primed = true;
+                deskVideo.pause();
+                // Hand the playhead straight back to the scrubber.
+                deskVideo.currentTime = Math.max(0, Math.min(shownTime < 0 ? 0 : shownTime,
+                                                             (duration || 1) - 0.03));
+            }).catch(() => { /* blocked — retried on first gesture below */ });
+        } else {
+            primed = true;
+            deskVideo.pause();
+        }
+    }
+
+    // Autoplay policy allows muted+playsinline, but if a browser still blocks
+    // it, the first real user gesture is a guaranteed second chance.
+    ['pointerdown', 'touchstart', 'scroll'].forEach(ev => {
+        window.addEventListener(ev, primeVideo, { once: true, passive: true });
+    });
+
     deskVideo.addEventListener('loadedmetadata', initVideo);
-    deskVideo.addEventListener('canplay', initVideo);
+    deskVideo.addEventListener('canplay', () => { initVideo(); primeVideo(); });
     deskVideo.addEventListener('durationchange', initVideo);
-    if (deskVideo.readyState >= 1) initVideo();   // already cached
+    if (deskVideo.readyState >= 1) { initVideo(); primeVideo(); }   // already cached
 
     window.addEventListener('scroll', updateIntro, { passive: true });
     window.addEventListener('resize', updateIntro);
