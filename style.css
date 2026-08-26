@@ -63,16 +63,29 @@ body {
 /* The desk footage itself. Real candle flames, real steam, and the real
    box opening are all baked into these frames — nothing is faked with CSS
    overlays any more, so there is nothing left to mis-align on resize. */
-#desk-video {
+#desk-video,
+#desk-ambient {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
     object-position: center;
-    z-index: 2;
     display: block;
 }
+
+#desk-video { z-index: 2; }
+
+/* Sits directly over the scrub frame. Both render the identical sealed box,
+   so cross-fading between them shows no change in the scene itself — only
+   the ambient motion starting or stopping. */
+#desk-ambient {
+    z-index: 3;
+    opacity: 0;
+    transition: opacity 0.28s ease;
+    pointer-events: none;
+}
+#desk-ambient.visible { opacity: 1; }
 
 #box-glow {
     position: absolute;

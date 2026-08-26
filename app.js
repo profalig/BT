@@ -198,9 +198,11 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // Pick the encode before anything requests the file: full-res on
     // desktop, a much lighter one on phones so they aren't pulling 13MB
     // over cellular for a hero animation.
-    deskVideo.src = window.innerWidth <= 768
-        ? deskVideo.dataset.srcSm
-        : deskVideo.dataset.srcHd;
+    const smallScreen = window.innerWidth <= 768;
+    deskVideo.src = smallScreen ? deskVideo.dataset.srcSm : deskVideo.dataset.srcHd;
+
+    const _amb = document.getElementById('desk-ambient');
+    if (_amb) _amb.src = smallScreen ? _amb.dataset.srcSm : _amb.dataset.srcHd;
 
     // The intro is now a deep, staged journey (#intro-scene is 560vh). These
     // fractions carve it into phases. SCRUB_END stays small on purpose: the
@@ -212,14 +214,58 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     //   0.22 - 0.56  dive down into the box
     //   0.38 - 0.95  descent through the light-gates
     //   0.88 - 1.00  arrival, hand off to the vault
-    const SCRUB_END = 0.14;
-    const ZOOM_START = 0.20, ZOOM_END = 0.50;
-    const GLOW_START = 0.22, GLOW_END = 0.40;
+    // STAGED SCRUB MAP: scroll progress -> time in the clip.
+    // Piecewise rather than linear, so each physical stage of the box opening
+    // gets its own stretch of scroll instead of all three blurring past in
+    // one short burst. Stage boundaries were read off the footage itself:
+    //   0.87s  flaps first move        1.90s  lid open, sides still upright
+    //   3.50s  sides fully splayed     4.94s  settled
+    // Spreading it out also makes the scrub visibly smoother: each scrolled
+    // pixel now advances ~1.4ms of video instead of ~8.5ms, so the seeks are
+    // finer and the motion reads continuous rather than steppy.
+    const SCRUB_MAP = [
+        [0.000, 0.00],   // sealed — ambient layer is showing here
+        [0.030, 0.87],   // hold, then the first flap movement
+        [0.210, 1.90],   // STAGE 1 — lid flaps (top + bottom) fold open
+        [0.390, 3.50],   // STAGE 2 — side flaps splay outward
+        [0.460, 4.94]    // STAGE 3 — settles fully open
+    ];
+    const SCRUB_END = SCRUB_MAP[SCRUB_MAP.length - 1][0];
+
+    function scrubTimeFor(p) {
+        if (p <= SCRUB_MAP[0][0]) return SCRUB_MAP[0][1];
+        for (let i = 1; i < SCRUB_MAP.length; i++) {
+            const [p0, t0] = SCRUB_MAP[i - 1];
+            const [p1, t1] = SCRUB_MAP[i];
+            if (p <= p1) return t0 + (t1 - t0) * ((p - p0) / (p1 - p0));
+        }
+        return SCRUB_MAP[SCRUB_MAP.length - 1][1];
+    }
+
+    const ZOOM_START = 0.46, ZOOM_END = 0.78;
+    const GLOW_START = 0.48, GLOW_END = 0.66;
     // Starts earlier than the zoom ends: the tunnel takes over while the box
     // interior is still filling with light, so we never linger on empty card-
     // board waiting for something to happen.
-    const TUNNEL_START = 0.33, TUNNEL_END = 0.95;
-    const REVEAL_START = 0.88, REVEAL_END = 1.0;
+    const TUNNEL_START = 0.60, TUNNEL_END = 0.96;
+    const REVEAL_START = 0.90, REVEAL_END = 1.0;
+
+    // AMBIENT LAYER
+    // While parked at the top, a separate short clip loops over the scrub
+    // frame so the desk is alive on arrival: candles flickering, steam
+    // rising. Scroll cross-fades it away and the scrub video takes over.
+    //
+    // It is its own baked file rather than a windowed loop of the main clip,
+    // because neither alternative worked. A hard cut back to the start always
+    // popped — the scene drifts continuously (candle burning down, steam
+    // drifting off), so the closest returnable frame still differs ~3x more
+    // than a normal frame step (1.22 vs 0.40 mean abs luma). Ping-ponging
+    // removed the pop but ran the steam backwards, which reads as unreal.
+    // The baked clip cross-fades its own tail onto its head, so it loops with
+    // no cut AND the steam only ever rises.
+    const ambientVideo = document.getElementById('desk-ambient');
+    let ambient = false;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     let targetTime = 0;   // where the scroll wants the clip to be
     let shownTime = -1;   // where we last actually seeked it
@@ -231,7 +277,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         const total = introScene.offsetHeight - window.innerHeight;
         const scrolled = Math.min(Math.max(-rect.top, 0), total);
         progress = total > 0 ? scrolled / total : 0;
-        if (duration) targetTime = clamp01(progress / SCRUB_END) * duration;
+        if (duration) targetTime = Math.min(scrubTimeFor(progress), duration - 0.03);
     }
 
     function updateIntro() {
@@ -291,7 +337,22 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         introScene.style.pointerEvents = progress >= 1 ? 'none' : 'auto';
 
         // Cozy autumn HUD at the desk, dark premium HUD once diving in.
-        document.body.classList.toggle('in-space', progress > 0.55);
+        document.body.classList.toggle('in-space', progress > 0.62);
+
+        // Alive at rest, scrubbed the moment they scroll.
+        setAmbient(progress < 0.004 && !reducedMotion);
+    }
+
+    function setAmbient(on) {
+        if (on === ambient || !ambientVideo) return;
+        ambient = on;
+        ambientVideo.classList.toggle('visible', on);
+        if (on) {
+            ambientVideo.play().catch(() => {});
+        } else {
+            // Let the cross-fade finish before stopping, so it never cuts.
+            setTimeout(() => { if (!ambient) ambientVideo.pause(); }, 320);
+        }
     }
 
     // Seeking is driven from a rAF loop that eases toward the scroll target
@@ -299,6 +360,14 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // fire far faster than a video can seek, and hammering currentTime makes
     // the decoder thrash and stutter.
     function scrubLoop() {
+        // Chrome suspends muted, video-only media when a tab goes to the
+        // background ("paused to save power"), so the ambience would come
+        // back frozen after a tab switch. Nudge it whenever it is stopped
+        // while it should be running.
+        if (ambient && ambientVideo && ambientVideo.paused && !document.hidden) {
+            ambientVideo.play().catch(() => {});
+        }
+
         if (duration) {
             const diff = targetTime - shownTime;
             if (Math.abs(diff) > 0.008) {
@@ -309,16 +378,24 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         requestAnimationFrame(scrubLoop);
     }
 
-    deskVideo.addEventListener('loadedmetadata', () => {
+    // Called once the clip knows its own duration. Must also run immediately
+    // when the video is served from cache — in that case loadedmetadata and
+    // canplay have already fired by the time these listeners attach, and
+    // waiting on them leaves duration at 0 forever (which silently disables
+    // the ambient loop, since setAmbient guards on it).
+    function initVideo() {
+        if (duration) return;
         duration = deskVideo.duration || 0;
-        shownTime = 0;
-        deskVideo.pause();
+        if (!duration) return;
+        if (shownTime < 0) shownTime = 0;
         readScroll();
-        updateIntro();
-    });
+        updateIntro();   // starts the ambient loop when parked at the top
+    }
 
-    // Some browsers won't decode a first frame until playback is nudged.
-    deskVideo.play().then(() => deskVideo.pause()).catch(() => {});
+    deskVideo.addEventListener('loadedmetadata', initVideo);
+    deskVideo.addEventListener('canplay', initVideo);
+    deskVideo.addEventListener('durationchange', initVideo);
+    if (deskVideo.readyState >= 1) initVideo();   // already cached
 
     window.addEventListener('scroll', updateIntro, { passive: true });
     window.addEventListener('resize', updateIntro);
