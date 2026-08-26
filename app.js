@@ -49,6 +49,12 @@ const planetData = {
     const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches
         || navigator.maxTouchPoints > 0;
 
+    // Desktop gets no onboarding at all — the desk photo is the hook and a
+    // card over it blunts the one moment that sells the site. Touch devices
+    // still get the rotate gate and the swipe primer, where scroll-driven
+    // navigation genuinely is not obvious.
+    if (!isTouch) return;
+
     const STEPS = isTouch ? [
         {
             title: 'SWIPE UP SLOWLY',
