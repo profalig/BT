@@ -1806,6 +1806,361 @@ body.in-space .oauth-btn:hover {
 }
 
 /* ==========================================
+   BACKTEST REPORT DASHBOARD
+   Chart roles are declared as tokens so every plot is written against a
+   role rather than raw hex. Sequential (amber) carries magnitude; the
+   diverging pair carries P&L polarity with a neutral gray midpoint.
+   ========================================== */
+.rpt-overlay {
+    --surface-0: #08080a;
+    --surface-1: #0e0e11;
+    --surface-2: #16161a;
+    --hairline:  rgba(210, 213, 219, 0.13);
+    --text-primary:   #f2f3f5;
+    --text-secondary: #a8abb3;
+    --text-muted:     #6f737c;
+
+    /* Chart palette — validated against this surface with the dataviz
+       validator (all five checks pass: lightness band L 0.48–0.67, chroma
+       floor, CVD separation, normal-vision floor, contrast).
+       Worst adjacent CVD ΔE 8.9 (deutan); normal-vision ΔE 28.3.
+
+       NOTE ON THE P&L PAIR: a literal green/red scored ΔE 4.6 under
+       deuteranopia — far under the 8 threshold — meaning roughly 1 in 12 men
+       could not tell profit from loss. The "profit" hue is pushed toward
+       teal, which keeps the green reading while actually surviving CVD.
+       Sign prefixes and the legend carry the meaning too, so colour is
+       never the only channel. */
+
+    /* sequential — magnitude */
+    --seq-1: #c08438;
+    --seq-2: #9a6a2d;
+    --seq-3: #6f4c20;
+    --seq-track: rgba(210, 213, 219, 0.08);
+
+    /* diverging — P&L polarity, neutral gray midpoint */
+    --pos: #12a184;
+    --neg: #e2564e;
+    --mid: #6f737c;
+
+    /* UI accent stays the brand amber — it never shares a plot with the
+       P&L pair, so it is free of the in-chart adjacency constraint. */
+    --accent: #f0b25a;
+
+    position: fixed;
+    inset: 0;
+    z-index: 11000;
+    display: none;
+    background: var(--surface-0);
+    overflow: hidden;
+}
+.rpt-overlay.active { display: block; }
+
+.rpt-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    animation: rpt-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes rpt-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* Header */
+.rpt-head {
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px 28px 16px;
+    border-bottom: 1px solid var(--hairline);
+    background: linear-gradient(180deg, var(--surface-1), var(--surface-0));
+}
+.rpt-eyebrow {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.66rem;
+    letter-spacing: 2.5px;
+    color: var(--accent);
+    margin-bottom: 6px;
+}
+.rpt-head h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+    color: var(--text-primary);
+    margin: 0 0 6px;
+}
+.rpt-sub {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+.rpt-dot-sep { width: 3px; height: 3px; border-radius: 50%; background: var(--text-muted); }
+
+.rpt-head-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.rpt-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 5px;
+    border: 1px solid var(--hairline);
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.74rem;
+    letter-spacing: 1.2px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.22s ease;
+}
+.rpt-btn:hover { color: var(--text-primary); border-color: rgba(210,213,219,0.35); }
+.rpt-btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #17120a;
+    font-weight: 700;
+}
+.rpt-btn-primary:hover { background: #ffc673; border-color: #ffc673; color: #17120a; }
+.rpt-btn-primary[aria-disabled="true"] { opacity: 0.4; pointer-events: none; }
+
+/* Body */
+.rpt-body {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 20px 28px 40px;
+}
+
+.rpt-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 11px 14px;
+    margin-bottom: 18px;
+    border-radius: 5px;
+    border: 1px solid rgba(240, 178, 90, 0.28);
+    background: rgba(240, 178, 90, 0.07);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+/* `display:flex` above outranks the default [hidden]{display:none}, so the
+   sample-data note has to opt out explicitly or it shows on real reports. */
+.rpt-note[hidden] { display: none; }
+.rpt-note i { color: var(--accent); margin-top: 2px; }
+.rpt-note code {
+    font-family: 'Share Tech Mono', monospace;
+    background: rgba(255,255,255,0.07);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--accent);
+}
+
+/* Hero + KPI row */
+.rpt-hero-row {
+    display: grid;
+    grid-template-columns: minmax(230px, 0.9fr) 3fr;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+.rpt-hero, .rpt-kpi {
+    background: var(--surface-1);
+    border: 1px solid var(--hairline);
+    border-radius: 7px;
+    padding: 16px 18px;
+}
+.rpt-hero { display: flex; flex-direction: column; justify-content: center; }
+.rpt-hero-value {
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -1.5px;
+    color: var(--text-primary);
+    margin: 4px 0;
+}
+.rpt-hero-value.pos { color: var(--pos); }
+.rpt-hero-value.neg { color: var(--neg); }
+.rpt-hero-meta { font-size: 0.76rem; color: var(--text-muted); }
+
+.rpt-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 10px;
+}
+.rpt-kpi-label {
+    display: block;
+    font-size: 0.68rem;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+}
+.rpt-kpi-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.4px;
+}
+.rpt-kpi-sub { display: block; font-size: 0.68rem; color: var(--text-muted); margin-top: 3px; }
+
+/* Chart cards */
+.rpt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+    gap: 14px;
+    margin-bottom: 14px;
+}
+.rpt-card {
+    background: var(--surface-1);
+    border: 1px solid var(--hairline);
+    border-radius: 7px;
+    padding: 16px 18px 12px;
+    min-width: 0;
+}
+.rpt-card-wide { grid-column: 1 / -1; }
+@media (min-width: 1180px) {
+    .rpt-grid { grid-template-columns: repeat(3, 1fr); }
+    .rpt-card-wide { grid-column: span 3; }
+}
+.rpt-card figcaption { margin-bottom: 12px; }
+.rpt-card h3 {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 3px;
+    letter-spacing: 0.1px;
+}
+.rpt-card figcaption p { font-size: 0.72rem; color: var(--text-muted); margin: 0; line-height: 1.4; }
+.rpt-plot { position: relative; width: 100%; }
+.rpt-plot svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+/* Recessive axes & grid */
+.rpt-plot .grid-line { stroke: var(--hairline); stroke-width: 1; }
+.rpt-plot .axis-text {
+    fill: var(--text-muted);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+}
+.rpt-plot .zero-line { stroke: rgba(210,213,219,0.4); stroke-width: 1; }
+.rpt-plot .mark { transition: opacity 0.15s ease; }
+.rpt-plot:hover .mark.dim { opacity: 0.35; }
+
+/* Tooltip */
+.rpt-tip {
+    position: absolute;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -120%);
+    background: rgba(4, 4, 5, 0.97);
+    border: 1px solid rgba(210, 213, 219, 0.28);
+    border-radius: 5px;
+    padding: 7px 10px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    box-shadow: 0 8px 26px rgba(0,0,0,0.75);
+    transition: opacity 0.12s ease;
+    z-index: 5;
+}
+.rpt-tip.show { opacity: 1; }
+.rpt-tip .tip-k { color: var(--text-muted); }
+
+/* Horizontal magnitude bars */
+.hbar-wrap { display: flex; flex-direction: column; gap: 9px; padding-top: 2px; }
+.hbar-row { display: grid; grid-template-columns: 70px 1fr 58px; align-items: center; gap: 10px; }
+.hbar-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hbar-track { height: 14px; background: var(--seq-track); border-radius: 3px; overflow: hidden; }
+.hbar-fill {
+    display: block; height: 100%;
+    background: var(--seq-1);
+    border-radius: 0 3px 3px 0;
+    transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hbar-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem; color: var(--text-muted); text-align: right; white-space: nowrap;
+}
+.rpt-empty { color: var(--text-muted); font-size: 0.78rem; padding: 16px 0; text-align: center; }
+
+/* Legend */
+.rpt-legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+.rpt-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.rpt-legend i {
+    width: 9px; height: 9px; border-radius: 2px; display: inline-block;
+}
+
+/* Trade log */
+.rpt-log-card { padding-bottom: 4px; }
+.rpt-table-scroll { overflow-x: auto; max-height: 340px; overflow-y: auto; }
+.rpt-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+.rpt-table th {
+    position: sticky;
+    top: 0;
+    background: var(--surface-2);
+    color: var(--text-muted);
+    font-family: 'Share Tech Mono', monospace;
+    font-weight: 500;
+    font-size: 0.66rem;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--hairline);
+    white-space: nowrap;
+}
+.rpt-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(210,213,219,0.06);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+.rpt-table td.num, .rpt-table th.num { text-align: right; font-family: 'Share Tech Mono', monospace; }
+.rpt-table tr:hover td { background: rgba(255,255,255,0.028); }
+.rpt-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.66rem; letter-spacing: 0.6px;
+}
+.rpt-tag::before { content: ''; width: 7px; height: 7px; border-radius: 2px; }
+.rpt-tag.win  { color: var(--pos); }
+.rpt-tag.win::before  { background: var(--pos); }
+.rpt-tag.loss { color: var(--neg); }
+.rpt-tag.loss::before { background: var(--neg); }
+.val-pos { color: var(--pos); }
+.val-neg { color: var(--neg); }
+
+@media (max-width: 860px) {
+    .rpt-head { flex-direction: column; align-items: stretch; padding: 14px 16px 12px; }
+    .rpt-head-right { justify-content: flex-start; }
+    .rpt-head h2 { font-size: 1.15rem; }
+    .rpt-body { padding: 14px 16px 30px; }
+    .rpt-hero-row { grid-template-columns: 1fr; }
+    .rpt-hero-value { font-size: 2.2rem; }
+}
+@media (max-height: 560px) {
+    .rpt-head { padding: 10px 14px 8px; }
+    .rpt-head h2 { font-size: 1rem; margin-bottom: 2px; }
+    .rpt-hero-value { font-size: 1.8rem; }
+}
+
+/* ==========================================
    ROTATE GATE + TOUCH SCROLL TUTORIAL
    ========================================== */
 #rotate-gate,

@@ -997,12 +997,16 @@ async function openUserReportsModal() {
             let statusBadge;
             let downloadBtn;
 
+            // Completed runs get the interactive dashboard as the primary
+            // action; the PDF sits beside it as the download artifact.
+            const viewBtn = `<button class="rpt-open-btn" data-sub-idx="${historyList.indexOf(sub)}" style="background:#f0b25a; color:#17120a; border:none; padding:7px 14px; border-radius:4px; font-family:'Share Tech Mono',monospace; font-size:0.78rem; font-weight:700; letter-spacing:1px; cursor:pointer;"><i class="fa-solid fa-chart-line"></i> VIEW REPORT</button>`;
+
             if (reportUrl) {
                 statusBadge = `<span style="color:#ffb066; font-weight:bold;">[ COMPLETED ]</span>`;
-                downloadBtn = `<a href="${reportUrl}" target="_blank" download style="color:#d2d5db; text-decoration:underline; font-weight:bold;"><i class="fa-solid fa-file-pdf"></i> DOWNLOAD PDF REPORT</a>`;
+                downloadBtn = `<div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">${viewBtn}<a href="${reportUrl}" target="_blank" download style="color:#d2d5db; text-decoration:underline; font-weight:bold;"><i class="fa-solid fa-file-pdf"></i> DOWNLOAD PDF</a></div>`;
             } else if (['completed', 'complete', 'done', 'success'].includes(rawStatus)) {
                 statusBadge = `<span style="color:#ffb066; font-weight:bold;">[ COMPLETED ]</span>`;
-                downloadBtn = `<span style="color:#ffd700;"><i class="fa-solid fa-triangle-exclamation"></i> Link pending in database</span>`;
+                downloadBtn = `<div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">${viewBtn}<span style="color:#ffd700;"><i class="fa-solid fa-triangle-exclamation"></i> PDF link pending</span></div>`;
             } else if (['failed', 'error', 'rejected'].includes(rawStatus)) {
                 statusBadge = `<span style="color:#ff0055; font-weight:bold;">[ FAILED ]</span>`;
                 downloadBtn = `<span style="color:#ff0055;"><i class="fa-solid fa-circle-xmark"></i> Execution Error</span>`;
@@ -1031,6 +1035,18 @@ async function openUserReportsModal() {
         `;
 
         showTacticalModal('AGENT PROFILE // COMMAND CENTER', finalModalHtml, true);
+
+        // Wire the VIEW REPORT buttons to the dashboard. Bound after the modal
+        // renders, since showTacticalModal injects this HTML.
+        document.querySelectorAll('.rpt-open-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const sub = historyList[Number(btn.dataset.subIdx)];
+                if (!sub) return;
+                document.getElementById('tactical-modal-overlay')?.classList.remove('active');
+                window.__rptLast = sub;
+                openReportDashboard(sub);
+            });
+        });
     } catch (err) {
         showTacticalModal('FETCH ERROR', err.message, false);
     }

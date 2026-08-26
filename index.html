@@ -737,6 +737,120 @@
         </div>
     </div>
 
+    <!-- BACKTEST REPORT DASHBOARD -->
+    <div id="report-dashboard" class="rpt-overlay" aria-hidden="true">
+        <div class="rpt-shell">
+            <header class="rpt-head">
+                <div class="rpt-head-left">
+                    <div class="rpt-eyebrow">// BACKTEST INTELLIGENCE REPORT</div>
+                    <h2 id="rpt-title">System Name</h2>
+                    <div class="rpt-sub">
+                        <span id="rpt-date">—</span>
+                        <span class="rpt-dot-sep"></span>
+                        <span id="rpt-range">—</span>
+                        <span class="rpt-dot-sep"></span>
+                        <span id="rpt-symbols">—</span>
+                    </div>
+                </div>
+                <div class="rpt-head-right">
+                    <a id="rpt-download" class="rpt-btn rpt-btn-primary" href="#" target="_blank" rel="noopener">
+                        <i class="fa-solid fa-file-pdf"></i> DOWNLOAD FULL PDF
+                    </a>
+                    <button id="rpt-close" class="rpt-btn" aria-label="Close report">
+                        <i class="fa-solid fa-xmark"></i> CLOSE
+                    </button>
+                </div>
+            </header>
+
+            <div class="rpt-body">
+                <div id="rpt-demo-note" class="rpt-note" hidden>
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>Sample data shown — this report has no metrics attached yet. Once your worker writes a <code>metrics</code> record alongside the PDF, the real numbers render here.</span>
+                </div>
+
+                <!-- HEADLINE FIGURE + KPI ROW -->
+                <section class="rpt-hero-row">
+                    <div class="rpt-hero">
+                        <span class="rpt-kpi-label">Net return</span>
+                        <span class="rpt-hero-value" id="kpi-net">—</span>
+                        <span class="rpt-hero-meta" id="kpi-net-meta">—</span>
+                    </div>
+                    <div class="rpt-kpis" id="rpt-kpis"></div>
+                </section>
+
+                <!-- CHARTS -->
+                <section class="rpt-grid">
+                    <figure class="rpt-card rpt-card-wide">
+                        <figcaption>
+                            <h3>Equity curve</h3>
+                            <p>Account balance across the tested period</p>
+                        </figcaption>
+                        <div class="rpt-plot" id="chart-equity"></div>
+                    </figure>
+
+                    <figure class="rpt-card rpt-card-wide">
+                        <figcaption>
+                            <h3>Drawdown</h3>
+                            <p>Depth below the running peak — how deep it hurt</p>
+                        </figcaption>
+                        <div class="rpt-plot" id="chart-drawdown"></div>
+                    </figure>
+
+                    <figure class="rpt-card rpt-card-wide">
+                        <figcaption>
+                            <h3>Monthly return</h3>
+                            <p>Profit and loss by month</p>
+                        </figcaption>
+                        <div class="rpt-plot" id="chart-monthly"></div>
+                    </figure>
+
+                    <figure class="rpt-card">
+                        <figcaption>
+                            <h3>Win rate by weekday</h3>
+                            <p>Share of winning trades per session day</p>
+                        </figcaption>
+                        <div class="rpt-plot" id="chart-weekday"></div>
+                    </figure>
+
+                    <figure class="rpt-card">
+                        <figcaption>
+                            <h3>Trades by symbol</h3>
+                            <p>Where the system was most active</p>
+                        </figcaption>
+                        <div class="rpt-plot" id="chart-symbols"></div>
+                    </figure>
+
+                    <figure class="rpt-card">
+                        <figcaption>
+                            <h3>R-multiple spread</h3>
+                            <p>Outcome distribution in units of risk</p>
+                        </figcaption>
+                        <div class="rpt-plot" id="chart-rmultiple"></div>
+                    </figure>
+                </section>
+
+                <!-- TRADE LOG -->
+                <section class="rpt-card rpt-log-card">
+                    <figcaption>
+                        <h3>Trade log</h3>
+                        <p>Every execution, itemised. The PDF carries the complete record.</p>
+                    </figcaption>
+                    <div class="rpt-table-scroll">
+                        <table class="rpt-table" id="rpt-log">
+                            <thead>
+                                <tr>
+                                    <th>#</th><th>Symbol</th><th>Side</th><th>Entry</th>
+                                    <th>Exit</th><th class="num">R</th><th class="num">P&amp;L</th><th>Result</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
     <!-- AUTHENTICATION HUD MODAL -->
     <div id="auth-modal-overlay">
         <div class="auth-modal-card">
@@ -827,6 +941,7 @@
     </div>
 	
     <script src="app.js"></script>
+    <script src="report.js"></script>
     <script>
         // ELEGANT "INVISIBLE PEN" WRITING ENGINE
         async function runBlockWriting(elements, holdTime = 3200, fadeTime = 800) {
