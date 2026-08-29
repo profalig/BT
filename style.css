@@ -104,6 +104,27 @@ body {
 }
 #desk-ambient.visible { opacity: 1; }
 
+/* Static box patch — see index.html. Insets are written from JS in ELEMENT
+   space, converted from the box's known position in VIDEO space, because
+   object-fit:cover crops by an amount that depends on the window's aspect. */
+#box-still {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+    z-index: 4;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    --bx0: 32%; --bx1: 68%;
+    --by0: 22%; --by1: 75%;
+    clip-path: inset(var(--by0) calc(100% - var(--bx1)) calc(100% - var(--by1)) var(--bx0));
+}
+#box-still.visible { opacity: 1; }
+
 #box-glow {
     position: absolute;
     inset: 0;

@@ -224,17 +224,17 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // Piecewise rather than linear, so each physical stage of the box opening
     // gets its own stretch of scroll instead of all three blurring past in
     // one short burst. Stage boundaries were read off the footage itself:
-    //   0.87s  flaps first move        1.90s  lid open, sides still upright
-    //   3.50s  sides fully splayed     4.94s  settled
+    //   0.75s  flaps first move        2.20s  lid open, interior showing
+    //   3.50s  sides fully splayed     5.00s  settled on the sky reveal
     // Spreading it out also makes the scrub visibly smoother: each scrolled
-    // pixel now advances ~1.4ms of video instead of ~8.5ms, so the seeks are
-    // finer and the motion reads continuous rather than steppy.
+    // pixel advances a fraction of the video it otherwise would, so the seeks
+    // are finer and the motion reads continuous rather than steppy.
     const SCRUB_MAP = [
         [0.000, 0.00],   // sealed — ambient layer is showing here
-        [0.030, 0.87],   // hold, then the first flap movement
-        [0.210, 1.90],   // STAGE 1 — lid flaps (top + bottom) fold open
+        [0.030, 0.75],   // hold, then the first flap movement
+        [0.210, 2.20],   // STAGE 1 — lid flaps fold open, interior appears
         [0.390, 3.50],   // STAGE 2 — side flaps splay outward
-        [0.460, 4.94]    // STAGE 3 — settles fully open
+        [0.460, 5.00]    // STAGE 3 — settles on the storm/lightning reveal
     ];
     const SCRUB_END = SCRUB_MAP[SCRUB_MAP.length - 1][0];
 
@@ -272,6 +272,40 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // The baked clip cross-fades its own tail onto its head, so it loops with
     // no cut AND the steam only ever rises.
     const ambientVideo = document.getElementById('desk-ambient');
+    const boxStill = document.getElementById('box-still');
+
+    // Where the sealed box sits in the VIDEO frame, measured off this clip by
+    // differencing the sealed frame against the opening: motion is confined
+    // to x 35-65%, y 27-70%, everything else is background. Padded slightly.
+    const BOX_RECT = { x0: 0.325, x1: 0.665, y0: 0.235, y1: 0.725 };
+
+    // Convert that to element-space clip insets. object-fit:cover scales the
+    // video to cover the box and crops the overflow, so element coords and
+    // video coords only agree when the window matches the clip's aspect.
+    let stillTries = 0;
+    function syncBoxStill() {
+        if (!boxStill || !ambientVideo) return;
+        const r = boxStill.getBoundingClientRect();
+        const VW = ambientVideo.videoWidth, VH = ambientVideo.videoHeight;
+        if (!r.width || !r.height || !VW || !VH) {
+            if (stillTries++ < 60) requestAnimationFrame(syncBoxStill);
+            return;
+        }
+        stillTries = 0;
+        const scale = Math.max(r.width / VW, r.height / VH);
+        const rw = VW * scale, rh = VH * scale;
+        const cropL = (rw - r.width) / 2, cropT = (rh - r.height) / 2;
+        const ex = f => ((f * rw - cropL) / r.width) * 100;
+        const ey = f => ((f * rh - cropT) / r.height) * 100;
+        const s = boxStill.style;
+        s.setProperty('--bx0', ex(BOX_RECT.x0).toFixed(2) + '%');
+        s.setProperty('--bx1', ex(BOX_RECT.x1).toFixed(2) + '%');
+        s.setProperty('--by0', ey(BOX_RECT.y0).toFixed(2) + '%');
+        s.setProperty('--by1', ey(BOX_RECT.y1).toFixed(2) + '%');
+    }
+    window.addEventListener('resize', syncBoxStill);
+    ambientVideo?.addEventListener('loadedmetadata', syncBoxStill);
+    syncBoxStill();
     let ambient = false;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -366,6 +400,13 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         ambient = on;
         ambientVideo.classList.toggle('visible', on);
         ambientVideo.classList.toggle('full', !!full);
+        // The frozen box rides with the ambient layer: shown together, so the
+        // box holds still while the atmosphere moves; hidden together, so the
+        // scrub video owns the box the moment scrolling starts.
+        if (boxStill) {
+            boxStill.classList.toggle('visible', on);
+            if (on) syncBoxStill();
+        }
         if (on) {
             ambientVideo.play().catch(() => {});
         } else {

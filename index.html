@@ -309,6 +309,15 @@
                        data-src-hd="images/desk-ambient.mp4"
                        data-src-sm="images/desk-ambient-sm.mp4"
                        loop muted playsinline preload="auto"></video>
+
+                <!-- Static patch of the sealed box, laid over the ambient loop
+                     and clipped to just the box. The ambient clip animates the
+                     WHOLE frame, so the candlelight playing across the carton
+                     made the box itself pulse. This pins the box to a single
+                     frame while the candles, steam and leaves keep moving
+                     around it. Same source frame as the video, same framing,
+                     so it registers pixel-for-pixel. -->
+                <img id="box-still" src="images/desk-poster.jpg" alt="" aria-hidden="true">
             </div>
             <!-- The vault's light, leaking up out of the open box as the camera
                  dives in. Turns "zooming into an empty box" into "something is
