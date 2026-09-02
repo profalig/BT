@@ -52,101 +52,168 @@ body {
     perspective: 1800px;
 }
 
-/* Carries the desk footage as one layer that the dive-zoom scales. */
-#desk-scene {
+/* Carries the room footage; the dive-zoom scales this whole layer. */
+#room-scene {
     position: absolute;
     inset: 0;
-    transform-origin: 50% 52%; /* true center of the box in frame */
+    transform-origin: 50% 46%;
     will-change: transform;
+    background: #050505;
 }
 
-/* The desk footage itself. Real candle flames, real steam, and the real
-   box opening are all baked into these frames — nothing is faked with CSS
-   overlays any more, so there is nothing left to mis-align on resize. */
-#desk-video,
-#desk-ambient {
+#room-video {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
     object-position: center;
+    z-index: 2;
     display: block;
 }
 
-/* The poster frame also sits on the wrapper, so if the video is still
-   downloading — or a browser refuses to paint an unplayed one — the desk is
-   on screen instead of a black hole. It is behind both video layers, so it
-   is simply covered once real frames arrive. */
-#desk-scene {
-    background-image: url('images/desk-poster.jpg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-}
-
-#desk-video { z-index: 2; }
-
-/* Sits directly over the scrub frame — same source, same framing, so the two
-   layers register pixel-for-pixel with no alignment work.
-
-   Shown only while parked at the very top, where the box is sealed in both
-   layers. Keeping it alive further into the scroll was tried and abandoned:
-   the box's flaps splay directly over the steaming mug and reach the candle,
-   and opening it relights the whole desk — so no spatial mask can separate
-   "live atmosphere" from "scroll-driven box" in this footage. Doing that
-   properly needs a second clip of the desk with the box already open. */
-#desk-ambient {
-    z-index: 3;
-    opacity: 0;
-    transition: opacity 0.35s ease;
-    pointer-events: none;
-}
-#desk-ambient.visible { opacity: 1; }
-
-/* Static box patch — see index.html. Insets are written from JS in ELEMENT
-   space, converted from the box's known position in VIDEO space, because
-   object-fit:cover crops by an amount that depends on the window's aspect. */
-#box-still {
+/* Warm bloom that rises with the tree, lifting the room out of darkness as
+   the branches light. Screen-blended so it adds light rather than washing. */
+#grow-glow {
     position: absolute;
     inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-    display: block;
     z-index: 4;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.35s ease;
-    --bx0: 32%; --bx1: 68%;
-    --by0: 22%; --by1: 75%;
-    clip-path: inset(var(--by0) calc(100% - var(--bx1)) calc(100% - var(--by1)) var(--bx0));
-}
-#box-still.visible { opacity: 1; }
-
-#box-glow {
-    position: absolute;
-    inset: 0;
-    z-index: 5;
-    pointer-events: none;
-    opacity: 0;
     mix-blend-mode: screen;
-    /* Centred on the box in frame, matching #desk-scene's transform-origin. */
     background:
-        radial-gradient(ellipse 26% 20% at 50% 52%, rgba(255, 236, 205, 0.95) 0%, rgba(255, 190, 120, 0.5) 32%, transparent 68%),
-        radial-gradient(ellipse 46% 36% at 50% 52%, rgba(255, 172, 94, 0.35) 0%, transparent 72%);
-    will-change: opacity, transform;
+        radial-gradient(ellipse 30% 34% at 50% 52%, rgba(255, 206, 138, 0.55) 0%, rgba(255, 168, 82, 0.20) 45%, transparent 72%),
+        radial-gradient(ellipse 62% 52% at 50% 55%, rgba(255, 150, 70, 0.14) 0%, transparent 70%);
+    will-change: opacity;
 }
 
-#lid-flash {
+/* ==========================================
+   SERVICE BRANCHES
+   One per branch of the tree. Each is revealed as its branch grows, so the
+   tree itself becomes the navigation rather than a separate menu.
+   ========================================== */
+#branch-layer {
     position: absolute;
     inset: 0;
     z-index: 6;
     pointer-events: none;
-    background: radial-gradient(circle at 50% 52%, rgba(255,230,180,0.9) 0%, transparent 35%);
+}
+
+.branch {
+    position: absolute;
+    left: var(--bx);
+    top: var(--by);
+    display: flex;
+    align-items: center;
+    gap: 0;
+    transform: translate(-50%, -50%);
     opacity: 0;
-    mix-blend-mode: screen;
+    pointer-events: none;
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Right-hand branches read outward from the trunk, so mirror the order. */
+.branch[data-side="right"] { flex-direction: row-reverse; }
+
+.branch.lit {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Slide in from the trunk side as the branch forms. */
+.branch[data-side="left"]  { transform: translate(-50%, -50%) translateX(26px); }
+.branch[data-side="right"] { transform: translate(-50%, -50%) translateX(-26px); }
+.branch.lit[data-side="left"],
+.branch.lit[data-side="right"] { transform: translate(-50%, -50%) translateX(0); }
+
+.branch-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #ffd79a;
+    box-shadow: 0 0 12px rgba(255, 190, 120, 0.95), 0 0 26px rgba(255, 160, 70, 0.5);
+    flex-shrink: 0;
+}
+
+.branch-line {
+    width: 46px;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(255, 200, 140, 0) 0%, rgba(255, 200, 140, 0.75) 100%);
+    flex-shrink: 0;
+}
+.branch[data-side="right"] .branch-line {
+    background: linear-gradient(270deg, rgba(255, 200, 140, 0) 0%, rgba(255, 200, 140, 0.75) 100%);
+}
+
+.branch-card {
+    display: block;
+    padding: 11px 16px;
+    margin: 0 10px;
+    border-radius: 7px;
+    background: rgba(14, 10, 7, 0.82);
+    border: 1px solid rgba(255, 190, 120, 0.28);
+    backdrop-filter: blur(9px);
+    -webkit-backdrop-filter: blur(9px);
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.6);
+    white-space: nowrap;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+}
+.branch[data-side="right"] .branch-card { text-align: right; }
+
+.branch:hover .branch-card {
+    border-color: rgba(255, 210, 150, 0.8);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 26px rgba(255, 170, 80, 0.28);
+    transform: translateY(-2px);
+}
+
+.branch-tag {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 2.5px;
+    color: rgba(255, 190, 120, 0.85);
+    margin-bottom: 3px;
+}
+
+.branch-title {
+    display: block;
+    font-size: 0.98rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    color: #fff4e6;
+    margin-bottom: 2px;
+}
+
+.branch-sub {
+    display: block;
+    font-size: 0.73rem;
+    color: rgba(240, 220, 200, 0.6);
+}
+
+/* Portrait phones: the tree is centre-frame and there is no room either side,
+   so the cards stack down the screen instead of fanning out, and the
+   connector line is dropped since it would point at nothing. */
+@media (max-width: 900px), (orientation: portrait) {
+    .branch,
+    .branch[data-side="left"],
+    .branch[data-side="right"] {
+        left: 50%;
+        flex-direction: column;
+        align-items: center;
+        transform: translate(-50%, -50%) translateY(14px);
+    }
+    .branch.lit[data-side="left"],
+    .branch.lit[data-side="right"] { transform: translate(-50%, -50%) translateY(0); }
+    .branch-line { display: none; }
+    .branch-card {
+        margin: 8px 0 0;
+        padding: 9px 14px;
+        text-align: center !important;
+    }
+    .branch-title { font-size: 0.86rem; }
+    .branch-sub   { font-size: 0.66rem; }
 }
 
 #intro-vignette {
@@ -171,6 +238,14 @@ body {
     pointer-events: none;
     transition: opacity 0.3s ease;
 }
+/* The pulse animates opacity, so an inline opacity:0 loses to it and the
+   hint keeps blinking after it should be gone. Stopping the animation is
+   what actually hides it. */
+#scroll-hint.hidden {
+    animation: none !important;
+    opacity: 0 !important;
+}
+
 @keyframes hint-pulse {
     0%, 100% { opacity: 0.3; transform: translateX(-50%) translateY(0); }
     50%      { opacity: 0.9; transform: translateX(-50%) translateY(6px); }

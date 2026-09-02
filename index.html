@@ -4,21 +4,21 @@
     <base href="/">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>System & Backtest Factory</title>
+    <title>BarTest</title>
 
     <!-- Open Graph / Facebook / Instagram / iMessage Previews -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://bt-inky.vercel.app/">
-    <meta property="og:title" content="System & Backtest Factory">
-    <meta property="og:description" content="Test a system and view the report fully.">
-    <meta property="og:image" content="https://bt-inky.vercel.app/images/logo.png">
+    <meta property="og:title" content="BarTest">
+    <meta property="og:description" content="It is time to upgrade the level of our reality. Submit a system, get the full report.">
+    <meta property="og:image" content="https://bt-inky.vercel.app/images/room-start-desktop.jpg">
 
     <!-- Twitter Previews -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="https://bt-inky.vercel.app/">
-    <meta name="twitter:title" content="System & Backtest Factory">
-    <meta name="twitter:description" content="Test a system and view the report fully.">
-    <meta name="twitter:image" content="https://bt-inky.vercel.app/images/logo.png">
+    <meta name="twitter:title" content="BarTest">
+    <meta name="twitter:description" content="It is time to upgrade the level of our reality. Submit a system, get the full report.">
+    <meta name="twitter:image" content="https://bt-inky.vercel.app/images/room-start-desktop.jpg">
 
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -251,116 +251,81 @@
 </head>
 <body>
 
-    <!-- ROTATE-YOUR-PHONE GATE (portrait phones only) -->
-    <div id="rotate-gate" aria-hidden="true">
-        <div class="rotate-inner">
-            <svg class="rotate-icon" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-                <rect class="rotate-phone" x="43" y="18" width="34" height="62" rx="5"/>
-                <line class="rotate-speaker" x1="55" y1="27" x2="65" y2="27"/>
-                <path class="rotate-arrow" d="M28 84 A 34 34 0 0 0 92 84"/>
-                <polyline class="rotate-arrow" points="22,74 28,85 39,79"/>
-            </svg>
-            <div class="rotate-title">TURN YOUR DEVICE</div>
-            <p class="rotate-copy">This journey is built wide.<br>Rotate to landscape to step inside.</p>
-            <button id="rotate-dismiss">CONTINUE ANYWAY</button>
-        </div>
-    </div>
-
-    <!-- SCROLL TUTORIAL (touch devices) -->
-    <div id="touch-tutorial" aria-hidden="true">
-        <div class="tut-card">
-            <div class="tut-glyph">
-                <span class="tut-finger"></span>
-                <span class="tut-trail"></span>
-            </div>
-            <div class="tut-title" id="tut-title">SWIPE UP SLOWLY</div>
-            <p class="tut-copy" id="tut-copy">Your scroll is the camera. Take it gently — the package opens as you move.</p>
-            <div class="tut-dots">
-                <span class="tut-dot active"></span><span class="tut-dot"></span><span class="tut-dot"></span>
-            </div>
-            <button id="tut-next">BEGIN</button>
-        </div>
-    </div>
-
-    <!-- INTRO SCENE: DESK -> BOX FLAPS OPEN -> DIVE INTO SPACE -->
+    <!-- INTRO SCENE: LUXURY ROOM -> PUSH IN -> THE SEEDLING GROWS
+         Scroll scrubs the growth footage. Each branch that forms brings one
+         service forward, so the tree itself becomes the navigation. -->
     <section id="intro-scene">
         <div id="intro-sticky">
-            <div id="desk-scene">
-                <!-- Scroll-scrubbed desk footage: real candle flames, real steam,
-                     and the real box opening. Scroll position drives currentTime,
-                     so scrolling down opens the box and scrolling up closes it. -->
-                <!-- src is chosen in app.js: full 1920 encode on desktop,
-                     a lighter 1024 encode on small screens. Both are encoded
-                     with a keyframe on every frame so scroll-scrubbing seeks
-                     instantly instead of decoding forward from a distant one. -->
-                <video id="desk-video"
-                       data-src-hd="images/desk-sequence-hd.mp4"
-                       data-src-sm="images/desk-sequence-sm.mp4"
-                       poster="images/desk-poster.jpg"
+            <div id="room-scene">
+                <!-- Separate landscape / portrait masters, chosen in app.js.
+                     Both are encoded with a keyframe on every frame so
+                     scroll-scrubbing seeks instantly rather than decoding
+                     forward from a distant keyframe. -->
+                <video id="room-video"
+                       data-src-desktop="images/grow-desktop.mp4"
+                       data-src-phone="images/grow-phone.mp4"
+                       data-poster-desktop="images/room-start-desktop.jpg"
+                       data-poster-phone="images/room-start-phone.jpg"
                        muted playsinline preload="auto"></video>
-
-                <!-- Ambient layer: a short, seamlessly-looping clip of the
-                     sealed box — candles flickering, steam rising forward.
-                     Shown only while parked at the top; scroll cross-fades to
-                     the scrub video above. Baked as its own loop (tail
-                     cross-faded onto head) so the steam always rises rather
-                     than reversing. -->
-                <video id="desk-ambient"
-                       data-src-hd="images/desk-ambient.mp4"
-                       data-src-sm="images/desk-ambient-sm.mp4"
-                       loop muted playsinline preload="auto"></video>
-
-                <!-- Static patch of the sealed box, laid over the ambient loop
-                     and clipped to just the box. The ambient clip animates the
-                     WHOLE frame, so the candlelight playing across the carton
-                     made the box itself pulse. This pins the box to a single
-                     frame while the candles, steam and leaves keep moving
-                     around it. Same source frame as the video, same framing,
-                     so it registers pixel-for-pixel. -->
-                <img id="box-still" src="images/desk-poster.jpg" alt="" aria-hidden="true">
             </div>
-            <!-- The vault's light, leaking up out of the open box as the camera
-                 dives in. Turns "zooming into an empty box" into "something is
-                 down there", and hands off cleanly to the descent tunnel. -->
-            <div id="box-glow"></div>
-            <div id="lid-flash"></div>
+
+            <!-- Warm bloom that rises with the tree, so the room lifts out of
+                 darkness as the branches light up. -->
+            <div id="grow-glow"></div>
             <div id="intro-vignette"></div>
+
+            <!-- SERVICE BRANCHES: one per branch, revealed as the tree grows -->
+            <div id="branch-layer">
+                <a class="branch" data-id="backtest" data-side="left" style="--bx:33%; --by:31%">
+                    <span class="branch-line"></span>
+                    <span class="branch-dot"></span>
+                    <span class="branch-card">
+                        <span class="branch-tag">01</span>
+                        <span class="branch-title">Backtest Machine</span>
+                        <span class="branch-sub">Submit a system, get the full report</span>
+                    </span>
+                </a>
+                <a class="branch" data-id="databank" data-side="right" style="--bx:67%; --by:40%">
+                    <span class="branch-line"></span>
+                    <span class="branch-dot"></span>
+                    <span class="branch-card">
+                        <span class="branch-tag">02</span>
+                        <span class="branch-title">System Databank</span>
+                        <span class="branch-sub">A curated vault of tested strategies</span>
+                    </span>
+                </a>
+                <a class="branch" data-id="campus" data-side="left" style="--bx:31%; --by:52%">
+                    <span class="branch-line"></span>
+                    <span class="branch-dot"></span>
+                    <span class="branch-card">
+                        <span class="branch-tag">03</span>
+                        <span class="branch-title">Backtesting Campus</span>
+                        <span class="branch-sub">Learn to build and prove your own edge</span>
+                    </span>
+                </a>
+                <a class="branch" data-id="about" data-side="right" style="--bx:69%; --by:61%">
+                    <span class="branch-line"></span>
+                    <span class="branch-dot"></span>
+                    <span class="branch-card">
+                        <span class="branch-tag">04</span>
+                        <span class="branch-title">About The Factory</span>
+                        <span class="branch-sub">How the numbers are actually produced</span>
+                    </span>
+                </a>
+                <a class="branch" data-id="contact" data-side="left" style="--bx:35%; --by:72%">
+                    <span class="branch-line"></span>
+                    <span class="branch-dot"></span>
+                    <span class="branch-card">
+                        <span class="branch-tag">05</span>
+                        <span class="branch-title">Contact Us</span>
+                        <span class="branch-sub">Talk to the engineering desk</span>
+                    </span>
+                </a>
+            </div>
+
             <div id="scroll-hint">SCROLL TO BEGIN</div>
         </div>
     </section>
-
-    <!-- VAULT SCROLL RANGE: the descent through the gates, the core powering
-         up, then each module node energising in turn. Purely scroll
-         real-estate — everything renders through the fixed layers above. -->
-    <section id="tour-scene"></section>
-
-    <!-- VAULT NODE NAV -->
-    <div id="planet-nav-hud">
-        <div class="tour-nav-slot active" data-tour-index="-1">
-            <span class="tour-nav-dot"></span>
-            <span class="tour-nav-label">The Core</span>
-        </div>
-        <div class="tour-nav-slot" data-tour-index="0">
-            <span class="tour-nav-dot"></span>
-            <span class="tour-nav-label">Backtest Machine</span>
-        </div>
-        <div class="tour-nav-slot" data-tour-index="1">
-            <span class="tour-nav-dot"></span>
-            <span class="tour-nav-label">System Databank</span>
-        </div>
-        <div class="tour-nav-slot" data-tour-index="2">
-            <span class="tour-nav-dot"></span>
-            <span class="tour-nav-label">About The Factory</span>
-        </div>
-        <div class="tour-nav-slot" data-tour-index="3">
-            <span class="tour-nav-dot"></span>
-            <span class="tour-nav-label">Contact Us</span>
-        </div>
-        <div class="tour-nav-slot" data-tour-index="4">
-            <span class="tour-nav-dot"></span>
-            <span class="tour-nav-label">Backtesting Campus</span>
-        </div>
-    </div>
 
     <!-- AUTHENTICATION & SUBSCRIPTION CORNER (HUD DOCK) -->
     <div id="auth-corner">
@@ -416,133 +381,6 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- PREMIUM DEEP-SPACE BACKGROUND: gravity-warped spacetime grid -->
-    <div id="space-matrix">
-        <div class="premium-bg"></div>
-        <div class="nebula-layer"></div>
-        <div class="starfield-layer starfield-far"></div>
-        <canvas id="gravity-grid"></canvas>
-        <div class="starfield-layer starfield-near"></div>
-        <div class="grain-overlay"></div>
-    </div>
-
-    <!-- DESCENT TUNNEL: the fall from the open box down into the vault.
-         Pure CSS 3D — light-gates rushing past sell the impossible depth. -->
-    <div id="descent-tunnel">
-        <div class="gate" style="--i:0"></div><div class="gate" style="--i:1"></div>
-        <div class="gate" style="--i:2"></div><div class="gate" style="--i:3"></div>
-        <div class="gate" style="--i:4"></div><div class="gate" style="--i:5"></div>
-        <div class="gate" style="--i:6"></div><div class="gate" style="--i:7"></div>
-        <div class="gate" style="--i:8"></div><div class="gate" style="--i:9"></div>
-        <div class="gate" style="--i:10"></div><div class="gate" style="--i:11"></div>
-        <div class="gate" style="--i:12"></div><div class="gate" style="--i:13"></div>
-        <div class="gate" style="--i:14"></div><div class="gate" style="--i:15"></div>
-        <div class="gate" style="--i:16"></div><div class="gate" style="--i:17"></div>
-        <div class="gate" style="--i:18"></div><div class="gate" style="--i:19"></div>
-    </div>
-
-    <!-- CAMERA VIEWPORT -->
-    <div id="spaceship-viewport">
-        <section id="vault-stage">
-            <!-- Energy traces from the core out to each module node -->
-            <svg id="trace-layer" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <g class="trace-base">
-                    <line x1="50" y1="50" x2="50.0"  y2="16.0"/>
-                    <line x1="50" y1="50" x2="82.3"  y2="39.5"/>
-                    <line x1="50" y1="50" x2="70.0"  y2="77.5"/>
-                    <line x1="50" y1="50" x2="30.0"  y2="77.5"/>
-                    <line x1="50" y1="50" x2="17.7"  y2="39.5"/>
-                </g>
-                <g class="trace-live">
-                    <line data-trace="0" x1="50" y1="50" x2="50.0" y2="16.0"/>
-                    <line data-trace="1" x1="50" y1="50" x2="82.3" y2="39.5"/>
-                    <line data-trace="2" x1="50" y1="50" x2="70.0" y2="77.5"/>
-                    <line data-trace="3" x1="50" y1="50" x2="30.0" y2="77.5"/>
-                    <line data-trace="4" x1="50" y1="50" x2="17.7" y2="39.5"/>
-                </g>
-            </svg>
-
-            <!-- THE CORE -->
-            <div id="vault-core">
-                <svg viewBox="0 0 200 200">
-                    <circle class="core-ring ring-outer" cx="100" cy="100" r="86"/>
-                    <circle class="core-ring ring-mid"   cx="100" cy="100" r="66"/>
-                    <polygon class="core-chassis" points="100,42 150,71 150,129 100,158 50,129 50,71"/>
-                    <circle class="core-nucleus" cx="100" cy="100" r="26"/>
-                    <circle class="core-pulse"   cx="100" cy="100" r="26"/>
-                </svg>
-                <span class="core-label">THE CORE</span>
-            </div>
-
-            <!-- MODULE NODES -->
-            <div class="vault-node" data-id="backtest" style="--nx:50.0%; --ny:16.0%">
-                <div class="node-ring"></div>
-                <div class="node-face">
-                    <svg viewBox="0 0 24 24" class="node-icon">
-                        <path d="M2 18h20"/><path d="M6 15V9m0-3v2m0 7v2"/>
-                        <rect x="4.2" y="9" width="3.6" height="6" rx="0.6"/>
-                        <path d="M12 13V5m0-2v1m0 9v3"/>
-                        <rect x="10.2" y="5" width="3.6" height="8" rx="0.6"/>
-                        <path d="M18 16v-5m0-3v2m0 6v2"/>
-                        <rect x="16.2" y="11" width="3.6" height="5" rx="0.6"/>
-                    </svg>
-                </div>
-                <span class="node-label">Backtest Machine</span>
-            </div>
-
-            <div class="vault-node" data-id="databank" style="--nx:82.3%; --ny:39.5%">
-                <div class="node-ring"></div>
-                <div class="node-face">
-                    <svg viewBox="0 0 24 24" class="node-icon">
-                        <ellipse cx="12" cy="6" rx="7.5" ry="3"/>
-                        <path d="M4.5 6v6c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3V6"/>
-                        <path d="M4.5 12v6c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3v-6"/>
-                    </svg>
-                </div>
-                <span class="node-label">System Databank</span>
-            </div>
-
-            <div class="vault-node" data-id="about" style="--nx:70.0%; --ny:77.5%">
-                <div class="node-ring"></div>
-                <div class="node-face">
-                    <svg viewBox="0 0 24 24" class="node-icon">
-                        <rect x="3" y="3" width="18" height="18" rx="1.5"/>
-                        <path d="M3 9h18M9 3v18"/>
-                        <circle cx="15.5" cy="15" r="2.6"/>
-                        <path d="M15.5 12.4V9"/>
-                    </svg>
-                </div>
-                <span class="node-label">About The Factory</span>
-            </div>
-
-            <div class="vault-node" data-id="contact" style="--nx:30.0%; --ny:77.5%">
-                <div class="node-ring"></div>
-                <div class="node-face">
-                    <svg viewBox="0 0 24 24" class="node-icon">
-                        <circle cx="12" cy="17" r="2"/>
-                        <path d="M8.2 13.4a5.5 5.5 0 017.6 0"/>
-                        <path d="M5.4 10.3a9.5 9.5 0 0113.2 0"/>
-                        <path d="M2.6 7.2a13.5 13.5 0 0118.8 0"/>
-                    </svg>
-                </div>
-                <span class="node-label">Contact Us</span>
-            </div>
-
-            <div class="vault-node" data-id="campus" style="--nx:17.7%; --ny:39.5%">
-                <div class="node-ring"></div>
-                <div class="node-face">
-                    <svg viewBox="0 0 24 24" class="node-icon">
-                        <circle cx="12" cy="4.5" r="2.4"/>
-                        <circle cx="4.8" cy="18" r="2.4"/>
-                        <circle cx="19.2" cy="18" r="2.4"/>
-                        <path d="M10.3 6.3L6.5 15.9M13.7 6.3l3.8 9.6M7.2 18h9.6"/>
-                    </svg>
-                </div>
-                <span class="node-label">Backtesting Campus</span>
-            </div>
-        </section>
     </div>
 
     <!-- HUD MODULE OVERLAY -->

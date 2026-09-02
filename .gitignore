@@ -31,3 +31,6 @@ _metrics_sample.json
 # OS noise
 Thumbs.db
 .DS_Store
+
+# Raw masters kept locally; the site serves the encoded versions in images/
+_source/

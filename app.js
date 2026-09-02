@@ -29,214 +29,67 @@ const planetData = {
     }
 };
 
-// ==========================================
-// ONBOARDING: ROTATE GATE -> SCROLL TUTORIAL
-// The whole site is scroll-driven, which a still first frame doesn't
-// advertise, so both desktop and touch get a short primer.
-//
-// The rotate gate is touch-only. The tutorial runs everywhere, but on
-// desktop it waits a beat first: the desk photo IS the hook, and covering
-// it instantly would throw away the one moment that sells the site. So the
-// hero lands, registers, and only then does the card fade in over it.
-//
-// Shown once ever (localStorage), not once per session.
-// ==========================================
-(function initOnboarding() {
-    const gate = document.getElementById('rotate-gate');
-    const tut = document.getElementById('touch-tutorial');
-    if (!gate || !tut) return;
-
-    const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches
-        || navigator.maxTouchPoints > 0;
-
-    // Desktop gets no onboarding at all — the desk photo is the hook and a
-    // card over it blunts the one moment that sells the site. Touch devices
-    // still get the rotate gate and the swipe primer, where scroll-driven
-    // navigation genuinely is not obvious.
-    if (!isTouch) return;
-
-    const STEPS = isTouch ? [
-        {
-            title: 'SWIPE UP SLOWLY',
-            copy: 'Your scroll is the camera. Take it gently — the package on the desk opens as you move.',
-            cta: 'NEXT'
-        },
-        {
-            title: 'KEEP GOING, GO DEEPER',
-            copy: 'Past the box the floor drops away. Keep swiping to fall through the light and reach the Core.',
-            cta: 'NEXT'
-        },
-        {
-            title: 'PICK A MODULE',
-            copy: 'Five modules orbit the Core. Scroll to bring one into focus and tap it — or jump straight there from the rail on the right.',
-            cta: 'ENTER'
-        }
-    ] : [
-        {
-            title: 'SCROLL SLOWLY',
-            copy: 'Your scroll wheel is the camera. Ease into it — the package on the desk opens as you move.',
-            cta: 'NEXT'
-        },
-        {
-            title: 'KEEP GOING, GO DEEPER',
-            copy: 'Past the box the floor drops away. Keep scrolling to fall through the light and reach the Core.',
-            cta: 'NEXT'
-        },
-        {
-            title: 'PICK A MODULE',
-            copy: 'Five modules are wired to the Core. Scroll to bring one into focus and click it — or jump straight there from the rail on the right.',
-            cta: 'ENTER'
-        }
-    ];
-
-    const titleEl = document.getElementById('tut-title');
-    const copyEl = document.getElementById('tut-copy');
-    const nextBtn = document.getElementById('tut-next');
-    const dots = [...tut.querySelectorAll('.tut-dot')];
-    let step = 0;
-    // Once ever, not once per session.
-    let tutorialDone = false;
-    try { tutorialDone = localStorage.getItem('bf_tut_done') === '1'; } catch (e) {}
-
-    function renderStep() {
-        const s = STEPS[step];
-        titleEl.textContent = s.title;
-        copyEl.textContent = s.copy;
-        nextBtn.textContent = s.cta;
-        dots.forEach((d, i) => d.classList.toggle('active', i === step));
-    }
-
-    function isPortrait() {
-        return isTouch && window.matchMedia('(orientation: portrait)').matches;
-    }
-
-    let gateDismissed = false;
-
-    // Scroll is locked while either overlay is up, so the user can't blunder
-    // past the intro without seeing the first frame of it.
-    function lockScroll(on) {
-        document.body.style.overflow = on ? 'hidden' : '';
-    }
-
-    // On desktop, hold the card back so the desk photo lands first — that
-    // first impression is the hook and shouldn't open behind a modal.
-    const REVEAL_DELAY = isTouch ? 0 : 1500;
-    let revealQueued = false;
-    if (!isTouch) tut.classList.add('over-hero');
-
-    function showTutorial() {
-        if (tutorialDone || tut.classList.contains('show')) { return; }
-        if (REVEAL_DELAY && !revealQueued) {
-            revealQueued = true;
-            // Scroll is locked immediately even though the card is delayed,
-            // so an eager scroller can't blow past the intro in the gap.
-            lockScroll(true);
-            setTimeout(() => {
-                if (tutorialDone) { lockScroll(false); return; }
-                step = 0; renderStep();
-                tut.classList.add('show');
-            }, REVEAL_DELAY);
-            return;
-        }
-        step = 0;
-        renderStep();
-        tut.classList.add('show');
-        lockScroll(true);
-    }
-
-    function update() {
-        if (isPortrait() && !gateDismissed) {
-            gate.classList.add('show');
-            tut.classList.remove('show');
-            lockScroll(true);
-        } else {
-            gate.classList.remove('show');
-            if (!tutorialDone) showTutorial();
-            else lockScroll(false);
-        }
-    }
-
-    document.getElementById('rotate-dismiss').addEventListener('click', () => {
-        gateDismissed = true;
-        update();
-    });
-
-    nextBtn.addEventListener('click', () => {
-        step++;
-        if (step >= STEPS.length) {
-            tutorialDone = true;
-            try { localStorage.setItem('bf_tut_done', '1'); } catch (e) {}
-            tut.classList.remove('show');
-            lockScroll(false);
-        } else {
-            renderStep();
-        }
-    });
-
-    // Rotating the device re-evaluates the gate.
-    window.addEventListener('orientationchange', () => setTimeout(update, 220));
-    window.addEventListener('resize', update);
-    update();
-})();
-
 function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
 
 // INTRO SCENE SCROLL ENGINE
-// The desk sequence is real footage scrubbed by scroll position: the candle
-// flames, the steam and the box opening are all baked into the frames, so
-// none of it is faked with CSS overlays any more.
+// Scroll scrubs the growth footage: the camera pushes through a luxury room
+// and a seedling grows branch by branch. Each branch that forms brings one
+// service card forward, so the tree itself is the navigation.
 (function initIntroScene() {
-    const introScene = document.getElementById('intro-scene');
-    const introSticky = document.getElementById('intro-sticky');
-    const deskScene = document.getElementById('desk-scene');
-    const deskVideo = document.getElementById('desk-video');
-    const scrollHint = document.getElementById('scroll-hint');
-    const lidFlash = document.getElementById('lid-flash');
-    const spaceMatrixEl = document.getElementById('space-matrix');
-    const viewportEl = document.getElementById('spaceship-viewport');
-    const navHud = document.getElementById('planet-nav-hud');
-    const tunnel = document.getElementById('descent-tunnel');
-    const gates = tunnel ? [...tunnel.querySelectorAll('.gate')] : [];
-    const boxGlow = document.getElementById('box-glow');
-    if (!introScene || !deskVideo || !deskScene) return;
+    const introScene   = document.getElementById('intro-scene');
+    const introSticky  = document.getElementById('intro-sticky');
+    const roomScene    = document.getElementById('room-scene');
+    const video        = document.getElementById('room-video');
+    const glow         = document.getElementById('grow-glow');
+    const scrollHint   = document.getElementById('scroll-hint');
+    const branches     = [...document.querySelectorAll('.branch')];
+    if (!introScene || !video || !roomScene) return;
 
-    // Pick the encode before anything requests the file: full-res on
-    // desktop, a much lighter one on phones so they aren't pulling 13MB
-    // over cellular for a hero animation.
-    const smallScreen = window.innerWidth <= 768;
-    deskVideo.src = smallScreen ? deskVideo.dataset.srcSm : deskVideo.dataset.srcHd;
+    let targetTime = 0;
+    let shownTime  = -1;
+    let duration   = 0;
+    let progress   = 0;
+    let primed     = false;
 
-    const _amb = document.getElementById('desk-ambient');
-    if (_amb) _amb.src = smallScreen ? _amb.dataset.srcSm : _amb.dataset.srcHd;
+    // Portrait phones get the portrait master, everything else the landscape
+    // one. Re-evaluated rather than decided once at parse time: on first run
+    // the viewport can still be reporting pre-layout dimensions, which picked
+    // the phone file on a wide desktop. Only swaps when the mode genuinely
+    // changes, so a plain resize never re-downloads the video.
+    let sourceMode = null;
+    function pickSource() {
+        const portrait = window.matchMedia('(orientation: portrait)').matches
+            || document.documentElement.clientWidth <= 900;
+        const mode = portrait ? 'phone' : 'desktop';
+        if (mode === sourceMode) return;
+        sourceMode = mode;
+        video.poster = portrait ? video.dataset.posterPhone : video.dataset.posterDesktop;
+        video.src    = portrait ? video.dataset.srcPhone    : video.dataset.srcDesktop;
+        duration = 0; shownTime = -1; primed = false;
+        video.load();
+    }
 
-    // The intro is now a deep, staged journey (#intro-scene is 560vh). These
-    // fractions carve it into phases. SCRUB_END stays small on purpose: the
-    // clip is only ~5s, so it gets a short slice (~6 wheel notches) and all
-    // the extra depth goes to the dive and the descent instead.
-    //
-    //   0.00 - 0.14  box opens        (video scrub)
-    //   0.14 - 0.24  hold on the open box, let the eye settle
-    //   0.22 - 0.56  dive down into the box
-    //   0.38 - 0.95  descent through the light-gates
-    //   0.88 - 1.00  arrival, hand off to the vault
     // STAGED SCRUB MAP: scroll progress -> time in the clip.
-    // Piecewise rather than linear, so each physical stage of the box opening
-    // gets its own stretch of scroll instead of all three blurring past in
-    // one short burst. Stage boundaries were read off the footage itself:
-    //   0.75s  flaps first move        2.20s  lid open, interior showing
-    //   3.50s  sides fully splayed     5.00s  settled on the sky reveal
-    // Spreading it out also makes the scrub visibly smoother: each scrolled
-    // pixel advances a fraction of the video it otherwise would, so the seeks
-    // are finer and the motion reads continuous rather than steppy.
+    // Read off the footage: the room push-in runs to ~1.30s, the tree then
+    // grows continuously (lit pixels climb 2 -> 107) until ~4.30s, then
+    // settles. Growth is split evenly so each service gets its own stretch
+    // of scroll rather than all five arriving at once.
     const SCRUB_MAP = [
-        [0.000, 0.00],   // sealed — ambient layer is showing here
-        [0.030, 0.75],   // hold, then the first flap movement
-        [0.210, 2.20],   // STAGE 1 — lid flaps fold open, interior appears
-        [0.390, 3.50],   // STAGE 2 — side flaps splay outward
-        [0.460, 5.00]    // STAGE 3 — settles on the storm/lightning reveal
+        [0.000, 0.00],   // held on the room — SCROLL TO BEGIN
+        [0.060, 0.35],
+        [0.170, 1.30],   // camera has pushed in; the seedling is about to grow
+        [0.300, 1.95],   // branch 1
+        [0.420, 2.55],   // branch 2
+        [0.540, 3.15],   // branch 3
+        [0.660, 3.70],   // branch 4
+        [0.790, 4.35],   // branch 5
+        [0.900, 5.10]    // full tree, settled
     ];
-    const SCRUB_END = SCRUB_MAP[SCRUB_MAP.length - 1][0];
+
+    // Scroll position at which each branch's card lights. Slightly after the
+    // matching growth keyframe so the card follows the branch appearing.
+    const BRANCH_AT = [0.315, 0.435, 0.555, 0.675, 0.805];
 
     function scrubTimeFor(p) {
         if (p <= SCRUB_MAP[0][0]) return SCRUB_MAP[0][1];
@@ -248,249 +101,95 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         return SCRUB_MAP[SCRUB_MAP.length - 1][1];
     }
 
-    const ZOOM_START = 0.46, ZOOM_END = 0.78;
-    const GLOW_START = 0.48, GLOW_END = 0.66;
-    // Starts earlier than the zoom ends: the tunnel takes over while the box
-    // interior is still filling with light, so we never linger on empty card-
-    // board waiting for something to happen.
-    const TUNNEL_START = 0.60, TUNNEL_END = 0.96;
-    // Deliberately overlaps the tunnel: the vault has to be fading up while
-    // the last gates are still on screen, or there is a gap with neither.
-    const REVEAL_START = 0.84, REVEAL_END = 0.99;
-
-    // AMBIENT LAYER
-    // While parked at the top, a separate short clip loops over the scrub
-    // frame so the desk is alive on arrival: candles flickering, steam
-    // rising. Scroll cross-fades it away and the scrub video takes over.
-    //
-    // It is its own baked file rather than a windowed loop of the main clip,
-    // because neither alternative worked. A hard cut back to the start always
-    // popped — the scene drifts continuously (candle burning down, steam
-    // drifting off), so the closest returnable frame still differs ~3x more
-    // than a normal frame step (1.22 vs 0.40 mean abs luma). Ping-ponging
-    // removed the pop but ran the steam backwards, which reads as unreal.
-    // The baked clip cross-fades its own tail onto its head, so it loops with
-    // no cut AND the steam only ever rises.
-    const ambientVideo = document.getElementById('desk-ambient');
-    const boxStill = document.getElementById('box-still');
-
-    // Where the sealed box sits in the VIDEO frame, measured off this clip by
-    // differencing the sealed frame against the opening: motion is confined
-    // to x 35-65%, y 27-70%, everything else is background. Padded slightly.
-    const BOX_RECT = { x0: 0.325, x1: 0.665, y0: 0.235, y1: 0.725 };
-
-    // Convert that to element-space clip insets. object-fit:cover scales the
-    // video to cover the box and crops the overflow, so element coords and
-    // video coords only agree when the window matches the clip's aspect.
-    let stillTries = 0;
-    function syncBoxStill() {
-        if (!boxStill || !ambientVideo) return;
-        const r = boxStill.getBoundingClientRect();
-        const VW = ambientVideo.videoWidth, VH = ambientVideo.videoHeight;
-        if (!r.width || !r.height || !VW || !VH) {
-            if (stillTries++ < 60) requestAnimationFrame(syncBoxStill);
-            return;
-        }
-        stillTries = 0;
-        const scale = Math.max(r.width / VW, r.height / VH);
-        const rw = VW * scale, rh = VH * scale;
-        const cropL = (rw - r.width) / 2, cropT = (rh - r.height) / 2;
-        const ex = f => ((f * rw - cropL) / r.width) * 100;
-        const ey = f => ((f * rh - cropT) / r.height) * 100;
-        const s = boxStill.style;
-        s.setProperty('--bx0', ex(BOX_RECT.x0).toFixed(2) + '%');
-        s.setProperty('--bx1', ex(BOX_RECT.x1).toFixed(2) + '%');
-        s.setProperty('--by0', ey(BOX_RECT.y0).toFixed(2) + '%');
-        s.setProperty('--by1', ey(BOX_RECT.y1).toFixed(2) + '%');
-    }
-    window.addEventListener('resize', syncBoxStill);
-    ambientVideo?.addEventListener('loadedmetadata', syncBoxStill);
-    syncBoxStill();
-    let ambient = false;
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    let targetTime = 0;   // where the scroll wants the clip to be
-    let shownTime = -1;   // where we last actually seeked it
-    let duration = 0;
-    let progress = 0;
 
     function readScroll() {
-        const rect = introScene.getBoundingClientRect();
+        const rect  = introScene.getBoundingClientRect();
         const total = introScene.offsetHeight - window.innerHeight;
-        const scrolled = Math.min(Math.max(-rect.top, 0), total);
-        progress = total > 0 ? scrolled / total : 0;
+        const done  = Math.min(Math.max(-rect.top, 0), total);
+        progress = total > 0 ? done / total : 0;
         if (duration) targetTime = Math.min(scrubTimeFor(progress), duration - 0.03);
     }
 
     function updateIntro() {
         readScroll();
 
-        if (lidFlash) {
-            // Flash peaks as the flaps finish swinging open.
-            const flashPeak = 0.62, flashWidth = 0.12;
-            const flashProgress = Math.max(0, 1 - Math.abs(progress - flashPeak) / flashWidth);
-            lidFlash.style.opacity = flashProgress * 0.5;
-        }
+        // The room lifts out of darkness as the tree lights up.
+        if (glow) glow.style.opacity = clamp01((progress - 0.17) / 0.55) * 0.9;
 
-        // DIVE ZOOM into the open box, centred on the box in frame.
-        const zoomProgress = clamp01((progress - ZOOM_START) / (ZOOM_END - ZOOM_START));
-        const zoomEase = Math.pow(zoomProgress, 1.7);
-        deskScene.style.transform = `scale(${1 + zoomEase * 15})`;
+        // Light each branch as its growth stage passes.
+        branches.forEach((el, i) => {
+            el.classList.toggle('lit', progress >= BRANCH_AT[i]);
+        });
 
-        // Light wells up out of the open box as the camera falls toward it,
-        // so the dive lands on "something is down there" rather than on an
-        // empty cardboard floor.
-        if (boxGlow) {
-            const glowEase = easeOutCubic(clamp01((progress - GLOW_START) / (GLOW_END - GLOW_START)));
-            boxGlow.style.opacity = glowEase;
-            boxGlow.style.transform = `scale(${1 + glowEase * 2.6})`;
-        }
-
-        // DESCENT TUNNEL: once the camera is inside the box, fly the gates
-        // past to sell the impossible depth, then hand off to the vault.
-        if (tunnel) {
-            const tunProgress = clamp01((progress - TUNNEL_START) / (TUNNEL_END - TUNNEL_START));
-            const fadeIn  = clamp01(tunProgress / 0.18);
-            const fadeOut = clamp01((tunProgress - 0.8) / 0.2);
-            tunnel.style.opacity = fadeIn * (1 - fadeOut);
-
-            const GAP = 430;
-            // Travel exactly far enough for the LAST gate to reach the camera
-            // as the tunnel ends. Overshooting here empties the tunnel early
-            // and leaves a stretch of plain black before the vault fades in.
-            const travel = tunProgress * (GAP * (gates.length - 1) + 300);
-            gates.forEach((g, i) => {
-                const z = -GAP * i + travel;
-                // Fade a gate out as it rushes past the camera plane, and in
-                // as it emerges from the darkness far below.
-                const near = clamp01((z - 40) / 260);
-                g.style.transform = `translateZ(${z}px) rotate(${i * 7 + tunProgress * 26}deg)`;
-                g.style.opacity = (1 - near) * clamp01((z + 3400) / 900);
-            });
-        }
-
-        const revealProgress = clamp01((progress - REVEAL_START) / (REVEAL_END - REVEAL_START));
-        introSticky.style.opacity = 1 - revealProgress;
-        if (spaceMatrixEl) spaceMatrixEl.style.opacity = revealProgress;
-        if (viewportEl) viewportEl.style.opacity = revealProgress;
-        if (navHud) {
-            navHud.style.opacity = revealProgress;
-            navHud.style.pointerEvents = revealProgress > 0.5 ? 'auto' : 'none';
-        }
-
-        if (scrollHint) scrollHint.style.opacity = progress > 0.04 ? 0 : 1;
+        if (scrollHint) scrollHint.classList.toggle('hidden', progress > 0.04);
         introScene.style.pointerEvents = progress >= 1 ? 'none' : 'auto';
 
-        // Cozy autumn HUD at the desk, dark premium HUD once diving in.
+        // Warm room HUD at the start, cooler once the tree dominates.
         document.body.classList.toggle('in-space', progress > 0.62);
-
-        // Alive while parked at the top; scroll hands over to the scrub.
-        setAmbient(progress < 0.004 && !reducedMotion, true);
     }
 
-    //  = whole frame live (box sealed, layers identical).
-    // otherwise = masked to the outer bands, so the candles and steam stay
-    // alive while scroll drives the box in the middle of frame.
-    function setAmbient(on, full) {
-        if (ambientVideo && ambient === on) {
-            ambientVideo.classList.toggle('full', !!full);
-            return;
-        }
-        if (!ambientVideo) return;
-        ambient = on;
-        ambientVideo.classList.toggle('visible', on);
-        ambientVideo.classList.toggle('full', !!full);
-        // The frozen box rides with the ambient layer: shown together, so the
-        // box holds still while the atmosphere moves; hidden together, so the
-        // scrub video owns the box the moment scrolling starts.
-        if (boxStill) {
-            boxStill.classList.toggle('visible', on);
-            if (on) syncBoxStill();
-        }
-        if (on) {
-            ambientVideo.play().catch(() => {});
-        } else {
-            // Let the cross-fade finish before stopping, so it never cuts.
-            setTimeout(() => { if (!ambient) ambientVideo.pause(); }, 400);
-        }
-    }
-
-    // Seeking is driven from a rAF loop that eases toward the scroll target
-    // rather than being set straight from the scroll handler: scroll events
-    // fire far faster than a video can seek, and hammering currentTime makes
-    // the decoder thrash and stutter.
+    // Seeking runs from a rAF loop that eases toward the scroll target rather
+    // than being set straight from the scroll handler: scroll events fire far
+    // faster than a video can seek, and hammering currentTime makes the
+    // decoder thrash.
     function scrubLoop() {
-        // Chrome suspends muted, video-only media when a tab goes to the
-        // background ("paused to save power"), so the ambience would come
-        // back frozen after a tab switch. Nudge it whenever it is stopped
-        // while it should be running.
-        if (ambient && ambientVideo && ambientVideo.paused && !document.hidden) {
-            ambientVideo.play().catch(() => {});
-        }
-
         if (duration) {
             const diff = targetTime - shownTime;
             if (Math.abs(diff) > 0.008) {
                 shownTime += diff * 0.32;
-                deskVideo.currentTime = Math.max(0, Math.min(shownTime, duration - 0.03));
+                video.currentTime = Math.max(0, Math.min(shownTime, duration - 0.03));
             }
         }
         requestAnimationFrame(scrubLoop);
     }
 
-    // Called once the clip knows its own duration. Must also run immediately
-    // when the video is served from cache — in that case loadedmetadata and
-    // canplay have already fired by the time these listeners attach, and
-    // waiting on them leaves duration at 0 forever (which silently disables
-    // the ambient loop, since setAmbient guards on it).
+    // Mobile browsers will not render a frame from a <video> that has never
+    // begun playback, and they ignore preload="auto" to save data. One muted
+    // inline play/pause forces the decoder to produce frames; after that,
+    // seeking paints normally.
+    function prime() {
+        if (primed) return;
+        const pr = video.play();
+        if (pr && pr.then) {
+            pr.then(() => {
+                primed = true;
+                video.pause();
+                video.currentTime = Math.max(0, Math.min(shownTime < 0 ? 0 : shownTime,
+                                                         (duration || 1) - 0.03));
+            }).catch(() => {});
+        } else { primed = true; video.pause(); }
+    }
+    ['pointerdown', 'touchstart', 'scroll'].forEach(ev =>
+        window.addEventListener(ev, prime, { once: true, passive: true }));
+
+    // Must also run immediately when the file is cached: loadedmetadata and
+    // canplay have already fired by then, so waiting on them leaves duration
+    // at 0 forever and the scrub never starts.
     function initVideo() {
         if (duration) return;
-        duration = deskVideo.duration || 0;
+        duration = video.duration || 0;
         if (!duration) return;
         if (shownTime < 0) shownTime = 0;
         readScroll();
-        updateIntro();   // starts the ambient loop when parked at the top
+        updateIntro();
     }
+    video.addEventListener('loadedmetadata', initVideo);
+    video.addEventListener('canplay', () => { initVideo(); prime(); });
+    video.addEventListener('durationchange', initVideo);
+    if (video.readyState >= 1) { initVideo(); prime(); }
 
-    // PRIME THE SCRUB VIDEO.
-    // We never call play() on this element — it is driven purely by seeking.
-    // Desktop decodes a frame on seek regardless, but mobile browsers
-    // generally will NOT render anything from a <video> that has never begun
-    // playback, and they routinely ignore preload="auto" to save data. The
-    // result on a phone is a video element that stays blank the whole way
-    // through the scroll. A single muted inline play()/pause() forces the
-    // decoder to produce frames, after which seeking paints normally.
-    let primed = false;
-    function primeVideo() {
-        if (primed || !deskVideo) return;
-        const p = deskVideo.play();
-        if (p && p.then) {
-            p.then(() => {
-                primed = true;
-                deskVideo.pause();
-                // Hand the playhead straight back to the scrubber.
-                deskVideo.currentTime = Math.max(0, Math.min(shownTime < 0 ? 0 : shownTime,
-                                                             (duration || 1) - 0.03));
-            }).catch(() => { /* blocked — retried on first gesture below */ });
-        } else {
-            primed = true;
-            deskVideo.pause();
-        }
-    }
-
-    // Autoplay policy allows muted+playsinline, but if a browser still blocks
-    // it, the first real user gesture is a guaranteed second chance.
-    ['pointerdown', 'touchstart', 'scroll'].forEach(ev => {
-        window.addEventListener(ev, primeVideo, { once: true, passive: true });
+    // Clicking a branch opens that service, reusing the existing panels.
+    branches.forEach(el => {
+        el.addEventListener('click', () => {
+            if (!el.classList.contains('lit')) return;
+            openService(el.dataset.id);
+        });
     });
 
-    deskVideo.addEventListener('loadedmetadata', initVideo);
-    deskVideo.addEventListener('canplay', () => { initVideo(); primeVideo(); });
-    deskVideo.addEventListener('durationchange', initVideo);
-    if (deskVideo.readyState >= 1) { initVideo(); primeVideo(); }   // already cached
-
+    pickSource();
     window.addEventListener('scroll', updateIntro, { passive: true });
-    window.addEventListener('resize', updateIntro);
+    window.addEventListener('resize', () => { pickSource(); updateIntro(); });
+    window.addEventListener('orientationchange', () => setTimeout(pickSource, 150));
     updateIntro();
     requestAnimationFrame(scrubLoop);
 })();
@@ -544,384 +243,60 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     }
 })();
 
-// ==========================================
-// VAULT MODULE NODES
-// Five nodes wired to the core. Order here drives the scroll tour, the
-// nav rail and which trace lights up.
-// ==========================================
-const orbits = ['backtest', 'databank', 'about', 'contact', 'campus'].map((id, i) => ({
-    id,
-    index: i,
-    planetEl: document.querySelector(`.vault-node[data-id="${id}"]`),
-    traceEl: document.querySelector(`#trace-layer .trace-live line[data-trace="${i}"]`),
-    px: 0,
-    py: 0
-}));
-
-const vaultStage = document.getElementById('vault-stage');
-
-// Node centres in viewport pixels, relative to stage centre — used both to
-// aim the camera and to place the gravity wells under each node.
-function updateNodeOffsets() {
-    if (!vaultStage) return;
-    const s = vaultStage.getBoundingClientRect();
-    const cx = s.left + s.width / 2;
-    const cy = s.top + s.height / 2;
-    orbits.forEach(o => {
-        if (!o.planetEl) return;
-        const r = o.planetEl.getBoundingClientRect();
-        o.px = (r.left + r.width / 2) - cx;
-        o.py = (r.top + r.height / 2) - cy;
-    });
-}
-updateNodeOffsets();
-window.addEventListener('resize', updateNodeOffsets);
-window.addEventListener('load', updateNodeOffsets);
-
-const viewport = document.getElementById('spaceship-viewport');
-const spaceMatrix = document.getElementById('space-matrix');
-const returnBtn = document.getElementById('return-btn');
+// The service panel is shared by every entry point.
 const moduleDetails = document.querySelector('.module-details');
 const actionBtn = document.getElementById('module-action-btn');
-
-let activePlanetData = null;
-let isHyperZoomed = false;
-let cam = { x: 0, y: 0, scale: 1 };
-let targetCam = { x: 0, y: 0, scale: 1 };
+const returnBtn = document.getElementById('return-btn');
 
 // ==========================================
-// PLANET TOUR: SCROLL-DRIVEN + SKIP HUD
-// Continuing to scroll past the intro pans/zooms the camera from one
-// planet to the next (reusing the same lerp-based camera as a manual
-// planet click). #planet-nav-hud lets you jump straight to any stop.
+// OPEN A SERVICE
+// Shared entry point: a branch click (and anything else) routes here, which
+// fills the existing detail panel from planetData and shows it.
 // ==========================================
-let showcaseIndex = -1;
+let activeServiceId = null;
 
-(function initPlanetTour() {
-    const tourScene = document.getElementById('tour-scene');
-    const navHud = document.getElementById('planet-nav-hud');
-    if (!tourScene) return;
+function openService(id) {
+    const data = planetData[id];
+    if (!data) return;
+    activeServiceId = id;
+    document.body.classList.add('warping');
 
-    const STOPS = orbits.length + 1; // overview + one per planet
-    let lastActiveSlot = null;
+    document.getElementById('module-tag').innerText = data.tag;
+    document.getElementById('module-tag').style.color = data.color;
+    document.getElementById('module-title').innerText = data.title;
+    document.getElementById('module-title').style.color = data.color;
+    document.getElementById('module-desc').innerHTML = data.desc;
 
-    function setActiveSlot(index) {
-        if (index === lastActiveSlot) return;
-        lastActiveSlot = index;
-        if (navHud) {
-            navHud.querySelectorAll('.tour-nav-slot').forEach(slot => {
-                slot.classList.toggle('active', Number(slot.dataset.tourIndex) === index);
-            });
-        }
-        orbits.forEach((o, i) => {
-            if (o.planetEl) o.planetEl.classList.toggle('showcasing', i === index);
-        });
-    }
+    moduleDetails.style.borderLeftColor = data.color;
+    actionBtn.style.borderColor = data.color;
+    actionBtn.style.color = data.color;
 
-    // Two separate states, deliberately decoupled:
-    //
-    //   .energised — purely visual. At the core stage the whole board is lit
-    //                so it reads as a finished machine.
-    //   .focused   — the only state that accepts clicks, and only ever the
-    //                one node the camera is actually parked on.
-    //
-    // Nothing is clickable at the core overview. That's the point: if you
-    // could open any module straight from the core, the zoom-scroll would be
-    // decorative. To reach a module you either scroll to it or use the rail.
-    function setEnergised(uptoIndex) {
-        const atCore = uptoIndex < 0; // -1 === the core overview
-        orbits.forEach((o, i) => {
-            const lit = atCore || i <= uptoIndex;
-            if (o.planetEl) {
-                o.planetEl.classList.toggle('energised', lit);
-                o.planetEl.classList.toggle('focused', !atCore && i === uptoIndex);
-            }
-            if (o.traceEl) o.traceEl.classList.toggle('live', lit);
-        });
-    }
+    document.getElementById('stats-grid').innerHTML = data.stats.map(st => `
+        <div class="stat-card">
+            <span class="stat-title">${st.label}</span>
+            <span class="stat-value" style="color: ${data.color}">${st.val}</span>
+        </div>
+    `).join('');
 
-    function updateTour() {
-        const rect = tourScene.getBoundingClientRect();
-        const total = tourScene.offsetHeight - window.innerHeight;
-        const scrolled = Math.min(Math.max(-rect.top, 0), Math.max(total, 0));
-        const tourProgress = total > 0 ? scrolled / total : 0;
+    // About and Contact are read-only — nothing to initialise.
+    actionBtn.style.display = (id === 'contact' || id === 'about') ? 'none' : 'flex';
 
-        const stopFloat = tourProgress * STOPS;
-        const stopIndex = Math.min(STOPS - 1, Math.floor(stopFloat));
-        const planetIndex = stopIndex - 1; // -1 = the core itself
-
-        if (!document.body.classList.contains('landed') && !document.body.classList.contains('warping')) {
-            showcaseIndex = planetIndex;
-        }
-        setActiveSlot(planetIndex);
-        setEnergised(planetIndex);
-    }
-
-    window.addEventListener('scroll', updateTour, { passive: true });
-    window.addEventListener('resize', updateTour);
-    updateTour();
-
-    if (navHud) {
-        navHud.querySelectorAll('.tour-nav-slot').forEach(slot => {
-            slot.addEventListener('click', () => {
-                const idx = Number(slot.dataset.tourIndex);
-                const stop = idx + 1; // overview(-1) -> stop 0
-                const tourSceneTop = tourScene.getBoundingClientRect().top + window.scrollY;
-                const total = tourScene.offsetHeight - window.innerHeight;
-                const targetScroll = tourSceneTop + ((stop + 0.5) / STOPS) * total;
-                window.scrollTo({ top: targetScroll, behavior: 'smooth' });
-            });
-        });
-    }
-})();
-
-// ==========================================
-// GRAVITY-WARPED SPACETIME GRID
-// A dotted net drawn on a canvas that dips toward the sun and each planet,
-// simulating gravitational curvature. Positions are recomputed every frame
-// from the same camera math that places the planets themselves, so the
-// warp always tracks what's actually on screen.
-// ==========================================
-let gravityGridDraw = null;
-(function initGravityGrid() {
-    const canvas = document.getElementById('gravity-grid');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let SPACING = 52;
-    let W = 0, H = 0, cols = 0, rows = 0, dpr = 1;
-
-    function resize() {
-        const mobile = window.innerWidth <= 768;
-        // Phones pay for this mesh twice over — once in the per-point physics
-        // and again in fill-rate at 2-3x device pixel ratio. Coarsen both.
-        SPACING = mobile ? 76 : 52;
-        dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.25 : 2);
-        W = window.innerWidth;
-        H = window.innerHeight;
-        canvas.width = Math.round(W * dpr);
-        canvas.height = Math.round(H * dpr);
-        canvas.style.width = W + 'px';
-        canvas.style.height = H + 'px';
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        cols = Math.ceil(W / SPACING) + 2;
-        rows = Math.ceil(H / SPACING) + 2;
-    }
-    window.addEventListener('resize', resize);
-    resize();
-
-    gravityGridDraw = function (sources) {
-        // Self-heal the canvas size. A page opened in a background tab (or
-        // restored from a bookmark before layout settles) can run the initial
-        // resize() while innerWidth/innerHeight are still 0 — the canvas then
-        // stays 0x0 forever, because nothing fires a resize event afterwards,
-        // and the grid silently never renders.
-        if (W !== window.innerWidth || H !== window.innerHeight || !canvas.width) {
-            resize();
-        }
-        if (!W || !H) return;
-        ctx.clearRect(0, 0, W, H);
-
-        const pts = new Array(rows);
-        for (let j = 0; j < rows; j++) {
-            const row = new Array(cols);
-            const gy = j * SPACING - SPACING;
-            for (let i = 0; i < cols; i++) {
-                const gx = i * SPACING - SPACING;
-                let dx = 0, dy = 0;
-                for (let k = 0; k < sources.length; k++) {
-                    const s = sources[k];
-                    const ddx = gx - s.x, ddy = gy - s.y;
-                    const dist = Math.sqrt(ddx * ddx + ddy * ddy) + 46;
-                    const pull = Math.min(s.strength / dist, s.maxPull);
-                    dx -= (ddx / dist) * pull;
-                    dy -= (ddy / dist) * pull;
-                }
-                row[i] = [gx + dx, gy + dy];
-            }
-            pts[j] = row;
-        }
-
-        ctx.strokeStyle = 'rgba(190, 195, 205, 0.16)';
-        ctx.lineWidth = 1;
-        for (let j = 0; j < rows; j++) {
-            ctx.beginPath();
-            for (let i = 0; i < cols; i++) {
-                const [x, y] = pts[j][i];
-                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            }
-            ctx.stroke();
-        }
-        for (let i = 0; i < cols; i++) {
-            ctx.beginPath();
-            for (let j = 0; j < rows; j++) {
-                const [x, y] = pts[j][i];
-                if (j === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            }
-            ctx.stroke();
-        }
-
-        // One batched path of tiny squares instead of a beginPath+arc+fill per
-        // point. At ~200 points that swap alone is worth several ms a frame,
-        // and at this size a 3px square is indistinguishable from a dot.
-        ctx.fillStyle = 'rgba(225, 227, 232, 0.45)';
-        ctx.beginPath();
-        for (let j = 0; j < rows; j++) {
-            for (let i = 0; i < cols; i++) {
-                const [x, y] = pts[j][i];
-                ctx.rect(x - 1.4, y - 1.4, 2.8, 2.8);
-            }
-        }
-        ctx.fill();
-    };
-})();
-
-// Tracks whether the camera has shifted enough since the last gravity-grid
-// draw to be worth rebuilding the mesh for.
-let lastGrid = { x: 0, y: 0, scale: 0 };
-// Explicit flag rather than seeding lastGrid with NaN: every comparison
-// against NaN is false, so a NaN seed makes camMovedSinceGridDraw() answer
-// "not moved" forever and the grid never paints at all.
-let forceGridDraw = true;
-// Repaint once the tab becomes visible again, covering a grid that was
-// skipped (or sized 0x0) while it was hidden.
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) forceGridDraw = true;
-});
-window.addEventListener('resize', () => { forceGridDraw = true; });
-function camMovedSinceGridDraw() {
-    const moved = forceGridDraw
-        || Math.abs(cam.x - lastGrid.x) > 0.35
-        || Math.abs(cam.y - lastGrid.y) > 0.35
-        || Math.abs(cam.scale - lastGrid.scale) > 0.0015;
-    if (moved) {
-        lastGrid.x = cam.x; lastGrid.y = cam.y; lastGrid.scale = cam.scale;
-        forceGridDraw = false;
-    }
-    return moved;
+    setTimeout(() => document.body.classList.add('landed'), 60);
 }
 
-// CAMERA RENDER ENGINE
-function renderEngine(time) {
-    const isMobile = window.innerWidth <= 768;
-
-    if (activePlanetData) {
-        const o = activePlanetData;
-        if (isHyperZoomed) {
-            targetCam.scale = isMobile ? 3.0 : 5.2;
-            targetCam.x = -o.px;
-            targetCam.y = -o.py;
-        } else {
-            targetCam.scale = isMobile ? 1.25 : 1.9;
-            const screenOffset = isMobile ? 0 : -220;
-            targetCam.x = (screenOffset / targetCam.scale) - o.px;
-            targetCam.y = -o.py;
-        }
-    } else if (showcaseIndex >= 0 && orbits[showcaseIndex]) {
-        const o = orbits[showcaseIndex];
-        targetCam.scale = isMobile ? 1.2 : 1.75;
-        targetCam.x = -o.px;
-        targetCam.y = -o.py;
-    } else {
-        targetCam.x = 0; targetCam.y = 0; targetCam.scale = 1;
-    }
-
-    const lerpSpeed = isHyperZoomed ? 0.05 : (activePlanetData ? 0.12 : (showcaseIndex >= 0 ? 0.06 : 0.08));
-    cam.x += (targetCam.x - cam.x) * lerpSpeed;
-    cam.y += (targetCam.y - cam.y) * lerpSpeed;
-    cam.scale += (targetCam.scale - cam.scale) * lerpSpeed;
-
-    if (viewport) {
-        viewport.style.transform = `scale(${cam.scale}) translate3d(${cam.x}px, ${cam.y}px, 0px)`;
-    }
-    if (spaceMatrix) {
-        spaceMatrix.style.transform = `translate3d(${cam.x * 0.15}px, ${cam.y * 0.15}px, 0px)`;
-    }
-
-    // The grid only changes when the camera does. Once the lerp settles —
-    // which is precisely when you're parked at the core reading it — this
-    // skips the whole mesh rebuild instead of burning a frame on an
-    // identical picture.
-    if (gravityGridDraw && camMovedSinceGridDraw()) {
-        const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
-        // The core sits at stage centre and warps space hardest; each node
-        // makes its own smaller dimple.
-        const sources = [{
-            x: cx + cam.scale * cam.x,
-            y: cy + cam.scale * cam.y,
-            strength: 15000,
-            maxPull: 46
-        }];
-        orbits.forEach(o => {
-            sources.push({
-                x: cx + cam.scale * ((o.px || 0) + cam.x),
-                y: cy + cam.scale * ((o.py || 0) + cam.y),
-                strength: 2600,
-                maxPull: 30
-            });
-        });
-        gravityGridDraw(sources);
-    }
-
-    requestAnimationFrame(renderEngine);
-}
-requestAnimationFrame(renderEngine);
-
-orbits.forEach(o => {
-    if (!o.planetEl) return;
-    o.planetEl.addEventListener('click', () => {
-        if (document.body.classList.contains('warping') || isHyperZoomed) return;
-
-        orbits.forEach(orbit => orbit.planetEl && orbit.planetEl.classList.remove('active'));
-        
-        activePlanetData = o;
-        o.planetEl.classList.add('active'); 
-        document.body.classList.add('warping');
-
-        const data = planetData[o.id];
-        
-        document.getElementById('module-tag').innerText = data.tag;
-        document.getElementById('module-tag').style.color = data.color;
-        document.getElementById('module-title').innerText = data.title;
-        document.getElementById('module-title').style.color = data.color;
-        document.getElementById('module-desc').innerHTML = data.desc; 
-        
-        moduleDetails.style.borderLeftColor = data.color;
-        actionBtn.style.borderColor = data.color;
-        actionBtn.style.color = data.color;
-
-        document.getElementById('stats-grid').innerHTML = data.stats.map(s => `
-            <div class="stat-card">
-                <span class="stat-title">${s.label}</span>
-                <span class="stat-value" style="color: ${data.color}">${s.val}</span>
-            </div>
-        `).join('');
-
-        if (o.id === 'contact' || o.id === 'about') {
-            actionBtn.style.display = 'none';
-        } else {
-            actionBtn.style.display = 'flex';
-        }
-
-        setTimeout(() => document.body.classList.add('landed'), 500);
-    });
-});
-
-returnBtn.addEventListener('click', () => {
+function closeService() {
     document.body.classList.remove('landed');
-    if (activePlanetData && activePlanetData.planetEl) activePlanetData.planetEl.classList.remove('active');
-    activePlanetData = null;
-    setTimeout(() => { document.body.classList.remove('warping'); }, 800);
-    // Resync the scroll-driven planet tour to the current scroll position now
-    // that it's no longer overridden by a landed planet.
-    window.dispatchEvent(new Event('scroll'));
-});
+    activeServiceId = null;
+    setTimeout(() => { document.body.classList.remove('warping'); }, 600);
+}
+
+returnBtn.addEventListener('click', closeService);
 
 // INITIALIZE MODULE BUTTON LOGIC
 actionBtn.addEventListener('click', () => {
-    if (!activePlanetData) return;
+    if (!activeServiceId) return;
 
-    if (activePlanetData.id === 'backtest') {
-        isHyperZoomed = true;
+    if (activeServiceId === 'backtest') {
         document.body.classList.remove('landed');
         const titleContainer = document.getElementById('spaceship-title-container');
         const authCorner = document.getElementById('auth-corner');
@@ -932,10 +307,10 @@ actionBtn.addEventListener('click', () => {
             const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
             if (gasAtmosphere) gasAtmosphere.classList.add('active');
         }, 800);
-    } else if (activePlanetData.id === 'databank') {
+    } else if (activeServiceId === 'databank') {
         openDatabankModal();
-    } else if (activePlanetData.id === 'campus') {
-        showTacticalModal('BACKTESTING CAMPUS', 'Enrolling now for the upcoming Quantitative Engineering cohort. Contact our engineering desk via SEC-04 to apply.', true);
+    } else if (activeServiceId === 'campus') {
+        showTacticalModal('BACKTESTING CAMPUS', 'Enrolling now for the upcoming Quantitative Engineering cohort. Reach the engineering desk through Contact Us to apply.', true);
     }
 });
 
@@ -945,7 +320,6 @@ if (abortConsoleBtn) {
     abortConsoleBtn.addEventListener('click', () => {
         const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
         if (gasAtmosphere) gasAtmosphere.classList.remove('active');
-        isHyperZoomed = false;
         
         setTimeout(() => {
             document.body.classList.add('landed');
@@ -954,14 +328,6 @@ if (abortConsoleBtn) {
             if (titleContainer) titleContainer.style.opacity = '1';
             if (authCorner) authCorner.style.opacity = '1';
         }, 600);
-    });
-}
-
-// Hovering the core reveals every node label at once.
-const vaultCore = document.getElementById('vault-core');
-if (vaultCore) {
-    vaultCore.addEventListener('mouseenter', () => {
-        orbits.forEach(o => o.planetEl && o.planetEl.classList.add('energised'));
     });
 }
 
@@ -1373,10 +739,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
             if (gasAtmosphere) gasAtmosphere.classList.remove('active');
             
-            isHyperZoomed = false;
-
+    
             setTimeout(() => {
-                if (activePlanetData) {
+                if (activeServiceId) {
                     document.body.classList.add('landed');
                 }
                 const titleContainer = document.getElementById('spaceship-title-container');
