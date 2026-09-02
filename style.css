@@ -38,11 +38,14 @@ body {
        constants in app.js). The box-opening scrub still only occupies a
        short slice of that so it stays snappy; the extra depth all goes to
        the dive and the descent, which is where there is something to look at. */
-    /* 340vh => 240vh of travel. Was 560vh, which spread the clip's 122 frames
-       over ~37px of scroll each on a 1080p screen, so one wheel notch jumped
-       three frames and the growth read as stepping. Tightening the travel
-       nearly doubles frame density for free — no re-encode, no quality cost. */
-    height: 340vh;
+    /* 560vh => 460vh of travel. Shortening this to 340vh was a mistake: a
+       phone momentum flick covers ~2000px in half a second, and over a short
+       travel that demands ~200 frame updates/sec when rAF caps at 60 and the
+       decoder at ~78 — so it skipped and juddered. A long travel asks for
+       fewer frames per flick. Granularity for slow scrolling is bought with
+       frame RATE instead (the clip is 48fps), which costs nothing at speed
+       because fast scrolling is capped by rAF either way. */
+    height: 560vh;
     z-index: 200;
 }
 

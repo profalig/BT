@@ -217,12 +217,22 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         lastFrame = now;
         if (duration && active) {
             const diff = targetTime - shownTime;
-            // Skip while a seek is still in flight: handing the decoder a new
-            // position mid-seek is what makes scrubbing stutter. shownTime
-            // keeps easing, so the next frame simply catches up.
-            if (Math.abs(diff) > 0.004 && !active.seeking) {
+            if (Math.abs(diff) > 0.004) {
+                // Ease EVERY frame, on wall-clock time. Gating this on
+                // !seeking (as it was) stalled the easing whenever the
+                // decoder was busy, so the motion advanced in lurches
+                // instead of gliding — the decoder's pace was driving the
+                // animation rather than the clock.
                 shownTime += diff * (1 - Math.pow(0.1, dt / EASE_SECONDS));
-                active.currentTime = Math.max(0, Math.min(shownTime, duration - 0.03));
+            }
+            // Issue a seek only when the decoder is free, and always to the
+            // newest position. Requests are dropped rather than queued, so a
+            // fast scroll never builds a backlog of stale seeks.
+            if (!active.seeking) {
+                const want = Math.max(0, Math.min(shownTime, duration - 0.03));
+                if (Math.abs(want - active.currentTime) > 0.004) {
+                    active.currentTime = want;
+                }
             }
         }
         requestAnimationFrame(scrubLoop);
