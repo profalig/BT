@@ -474,7 +474,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // a phone, whether you are looking at the current build or a cached one —
     // which has repeatedly been the difference between "the fix did not work"
     // and "the fix never arrived".
-    const BUILD = 'build-12  2026-09-03  directSrc-fix';
+    const BUILD = 'build-13  2026-09-03  level4.0-hwdecode';
     try { console.log('BarTest ' + BUILD); } catch (e) {}
 
     // Append ?debug=1 to the URL for an on-screen readout. A phone cannot be
