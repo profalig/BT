@@ -40,7 +40,8 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     const introScene   = document.getElementById('intro-scene');
     const introSticky  = document.getElementById('intro-sticky');
     const roomScene    = document.getElementById('room-scene');
-    const video        = document.getElementById('room-video');
+    const video        = document.getElementById('room-video');    // full quality
+    const lqVideo      = document.getElementById('room-video-lq'); // instant proxy
     const glow         = document.getElementById('grow-glow');
     const scrollHint   = document.getElementById('scroll-hint');
     const branches     = [...document.querySelectorAll('.branch')];
@@ -51,6 +52,9 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     let duration   = 0;
     let progress   = 0;
     let primed     = false;
+    // Whichever clip is currently on screen. Starts as the proxy so the scroll
+    // is live almost immediately, then becomes the full-quality clip.
+    let active     = lqVideo || video;
 
     // Portrait phones get the portrait master, everything else the landscape
     // one. Re-evaluated rather than decided once at parse time: on first run
@@ -66,49 +70,67 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         const mode = portrait ? 'phone' : 'desktop';
         if (mode === sourceMode) return;
         sourceMode = mode;
-        video.poster = portrait ? video.dataset.posterPhone : video.dataset.posterDesktop;
-        duration = 0; shownTime = -1; primed = false; ready = false;
+        duration = 0; shownTime = -1; primed = false; upgraded = false;
+        active = lqVideo;
+        video.classList.remove('shown');
+        lqVideo.classList.remove('faded');
+
+        lqVideo.poster = portrait ? lqVideo.dataset.posterPhone
+                                  : lqVideo.dataset.posterDesktop;
+        lqVideo.src    = portrait ? lqVideo.dataset.srcPhone
+                                  : lqVideo.dataset.srcDesktop;
+        lqVideo.load();
+
         fetchClip(portrait ? video.dataset.srcPhone : video.dataset.srcDesktop,
                   ++loadToken);
     }
 
-    // Scrubbing seeks on every frame of scroll, and a seek into a byte range
-    // that has not arrived yet paints nothing: the tree stops growing while
-    // the scroll carries on, which reads as a broken page rather than a busy
-    // one. So download the whole clip up front and play it from memory —
-    // every later seek is then local and cannot stall on the network. Byte
-    // progress also gives an honest percentage, where the buffered-range
-    // guess it replaces was both coarse and optimistic.
+    // TWO-TIER LOAD
+    // Waiting for the full clip before anything moves is what made the opening
+    // feel frozen. A ~1.4MB proxy streams in under half a second and is what
+    // the first scrolls actually scrub, while the full-quality clip downloads
+    // in the background. Fetching that one to a Blob rather than streaming it
+    // matters: scrubbing seeks constantly, and a seek into a byte range that
+    // has not arrived yet paints nothing, so the tree would stop growing while
+    // the scroll carried on. From memory, every seek is local and cannot stall.
     function fetchClip(url, token) {
-        if (!window.fetch || typeof URL.createObjectURL !== 'function') {
-            directSrc(url); return;
-        }
+        if (!window.fetch || typeof URL.createObjectURL !== 'function') return;
         fetch(url).then(res => {
-            if (!res.ok || !res.body || !res.body.getReader) throw 0;
-            const total  = +res.headers.get('content-length') || 0;
-            const reader = res.body.getReader();
-            const chunks = [];
-            let got = 0;
-            return (function pump() {
-                return reader.read().then(({ done, value }) => {
-                    if (token !== loadToken) { reader.cancel(); return null; }
-                    if (done) return new Blob(chunks, { type: 'video/mp4' });
-                    chunks.push(value);
-                    got += value.length;
-                    if (total) showProgress(got / total);
-                    return pump();
-                });
-            })();
+            if (!res.ok || !res.blob) throw 0;
+            return res.blob();
         }).then(blob => {
             if (!blob || token !== loadToken) return;
             if (blobUrl) URL.revokeObjectURL(blobUrl);
             blobUrl = URL.createObjectURL(blob);
             video.src = blobUrl;
             video.load();
-        }).catch(() => { if (token === loadToken) directSrc(url); });
+        }).catch(() => {});
     }
 
-    function directSrc(url) { video.src = url; video.load(); }
+    // Hand over only once the full clip can render the exact frame already on
+    // screen, so the swap is a change of sharpness and nothing else.
+    let upgraded = false;
+    function upgrade() {
+        if (upgraded || !duration || video.readyState < 3) return;
+        upgraded = true;
+        const settle = () => {
+            video.removeEventListener('seeked', settle);
+            video.classList.add('shown');
+            lqVideo.classList.add('faded');
+            active = video;
+        };
+        video.addEventListener('seeked', settle);
+        // Mobile will not paint a video that has never played, so give the
+        // incoming clip the same muted play/pause priming the proxy got.
+        const pr = video.play();
+        if (pr && pr.then) pr.then(() => video.pause()).catch(() => {});
+        video.currentTime = Math.max(0, Math.min(shownTime < 0 ? 0 : shownTime,
+                                                 duration - 0.03));
+        // If the seek never reports back, show it anyway rather than stall.
+        setTimeout(settle, 1200);
+    }
+    video.addEventListener('canplaythrough', upgrade);
+    video.addEventListener('loadeddata', upgrade);
 
     // STAGED SCRUB MAP: scroll progress -> time in the clip.
     // Read off the footage: the room push-in runs to ~1.30s, the tree then
@@ -168,66 +190,39 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         document.body.classList.toggle('in-space', progress > 0.62);
     }
 
-    // READINESS
-    // The clip is held off-screen until it is fully in memory, and the scroll
-    // is pinned while that happens — otherwise a visitor scrolls straight past
-    // the seedling during the download and never sees it grow. The hint
-    // carries the real byte percentage so the wait is legible.
-    let ready = false;
-    let locked = false;
-    // iOS Safari does not reliably honour overflow:hidden for touch scrolling,
-    // so the class is backed by non-passive listeners. They are attached only
-    // while locked, since a permanent non-passive wheel listener would opt the
-    // page out of the browser's fast scrolling path.
-    function eatScroll(e) { if (locked) e.preventDefault(); }
-    function lockScroll() {
-        if (locked) return;
-        locked = true;
-        window.scrollTo(0, 0);
-        document.documentElement.classList.add('intro-loading');
-        window.addEventListener('touchmove', eatScroll, { passive: false });
-        window.addEventListener('wheel',     eatScroll, { passive: false });
-    }
-    function unlockScroll() {
-        if (!locked) return;
-        locked = false;
-        document.documentElement.classList.remove('intro-loading');
-        window.removeEventListener('touchmove', eatScroll, { passive: false });
-        window.removeEventListener('wheel',     eatScroll, { passive: false });
-    }
-    function showProgress(frac) {
-        if (ready || !scrollHint) return;
-        lockScroll();
-        const pct = Math.max(1, Math.min(99, Math.round(frac * 100)));
-        scrollHint.textContent = 'PREPARING  ' + pct + '%';
-        scrollHint.classList.add('preparing');
-    }
+    // The hint no longer gates anything: the proxy makes the scene scrubbable
+    // almost at once, so there is nothing to wait for and nothing to lock.
     function markReady() {
-        if (ready) return;
-        ready = true;
-        unlockScroll();
         if (!scrollHint) return;
         scrollHint.textContent = 'SCROLL TO BEGIN';
         scrollHint.classList.remove('preparing');
     }
-    video.addEventListener('canplaythrough', markReady);
-    video.addEventListener('loadeddata', () => { if (video.readyState >= 3) markReady(); });
-    // Never strand the page behind a failed or very slow download.
-    setTimeout(markReady, 15000);
+    lqVideo.addEventListener('loadeddata', markReady);
+    markReady();
 
     // Seeking runs from a rAF loop that eases toward the scroll target rather
     // than being set straight from the scroll handler: scroll events fire far
     // faster than a video can seek, and hammering currentTime makes the
     // decoder thrash.
-    function scrubLoop() {
-        if (duration) {
+    // A mouse wheel arrives in ~100px jumps, so mapping scroll straight to a
+    // frame makes the growth lurch. Easing toward the target instead walks the
+    // clip through the frames in between, which reads as motion rather than a
+    // jump — this is most of why the desktop felt less smooth than touch
+    // scrolling, which is already continuous. The rate is expressed per second
+    // so it behaves the same on a 60Hz and a 144Hz display.
+    const EASE_SECONDS = 0.22;
+    let lastFrame = 0;
+    function scrubLoop(now) {
+        const dt = lastFrame ? Math.min(0.05, (now - lastFrame) / 1000) : 0.016;
+        lastFrame = now;
+        if (duration && active) {
             const diff = targetTime - shownTime;
             // Skip while a seek is still in flight: handing the decoder a new
             // position mid-seek is what makes scrubbing stutter. shownTime
             // keeps easing, so the next frame simply catches up.
-            if (Math.abs(diff) > 0.004 && !video.seeking) {
-                shownTime += diff * 0.35;
-                video.currentTime = Math.max(0, Math.min(shownTime, duration - 0.03));
+            if (Math.abs(diff) > 0.004 && !active.seeking) {
+                shownTime += diff * (1 - Math.pow(0.1, dt / EASE_SECONDS));
+                active.currentTime = Math.max(0, Math.min(shownTime, duration - 0.03));
             }
         }
         requestAnimationFrame(scrubLoop);
@@ -239,15 +234,15 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // seeking paints normally.
     function prime() {
         if (primed) return;
-        const pr = video.play();
+        const pr = lqVideo.play();
         if (pr && pr.then) {
             pr.then(() => {
                 primed = true;
-                video.pause();
-                video.currentTime = Math.max(0, Math.min(shownTime < 0 ? 0 : shownTime,
-                                                         (duration || 1) - 0.03));
+                lqVideo.pause();
+                lqVideo.currentTime = Math.max(0, Math.min(shownTime < 0 ? 0 : shownTime,
+                                                           (duration || 1) - 0.03));
             }).catch(() => {});
-        } else { primed = true; video.pause(); }
+        } else { primed = true; lqVideo.pause(); }
     }
     ['pointerdown', 'touchstart', 'scroll'].forEach(ev =>
         window.addEventListener(ev, prime, { once: true, passive: true }));
@@ -255,18 +250,23 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // Must also run immediately when the file is cached: loadedmetadata and
     // canplay have already fired by then, so waiting on them leaves duration
     // at 0 forever and the scrub never starts.
+    // Duration comes from the proxy, which arrives first; both cuts are the
+    // same length. Must also run immediately when the file is cached, since
+    // loadedmetadata and canplay have already fired by then and waiting on
+    // them would leave duration at 0 forever.
     function initVideo() {
         if (duration) return;
-        duration = video.duration || 0;
+        duration = lqVideo.duration || 0;
         if (!duration) return;
         if (shownTime < 0) shownTime = 0;
         readScroll();
         updateIntro();
+        upgrade();
     }
-    video.addEventListener('loadedmetadata', initVideo);
-    video.addEventListener('canplay', () => { initVideo(); prime(); });
-    video.addEventListener('durationchange', initVideo);
-    if (video.readyState >= 1) { initVideo(); prime(); }
+    lqVideo.addEventListener('loadedmetadata', initVideo);
+    lqVideo.addEventListener('canplay', () => { initVideo(); prime(); });
+    lqVideo.addEventListener('durationchange', initVideo);
+    if (lqVideo.readyState >= 1) { initVideo(); prime(); }
 
     // Clicking a branch opens that service, reusing the existing panels.
     branches.forEach(el => {

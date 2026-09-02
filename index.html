@@ -261,12 +261,19 @@
                      Both are encoded with a keyframe on every frame so
                      scroll-scrubbing seeks instantly rather than decoding
                      forward from a distant keyframe. -->
-                <video id="room-video"
-                       data-src-desktop="images/grow-desktop.mp4"
-                       data-src-phone="images/grow-phone.mp4"
+                <!-- A ~1.4MB proxy streams in under half a second so the
+                     scroll is live immediately; the full-quality clip loads
+                     behind it and takes over silently once it is ready. -->
+                <video id="room-video-lq"
+                       data-src-desktop="images/grow-desktop-lq.mp4"
+                       data-src-phone="images/grow-phone-lq.mp4"
                        data-poster-desktop="images/room-start-desktop.jpg"
                        data-poster-phone="images/room-start-phone.jpg"
                        muted playsinline preload="auto"></video>
+                <video id="room-video"
+                       data-src-desktop="images/grow-desktop.mp4"
+                       data-src-phone="images/grow-phone.mp4"
+                       muted playsinline preload="none"></video>
             </div>
 
             <!-- Warm bloom that rises with the tree, so the room lifts out of
@@ -276,7 +283,7 @@
 
             <!-- SERVICE BRANCHES: one per branch, revealed as the tree grows -->
             <div id="branch-layer">
-                <a class="branch" data-id="backtest" data-side="left" style="--bx:33%; --by:31%; --px:46%; --py:30%">
+                <a class="branch" data-id="backtest" data-side="left" style="--bx:33%; --by:31%; --px:46%; --py:26%">
                     <span class="branch-line"></span>
                     <span class="branch-dot"></span>
                     <span class="branch-card">
@@ -285,7 +292,7 @@
                         <span class="branch-sub">Submit a system, get the full report</span>
                     </span>
                 </a>
-                <a class="branch" data-id="databank" data-side="right" style="--bx:67%; --by:40%; --px:55%; --py:40.5%">
+                <a class="branch" data-id="databank" data-side="right" style="--bx:67%; --by:40%; --px:55%; --py:38%">
                     <span class="branch-line"></span>
                     <span class="branch-dot"></span>
                     <span class="branch-card">
@@ -294,7 +301,7 @@
                         <span class="branch-sub">A curated vault of tested strategies</span>
                     </span>
                 </a>
-                <a class="branch" data-id="campus" data-side="left" style="--bx:31%; --by:52%; --px:46%; --py:51%">
+                <a class="branch" data-id="campus" data-side="left" style="--bx:31%; --by:52%; --px:46%; --py:50%">
                     <span class="branch-line"></span>
                     <span class="branch-dot"></span>
                     <span class="branch-card">
@@ -303,7 +310,7 @@
                         <span class="branch-sub">Learn to build and prove your own edge</span>
                     </span>
                 </a>
-                <a class="branch" data-id="about" data-side="right" style="--bx:69%; --by:61%; --px:55%; --py:61.5%">
+                <a class="branch" data-id="about" data-side="right" style="--bx:69%; --by:61%; --px:55%; --py:62%">
                     <span class="branch-line"></span>
                     <span class="branch-dot"></span>
                     <span class="branch-card">
@@ -312,7 +319,7 @@
                         <span class="branch-sub">How the numbers are actually produced</span>
                     </span>
                 </a>
-                <a class="branch" data-id="contact" data-side="left" style="--bx:35%; --by:72%; --px:46%; --py:72%">
+                <a class="branch" data-id="contact" data-side="left" style="--bx:35%; --by:72%; --px:46%; --py:74%">
                     <span class="branch-line"></span>
                     <span class="branch-dot"></span>
                     <span class="branch-card">
