@@ -241,11 +241,16 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     }
 
 
+    // Exposed for the ?debug=1 readout: when progress will not move on a real
+    // device, these are the numbers that say why.
+    let dbgScrollEvents = 0, dbgTotal = 0, dbgRectTop = 0, dbgSceneH = 0;
     function readScroll() {
         const rect  = introScene.getBoundingClientRect();
         const total = introScene.offsetHeight - window.innerHeight;
         const done  = Math.min(Math.max(-rect.top, 0), total);
         progress = total > 0 ? done / total : 0;
+        dbgTotal = total; dbgRectTop = Math.round(rect.top);
+        dbgSceneH = introScene.offsetHeight;
         if (duration) targetTime = Math.min(scrubTimeFor(progress), duration - 0.03);
     }
 
@@ -381,6 +386,23 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         lqVideo.currentTime = Math.max(0, Math.min(shownTime < 0 ? 0 : shownTime,
                                                    (duration || 1) - 0.03));
         detachPrime();
+        nudgeFullLoad();
+    }
+
+    // iOS will not preload a <video> without a user gesture no matter what
+    // the preload attribute says. On a real iPhone the full clip therefore
+    // sat at readyState 0 indefinitely — the debug readout showed
+    // "full rs:0" while the proxy, primed by the first touch, was at rs:4 —
+    // so the upgrade never fired and the phone stayed on the soft proxy.
+    // Now that priming proves a gesture has happened, give the full clip the
+    // same nudge.
+    function nudgeFullLoad() {
+        if (!isIOS || !video.getAttribute('src') || video.readyState >= 1) return;
+        try {
+            video.load();
+            const pr = video.play();
+            if (pr && pr.then) pr.then(() => video.pause()).catch(() => {});
+        } catch (e) {}
     }
     function prime() {
         if (primed) return;
@@ -423,7 +445,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // a phone, whether you are looking at the current build or a cached one —
     // which has repeatedly been the difference between "the fix did not work"
     // and "the fix never arrived".
-    const BUILD = 'build-9  2026-09-03  proxy-release';
+    const BUILD = 'build-10  2026-09-03  scroll-diag';
     try { console.log('BarTest ' + BUILD); } catch (e) {}
 
     // Append ?debug=1 to the URL for an on-screen readout. A phone cannot be
@@ -441,6 +463,10 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
             box.textContent =
                 BUILD + '\n' +
                 'iOS:' + isIOS + '  primed:' + primed + '  src:' + sourceMode + '\n' +
+                'scrollY:' + Math.round(window.scrollY) +
+                    '  vh:' + window.innerHeight + '  evts:' + dbgScrollEvents + '\n' +
+                'sceneH:' + dbgSceneH + '  total:' + Math.round(dbgTotal) +
+                    '  top:' + dbgRectTop + '\n' +
                 'dur:' + duration.toFixed(2) + '  prog:' + progress.toFixed(3) + '\n' +
                 'target:' + targetTime.toFixed(2) + '  shown:' + shownTime.toFixed(2) + '\n' +
                 'active:' + (active === video ? 'FULL' : 'proxy') +
@@ -450,12 +476,14 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
                 'full  rs:' + video.readyState + ' t:' + video.currentTime.toFixed(2) +
                     ' ' + mediaErr(video.error) + '\n' +
                 'swapped:' + video.classList.contains('shown') +
-                    '  cards:' + document.querySelectorAll('.branch.lit').length;
+                    '  cards:' + document.querySelectorAll('.branch.lit').length + '\n' +
+                'body:[' + document.body.className + ']';
         }, 200);
     }
 
     pickSource();
-    window.addEventListener('scroll', updateIntro, { passive: true });
+    window.addEventListener('scroll', () => { dbgScrollEvents++; updateIntro(); },
+                            { passive: true });
     window.addEventListener('resize', () => { pickSource(); updateIntro(); });
     window.addEventListener('orientationchange', () => setTimeout(pickSource, 150));
     updateIntro();
