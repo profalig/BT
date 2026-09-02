@@ -56,6 +56,19 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // is live almost immediately, then becomes the full-quality clip.
     let active     = lqVideo || video;
 
+    // Never overlap a seek: on iOS Safari, writing currentTime again before
+    // the previous seek's `seeked` event has fired can wedge the media
+    // pipeline outright — the element stops responding to ANY further seek
+    // and the hero freezes for the rest of the session. That is exactly what
+    // "the phone does nothing" was, from a change that dropped this guard
+    // after a benchmark run in this Chromium-based preview pane showed a
+    // higher update rate without it. Chrome's decoder coalesces overlapping
+    // seeks; Safari's does not — and that difference cannot be seen from
+    // inside Chrome. This guard is permanent. See requestSeek()/onSeeked()
+    // by the scrub loop for how it stays fast anyway.
+    let seekPending  = false;
+    let seekIssuedAt = 0;
+
     // Portrait phones get the portrait master, everything else the landscape
     // one. Re-evaluated rather than decided once at parse time: on first run
     // the viewport can still be reporting pre-layout dimensions, which picked
@@ -72,6 +85,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         sourceMode = mode;
         duration = 0; shownTime = -1; primed = false; upgraded = false;
         active = lqVideo;
+        seekPending = false;
         video.classList.remove('shown');
         lqVideo.classList.remove('faded');
 
@@ -131,6 +145,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
             video.classList.add('shown');
             lqVideo.classList.add('faded');
             active = video;
+            seekPending = false; // any pending flag belonged to the proxy's seek
         };
 
         // Swap only once the full clip has genuinely PRESENTED a frame.
@@ -174,19 +189,18 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         [0.900, 5.10]    // full tree, settled
     ];
 
-    // Scroll position at which each branch's card lights. Slightly after the
-    // matching growth keyframe so the card follows the branch appearing.
+    // Scroll position at which each branch's card lights, and the range the
+    // room glow ramps over. Deliberately scroll-driven, not video-driven: an
+    // earlier version keyed these to the video's own eased playback time so
+    // they would land in exact sync with the growth, but that coupled the
+    // whole interface to the decoder — if the clip stalled or hadn't loaded,
+    // no cards and no glow appeared AT ALL and the page looked dead. Scroll
+    // position is always live, so this can never go blank. The cards lead
+    // the picture by the easing interval (a couple hundred ms), which reads
+    // as nothing next to a hero that might not render at all.
     const BRANCH_AT = [0.315, 0.435, 0.555, 0.675, 0.805];
-
-    // ...but the cards are driven off the clip TIME these correspond to, not
-    // off scroll position. The frame on screen is the eased shownTime, which
-    // trails the raw scroll by the easing interval, so lighting cards from
-    // scroll made them appear before the branch had actually grown — the tree
-    // and its labels visibly disagreed while scrolling. Converting through the
-    // same map keeps the tuning in one place.
-    const BRANCH_TIME = BRANCH_AT.map(scrubTimeFor);
-    const GLOW_FROM   = scrubTimeFor(0.17);
-    const GLOW_TO     = scrubTimeFor(0.72);
+    const GLOW_FROM = 0.17;
+    const GLOW_TO   = 0.72;
 
     function scrubTimeFor(p) {
         if (p <= SCRUB_MAP[0][0]) return SCRUB_MAP[0][1];
@@ -224,31 +238,23 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         paintForFrame();
     }
 
-    // Everything that must agree with the picture is keyed off the frame being
-    // shown, and runs from the scrub loop as well as on scroll, so the cards
-    // arrive exactly as their branch finishes growing.
+    // Runs from updateIntro() on every scroll event — not from the scrub
+    // loop, and not from anything the video does. See the comment on
+    // BRANCH_AT above for why.
     function paintForFrame() {
-        // Scroll-driven, deliberately. Keying these to the video's eased time
-        // synced them a little better with the growth, but it coupled the whole
-        // interface to the decoder: if the clip stalled or its loop was not
-        // running, no cards and no glow appeared at all and the page looked
-        // dead. The ~0.2s the cards lead the picture by is barely visible; a
-        // hero that can go blank is not worth it.
-        const t = scrubTimeFor(progress);
-
         if (glow) {
             // Quantised to 100 steps: past that the change is invisible but
             // still repaints a full-viewport gradient.
-            const g = Math.round(clamp01((t - GLOW_FROM) / (GLOW_TO - GLOW_FROM)) * 90) / 100;
+            const g = Math.round(clamp01((progress - GLOW_FROM) / (GLOW_TO - GLOW_FROM)) * 90) / 100;
             if (g !== lastGlow) { glow.style.opacity = g; lastGlow = g; }
         }
 
         branches.forEach((el, i) => {
-            el.classList.toggle('lit', t >= BRANCH_TIME[i]);
+            el.classList.toggle('lit', progress >= BRANCH_AT[i]);
         });
 
         // Warm room HUD at the start, cooler once the tree dominates.
-        document.body.classList.toggle('in-space', t >= GLOW_TO);
+        document.body.classList.toggle('in-space', progress >= GLOW_TO);
     }
 
     // The hint no longer gates anything: the proxy makes the scene scrubbable
@@ -273,6 +279,37 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // so it behaves the same on a 60Hz and a 144Hz display.
     const EASE_SECONDS = 0.22;
     let lastFrame = 0;
+
+    // Fires the moment the active element's in-flight seek resolves, rather
+    // than waiting for the next rAF tick to notice — that shaves up to one
+    // frame (~16ms) of dead time between one seek finishing and the next
+    // starting, without ever writing currentTime while a seek is still
+    // pending. That is the entire performance case for this over a flat
+    // "seek every frame": get the same throughput the unguarded version
+    // measured in Chrome, without the guarantee-breaking part.
+    function requestSeek() {
+        if (!duration || !active) return;
+        if (seekPending) {
+            // Self-heal: if a `seeked` event is ever swallowed (observed in
+            // some WebKit versions on a source-change race), do not stay
+            // stuck waiting for it for the rest of the session.
+            if (performance.now() - seekIssuedAt < 1200) return;
+            seekPending = false;
+        }
+        const want = Math.max(0, Math.min(shownTime, duration - 0.03));
+        if (Math.abs(want - active.currentTime) <= 0.004) return;
+        seekPending  = true;
+        seekIssuedAt = performance.now();
+        active.currentTime = want;
+    }
+    function onSeeked(e) {
+        if (e.target !== active) return;
+        seekPending = false;
+        requestSeek(); // shownTime may already have moved on; chain immediately
+    }
+    video.addEventListener('seeked', onSeeked);
+    lqVideo.addEventListener('seeked', onSeeked);
+
     function scrubLoop(now) {
         const dt = lastFrame ? Math.min(0.05, (now - lastFrame) / 1000) : 0.016;
         lastFrame = now;
@@ -286,25 +323,12 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         if (duration && active) {
             const diff = targetTime - shownTime;
             if (Math.abs(diff) > 0.004) {
-                // Ease EVERY frame, on wall-clock time. Gating this on
-                // !seeking (as it was) stalled the easing whenever the
-                // decoder was busy, so the motion advanced in lurches
-                // instead of gliding — the decoder's pace was driving the
-                // animation rather than the clock.
+                // Ease EVERY frame, on wall-clock time. This is cheap (no DOM,
+                // no video) and safe to run unconditionally — it is only the
+                // actual seek below that must never overlap itself.
                 shownTime += diff * (1 - Math.pow(0.1, dt / EASE_SECONDS));
             }
-            // Seek every frame, unconditionally. This used to be gated on
-            // !active.seeking, on the theory that handing the decoder a new
-            // position mid-seek would make it thrash. Measured on the live
-            // element, the opposite is true: the guard skipped whatever frame
-            // a seek was still in flight for and roughly halved the update
-            // rate — 31/sec with it, 59/sec without, at the same scroll speed.
-            // The browser coalesces a new currentTime onto an in-flight seek,
-            // so writing every frame simply keeps the target fresh.
-            const want = Math.max(0, Math.min(shownTime, duration - 0.03));
-            if (Math.abs(want - active.currentTime) > 0.004) {
-                active.currentTime = want;
-            }
+            requestSeek();
         }
         requestAnimationFrame(scrubLoop);
     }
@@ -328,9 +352,6 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     ['pointerdown', 'touchstart', 'scroll'].forEach(ev =>
         window.addEventListener(ev, prime, { once: true, passive: true }));
 
-    // Must also run immediately when the file is cached: loadedmetadata and
-    // canplay have already fired by then, so waiting on them leaves duration
-    // at 0 forever and the scrub never starts.
     // Duration comes from the proxy, which arrives first; both cuts are the
     // same length. Must also run immediately when the file is cached, since
     // loadedmetadata and canplay have already fired by then and waiting on
