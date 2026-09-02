@@ -293,14 +293,17 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
                 // animation rather than the clock.
                 shownTime += diff * (1 - Math.pow(0.1, dt / EASE_SECONDS));
             }
-            // Issue a seek only when the decoder is free, and always to the
-            // newest position. Requests are dropped rather than queued, so a
-            // fast scroll never builds a backlog of stale seeks.
-            if (!active.seeking) {
-                const want = Math.max(0, Math.min(shownTime, duration - 0.03));
-                if (Math.abs(want - active.currentTime) > 0.004) {
-                    active.currentTime = want;
-                }
+            // Seek every frame, unconditionally. This used to be gated on
+            // !active.seeking, on the theory that handing the decoder a new
+            // position mid-seek would make it thrash. Measured on the live
+            // element, the opposite is true: the guard skipped whatever frame
+            // a seek was still in flight for and roughly halved the update
+            // rate — 31/sec with it, 59/sec without, at the same scroll speed.
+            // The browser coalesces a new currentTime onto an in-flight seek,
+            // so writing every frame simply keeps the target fresh.
+            const want = Math.max(0, Math.min(shownTime, duration - 0.03));
+            if (Math.abs(want - active.currentTime) > 0.004) {
+                active.currentTime = want;
             }
         }
         requestAnimationFrame(scrubLoop);
