@@ -93,8 +93,21 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // matters: scrubbing seeks constantly, and a seek into a byte range that
     // has not arrived yet paints nothing, so the tree would stop growing while
     // the scroll carried on. From memory, every seek is local and cannot stall.
+    // iOS Safari accounts a blob: URL against the tab's memory, and holding a
+    // ~14MB clip there — plus the transient copy made while assembling it, plus
+    // two live 1080x1920 decoders — is enough to get the tab killed with
+    // "A problem repeatedly occurred", especially while back-scrolling, where
+    // every seek has to decode forward from the previous keyframe. There the
+    // clip is streamed from its URL instead and left in the media cache, which
+    // is not JS heap. Everywhere else the Blob is kept: it is what guarantees
+    // a seek can never stall on the network.
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
     function fetchClip(url, token) {
-        if (!window.fetch || typeof URL.createObjectURL !== 'function') return;
+        if (isIOS || !window.fetch || typeof URL.createObjectURL !== 'function') {
+            directSrc(url); return;
+        }
         fetch(url).then(res => {
             if (!res.ok || !res.blob) throw 0;
             return res.blob();
@@ -113,11 +126,27 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     function upgrade() {
         if (upgraded || !duration || video.readyState < 3) return;
         upgraded = true;
+        let settled = false;
         const settle = () => {
+            if (settled) return;
+            settled = true;
             video.removeEventListener('seeked', settle);
             video.classList.add('shown');
             lqVideo.classList.add('faded');
             active = video;
+            // Tear the proxy down rather than leaving it parked at opacity 0.
+            // An idle <video> still holds a decoder and its decoded frames,
+            // and on iOS that is memory the tab cannot spare.
+            setTimeout(() => {
+                // Never drop the proxy unless the full clip can actually
+                // render — otherwise a failed upgrade leaves a blank hero.
+                if (active !== video || video.readyState < 3) return;
+                try {
+                    lqVideo.pause();
+                    lqVideo.removeAttribute('src');
+                    lqVideo.load();
+                } catch (e) {}
+            }, 400);
         };
         video.addEventListener('seeked', settle);
         // Mobile will not paint a video that has never played, so give the
@@ -153,6 +182,16 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // matching growth keyframe so the card follows the branch appearing.
     const BRANCH_AT = [0.315, 0.435, 0.555, 0.675, 0.805];
 
+    // ...but the cards are driven off the clip TIME these correspond to, not
+    // off scroll position. The frame on screen is the eased shownTime, which
+    // trails the raw scroll by the easing interval, so lighting cards from
+    // scroll made them appear before the branch had actually grown — the tree
+    // and its labels visibly disagreed while scrolling. Converting through the
+    // same map keeps the tuning in one place.
+    const BRANCH_TIME = BRANCH_AT.map(scrubTimeFor);
+    const GLOW_FROM   = scrubTimeFor(0.17);
+    const GLOW_TO     = scrubTimeFor(0.72);
+
     function scrubTimeFor(p) {
         if (p <= SCRUB_MAP[0][0]) return SCRUB_MAP[0][1];
         for (let i = 1; i < SCRUB_MAP.length; i++) {
@@ -172,22 +211,46 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         if (duration) targetTime = Math.min(scrubTimeFor(progress), duration - 0.03);
     }
 
+    // Scroll fires far more often than any of these values actually change,
+    // and every write to an inline style costs a recalc whether or not the
+    // value differs. Each one is therefore latched and only written on a real
+    // change; classList.toggle already no-ops when the state matches.
+    let lastGlow = -1;
+    let lastPE   = null;
     function updateIntro() {
+        if (document.body.classList.contains('modal-locked')) return;
         readScroll();
 
-        // The room lifts out of darkness as the tree lights up.
-        if (glow) glow.style.opacity = clamp01((progress - 0.17) / 0.55) * 0.9;
+        if (scrollHint) scrollHint.classList.toggle('hidden', progress > 0.04);
+        const pe = progress >= 1 ? 'none' : 'auto';
+        if (pe !== lastPE) { introScene.style.pointerEvents = pe; lastPE = pe; }
 
-        // Light each branch as its growth stage passes.
+        paintForFrame();
+    }
+
+    // Everything that must agree with the picture is keyed off the frame being
+    // shown, and runs from the scrub loop as well as on scroll, so the cards
+    // arrive exactly as their branch finishes growing.
+    function paintForFrame() {
+        // Before the clip has loaded there is no frame to agree with, so fall
+        // back to scroll position rather than showing nothing at all.
+        const t = (duration && shownTime >= 0)
+            ? shownTime
+            : scrubTimeFor(progress);
+
+        if (glow) {
+            // Quantised to 100 steps: past that the change is invisible but
+            // still repaints a full-viewport gradient.
+            const g = Math.round(clamp01((t - GLOW_FROM) / (GLOW_TO - GLOW_FROM)) * 90) / 100;
+            if (g !== lastGlow) { glow.style.opacity = g; lastGlow = g; }
+        }
+
         branches.forEach((el, i) => {
-            el.classList.toggle('lit', progress >= BRANCH_AT[i]);
+            el.classList.toggle('lit', t >= BRANCH_TIME[i]);
         });
 
-        if (scrollHint) scrollHint.classList.toggle('hidden', progress > 0.04);
-        introScene.style.pointerEvents = progress >= 1 ? 'none' : 'auto';
-
         // Warm room HUD at the start, cooler once the tree dominates.
-        document.body.classList.toggle('in-space', progress > 0.62);
+        document.body.classList.toggle('in-space', t >= GLOW_TO);
     }
 
     // The hint no longer gates anything: the proxy makes the scene scrubbable
@@ -215,6 +278,13 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     function scrubLoop(now) {
         const dt = lastFrame ? Math.min(0.05, (now - lastFrame) / 1000) : 0.016;
         lastFrame = now;
+        // While a modal pins the body with position:fixed the page reports
+        // scrollY 0, which would drag the hero back to its first frame behind
+        // the overlay and then animate back on close. Park instead.
+        if (document.body.classList.contains('modal-locked')) {
+            requestAnimationFrame(scrubLoop);
+            return;
+        }
         if (duration && active) {
             const diff = targetTime - shownTime;
             if (Math.abs(diff) > 0.004) {
@@ -234,6 +304,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
                     active.currentTime = want;
                 }
             }
+            paintForFrame();
         }
         requestAnimationFrame(scrubLoop);
     }
@@ -598,34 +669,34 @@ async function openUserReportsModal() {
 
         const profileHeaderHtml = `
             <div style="background: rgba(210, 213, 219, 0.05); border: 1px solid rgba(210, 213, 219, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 10px; margin-bottom: 12px;">
+                <div class="prof-head" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 10px; margin-bottom: 12px;">
                     <div>
                         <div style="font-size: 0.75em; color: #888; letter-spacing: 1px;">// CLEARANCE LEVEL: AGENT</div>
                         <div style="font-size: 1.3em; font-weight: bold; color: #e4e6ea; letter-spacing: 1px;">
                             <i class="fa-solid fa-id-badge"></i> ${callsign}
                         </div>
                     </div>
-                    <div style="text-align: right; font-size: 0.85em; color: #aaa;">
-                        <div><i class="fa-solid fa-envelope"></i> ${userEmail}</div>
+                    <div class="prof-contact" style="text-align: right; font-size: 0.85em; color: #aaa;">
+                        <div class="prof-email"><i class="fa-solid fa-envelope"></i> ${userEmail}</div>
                         <div style="color: #ffb066; margin-top: 2px;">● COMM-LINK ACTIVE</div>
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center;">
+                <div class="prof-stats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center;">
                     <div style="background: rgba(255, 215, 0, 0.1); padding: 8px; border-radius: 4px; border: 1px solid rgba(255, 215, 0, 0.3);">
-                        <div style="font-size: 0.7em; color: #ffd700;">CREDITS</div>
+                        <div class="prof-stat-label" style="font-size: 0.7em; color: #ffd700;">CREDITS</div>
                         <div style="font-size: 1.2em; font-weight: bold; color: #ffd700;">${availableCredits}</div>
                     </div>
                     <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="font-size: 0.7em; color: #888;">TOTAL RUNS</div>
+                        <div class="prof-stat-label" style="font-size: 0.7em; color: #888;">TOTAL RUNS</div>
                         <div style="font-size: 1.2em; font-weight: bold; color: #ffffff;">${totalSubmissions}</div>
                     </div>
                     <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255, 176, 102, 0.15);">
-                        <div style="font-size: 0.7em; color: #888;">COMPLETED</div>
+                        <div class="prof-stat-label" style="font-size: 0.7em; color: #888;">COMPLETED</div>
                         <div style="font-size: 1.2em; font-weight: bold; color: #ffb066;">${completedCount}</div>
                     </div>
                     <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(210, 213, 219, 0.15);">
-                        <div style="font-size: 0.7em; color: #888;">IN QUEUE</div>
+                        <div class="prof-stat-label" style="font-size: 0.7em; color: #888;">IN QUEUE</div>
                         <div style="font-size: 1.2em; font-weight: bold; color: #d2d5db;">${pendingCount}</div>
                     </div>
                 </div>
@@ -659,22 +730,22 @@ async function openUserReportsModal() {
             const viewBtn = `<button class="rpt-open-btn" data-sub-idx="${historyList.indexOf(sub)}" style="background:#f0b25a; color:#17120a; border:none; padding:7px 14px; border-radius:4px; font-family:'Share Tech Mono',monospace; font-size:0.78rem; font-weight:700; letter-spacing:1px; cursor:pointer;"><i class="fa-solid fa-chart-line"></i> VIEW REPORT</button>`;
 
             if (reportUrl) {
-                statusBadge = `<span style="color:#ffb066; font-weight:bold;">[ COMPLETED ]</span>`;
+                statusBadge = `<span class="prof-status" style="color:#ffb066; font-weight:bold;">[ COMPLETED ]</span>`;
                 downloadBtn = `<div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">${viewBtn}<a href="${reportUrl}" target="_blank" download style="color:#d2d5db; text-decoration:underline; font-weight:bold;"><i class="fa-solid fa-file-pdf"></i> DOWNLOAD PDF</a></div>`;
             } else if (['completed', 'complete', 'done', 'success'].includes(rawStatus)) {
-                statusBadge = `<span style="color:#ffb066; font-weight:bold;">[ COMPLETED ]</span>`;
+                statusBadge = `<span class="prof-status" style="color:#ffb066; font-weight:bold;">[ COMPLETED ]</span>`;
                 downloadBtn = `<div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">${viewBtn}<span style="color:#ffd700;"><i class="fa-solid fa-triangle-exclamation"></i> PDF link pending</span></div>`;
             } else if (['failed', 'error', 'rejected'].includes(rawStatus)) {
-                statusBadge = `<span style="color:#ff0055; font-weight:bold;">[ FAILED ]</span>`;
+                statusBadge = `<span class="prof-status" style="color:#ff0055; font-weight:bold;">[ FAILED ]</span>`;
                 downloadBtn = `<span style="color:#ff0055;"><i class="fa-solid fa-circle-xmark"></i> Execution Error</span>`;
             } else {
-                statusBadge = `<span style="color:#ffd700; font-weight:bold;">[ PROCESSING ]</span>`;
+                statusBadge = `<span class="prof-status" style="color:#ffd700; font-weight:bold;">[ PROCESSING ]</span>`;
                 downloadBtn = `<span style="color:#888;"><i class="fa-solid fa-spinner fa-spin"></i> Analyzing Tick Data...</span>`;
             }
 
             return `
                 <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(228,230,234,0.2); margin-bottom: 10px; padding: 12px 14px; border-radius: 6px; text-align: left;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="prof-row-top" style="display: flex; justify-content: space-between; align-items: center;">
                         <strong style="color: #e4e6ea; font-size: 1.05em; letter-spacing: 0.5px;">${sub.system_name || 'UNTITLED SYSTEM'}</strong>
                         ${statusBadge}
                     </div>

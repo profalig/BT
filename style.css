@@ -84,7 +84,9 @@ body {
 #room-video-lq { z-index: 2; }
 #room-video    { z-index: 3; opacity: 0; }
 #room-video.shown    { opacity: 1; }
-#room-video-lq.faded { opacity: 0; }
+/* visibility, not just opacity: an opacity:0 layer is still composited every
+   frame, and the proxy is torn down after the hand-over anyway. */
+#room-video-lq.faded { opacity: 0; visibility: hidden; }
 
 /* Warm bloom that rises with the tree, lifting the room out of darkness as
    the branches light. Screen-blended so it adds light rather than washing. */
@@ -94,10 +96,14 @@ body {
     z-index: 4;
     pointer-events: none;
     opacity: 0;
-    mix-blend-mode: screen;
+    /* Was mix-blend-mode: screen. Blending samples what is underneath, and
+       what is underneath is the video — so every seek invalidated a
+       full-viewport blend. Over near-black footage plain alpha compositing
+       of a warm gradient is visually almost the same; the stops are lifted
+       a little to make up the difference. */
     background:
-        radial-gradient(ellipse 30% 34% at 50% 52%, rgba(255, 206, 138, 0.55) 0%, rgba(255, 168, 82, 0.20) 45%, transparent 72%),
-        radial-gradient(ellipse 62% 52% at 50% 55%, rgba(255, 150, 70, 0.14) 0%, transparent 70%);
+        radial-gradient(ellipse 30% 34% at 50% 52%, rgba(255, 206, 138, 0.62) 0%, rgba(255, 168, 82, 0.24) 45%, transparent 72%),
+        radial-gradient(ellipse 62% 52% at 50% 55%, rgba(255, 150, 70, 0.17) 0%, transparent 70%);
     will-change: opacity;
 }
 
@@ -132,6 +138,11 @@ body {
     text-decoration: none;
     cursor: pointer;
     transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+    /* Promote to its own layer so the fade/slide is composited rather than
+       repainted through everything stacked over the video. No `contain:
+       paint` here — it would clip to the branch box and cut off both the
+       card's drop shadow and the dot's glow, which extend well outside it. */
+    will-change: opacity, transform;
 }
 
 /* Right-hand branches read outward from the trunk, so mirror the order. */
@@ -172,21 +183,39 @@ body {
     padding: 11px 16px;
     margin: 0 10px;
     border-radius: 7px;
-    background: rgba(14, 10, 7, 0.82);
+    /* No backdrop-filter here on purpose. Blurring the backdrop forces the
+       browser to re-read and re-blur the region behind each card, and the
+       backdrop is a video being seeked on every frame of scroll — so five
+       cards meant five full re-blurs per scrubbed frame, scaling with
+       viewport area. That was the desktop lag. A slightly more opaque solid
+       reads almost identically over night footage and costs nothing. */
+    background: rgba(12, 9, 6, 0.9);
     border: 1px solid rgba(255, 190, 120, 0.28);
-    backdrop-filter: blur(9px);
-    -webkit-backdrop-filter: blur(9px);
     box-shadow: 0 10px 34px rgba(0, 0, 0, 0.6);
     white-space: nowrap;
     transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
 }
 .branch[data-side="right"] .branch-card { text-align: right; }
 
-.branch:hover .branch-card {
+/* Guarded on a real pointer. On iOS Safari the first tap of an element that
+   has :hover styles only applies the hover state — the click lands on the
+   SECOND tap. That is why a branch had to be touched twice to open. Behind
+   (hover: hover) touch devices never enter this rule and the first tap
+   activates. */
+@media (hover: hover) and (pointer: fine) {
+    .branch:hover .branch-card {
+        border-color: rgba(255, 210, 150, 0.8);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 26px rgba(255, 170, 80, 0.28);
+        transform: translateY(-2px);
+    }
+}
+
+/* Touch gets an immediate pressed state instead, so a tap still feels alive. */
+.branch:active .branch-card {
     border-color: rgba(255, 210, 150, 0.8);
     box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 26px rgba(255, 170, 80, 0.28);
-    transform: translateY(-2px);
 }
+.branch { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 
 .branch-tag {
     display: block;
@@ -2741,4 +2770,26 @@ html {
 body {
     height: auto !important;
     min-height: 100vh;
+}
+/* ==========================================================================
+   AGENT PROFILE MODAL — wrapping
+   The header row put the callsign and the email in one space-between flex
+   row. On a phone that row is narrower than both, and the line breaker is
+   allowed to split at the "@" and the dots, so an address ended up half on
+   one line and half on the next. Each value is now unbreakable and the row
+   is allowed to wrap instead, so a long value moves down whole.
+   ========================================================================== */
+.prof-head { flex-wrap: wrap; gap: 10px; }
+.prof-email,
+.prof-status,
+.prof-stat-label { white-space: nowrap; }
+.prof-row-top { flex-wrap: wrap; gap: 6px; }
+
+@media (max-width: 480px) {
+    /* Stack the header rather than squeezing two columns into ~340px. */
+    .prof-head    { flex-direction: column; align-items: flex-start !important; }
+    .prof-contact { text-align: left !important; }
+    /* Four stat tiles left ~69px of content each, too narrow for the word
+       COMPLETED at this size — two per row gives it space. */
+    .prof-stats   { grid-template-columns: repeat(2, 1fr) !important; }
 }

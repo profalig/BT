@@ -385,44 +385,57 @@ function openReportDashboard(submission) {
 
     el.classList.add('active');
     el.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
+    rptLockPage();
 
-    // Draw after layout so the SVGs measure against real widths
-    requestAnimationFrame(() => {
-        rptArea(document.getElementById('chart-equity'), m.equity, {
+    // The overlay used to become visible in the same frame that built six
+    // charts and up to 200 trade rows, so on a phone it appeared only after
+    // all of that finished — which is what made the report feel slow to open.
+    // The panel is painted first, then the work is spread one job per frame.
+    const jobs = [
+        () => rptArea(document.getElementById('chart-equity'), m.equity, {
             fill: 'var(--seq-1)',
             fmtY: v => (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : Math.round(v)),
             fmtTip: v => RPT.fmtMoney(v, cur)
-        });
-        rptArea(document.getElementById('chart-drawdown'), m.drawdown, {
+        }),
+        () => rptArea(document.getElementById('chart-drawdown'), m.drawdown, {
             fill: 'var(--neg)', below: true, height: 160,
             fmtY: v => v.toFixed(0) + '%',
             fmtTip: v => RPT.fmtNum(v, 2) + '%'
-        });
-        rptDiverging(document.getElementById('chart-monthly'), m.monthly);
-        rptBars(document.getElementById('chart-weekday'), m.weekday, {
+        }),
+        () => rptDiverging(document.getElementById('chart-monthly'), m.monthly),
+        () => rptBars(document.getElementById('chart-weekday'), m.weekday, {
             unit: '%', fmtTip: v => RPT.fmtNum(v, 1) + '% win rate'
-        });
-        rptHBars(document.getElementById('chart-symbols'), m.symbols, ' trades');
-        rptBars(document.getElementById('chart-rmultiple'), m.rBuckets, {
+        }),
+        () => rptHBars(document.getElementById('chart-symbols'), m.symbols, ' trades'),
+        () => rptBars(document.getElementById('chart-rmultiple'), m.rBuckets, {
             fmtTip: v => v + ' trades'
-        });
-
-        const tb = document.querySelector('#rpt-log tbody');
-        const rows = (m.trades || []).slice(0, 200);
-        tb.innerHTML = rows.length ? rows.map((t, i) =>
-            '<tr>' +
-              '<td>' + (i + 1) + '</td>' +
-              '<td>' + RPT.esc(t.symbol) + '</td>' +
-              '<td>' + RPT.esc(t.side) + '</td>' +
-              '<td>' + RPT.esc(t.entry) + '</td>' +
-              '<td>' + RPT.esc(t.exit) + '</td>' +
-              '<td class="num ' + (t.r >= 0 ? 'val-pos' : 'val-neg') + '">' + RPT.fmtNum(t.r) + 'R</td>' +
-              '<td class="num ' + (t.pnl >= 0 ? 'val-pos' : 'val-neg') + '">' + RPT.fmtMoney(t.pnl, cur) + '</td>' +
-              '<td><span class="rpt-tag ' + (t.pnl >= 0 ? 'win' : 'loss') + '">' + (t.pnl >= 0 ? 'WIN' : 'LOSS') + '</span></td>' +
-            '</tr>').join('')
-            : '<tr><td colspan="8" style="text-align:center;padding:22px;color:var(--text-muted)">No trade log attached — see the PDF for the full record.</td></tr>';
-    });
+        }),
+        () => {
+            const tb = document.querySelector('#rpt-log tbody');
+            const rows = (m.trades || []).slice(0, 200);
+            tb.innerHTML = rows.length ? rows.map((t, i) =>
+                '<tr>' +
+                  '<td>' + (i + 1) + '</td>' +
+                  '<td>' + RPT.esc(t.symbol) + '</td>' +
+                  '<td>' + RPT.esc(t.side) + '</td>' +
+                  '<td>' + RPT.esc(t.entry) + '</td>' +
+                  '<td>' + RPT.esc(t.exit) + '</td>' +
+                  '<td class="num ' + (t.r >= 0 ? 'val-pos' : 'val-neg') + '">' + RPT.fmtNum(t.r) + 'R</td>' +
+                  '<td class="num ' + (t.pnl >= 0 ? 'val-pos' : 'val-neg') + '">' + RPT.fmtMoney(t.pnl, cur) + '</td>' +
+                  '<td><span class="rpt-tag ' + (t.pnl >= 0 ? 'win' : 'loss') + '">' + (t.pnl >= 0 ? 'WIN' : 'LOSS') + '</span></td>' +
+                '</tr>').join('')
+                : '<tr><td colspan="8" style="text-align:center;padding:22px;color:var(--text-muted)">No trade log attached — see the PDF for the full record.</td></tr>';
+        }
+    ];
+    let ji = 0;
+    function pump() {
+        if (ji >= jobs.length) return;
+        jobs[ji++]();
+        requestAnimationFrame(pump);
+    }
+    // Two frames before the first job: one for the browser to lay the panel
+    // out, one for it to actually paint it. Only then start drawing.
+    requestAnimationFrame(() => requestAnimationFrame(pump));
 }
 
 function closeReportDashboard() {
@@ -430,7 +443,32 @@ function closeReportDashboard() {
     if (!el) return;
     el.classList.remove('active');
     el.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
+    rptUnlockPage();
+}
+
+// `body { overflow: hidden }` does not lock the page on iOS Safari, where the
+// scrolling element is the documentElement — which is why the page behind the
+// report kept moving under a reader's thumb. Pinning the body with
+// position:fixed at the current offset is the lock that actually holds; the
+// offset is restored on close so they land back where they were. The body
+// class also parks the hero scrub loop, which would otherwise chase the
+// scroll position to 0 while it is pinned.
+let rptSavedScroll = 0;
+function rptLockPage() {
+    rptSavedScroll = window.scrollY || document.documentElement.scrollTop || 0;
+    document.body.classList.add('modal-locked');
+    const b = document.body.style;
+    b.position = 'fixed';
+    b.top   = (-rptSavedScroll) + 'px';
+    b.left  = '0';
+    b.right = '0';
+    b.width = '100%';
+}
+function rptUnlockPage() {
+    document.body.classList.remove('modal-locked');
+    const b = document.body.style;
+    b.position = ''; b.top = ''; b.left = ''; b.right = ''; b.width = ''; b.overflow = '';
+    window.scrollTo(0, rptSavedScroll);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
