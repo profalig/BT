@@ -1,0 +1,39 @@
+# Research notebooks — these contain the plaintext Supabase service_role key
+# and the Telegram bot token. They must never reach a public repo.
+Projects/
+
+# NOTE: backend/ and backend-site/ ARE tracked, by request. Several files in
+# them carry the Telegram bot token in plaintext — move it to an environment
+# variable on Render and regenerate the token via BotFather when convenient.
+
+# Retired assets kept locally in case they are ever wanted back (~24MB)
+_unused/
+
+# Local dev tooling, not part of the site
+_devserver.py
+.claude/
+__pycache__/
+*.pyc
+
+# Scratch / analysis artifacts
+_ref_*
+_q*.mp4
+_n_*.mp4
+_f_*.mp4
+_a_*.mp4
+_v*.mp4
+_x*.mp4
+_w*.mp4
+_tex_*.mp4
+_preview.pdf
+_metrics_sample.json
+
+# OS noise
+Thumbs.db
+.DS_Store
+
+# Raw masters kept locally; the site serves the encoded versions in images/
+_source/
+
+# seek-latency test encodes
+_q/
