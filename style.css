@@ -80,6 +80,12 @@ body {
     object-fit: cover;
     object-position: center;
     display: block;
+    /* Pure decoration — nothing listens to either video element. Left at the
+       default (auto), a real touch compositor can hit-test a playing video
+       slightly differently from a static box; taking it out of hit-testing
+       entirely removes that as a way for a tap on a card sitting above it to
+       land on the video instead. */
+    pointer-events: none;
 }
 #room-video-lq { z-index: 2; }
 #room-video    { z-index: 3; opacity: 0; }
