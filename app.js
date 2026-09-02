@@ -88,6 +88,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         seekPending = false;
         video.classList.remove('shown');
         lqVideo.classList.remove('faded');
+        lqVideo.style.display = '';   // may have been released on a prior pick
 
         lqVideo.poster = portrait ? lqVideo.dataset.posterPhone
                                   : lqVideo.dataset.posterDesktop;
@@ -134,6 +135,32 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         }).catch(() => {});
     }
 
+    // Two live <video> decoders is not a free safety net — it is by far the
+    // most expensive thing on this page. Measured on the deployed build, the
+    // full clip seeks in 11.7ms once the proxy is released and 133.1ms while
+    // it is still loaded: 11x. A screen recording from a real machine showed
+    // ~16 hero updates/sec with ~100ms stalls, which matches the slow figure
+    // almost exactly — that contention WAS the scroll lag.
+    //
+    // The proxy was previously kept alive forever because an earlier handoff
+    // revealed the full clip on a timer and could hand over to an element
+    // that had never painted, leaving a blank hero. That is no longer how it
+    // works: show() runs only after requestVideoFrameCallback confirms a real
+    // presented frame, so by then the proxy has nothing left to protect
+    // against and its decoder is pure cost.
+    function releaseProxy() {
+        setTimeout(() => {
+            // Bail if anything looks off — a live proxy beats a blank hero.
+            if (active !== video || video.readyState < 2) return;
+            try {
+                lqVideo.pause();
+                lqVideo.removeAttribute('src');
+                lqVideo.load();
+                lqVideo.style.display = 'none';
+            } catch (e) {}
+        }, 400);
+    }
+
     // Hand over only once the full clip can render the exact frame already on
     // screen, so the swap is a change of sharpness and nothing else.
     let upgraded = false;
@@ -146,6 +173,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
             lqVideo.classList.add('faded');
             active = video;
             seekPending = false; // any pending flag belonged to the proxy's seek
+            releaseProxy();
         };
 
         // Swap only once the full clip has genuinely PRESENTED a frame.
@@ -337,20 +365,33 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // begun playback, and they ignore preload="auto" to save data. One muted
     // inline play/pause forces the decoder to produce frames; after that,
     // seeking paints normally.
+    // Priming has to be RETRIED, not fired once. play() rejects outright if
+    // the element has no data yet, and iOS additionally refuses muted
+    // autoplay in Low Power Mode. With {once:true} those listeners were spent
+    // on attempts that could not succeed, leaving the element unprimed — so
+    // it never painted a frame and the hero sat on its poster while the
+    // scroll appeared to do nothing. Stay attached until one attempt lands.
+    const PRIME_EVENTS = ['pointerdown', 'touchstart', 'touchend', 'click', 'scroll'];
+    function detachPrime() {
+        PRIME_EVENTS.forEach(ev => window.removeEventListener(ev, prime));
+    }
+    function primeDone() {
+        primed = true;
+        lqVideo.pause();
+        lqVideo.currentTime = Math.max(0, Math.min(shownTime < 0 ? 0 : shownTime,
+                                                   (duration || 1) - 0.03));
+        detachPrime();
+    }
     function prime() {
         if (primed) return;
         const pr = lqVideo.play();
-        if (pr && pr.then) {
-            pr.then(() => {
-                primed = true;
-                lqVideo.pause();
-                lqVideo.currentTime = Math.max(0, Math.min(shownTime < 0 ? 0 : shownTime,
-                                                           (duration || 1) - 0.03));
-            }).catch(() => {});
-        } else { primed = true; lqVideo.pause(); }
+        // On rejection deliberately do nothing: the listeners stay attached
+        // and the next gesture tries again.
+        if (pr && pr.then) pr.then(primeDone).catch(() => {});
+        else primeDone();
     }
-    ['pointerdown', 'touchstart', 'scroll'].forEach(ev =>
-        window.addEventListener(ev, prime, { once: true, passive: true }));
+    PRIME_EVENTS.forEach(ev =>
+        window.addEventListener(ev, prime, { passive: true }));
 
     // Duration comes from the proxy, which arrives first; both cuts are the
     // same length. Must also run immediately when the file is cached, since
@@ -377,6 +418,33 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
             openService(el.dataset.id);
         });
     });
+
+    // Append ?debug=1 to the URL for an on-screen readout. A phone cannot be
+    // inspected from here, so this exists to be screenshotted and sent back
+    // rather than guessed at.
+    if (/[?&]debug=1/.test(location.search)) {
+        const box = document.createElement('div');
+        box.style.cssText = 'position:fixed;left:6px;top:6px;z-index:99999;' +
+            'font:11px/1.4 monospace;color:#6f6;background:rgba(0,0,0,.85);' +
+            'padding:8px 10px;border:1px solid #6f6;border-radius:4px;' +
+            'white-space:pre;pointer-events:none';
+        document.body.appendChild(box);
+        const mediaErr = m => m ? ('ERR' + m.code) : 'ok';
+        setInterval(() => {
+            box.textContent =
+                'iOS:' + isIOS + '  primed:' + primed + '  src:' + sourceMode + '\n' +
+                'dur:' + duration.toFixed(2) + '  prog:' + progress.toFixed(3) + '\n' +
+                'target:' + targetTime.toFixed(2) + '  shown:' + shownTime.toFixed(2) + '\n' +
+                'active:' + (active === video ? 'FULL' : 'proxy') +
+                    '  seekPending:' + seekPending + '\n' +
+                'proxy rs:' + lqVideo.readyState + ' t:' + lqVideo.currentTime.toFixed(2) +
+                    ' ' + mediaErr(lqVideo.error) + '\n' +
+                'full  rs:' + video.readyState + ' t:' + video.currentTime.toFixed(2) +
+                    ' ' + mediaErr(video.error) + '\n' +
+                'swapped:' + video.classList.contains('shown') +
+                    '  cards:' + document.querySelectorAll('.branch.lit').length;
+        }, 200);
+    }
 
     pickSource();
     window.addEventListener('scroll', updateIntro, { passive: true });
