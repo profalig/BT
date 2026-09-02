@@ -58,6 +58,8 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // the phone file on a wide desktop. Only swaps when the mode genuinely
     // changes, so a plain resize never re-downloads the video.
     let sourceMode = null;
+    let blobUrl    = null;
+    let loadToken  = 0;
     function pickSource() {
         const portrait = window.matchMedia('(orientation: portrait)').matches
             || document.documentElement.clientWidth <= 900;
@@ -65,10 +67,48 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         if (mode === sourceMode) return;
         sourceMode = mode;
         video.poster = portrait ? video.dataset.posterPhone : video.dataset.posterDesktop;
-        video.src    = portrait ? video.dataset.srcPhone    : video.dataset.srcDesktop;
-        duration = 0; shownTime = -1; primed = false;
-        video.load();
+        duration = 0; shownTime = -1; primed = false; ready = false;
+        fetchClip(portrait ? video.dataset.srcPhone : video.dataset.srcDesktop,
+                  ++loadToken);
     }
+
+    // Scrubbing seeks on every frame of scroll, and a seek into a byte range
+    // that has not arrived yet paints nothing: the tree stops growing while
+    // the scroll carries on, which reads as a broken page rather than a busy
+    // one. So download the whole clip up front and play it from memory —
+    // every later seek is then local and cannot stall on the network. Byte
+    // progress also gives an honest percentage, where the buffered-range
+    // guess it replaces was both coarse and optimistic.
+    function fetchClip(url, token) {
+        if (!window.fetch || typeof URL.createObjectURL !== 'function') {
+            directSrc(url); return;
+        }
+        fetch(url).then(res => {
+            if (!res.ok || !res.body || !res.body.getReader) throw 0;
+            const total  = +res.headers.get('content-length') || 0;
+            const reader = res.body.getReader();
+            const chunks = [];
+            let got = 0;
+            return (function pump() {
+                return reader.read().then(({ done, value }) => {
+                    if (token !== loadToken) { reader.cancel(); return null; }
+                    if (done) return new Blob(chunks, { type: 'video/mp4' });
+                    chunks.push(value);
+                    got += value.length;
+                    if (total) showProgress(got / total);
+                    return pump();
+                });
+            })();
+        }).then(blob => {
+            if (!blob || token !== loadToken) return;
+            if (blobUrl) URL.revokeObjectURL(blobUrl);
+            blobUrl = URL.createObjectURL(blob);
+            video.src = blobUrl;
+            video.load();
+        }).catch(() => { if (token === loadToken) directSrc(url); });
+    }
+
+    function directSrc(url) { video.src = url; video.load(); }
 
     // STAGED SCRUB MAP: scroll progress -> time in the clip.
     // Read off the footage: the room push-in runs to ~1.30s, the tree then
@@ -122,7 +162,6 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         });
 
         if (scrollHint) scrollHint.classList.toggle('hidden', progress > 0.04);
-        updateReadyState();
         introScene.style.pointerEvents = progress >= 1 ? 'none' : 'auto';
 
         // Warm room HUD at the start, cooler once the tree dominates.
@@ -130,36 +169,51 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     }
 
     // READINESS
-    // On a cold load the clip is still downloading, so scrubbing lands on
-    // frames that have not arrived and the tree simply never grows — which
-    // reads as the site being broken rather than busy. Show the real state
-    // instead: hold the hint at "PREPARING" until enough is buffered to play
-    // through, then invite the scroll.
+    // The clip is held off-screen until it is fully in memory, and the scroll
+    // is pinned while that happens — otherwise a visitor scrolls straight past
+    // the seedling during the download and never sees it grow. The hint
+    // carries the real byte percentage so the wait is legible.
     let ready = false;
-    function bufferedToEnd() {
-        if (!duration || !video.buffered.length) return 0;
-        let end = 0;
-        for (let i = 0; i < video.buffered.length; i++) {
-            if (video.buffered.start(i) <= 0.1) end = Math.max(end, video.buffered.end(i));
-        }
-        return end / duration;
+    let locked = false;
+    // iOS Safari does not reliably honour overflow:hidden for touch scrolling,
+    // so the class is backed by non-passive listeners. They are attached only
+    // while locked, since a permanent non-passive wheel listener would opt the
+    // page out of the browser's fast scrolling path.
+    function eatScroll(e) { if (locked) e.preventDefault(); }
+    function lockScroll() {
+        if (locked) return;
+        locked = true;
+        window.scrollTo(0, 0);
+        document.documentElement.classList.add('intro-loading');
+        window.addEventListener('touchmove', eatScroll, { passive: false });
+        window.addEventListener('wheel',     eatScroll, { passive: false });
     }
-    function updateReadyState() {
+    function unlockScroll() {
+        if (!locked) return;
+        locked = false;
+        document.documentElement.classList.remove('intro-loading');
+        window.removeEventListener('touchmove', eatScroll, { passive: false });
+        window.removeEventListener('wheel',     eatScroll, { passive: false });
+    }
+    function showProgress(frac) {
         if (ready || !scrollHint) return;
-        // readyState 4 = can play through; the buffered check covers browsers
-        // that report conservatively.
-        if (video.readyState >= 4 || bufferedToEnd() > 0.92) {
-            ready = true;
-            scrollHint.textContent = 'SCROLL TO BEGIN';
-            scrollHint.classList.remove('preparing');
-            return;
-        }
-        const pct = Math.round(bufferedToEnd() * 100);
-        scrollHint.textContent = pct > 3 ? `PREPARING  ${pct}%` : 'PREPARING';
+        lockScroll();
+        const pct = Math.max(1, Math.min(99, Math.round(frac * 100)));
+        scrollHint.textContent = 'PREPARING  ' + pct + '%';
         scrollHint.classList.add('preparing');
     }
-    video.addEventListener('progress', updateReadyState);
-    video.addEventListener('canplaythrough', updateReadyState);
+    function markReady() {
+        if (ready) return;
+        ready = true;
+        unlockScroll();
+        if (!scrollHint) return;
+        scrollHint.textContent = 'SCROLL TO BEGIN';
+        scrollHint.classList.remove('preparing');
+    }
+    video.addEventListener('canplaythrough', markReady);
+    video.addEventListener('loadeddata', () => { if (video.readyState >= 3) markReady(); });
+    // Never strand the page behind a failed or very slow download.
+    setTimeout(markReady, 15000);
 
     // Seeking runs from a rAF loop that eases toward the scroll target rather
     // than being set straight from the scroll handler: scroll events fire far
@@ -168,8 +222,11 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     function scrubLoop() {
         if (duration) {
             const diff = targetTime - shownTime;
-            if (Math.abs(diff) > 0.008) {
-                shownTime += diff * 0.32;
+            // Skip while a seek is still in flight: handing the decoder a new
+            // position mid-seek is what makes scrubbing stutter. shownTime
+            // keeps easing, so the next frame simply catches up.
+            if (Math.abs(diff) > 0.004 && !video.seeking) {
+                shownTime += diff * 0.35;
                 video.currentTime = Math.max(0, Math.min(shownTime, duration - 0.03));
             }
         }

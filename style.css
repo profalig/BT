@@ -2548,6 +2548,12 @@ body.warping * {
        leaving the page background (black) behind it.
        `clip` clips exactly the same way WITHOUT creating a scroll container. */
     html { overflow-x: hidden !important; }
+
+/* While the hero clip downloads, pin the page at the top so a visitor cannot
+   scroll past the seedling before there are frames to show. Lifted by
+   markReady() in app.js, which also has a 15s failsafe. */
+html.intro-loading,
+html.intro-loading body { overflow: hidden !important; }
     body { overflow-x: clip; }
 
     .hud-modal-content {
