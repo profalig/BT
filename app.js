@@ -445,7 +445,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // a phone, whether you are looking at the current build or a cached one —
     // which has repeatedly been the difference between "the fix did not work"
     // and "the fix never arrived".
-    const BUILD = 'build-10  2026-09-03  scroll-diag';
+    const BUILD = 'build-11  2026-09-03  listeners-first';
     try { console.log('BarTest ' + BUILD); } catch (e) {}
 
     // Append ?debug=1 to the URL for an on-screen readout. A phone cannot be
@@ -477,17 +477,38 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
                     ' ' + mediaErr(video.error) + '\n' +
                 'swapped:' + video.classList.contains('shown') +
                     '  cards:' + document.querySelectorAll('.branch.lit').length + '\n' +
-                'body:[' + document.body.className + ']';
+                'body:[' + document.body.className + ']\n' +
+                'initErr:[' + initError + ']';
         }, 200);
     }
 
-    pickSource();
+    // ORDER MATTERS HERE, and getting it wrong is what broke the phone.
+    //
+    // These listeners and the scrub loop used to be attached AFTER
+    // pickSource(). pickSource touches media APIs, and on a real iPhone
+    // something in there threw: the debug readout showed scrollY climbing to
+    // 1750 with evts:0 — the page scrolling while the scroll listener had
+    // never been attached at all, because the throw happened first. Every
+    // other symptom followed from that one fact: progress frozen at 0.000,
+    // the scrub loop never started, the full clip never requested.
+    //
+    // Wiring input up first means a failure anywhere in media setup can
+    // still only cost the video, never the whole interface.
     window.addEventListener('scroll', () => { dbgScrollEvents++; updateIntro(); },
                             { passive: true });
-    window.addEventListener('resize', () => { pickSource(); updateIntro(); });
-    window.addEventListener('orientationchange', () => setTimeout(pickSource, 150));
-    updateIntro();
+    window.addEventListener('resize', () => { safePickSource(); updateIntro(); });
+    window.addEventListener('orientationchange', () => setTimeout(safePickSource, 150));
     requestAnimationFrame(scrubLoop);
+
+    // Any failure in here is recorded and shown in the ?debug=1 readout
+    // rather than taking the page down with it.
+    let initError = '';
+    function safePickSource() {
+        try { pickSource(); }
+        catch (e) { initError = (e && e.message) ? e.message : String(e); }
+    }
+    safePickSource();
+    updateIntro();
 })();
 
 // ==========================================
