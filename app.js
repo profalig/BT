@@ -135,6 +135,26 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         }).catch(() => {});
     }
 
+    // The streaming path, used on iOS and anywhere fetch/Blob is unavailable.
+    //
+    // This function went missing in an earlier refactor and nothing caught it
+    // for days: Chrome never reaches the branch that calls it (it has fetch,
+    // and isIOS is false), so the ReferenceError could only ever fire on a
+    // real iPhone. There it threw inside pickSource, which at the time ran
+    // BEFORE the scroll listener was attached — so one missing function took
+    // out the entire interface, and every environment available for testing
+    // reported the page as healthy. Safari finally named it outright:
+    // "Can't find variable: directSrc".
+    //
+    // The element is authored preload="none" so the Blob path owns its own
+    // download; on this path it has to be told to buffer, or canplaythrough
+    // never fires and the upgrade to full quality never happens.
+    function directSrc(url) {
+        video.preload = 'auto';
+        video.src = url;
+        video.load();
+    }
+
     // Two live <video> decoders is not a free safety net — it is by far the
     // most expensive thing on this page. Measured on the deployed build, the
     // full clip seeks in 11.7ms once the proxy is released and 133.1ms while
@@ -244,6 +264,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // Exposed for the ?debug=1 readout: when progress will not move on a real
     // device, these are the numbers that say why.
     let dbgScrollEvents = 0, dbgTotal = 0, dbgRectTop = 0, dbgSceneH = 0;
+    let dbgUpd = 0, dbgRate = 0, dbgWindow = 0, dbgLastT = -1;
     function readScroll() {
         const rect  = introScene.getBoundingClientRect();
         const total = introScene.offsetHeight - window.innerHeight;
@@ -353,6 +374,14 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
             requestAnimationFrame(scrubLoop);
             return;
         }
+        // Live scrub rate, for the ?debug=1 readout: how many times per second
+        // the picture actually changes while scrolling. This is the number
+        // that decides whether it feels smooth, not seek latency in isolation.
+        if (active && active.currentTime !== dbgLastT) {
+            dbgLastT = active.currentTime; dbgUpd++;
+        }
+        if (now - dbgWindow >= 1000) { dbgRate = dbgUpd; dbgUpd = 0; dbgWindow = now; }
+
         if (duration && active) {
             const diff = targetTime - shownTime;
             if (Math.abs(diff) > 0.004) {
@@ -445,7 +474,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // a phone, whether you are looking at the current build or a cached one —
     // which has repeatedly been the difference between "the fix did not work"
     // and "the fix never arrived".
-    const BUILD = 'build-11  2026-09-03  listeners-first';
+    const BUILD = 'build-12  2026-09-03  directSrc-fix';
     try { console.log('BarTest ' + BUILD); } catch (e) {}
 
     // Append ?debug=1 to the URL for an on-screen readout. A phone cannot be
@@ -468,6 +497,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
                 'sceneH:' + dbgSceneH + '  total:' + Math.round(dbgTotal) +
                     '  top:' + dbgRectTop + '\n' +
                 'dur:' + duration.toFixed(2) + '  prog:' + progress.toFixed(3) + '\n' +
+                'UPDATES/SEC:' + dbgRate + '\n' +
                 'target:' + targetTime.toFixed(2) + '  shown:' + shownTime.toFixed(2) + '\n' +
                 'active:' + (active === video ? 'FULL' : 'proxy') +
                     '  seekPending:' + seekPending + '\n' +
