@@ -203,21 +203,53 @@ body {
    two of them still fit either side of the trunk on a 375pt screen. */
 @media (max-width: 900px), (orientation: portrait) {
     /* Portrait crops the frame tighter, so branches sit at different
-       coordinates than in landscape. */
+       coordinates than in landscape. --px/--py mark the branch END: the
+       dot is pinned there and the card hangs outboard of it. */
     .branch { left: var(--px, var(--bx)); top: var(--py, var(--by)); }
 
-    .branch-line { width: 20px; }
+    /* Re-order so the connector points INTO the tree instead of away from
+       it: card outboard, then line, then the dot sitting on the branch end.
+       (DOM order is line, dot, card, so both sides need explicit order.) */
+    .branch[data-side="left"],
+    .branch[data-side="right"] { flex-direction: row; }
 
+    .branch[data-side="left"]  .branch-card { order: 1; }
+    .branch[data-side="left"]  .branch-line { order: 2; }
+    .branch[data-side="left"]  .branch-dot  { order: 3; }
+
+    .branch[data-side="right"] .branch-dot  { order: 1; }
+    .branch[data-side="right"] .branch-line { order: 2; }
+    .branch[data-side="right"] .branch-card { order: 3; }
+
+    /* Pin the dot on the anchor rather than centring the whole assembly:
+       left cards end at the branch, right cards start from it. */
+    .branch[data-side="left"]  { transform: translate(-100%, -50%) translateX(22px); }
+    .branch[data-side="right"] { transform: translate(0, -50%) translateX(-22px); }
+    .branch.lit[data-side="left"]  { transform: translate(-100%, -50%) translateX(0); }
+    .branch.lit[data-side="right"] { transform: translate(0, -50%) translateX(0); }
+
+    .branch-line { width: 16px; }
+
+    /* Identical rectangles, so the five read as an ordered set rather than
+       five differently-shaped strips. */
     .branch-card {
+        width: 33vw;
+        max-width: 150px;
+        min-height: 56px;   /* two title lines, so all five boxes match */
         margin: 0 6px;
         padding: 8px 11px;
-        max-width: 47vw;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
         white-space: normal;
     }
 
     .branch-tag   { font-size: 0.52rem; letter-spacing: 1.8px; margin-bottom: 2px; }
-    .branch-title { font-size: 0.76rem; line-height: 1.2; margin-bottom: 2px; }
-    .branch-sub   { font-size: 0.6rem;  line-height: 1.25; }
+    .branch-title { font-size: 0.76rem; line-height: 1.2; margin-bottom: 0; }
+
+    /* The subtitle would wrap to three or four lines at this width and break
+       the uniform box height, so portrait navigates on title alone. */
+    .branch-sub { display: none; }
 
     .branch-dot { width: 7px; height: 7px; }
 }
@@ -225,9 +257,9 @@ body {
 /* Very narrow phones: drop the second line so the cards stay compact enough
    to sit beside the trunk rather than crowding it. */
 @media (max-width: 400px) {
-    .branch-card  { max-width: 48vw; padding: 7px 10px; }
-    .branch-sub   { display: none; }
-    .branch-title { font-size: 0.74rem; }
+    .branch-card  { width: 35vw; padding: 7px 9px; }
+    .branch-title { font-size: 0.72rem; }
+    .branch-line  { width: 12px; }
 }
 
 /* ==========================================
