@@ -126,37 +126,33 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     function upgrade() {
         if (upgraded || !duration || video.readyState < 3) return;
         upgraded = true;
-        let settled = false;
-        const settle = () => {
-            if (settled) return;
-            settled = true;
-            video.removeEventListener('seeked', settle);
+
+        const show = () => {
             video.classList.add('shown');
             lqVideo.classList.add('faded');
             active = video;
-            // Tear the proxy down rather than leaving it parked at opacity 0.
-            // An idle <video> still holds a decoder and its decoded frames,
-            // and on iOS that is memory the tab cannot spare.
-            setTimeout(() => {
-                // Never drop the proxy unless the full clip can actually
-                // render — otherwise a failed upgrade leaves a blank hero.
-                if (active !== video || video.readyState < 3) return;
-                try {
-                    lqVideo.pause();
-                    lqVideo.removeAttribute('src');
-                    lqVideo.load();
-                } catch (e) {}
-            }, 400);
         };
-        video.addEventListener('seeked', settle);
-        // Mobile will not paint a video that has never played, so give the
-        // incoming clip the same muted play/pause priming the proxy got.
+
+        // Swap only once the full clip has genuinely PRESENTED a frame.
+        // A <video> that has never painted renders as nothing, so revealing
+        // it on a timer could hand the visitor an empty hero — and the proxy
+        // is deliberately left loaded underneath, never torn down, so if this
+        // never fires the page simply keeps running on the proxy instead of
+        // going blank. That failure mode is what "the phone does nothing" was.
+        if (typeof video.requestVideoFrameCallback === 'function') {
+            video.requestVideoFrameCallback(show);
+        } else {
+            video.addEventListener('seeked', function once() {
+                video.removeEventListener('seeked', once);
+                show();
+            });
+        }
+
+        // Mobile will not paint a video that has never played.
         const pr = video.play();
         if (pr && pr.then) pr.then(() => video.pause()).catch(() => {});
         video.currentTime = Math.max(0, Math.min(shownTime < 0 ? 0 : shownTime,
                                                  duration - 0.03));
-        // If the seek never reports back, show it anyway rather than stall.
-        setTimeout(settle, 1200);
     }
     video.addEventListener('canplaythrough', upgrade);
     video.addEventListener('loadeddata', upgrade);
@@ -232,11 +228,13 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // shown, and runs from the scrub loop as well as on scroll, so the cards
     // arrive exactly as their branch finishes growing.
     function paintForFrame() {
-        // Before the clip has loaded there is no frame to agree with, so fall
-        // back to scroll position rather than showing nothing at all.
-        const t = (duration && shownTime >= 0)
-            ? shownTime
-            : scrubTimeFor(progress);
+        // Scroll-driven, deliberately. Keying these to the video's eased time
+        // synced them a little better with the growth, but it coupled the whole
+        // interface to the decoder: if the clip stalled or its loop was not
+        // running, no cards and no glow appeared at all and the page looked
+        // dead. The ~0.2s the cards lead the picture by is barely visible; a
+        // hero that can go blank is not worth it.
+        const t = scrubTimeFor(progress);
 
         if (glow) {
             // Quantised to 100 steps: past that the change is invisible but
@@ -304,7 +302,6 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
                     active.currentTime = want;
                 }
             }
-            paintForFrame();
         }
         requestAnimationFrame(scrubLoop);
     }

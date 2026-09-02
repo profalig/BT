@@ -84,9 +84,10 @@ body {
 #room-video-lq { z-index: 2; }
 #room-video    { z-index: 3; opacity: 0; }
 #room-video.shown    { opacity: 1; }
-/* visibility, not just opacity: an opacity:0 layer is still composited every
-   frame, and the proxy is torn down after the hand-over anyway. */
-#room-video-lq.faded { opacity: 0; visibility: hidden; }
+/* Opacity only — deliberately still rendered. The proxy stays loaded beneath
+   the full-quality clip as a safety net: if that one ever fails to paint, the
+   hero falls back to the proxy image instead of going blank. */
+#room-video-lq.faded { opacity: 0; }
 
 /* Warm bloom that rises with the tree, lifting the room out of darkness as
    the branches light. Screen-blended so it adds light rather than washing. */
