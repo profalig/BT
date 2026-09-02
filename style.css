@@ -192,180 +192,36 @@ body {
     color: rgba(240, 220, 200, 0.6);
 }
 
-/* Portrait phones: the tree is centre-frame and there is no room either side,
-   so the cards stack down the screen instead of fanning out, and the
-   connector line is dropped since it would point at nothing. */
+/* Portrait phones keep the same left/right fan as desktop, sitting against
+   the branch ends — the cards just get narrower and the connector shorter so
+   two of them still fit either side of the trunk on a 375pt screen. */
 @media (max-width: 900px), (orientation: portrait) {
-    .branch,
-    .branch[data-side="left"],
-    .branch[data-side="right"] {
-        left: 50%;
-        flex-direction: column;
-        align-items: center;
-        transform: translate(-50%, -50%) translateY(14px);
-    }
-    .branch.lit[data-side="left"],
-    .branch.lit[data-side="right"] { transform: translate(-50%, -50%) translateY(0); }
-    .branch-line { display: none; }
+    /* Portrait crops the frame tighter, so branches sit at different
+       coordinates than in landscape. */
+    .branch { left: var(--px, var(--bx)); top: var(--py, var(--by)); }
+
+    .branch-line { width: 20px; }
+
     .branch-card {
-        margin: 8px 0 0;
-        padding: 9px 14px;
-        text-align: center !important;
+        margin: 0 6px;
+        padding: 8px 11px;
+        max-width: 47vw;
+        white-space: normal;
     }
-    .branch-title { font-size: 0.86rem; }
-    .branch-sub   { font-size: 0.66rem; }
+
+    .branch-tag   { font-size: 0.52rem; letter-spacing: 1.8px; margin-bottom: 2px; }
+    .branch-title { font-size: 0.76rem; line-height: 1.2; margin-bottom: 2px; }
+    .branch-sub   { font-size: 0.6rem;  line-height: 1.25; }
+
+    .branch-dot { width: 7px; height: 7px; }
 }
 
-#intro-vignette {
-    position: absolute;
-    inset: 0;
-    z-index: 7;
-    pointer-events: none;
-    background: radial-gradient(ellipse 90% 80% at 50% 50%, transparent 55%, rgba(0,0,0,0.65) 100%);
-}
-
-#scroll-hint {
-    position: absolute;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 8;
-    color: rgba(255,255,255,0.7);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.8rem;
-    letter-spacing: 3px;
-    animation: hint-pulse 2s ease-in-out infinite;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-}
-/* The pulse animates opacity, so an inline opacity:0 loses to it and the
-   hint keeps blinking after it should be gone. Stopping the animation is
-   what actually hides it. */
-#scroll-hint.hidden {
-    animation: none !important;
-    opacity: 0 !important;
-}
-
-@keyframes hint-pulse {
-    0%, 100% { opacity: 0.3; transform: translateX(-50%) translateY(0); }
-    50%      { opacity: 0.9; transform: translateX(-50%) translateY(6px); }
-}
-
-#space-matrix,
-#spaceship-viewport {
-    opacity: 0;
-}
-
-/* ==========================================
-   PLANET TOUR SCROLL RANGE + SKIP HUD
-   ========================================== */
-#tour-scene {
-    position: relative;
-    /* 6 stops (core + 5 nodes). 300vh => 200vh of travel => ~3 wheel
-       notches per stop, which keeps the tour responsive rather than a grind. */
-    height: 300vh;
-    z-index: 1;
-    /* Pure scroll real-estate. Without this it sits over the fixed vault
-       layer and swallows every click aimed at a node. */
-    pointer-events: none;
-}
-
-#planet-nav-hud {
-    position: fixed;
-    top: 50%;
-    right: 26px;
-    transform: translateY(-50%);
-    z-index: 900;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.6s ease;
-}
-
-body.landed #planet-nav-hud,
-body.warping #planet-nav-hud {
-    opacity: 0 !important;
-    pointer-events: none !important;
-}
-
-.tour-nav-slot {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
-    cursor: pointer;
-}
-
-.tour-nav-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: rgba(10, 10, 11, 0.9);
-    border: 2px solid rgba(210, 213, 219, 0.7);
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
-    flex-shrink: 0;
-    transition: all 0.3s ease;
-}
-
-/* Labels stay legible at rest rather than only on hover — this rail is the
-   primary way to reach a module without scrolling, so it has to advertise
-   itself instead of hiding. */
-.tour-nav-label {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: rgba(228, 230, 234, 0.82);
-    background: rgba(10, 10, 11, 0.95);
-    border: 1px solid rgba(210, 213, 219, 0.4);
-    padding: 6px 13px;
-    border-radius: 4px;
-    white-space: nowrap;
-    opacity: 0.72;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.75);
-    transition: opacity 0.25s ease, transform 0.25s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-}
-
-.tour-nav-slot:hover .tour-nav-label,
-.tour-nav-slot.active .tour-nav-label {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-.tour-nav-slot:hover .tour-nav-dot,
-.tour-nav-slot.active .tour-nav-dot {
-    background: #eef0f3;
-    border-color: #eef0f3;
-    box-shadow: 0 0 14px rgba(255, 255, 255, 0.75);
-    transform: scale(1.3);
-}
-
-.tour-nav-slot.active .tour-nav-label {
-    color: #ffffff;
-    border-color: rgba(255, 214, 170, 0.85);
-    box-shadow: 0 0 18px rgba(255, 176, 102, 0.28), 0 4px 18px rgba(0, 0, 0, 0.75);
-}
-
-.tour-nav-slot.active .tour-nav-dot {
-    background: #ffd6aa;
-    border-color: #ffd6aa;
-    box-shadow: 0 0 16px rgba(255, 214, 170, 0.9);
-}
-
-@media (max-width: 900px) {
-    #planet-nav-hud {
-        right: 10px;
-        gap: 12px;
-    }
-    .tour-nav-label {
-        font-size: 0.6rem;
-        padding: 4px 8px;
-    }
+/* Very narrow phones: drop the second line so the cards stay compact enough
+   to sit beside the trunk rather than crowding it. */
+@media (max-width: 400px) {
+    .branch-card  { max-width: 48vw; padding: 7px 10px; }
+    .branch-sub   { display: none; }
+    .branch-title { font-size: 0.74rem; }
 }
 
 /* ==========================================

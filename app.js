@@ -122,11 +122,44 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         });
 
         if (scrollHint) scrollHint.classList.toggle('hidden', progress > 0.04);
+        updateReadyState();
         introScene.style.pointerEvents = progress >= 1 ? 'none' : 'auto';
 
         // Warm room HUD at the start, cooler once the tree dominates.
         document.body.classList.toggle('in-space', progress > 0.62);
     }
+
+    // READINESS
+    // On a cold load the clip is still downloading, so scrubbing lands on
+    // frames that have not arrived and the tree simply never grows — which
+    // reads as the site being broken rather than busy. Show the real state
+    // instead: hold the hint at "PREPARING" until enough is buffered to play
+    // through, then invite the scroll.
+    let ready = false;
+    function bufferedToEnd() {
+        if (!duration || !video.buffered.length) return 0;
+        let end = 0;
+        for (let i = 0; i < video.buffered.length; i++) {
+            if (video.buffered.start(i) <= 0.1) end = Math.max(end, video.buffered.end(i));
+        }
+        return end / duration;
+    }
+    function updateReadyState() {
+        if (ready || !scrollHint) return;
+        // readyState 4 = can play through; the buffered check covers browsers
+        // that report conservatively.
+        if (video.readyState >= 4 || bufferedToEnd() > 0.92) {
+            ready = true;
+            scrollHint.textContent = 'SCROLL TO BEGIN';
+            scrollHint.classList.remove('preparing');
+            return;
+        }
+        const pct = Math.round(bufferedToEnd() * 100);
+        scrollHint.textContent = pct > 3 ? `PREPARING  ${pct}%` : 'PREPARING';
+        scrollHint.classList.add('preparing');
+    }
+    video.addEventListener('progress', updateReadyState);
+    video.addEventListener('canplaythrough', updateReadyState);
 
     // Seeking runs from a rAF loop that eases toward the scroll target rather
     // than being set straight from the scroll handler: scroll events fire far
