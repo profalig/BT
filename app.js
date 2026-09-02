@@ -265,6 +265,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // device, these are the numbers that say why.
     let dbgScrollEvents = 0, dbgTotal = 0, dbgRectTop = 0, dbgSceneH = 0;
     let dbgUpd = 0, dbgRate = 0, dbgWindow = 0, dbgLastT = -1;
+    let dbgSeekMs = 0, dbgSeekMax = 0, dbgRaf = 0, dbgRafRate = 0;
     function readScroll() {
         const rect  = introScene.getBoundingClientRect();
         const total = introScene.offsetHeight - window.innerHeight;
@@ -358,6 +359,12 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     }
     function onSeeked(e) {
         if (e.target !== active) return;
+        // Time each seek. This is the number that separates "the decoder is
+        // slow" from "something else is throttling the loop" — updates/sec
+        // alone conflates the two.
+        const ms = performance.now() - seekIssuedAt;
+        dbgSeekMs = dbgSeekMs ? (dbgSeekMs * 0.8 + ms * 0.2) : ms;
+        if (ms > dbgSeekMax) dbgSeekMax = ms;
         seekPending = false;
         requestSeek(); // shownTime may already have moved on; chain immediately
     }
@@ -380,7 +387,9 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         if (active && active.currentTime !== dbgLastT) {
             dbgLastT = active.currentTime; dbgUpd++;
         }
-        if (now - dbgWindow >= 1000) { dbgRate = dbgUpd; dbgUpd = 0; dbgWindow = now; }
+        dbgRaf++;
+        if (now - dbgWindow >= 1000) { dbgRate = dbgUpd; dbgUpd = 0;
+            dbgRafRate = dbgRaf; dbgRaf = 0; dbgSeekMax = 0; dbgWindow = now; }
 
         if (duration && active) {
             const diff = targetTime - shownTime;
@@ -474,7 +483,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // a phone, whether you are looking at the current build or a cached one —
     // which has repeatedly been the difference between "the fix did not work"
     // and "the fix never arrived".
-    const BUILD = 'build-13  2026-09-03  level4.0-hwdecode';
+    const BUILD = 'build-15  2026-09-03  gop4-fast-seek';
     try { console.log('BarTest ' + BUILD); } catch (e) {}
 
     // Append ?debug=1 to the URL for an on-screen readout. A phone cannot be
@@ -497,7 +506,8 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
                 'sceneH:' + dbgSceneH + '  total:' + Math.round(dbgTotal) +
                     '  top:' + dbgRectTop + '\n' +
                 'dur:' + duration.toFixed(2) + '  prog:' + progress.toFixed(3) + '\n' +
-                'UPDATES/SEC:' + dbgRate + '\n' +
+                'UPDATES/SEC:' + dbgRate + '   rAF:' + dbgRafRate + '\n' +
+                'seekMs:' + dbgSeekMs.toFixed(0) + '   worst:' + dbgSeekMax.toFixed(0) + '\n' +
                 'target:' + targetTime.toFixed(2) + '  shown:' + shownTime.toFixed(2) + '\n' +
                 'active:' + (active === video ? 'FULL' : 'proxy') +
                     '  seekPending:' + seekPending + '\n' +
