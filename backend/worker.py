@@ -153,6 +153,26 @@ def set_plan(user_id, plan_key, status="active", expires_at=None):
         except Exception as e2:
             print(f"❌ Plan write failed (is the `plan` column there?): {e2}")
 
+def backtest_plan_of(user_id):
+    """The user's plan, if it includes the Backtest Machine.
+
+    Subscribers run as many backtests as they like, so no credit is taken from
+    them. Reads defensively: the `plan` column may not exist yet, and if it
+    cannot be read the answer is None, which falls back to charging a credit —
+    the behaviour that was there before plans existed.
+    """
+    if not user_id:
+        return None
+    try:
+        res = supabase.table("user_profiles").select("plan").eq("id", user_id).execute()
+        if res.data:
+            plan = clean_plan(res.data[0].get("plan"))
+            return plan if plan in ("machine", "full") else None
+    except Exception as e:
+        print(f"⚠️ Could not read plan for {user_id} (add the `plan` column): {e}")
+    return None
+
+
 def plan_for_stripe_customer(customer_id):
     """Which user a Stripe customer belongs to, for renewals and cancellations
     that arrive with no client_reference_id on them."""
@@ -564,8 +584,14 @@ def notify_new_submissions():
 
         print(f"\n--- New Request Received: Job #{job_id} [{system_name}] ---")
 
-        # SECURELY DEDUCT 1 CREDIT ON BACKEND
-        if user_id:
+        # SECURELY DEDUCT 1 CREDIT ON BACKEND — unless the plan covers it.
+        # A Backtest or Full subscriber runs as many as they want, so taking a
+        # credit from them would drive the balance to zero and then lock them
+        # out of the thing they are paying monthly for.
+        plan = backtest_plan_of(user_id)
+        if user_id and plan:
+            print(f"♾️  No credit taken: User {user_id} is on the '{plan}' plan.")
+        elif user_id:
             try:
                 u_res = supabase.table("user_profiles").select("credits").eq("id", user_id).execute()
                 if u_res.data and len(u_res.data) > 0:
@@ -580,7 +606,8 @@ def notify_new_submissions():
             f"📥 <b>NEW BACKTEST REQUEST RECEIVED!</b>\n\n"
             f"🆔 <b>Job ID:</b> <code>#{job_id}</code>\n"
             f"👤 <b>Client Email:</b> <code>{user_email}</code>\n"
-            f"⚙️ <b>System Name:</b> <code>{system_name}</code>\n\n"
+            f"⚙️ <b>System Name:</b> <code>{system_name}</code>\n"
+            f"🎫 <b>Plan:</b> {plan or 'credit'}\n\n"
             f"📜 <b>STRATEGY RULES:</b>\n"
             f"<i>{rules}</i>\n\n"
             f"⏳ <i>Status updated to 'in_review'. Conduct analysis and run local script when ready.</i>"

@@ -838,7 +838,11 @@ async function fillConsoleRail() {
     if (!window.BTAccess) { who.textContent = ''; return; }
     try {
         const a = await BTAccess.get(true);
-        n.textContent = a.signedIn ? String(a.credits) : '—';
+        const unlimited = a.signedIn && a.plan && a.backtest;
+        n.classList.toggle('is-unlimited', !!unlimited);
+        n.textContent = !a.signedIn ? '—' : unlimited ? '∞' : String(a.credits);
+        const label = document.querySelector('.rail-credit-l');
+        if (label) label.textContent = unlimited ? 'UNLIMITED BACKTESTS' : 'BACKTEST CREDITS';
         who.textContent = a.signedIn
             ? (a.planLabel ? a.email + ' · ' + a.planLabel : a.email)
             : 'not signed in';
@@ -1328,10 +1332,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const profile = await fetchOrCreateUserProfile(session.user);
             const currentCredits = profile ? profile.credits : 0;
 
-            if (currentCredits < 1) {
+            /* A Backtest or Full subscriber runs as many as they like, so the
+               credit balance is not consulted at all. Credits remain the route
+               for anyone without a plan. */
+            const access = window.BTAccess ? await BTAccess.get(true) : null;
+            const unlimited = !!(access && access.plan && access.backtest);
+
+            if (!unlimited && currentCredits < 1) {
                 showTacticalModal(
-                    'INSUFFICIENT CREDITS', 
-                    'You have 0 Backtest Credits remaining. Please upgrade your operational tier to unlock additional backtests.', 
+                    'NO BACKTESTS AVAILABLE',
+                    'This account has no backtest credits and no plan that includes the ' +
+                    'Backtest Machine. Backtest Access and Full Access both run as many ' +
+                    'backtests as you want.',
                     false
                 );
                 openSubscriptionModal();
@@ -1357,13 +1369,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (subError) throw subError;
 
-                // Optimistically update UI locally
-                const newCredits = Math.max(0, currentCredits - 1);
-                updateCreditBadgeUI(newCredits);
+                // Optimistically update UI locally. A subscriber spends nothing,
+                // so nothing is decremented and nothing is claimed about a balance.
+                const newCredits = unlimited ? currentCredits : Math.max(0, currentCredits - 1);
+                if (!unlimited) updateCreditBadgeUI(newCredits);
+                fillConsoleRail();
 
                 showTacticalModal(
                     'UPLINK SECURED', 
-                    `System parameters received! 1 Backtest Credit used. <b>${newCredits} credit(s) remaining</b>.<br><br>Your rules go to the engineering desk to be turned into code and run against real historical data. The report lands in your inbox, and in MY REPORTS, as soon as it is out.`, 
+                    (unlimited
+                        ? `System parameters received. Your plan runs as many backtests as you want, so nothing was deducted.`
+                        : `System parameters received! 1 Backtest Credit used. <b>${newCredits} credit(s) remaining</b>.`) +
+                    `<br><br>Your rules go to the engineering desk to be turned into code and run against real historical data. The report lands in your inbox, and in MY REPORTS, as soon as it is out.`, 
                     true
                 );
 

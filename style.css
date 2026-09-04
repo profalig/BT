@@ -3128,3 +3128,7 @@ body.landed .module-details .action-btn {
     white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis;
 }
+
+/* An infinity sign needs less room than a number and reads better slightly
+   larger. */
+.rail-credit-n.is-unlimited { font-size: 3rem; line-height: 0.95; }
