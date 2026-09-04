@@ -139,6 +139,26 @@ function compact(n) {
 }
 const baseAsset = () => S.symbol.replace(/USDT$|BUSD$|USD$/, '');
 
+/* A browser confirm() drops a Chrome-styled box with the hostname on it in
+   the middle of a dark terminal. Same job, our own furniture. */
+let askResolve = null;
+function ask(title, text, okLabel) {
+    return new Promise(resolve => {
+        askResolve = resolve;
+        $('rp-ask-title').textContent = title;
+        $('rp-ask-text').textContent = text;
+        $('rp-ask-yes').textContent = okLabel || 'Continue';
+        $('rp-ask').hidden = false;
+        setTimeout(() => $('rp-ask-yes').focus(), 30);
+    });
+}
+function answer(v) {
+    $('rp-ask').hidden = true;
+    const r = askResolve; askResolve = null;
+    if (r) r(v);
+}
+window.BTConfirm = ask;
+
 function status(msg, kind) {
     const box = $('rp-status');
     box.hidden = false;
@@ -285,7 +305,6 @@ async function loadChart() {
         paint();
         chart.timeScale().fitContent();
         hideStatus();
-        $('rp-hud').hidden = false;
         updateModeUI();
         renderAll();          // the ticket can only be priced once bars exist
         openStream();
@@ -419,8 +438,8 @@ let startingReplay = false;
 async function startReplay() {
     const ms = S.cutCandidate;
     if (!ms || startingReplay) return;
-    if (hasWorkToLose() &&
-        !confirm('Starting a new replay clears the open position and trade log. Continue?')) return;
+    if (hasWorkToLose() && !await ask('Start a new replay?',
+        'This clears the open position, working orders and trade log.', 'Start replay')) return;
     startingReplay = true;
     try {
 
@@ -584,10 +603,10 @@ function runLoop() {
    backward, which is precisely the thing this tool exists to prevent. */
 
 const IND = {
-    sma: { label: 'SMA', pane: 'price', params: { period: 20 },
-           calc: (b, p) => movingAvg(b.map(x => x.close), p.period) },
-    ema: { label: 'EMA', pane: 'price', params: { period: 21 },
-           calc: (b, p) => expAvg(b.map(x => x.close), p.period) },
+    sma: { label: 'SMA', pane: 'price', params: { period: 20 }, src: true,
+           calc: (b, p) => movingAvg(srcOf(b, p.source), p.period) },
+    ema: { label: 'EMA', pane: 'price', params: { period: 21 }, src: true,
+           calc: (b, p) => expAvg(srcOf(b, p.source), p.period) },
     vwma: { label: 'VWMA', pane: 'price', params: { period: 20 },
             calc: (b, p) => {
                 const out = new Array(b.length).fill(null);
@@ -603,8 +622,9 @@ const IND = {
             } },
     bb: {
         label: 'Bollinger', pane: 'price', params: { period: 20, mult: 2 }, multi: 3,
+        outputs: ['Basis', 'Upper', 'Lower'], src: true,
         calc: (b, p) => {
-            const c = b.map(x => x.close), ma = movingAvg(c, p.period);
+            const c = srcOf(b, p.source), ma = movingAvg(c, p.period);
             const up = [], lo = [];
             for (let i = 0; i < c.length; i++) {
                 if (ma[i] === null) { up.push(null); lo.push(null); continue; }
@@ -618,9 +638,9 @@ const IND = {
         }
     },
     rsi: {
-        label: 'RSI', pane: 'lower', params: { period: 14 },
+        label: 'RSI', pane: 'lower', params: { period: 14 }, src: true,
         calc: (b, p) => {
-            const c = b.map(x => x.close), out = new Array(c.length).fill(null);
+            const c = srcOf(b, p.source), out = new Array(c.length).fill(null);
             let g = 0, l = 0;
             for (let i = 1; i < c.length; i++) {
                 const d = c[i] - c[i - 1];
@@ -642,8 +662,9 @@ const IND = {
     },
     macd: {
         label: 'MACD', pane: 'lower', params: { period: 12, slow: 26, signal: 9 }, multi: 2,
+        outputs: ['MACD', 'Signal'], src: true,
         calc: (b, p) => {
-            const c = b.map(x => x.close);
+            const c = srcOf(b, p.source);
             const f = expAvg(c, p.period), s = expAvg(c, p.slow);
             const line = c.map((_, i) => (f[i] === null || s[i] === null) ? null : f[i] - s[i]);
             const clean = line.map(v => v === null ? 0 : v);
@@ -663,6 +684,7 @@ const IND = {
     },
     stoch: {
         label: 'Stochastic', pane: 'lower', params: { period: 14, signal: 3 }, multi: 2,
+        outputs: ['%K', '%D'],
         calc: (b, p) => {
             const k = new Array(b.length).fill(null);
             for (let i = p.period - 1; i < b.length; i++) {
@@ -693,6 +715,21 @@ const IND = {
     }
 };
 
+/* Which price an indicator is measured on. TradingView calls this the
+   source, and it is the input traders change most after the period. */
+const SOURCES = ['close', 'open', 'high', 'low', 'hl2', 'hlc3', 'ohlc4'];
+function srcOf(bars, name) {
+    switch (name) {
+        case 'open':  return bars.map(b => b.open);
+        case 'high':  return bars.map(b => b.high);
+        case 'low':   return bars.map(b => b.low);
+        case 'hl2':   return bars.map(b => (b.high + b.low) / 2);
+        case 'hlc3':  return bars.map(b => (b.high + b.low + b.close) / 3);
+        case 'ohlc4': return bars.map(b => (b.open + b.high + b.low + b.close) / 4);
+        default:      return bars.map(b => b.close);
+    }
+}
+
 function movingAvg(v, n) {
     const out = new Array(v.length).fill(null);
     let sum = 0;
@@ -713,16 +750,25 @@ function expAvg(v, n) {
     return out;
 }
 
+let legendCollapsed = false;
 const IND_COLORS = ['#f7a600', '#5aa9f0', '#c58af0', '#20b26c', '#ef454a', '#00c2c2'];
 let indSeq = 0;
 const activeInd = [];
 
-function makeLine(pane, color, width) {
-    const opts = {
-        color: color, lineWidth: width || 2,
+const DASH = { solid: 0, dotted: 1, dashed: 2 };
+
+function lineOpts(st) {
+    return {
+        color: st.color, lineWidth: +st.width || 2,
+        lineStyle: DASH[st.dash] || 0,
+        visible: st.visible !== false,
         priceLineVisible: false, lastValueVisible: false,
         crosshairMarkerVisible: false
     };
+}
+
+function makeLine(pane, st) {
+    const opts = lineOpts(st);
     if (pane === 'lower') {
         opts.priceScaleId = 'ind-lower';
         const ls = chart.addLineSeries(opts);
@@ -732,24 +778,43 @@ function makeLine(pane, color, width) {
     return chart.addLineSeries(opts);
 }
 
-function addIndicator(type, params, code) {
+// Secondary plots of the same indicator are dimmed shades of its main colour,
+// so a Bollinger band still reads as one object.
+function shade(hex, i) {
+    if (!i) return hex;
+    const h = hex.replace('#', '');
+    const v = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+    const mix = c => Math.round(c + (150 - c) * 0.35);
+    return '#' + [(v >> 16) & 255, (v >> 8) & 255, v & 255]
+        .map(c => mix(c).toString(16).padStart(2, '0')).join('');
+}
+
+function addIndicator(type, params, code, styles) {
     const def = IND[type];
     const count = (def && def.multi) || 1;
     const item = {
         id: ++indSeq, type: type,
-        params: Object.assign({}, def ? def.params : {}, params || {}),
-        code: code || null, lines: [], error: null, hidden: false
+        params: Object.assign({ source: 'close' }, def ? def.params : {}, params || {}),
+        code: code || null, lines: [], styles: [], error: null, hidden: false
     };
     const col = item.params.color || IND_COLORS[indSeq % IND_COLORS.length];
     item.params.color = col;
     for (let i = 0; i < count; i++) {
-        item.lines.push(makeLine(def ? def.pane : 'price', col, i === 0 ? 2 : 1));
+        const st = Object.assign(
+            { color: shade(col, i), width: i === 0 ? 2 : 1, dash: 'solid', visible: true },
+            (styles && styles[i]) || {});
+        item.styles.push(st);
+        item.lines.push(makeLine(def ? def.pane : 'price', st));
     }
     activeInd.push(item);
     renderIndicatorList();
     saveIndicators();
     refreshIndicators(lastPainted);
     return item;
+}
+
+function applyLineStyle(item, i) {
+    try { item.lines[i].applyOptions(lineOpts(item.styles[i])); } catch (e) {}
 }
 
 function removeIndicator(id) {
@@ -768,7 +833,7 @@ function refreshIndicators(data) {
         return;
     }
     for (const a of activeInd) {
-        if (a.hidden) { a.lines.forEach(l => l.setData([])); continue; }
+        if (a.hidden) { a.lines.forEach(l => { try { l.setData([]); } catch (e) {} }); continue; }
         let res;
         try {
             if (a.type === 'custom') {
@@ -833,22 +898,32 @@ function renderOHLC(bar) {
    the row for the same — the gestures the platform traders already use. */
 function renderLegend() {
     const box = $('rp-legend');
+    const toggle = $('rp-leg-toggle');
     if (!box) return;
+    toggle.hidden = !activeInd.length;
+    $('rp-leg-n').textContent = activeInd.length;
+    $('rp-leg-word').textContent = activeInd.length === 1 ? 'indicator' : 'indicators';
     if (!activeInd.length) { box.innerHTML = ''; return; }
+    if (legendCollapsed) { box.innerHTML = ''; return; }
+
     box.innerHTML = activeInd.map(a => {
-        const col = a.params.color || IND_COLORS[a.id % IND_COLORS.length];
+        const col = (a.styles[0] && a.styles[0].color) || a.params.color;
         const label = a.type === 'custom' ? 'Custom script'
             : IND[a.type].label + (a.params.period ? ' ' + a.params.period : '');
         const last = a.lastValue;
         const val = (last === null || last === undefined || !isFinite(last))
             ? '' : '<b>' + fmt(last, pdp()) + '</b>';
-        return '<div class="rp-leg-row" data-leg="' + a.id + '" title="Double-click for settings">' +
+        // The controls are always in the row, never revealed on hover: a row
+        // that changes width when the pointer crosses it shoves everything
+        // beside it out of the way.
+        return '<div class="rp-leg-row' + (a.hidden ? ' off' : '') + '" data-leg="' + a.id +
+                 '" title="Double-click for settings">' +
                  '<span class="rp-leg-dot" style="background:' + col + '"></span>' +
                  '<span class="rp-leg-name">' + label + '</span>' + val +
                  (a.error ? '<span class="rp-leg-err" title="' +
                     a.error.replace(/"/g, '&quot;') + '">!</span>' : '') +
                  '<span class="rp-leg-btns">' +
-                   '<button data-eye="' + a.id + '" title="Hide">' +
+                   '<button data-eye="' + a.id + '" title="Show / hide">' +
                      '<i class="fa-solid fa-eye' + (a.hidden ? '-slash' : '') + '"></i></button>' +
                    '<button data-gear2="' + a.id + '" title="Settings">' +
                      '<i class="fa-solid fa-gear"></i></button>' +
@@ -866,7 +941,7 @@ function renderLegend() {
         b.addEventListener('click', e => {
             e.stopPropagation();
             const a = activeInd.find(x => x.id === +b.dataset.eye);
-            if (a) { a.hidden = !a.hidden; refreshIndicators(lastPainted); }
+            if (a) { a.hidden = !a.hidden; refreshIndicators(lastPainted); saveIndicators(); }
         }));
     box.querySelectorAll('[data-gear2]').forEach(b =>
         b.addEventListener('click', e => { e.stopPropagation(); openIndSettings(+b.dataset.gear2); }));
@@ -877,18 +952,108 @@ function renderLegend() {
         }));
 }
 
-// Opens the picker with this indicator's own settings already expanded.
+/* Double-clicking an indicator — on the chart legend or in the list — opens
+   its own dialog, Inputs and Style on separate tabs, the way every platform
+   trader already expects. Every plot gets its own colour, width, style and
+   visibility, because a Bollinger basis and its bands are not one line. */
+let icfgId = null, icfgTab = 'inputs';
+
 function openIndSettings(id) {
-    openIndModal();
-    setTimeout(() => {
-        const cfg = document.querySelector('.rp-ind-cfg[data-cfg="' + id + '"]');
-        if (cfg) {
-            cfg.classList.add('open');
-            cfg.scrollIntoView({ block: 'nearest' });
-            const first = cfg.querySelector('input');
-            if (first) first.focus();
+    const a = activeInd.find(x => x.id === id);
+    if (!a) return;
+    icfgId = id; icfgTab = 'inputs';
+    $('rp-icfg').hidden = false;
+    document.querySelectorAll('#rp-icfg-tabs button').forEach(b =>
+        b.classList.toggle('active', b.dataset.itab === 'inputs'));
+    renderIndCfg();
+}
+function closeIndCfg() { $('rp-icfg').hidden = true; icfgId = null; }
+
+function indName(a) {
+    return a.type === 'custom' ? 'Custom script'
+        : IND[a.type].label + (a.params.period ? ' ' + a.params.period : '');
+}
+
+function renderIndCfg() {
+    const a = activeInd.find(x => x.id === icfgId);
+    if (!a) { closeIndCfg(); return; }
+    const def = IND[a.type];
+    $('rp-icfg-title').textContent = indName(a);
+    const box = $('rp-icfg-body');
+    const row = (lab, html) => '<div class="rp-set-row wide"><label>' + lab + '</label>' + html + '</div>';
+
+    if (icfgTab === 'inputs') {
+        let h = '';
+        if (a.type === 'custom') {
+            h += '<p class="rp-hint">Your own script. Edit the code and it recomputes on the ' +
+                 'bars currently revealed.</p>' +
+                 '<textarea id="rp-icfg-code" rows="10" spellcheck="false">' +
+                 String(a.code || '').replace(/</g, '&lt;') + '</textarea>';
+        } else {
+            const num = (k, lab, min, max, step) => row(lab,
+                '<input type="number" min="' + min + '" max="' + max + '" step="' + (step || 1) +
+                '" data-p="' + k + '" value="' + (a.params[k]) + '">');
+            if (def.params.period !== undefined) h += num('period', 'Length', 1, 500);
+            if (def.params.slow !== undefined)   h += num('slow', 'Slow length', 2, 500);
+            if (def.params.signal !== undefined) h += num('signal', 'Signal smoothing', 1, 100);
+            if (def.params.mult !== undefined)   h += num('mult', 'Std dev multiplier', 0.1, 10, 0.1);
+            if (def.src) {
+                h += row('Source', '<select data-p="source">' + SOURCES.map(o =>
+                    '<option value="' + o + '"' + (a.params.source === o ? ' selected' : '') +
+                    '>' + o + '</option>').join('') + '</select>');
+            }
+            if (!h) h = '<p class="rp-hint">This indicator has no inputs to configure.</p>';
         }
-    }, 60);
+        box.innerHTML = h;
+        box.querySelectorAll('[data-p]').forEach(inp =>
+            inp.addEventListener('input', () => {
+                const v = inp.type === 'number' ? +inp.value : inp.value;
+                a.params[inp.dataset.p] = v;
+                $('rp-icfg-title').textContent = indName(a);
+                refreshIndicators(lastPainted); saveIndicators(); renderIndicatorList();
+            }));
+        const code = document.getElementById('rp-icfg-code');
+        if (code) code.addEventListener('input', () => {
+            a.code = code.value;
+            refreshIndicators(lastPainted); saveIndicators();
+        });
+        return;
+    }
+
+    // ---- style tab
+    const names = (def && def.outputs) || ['Plot'];
+    box.innerHTML = a.styles.map((st, i) =>
+        '<div class="rp-plot-row" data-line="' + i + '">' +
+          '<label class="chk"><input type="checkbox" data-k="visible"' +
+            (st.visible !== false ? ' checked' : '') + '></label>' +
+          '<span class="rp-plot-name">' + (names[i] || ('Plot ' + (i + 1))) + '</span>' +
+          '<input type="color" data-k="color" value="' + st.color + '">' +
+          '<select data-k="width">' + [1, 2, 3, 4].map(w =>
+            '<option value="' + w + '"' + (+st.width === w ? ' selected' : '') + '>' + w + 'px</option>').join('') +
+          '</select>' +
+          '<select data-k="dash">' + ['solid', 'dashed', 'dotted'].map(d =>
+            '<option value="' + d + '"' + (st.dash === d ? ' selected' : '') + '>' +
+            d[0].toUpperCase() + d.slice(1) + '</option>').join('') +
+          '</select>' +
+        '</div>').join('') +
+        '<div class="rp-set-row" style="margin-top:14px">' +
+          '<label class="chk"><input type="checkbox" id="rp-icfg-hide"' +
+          (a.hidden ? ' checked' : '') + '> Hide this indicator entirely</label></div>';
+
+    box.querySelectorAll('.rp-plot-row [data-k]').forEach(inp =>
+        inp.addEventListener('input', () => {
+            const i = +inp.closest('.rp-plot-row').dataset.line;
+            const k = inp.dataset.k;
+            a.styles[i][k] = inp.type === 'checkbox' ? inp.checked
+                           : (k === 'width' ? +inp.value : inp.value);
+            applyLineStyle(a, i);
+            saveIndicators(); renderLegend(); renderIndicatorList();
+        }));
+    const hide = document.getElementById('rp-icfg-hide');
+    if (hide) hide.addEventListener('change', () => {
+        a.hidden = hide.checked;
+        refreshIndicators(lastPainted); saveIndicators();
+    });
 }
 
 function renderIndicatorList() {
@@ -900,7 +1065,7 @@ function renderIndicatorList() {
             ? 'Custom' : IND[a.type].label + (a.params.period ? ' ' + a.params.period : '');
         const err = a.error
             ? '<span class="rp-ind-err" title="' + a.error.replace(/"/g, '&quot;') + '">error</span>' : '';
-        const col = a.params.color || IND_COLORS[a.id % IND_COLORS.length];
+        const col = (a.styles[0] && a.styles[0].color) || a.params.color;
         return '<div class="rp-ind-wrap">' +
                '<div class="rp-ind-item">' +
                '<span class="rp-ind-dot" style="background:' + col + '"></span>' +
@@ -1015,7 +1180,9 @@ function maxQty(entry) {
 function ticketQty(side, entry) {
     if (sizeMode === 'qty') {
         const q = parseFloat($('rp-qty').value);
-        return isFinite(q) && q > 0 ? q : 0;
+        if (!isFinite(q) || q <= 0) return 0;
+        // Typed in USDT, the figure is notional, not coins.
+        return $('rp-qty-unit').value === 'quote' ? q / entry : q;
     }
     const lv = ticketLevels(side || 'long', entry);
     const riskPct = Math.max(0.01, parseFloat($('rp-risk').value) || 1);
@@ -1051,8 +1218,12 @@ function updateTicket() {
         ? '—' : money(reward) + '   ' + fmt(reward / risk, 2) + 'R';
     $('rp-rd-liq').textContent = liq === null ? '—' : px(liq);
 
-    $('rp-qty-unit').textContent = baseAsset();
-    if (sizeMode === 'risk' && qty) $('rp-qty').value = qty.toFixed(6);
+    const unitSel = $('rp-qty-unit');
+    unitSel.options[0].textContent = baseAsset();
+    if (sizeMode === 'risk' && qty) {
+        $('rp-qty').value = unitSel.value === 'quote'
+            ? (qty * entry).toFixed(2) : qty.toFixed(6);
+    }
     const mq = maxQty(entry);
     if (mq && sizeMode === 'qty') $('rp-pct').value = Math.min(100, Math.round(qty / mq * 100));
 
@@ -1123,8 +1294,12 @@ function closePosition(price, reason) {
     if (!p) return;
     const gross = (p.side === 'long' ? price - p.entry : p.entry - price) * p.qty;
     const fee = feeOn(p.qty * price);
-    const pnl = gross - fee;
-    S.balance += pnl;
+    S.balance += gross - fee;
+    // The entry fee was taken out of the balance when the position opened, so
+    // the TRADE's P&L has to carry it too — otherwise the sum of the trade log
+    // does not reconcile with the account, and the exported equity curve ends
+    // somewhere the balance never was.
+    const pnl = gross - fee - p.feePaid;
     S.trades.push({
         id: ++S.tradeSeq,
         side: p.side, qty: p.qty, entry: p.entry, exit: price,
@@ -1432,8 +1607,11 @@ function stats() {
         pf: loss ? gross / loss : (gross ? Infinity : 0),
         avgWin: wins.length ? gross / wins.length : 0,
         avgLoss: losses.length ? loss / losses.length : 0,
-        bestWin: t.length ? Math.max.apply(null, t.map(x => x.pnl)) : 0,
-        worstLoss: t.length ? Math.min.apply(null, t.map(x => x.pnl)) : 0,
+        // With no winners there is no best trade — reporting the least-bad
+        // loss as the "best" made a losing session read as if it had one.
+        bestWin: wins.length ? Math.max.apply(null, wins.map(x => x.pnl)) : 0,
+        worstLoss: losses.length ? Math.min.apply(null, losses.map(x => x.pnl)) : 0,
+        wins: wins.length, losses: losses.length,
         avgR: t.length ? t.reduce((a, x) => a + x.r, 0) / t.length : 0,
         expectancy: t.length ? net / t.length : 0,
         bestStreak, worstStreak,
@@ -1678,6 +1856,14 @@ function syncTransport() {
         ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>';
 }
 
+// The overlay bar is only a bar when it has something in it; left always-on
+// it showed as a small black tab floating over the candles.
+function syncHud() {
+    const cut  = !$('rp-cutbar').hidden;
+    const exit = !$('rp-exit-replay').hidden;
+    $('rp-hud').hidden = !(cut || exit);
+}
+
 function updateModeUI() {
     const replay = S.mode === 'replay';
     document.body.classList.toggle('is-replay', replay);
@@ -1687,6 +1873,7 @@ function updateModeUI() {
     $('rp-exit-replay').hidden = !replay;
     $('rp-mode').textContent = replay ? 'REPLAY' : 'BROWSE';
     $('rp-mode').className = 'rp-mode ' + (replay ? 'on' : '');
+    syncHud();
     syncOrderButtons(); syncTransport();
     if (!replay) $('rp-clock').textContent = '—';
 }
@@ -1809,6 +1996,221 @@ function openIndModal() {
 }
 function closeIndModal() { $('rp-modal').hidden = true; }
 
+// ================================================ export & saved sessions
+
+/* The report dashboard already has a documented metrics contract (see the
+   header of report.js). Exporting a replay session in exactly that shape
+   means a session measured here drops straight into the same dashboard the
+   Backtest Machine feeds — one format, two producers. */
+function buildReport() {
+    const st = stats();
+    const done = S.trades.filter(t => t.closedAt);
+    const byMonth = {};
+    let run = S.startBalance, peak = S.startBalance;
+    const equity = [], monthly = [], drawdown = [];
+
+    for (const t of done) {
+        const key = new Date(t.closedAt * 1000).toISOString().slice(0, 7);
+        if (!byMonth[key]) byMonth[key] = { start: run, pnl: 0, dd: 0 };
+        run += t.pnl;
+        byMonth[key].pnl += t.pnl;
+        peak = Math.max(peak, run);
+        byMonth[key].dd = Math.min(byMonth[key].dd, (run - peak) / peak * 100);
+    }
+    Object.keys(byMonth).sort().forEach(k => {
+        const m = byMonth[k];
+        equity.push({ t: k, v: +(m.start + m.pnl).toFixed(2) });
+        monthly.push({ t: k, v: +(m.start ? m.pnl / m.start * 100 : 0).toFixed(2) });
+        drawdown.push({ t: k, v: +m.dd.toFixed(2) });
+    });
+
+    const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const wd = {};
+    done.forEach(t => {
+        const d = DOW[new Date(t.closedAt * 1000).getUTCDay()];
+        if (!wd[d]) wd[d] = { n: 0, w: 0 };
+        wd[d].n++; if (t.pnl > 0) wd[d].w++;
+    });
+    const weekday = DOW.filter(d => wd[d])
+        .map(d => ({ t: d, v: +(wd[d].w / wd[d].n * 100).toFixed(1) }));
+
+    const counts = {};
+    done.forEach(t => {
+        const r = t.r;
+        const k = r < -2 ? '<-2R' : r < -1.5 ? '-2R' : r < -0.5 ? '-1R'
+                : r < 0.5 ? '0R' : r < 1.5 ? '+1R' : r < 2.5 ? '+2R' : '>+3R';
+        counts[k] = (counts[k] || 0) + 1;
+    });
+    const buckets = ['<-2R', '-2R', '-1R', '0R', '+1R', '+2R', '>+3R'];
+
+    const dates = done.map(t => t.closedAt * 1000);
+    return {
+        source: 'BarTest Replay', generatedAt: new Date().toISOString(),
+        symbol: S.symbol, timeframe: TF_LABEL[S.tfMin], venue: 'Binance',
+        currency: 'USD',
+        startBalance: S.startBalance,
+        endBalance: +S.balance.toFixed(2),
+        netReturnPct: +((S.balance - S.startBalance) / S.startBalance * 100).toFixed(2),
+        winRatePct: +st.winRate.toFixed(1),
+        maxDrawdownPct: -+S.maxDD.toFixed(2),
+        profitFactor: st.pf === Infinity ? null : +st.pf.toFixed(2),
+        sharpe: sharpeOf(done),
+        totalTrades: st.n,
+        avgWin: +st.avgWin.toFixed(2),
+        avgLoss: -+st.avgLoss.toFixed(2),
+        longestLossStreak: st.worstStreak,
+        feesPaid: +st.fees.toFixed(2),
+        expectancy: +st.expectancy.toFixed(2),
+        periodStart: dates.length ? new Date(Math.min.apply(null, dates)).toISOString().slice(0, 10) : null,
+        periodEnd:   dates.length ? new Date(Math.max.apply(null, dates)).toISOString().slice(0, 10) : null,
+        equity: equity, monthly: monthly, drawdown: drawdown, weekday: weekday,
+        symbols: st.n ? [{ t: S.symbol, v: st.n }] : [],
+        rBuckets: buckets.filter(b => counts[b]).map(b => ({ t: b, v: counts[b] })),
+        trades: done.map(t => ({
+            symbol: S.symbol,
+            side: t.side === 'long' ? 'Long' : 'Short',
+            entry: new Date(t.openedAt * 1000).toISOString().slice(0, 10),
+            exit:  new Date(t.closedAt * 1000).toISOString().slice(0, 10),
+            r: +t.r.toFixed(2), pnl: +t.pnl.toFixed(2)
+        }))
+    };
+}
+
+/* Trade-based Sharpe: the mean per-trade return over its standard deviation.
+   Deliberately NOT scaled by the square root of the trade count — that turns
+   a handful of trades into a huge number and reads as skill when it is only
+   a small sample. Under five closed trades there is no sample at all, so the
+   ratio is reported as absent rather than invented. */
+function sharpeOf(trades) {
+    if (trades.length < 5) return null;
+    const r = trades.map(t => t.pnl / S.startBalance);
+    const mean = r.reduce((a, b) => a + b, 0) / r.length;
+    const sd = Math.sqrt(r.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (r.length - 1));
+    return sd ? +(mean / sd).toFixed(2) : null;
+}
+
+function tradesCsv() {
+    const head = ['#', 'symbol', 'timeframe', 'side', 'qty', 'entry', 'exit',
+                  'opened_utc', 'closed_utc', 'exit_reason', 'r', 'pnl', 'fees', 'note', 'tags'];
+    const esc = v => {
+        const t = String(v === null || v === undefined ? '' : v);
+        return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+    };
+    const rows = S.trades.map((t, i) => [
+        i + 1, S.symbol, TF_LABEL[S.tfMin], t.side, t.qty, t.entry, t.exit,
+        t.openedAt ? iso(t.openedAt * 1000) : '', t.closedAt ? iso(t.closedAt * 1000) : '',
+        t.reason, t.r.toFixed(3), t.pnl.toFixed(2), (t.fees || 0).toFixed(2),
+        t.note || '', (t.tags || []).join('; ')
+    ].map(esc).join(','));
+    return head.join(',') + '\n' + rows.join('\n');
+}
+
+function download(name, text, mime) {
+    const blob = new Blob([text], { type: mime || 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+const stamp = () => S.symbol + '-' + TF_LABEL[S.tfMin] + '-' +
+    new Date().toISOString().slice(0, 16).replace(/[:T-]/g, '');
+
+// ---- saved sessions ------------------------------------------------------
+const SESS_KEY = 'bt.replay.sessions';
+function listSessions() {
+    try { return JSON.parse(localStorage.getItem(SESS_KEY) || '[]'); } catch (e) { return []; }
+}
+function saveSession() {
+    const all = listSessions();
+    all.unshift({
+        id: Date.now(),
+        label: S.symbol + ' ' + TF_LABEL[S.tfMin] + '  ' + S.trades.length + ' trades  ' +
+               new Date().toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }),
+        symbol: S.symbol, tfMin: S.tfMin, cursorMs: S.cursorMs, mode: S.mode,
+        startBalance: S.startBalance, balance: S.balance,
+        trades: S.trades, orders: S.orders, position: S.position,
+        maxDD: S.maxDD, maxDDAbs: S.maxDDAbs, peakEquity: S.peakEquity,
+        drawings: window.BTTools ? BTTools.serialize() : [],
+        indicators: activeInd.map(a => ({ type: a.type, params: a.params, code: a.code, styles: a.styles }))
+    });
+    try { localStorage.setItem(SESS_KEY, JSON.stringify(all.slice(0, 20))); }
+    catch (e) { status('Could not save — browser storage is full or blocked.', 'error'); return; }
+    status('Session saved.');
+    setTimeout(hideStatus, 2600);
+}
+
+async function loadSession(id) {
+    const sess = listSessions().find(x => x.id === id);
+    if (!sess) return;
+    if (hasWorkToLose() && !await ask('Load this session?',
+        'The current position, orders and trade log are replaced.', 'Load session')) return;
+    S.trades = sess.trades || [];
+    S.orders = sess.orders || [];
+    S.position = sess.position || null;
+    S.startBalance = sess.startBalance; S.balance = sess.balance;
+    S.maxDD = sess.maxDD || 0; S.maxDDAbs = sess.maxDDAbs || 0;
+    S.peakEquity = sess.peakEquity || sess.startBalance;
+    S.tradeSeq = S.trades.reduce((a, t) => Math.max(a, t.id || 0), 0);
+    if (window.BTTools) BTTools.load(sess.drawings || []);
+    while (activeInd.length) removeIndicator(activeInd[0].id);
+    (sess.indicators || []).forEach(i => {
+        try { addIndicator(i.type, i.params, i.code, i.styles); } catch (e) {}
+    });
+    updateIndCount();
+    drawPositionLines(); renderAll(); updateEquity();
+    status('Loaded session.');
+    setTimeout(hideStatus, 2600);
+}
+
+function openExportMenu(anchor) {
+    document.querySelectorAll('.rp-pop').forEach(n => n.remove());
+    const sessions = listSessions();
+    const pop = document.createElement('div');
+    pop.className = 'rp-pop rp-export-pop';
+    pop.innerHTML =
+        '<div class="rp-menu">' +
+          '<button data-x="report"><i class="fa-solid fa-chart-line"></i>' +
+            '<span>Export report (JSON)</span></button>' +
+          '<button data-x="csv"><i class="fa-solid fa-table"></i>' +
+            '<span>Export trade log (CSV)</span></button>' +
+          '<button data-x="save"><i class="fa-solid fa-floppy-disk"></i>' +
+            '<span>Save session</span></button>' +
+        '</div>' +
+        (sessions.length
+            ? '<h5>Saved sessions</h5><div class="rp-menu">' + sessions.map(x =>
+                '<button data-load="' + x.id + '"><i class="fa-solid fa-clock-rotate-left"></i>' +
+                '<span>' + x.label + '</span></button>').join('') + '</div>'
+            : '');
+    document.body.appendChild(pop);
+    const r = anchor.getBoundingClientRect();
+    pop.style.left = Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8,
+                                          r.right - pop.offsetWidth)) + 'px';
+    pop.style.top = Math.max(8, r.top - pop.offsetHeight - 6) + 'px';
+
+    const close = () => { pop.remove(); document.removeEventListener('mousedown', out); };
+    function out(e) { if (!pop.contains(e.target) && e.target !== anchor) close(); }
+    setTimeout(() => document.addEventListener('mousedown', out), 0);
+
+    pop.querySelectorAll('[data-x]').forEach(b => b.addEventListener('click', () => {
+        const x = b.dataset.x;
+        if (!S.trades.length && x !== 'save') {
+            status('No trades to export yet.', 'error');
+            setTimeout(hideStatus, 2600); close(); return;
+        }
+        if (x === 'report') download('bartest-report-' + stamp() + '.json',
+            JSON.stringify(buildReport(), null, 2), 'application/json');
+        if (x === 'csv') download('bartest-trades-' + stamp() + '.csv',
+            tradesCsv(), 'text/csv;charset=utf-8');
+        if (x === 'save') saveSession();
+        close();
+    }));
+    pop.querySelectorAll('[data-load]').forEach(b => b.addEventListener('click', () => {
+        loadSession(+b.dataset.load); close();
+    }));
+}
+
 // ------------------------------------------------------------- persistence
 
 /* Drawings and the indicator set are saved per symbol as you work and
@@ -1825,7 +2227,7 @@ function saveDrawings(list) {
 function saveIndicators() {
     try {
         localStorage.setItem(storeKey('ind'), JSON.stringify(
-            activeInd.map(a => ({ type: a.type, params: a.params, code: a.code }))));
+            activeInd.map(a => ({ type: a.type, params: a.params, code: a.code, styles: a.styles }))));
     } catch (e) {}
 }
 function restoreLayout() {
@@ -1850,11 +2252,15 @@ function restoreLayout() {
    borders, wicks, hollow bodies, background, grid, crosshair and scale. */
 
 const THEME_DEFAULT = {
+    // Bumped whenever a default that people can already have overridden
+    // changes. A saved theme from before the bump keeps every choice the
+    // trader actually made and takes the new canvas colours once.
+    v: 2,
     type: 'candle',
     up: '#20b26c', down: '#ef454a',
     borders: true, wicks: true, hollow: false,
-    bg: '#0e1116', text: '#929aa5',
-    gridV: true, gridH: true, gridColor: '#1c2028',
+    bg: '#2d292e', text: '#a9a3ad',
+    gridV: true, gridH: true, gridColor: '#3a353c',
     crosshair: true, magnet: false, log: false,
     precision: 'auto', seconds: false, watermark: true,
     balance: 10000, fee: 5
@@ -1864,7 +2270,17 @@ let theme = Object.assign({}, THEME_DEFAULT);
 function loadTheme() {
     try {
         const raw = localStorage.getItem('bt.replay.theme');
-        if (raw) theme = Object.assign({}, THEME_DEFAULT, JSON.parse(raw));
+        if (raw) {
+            const saved = JSON.parse(raw);
+            theme = Object.assign({}, THEME_DEFAULT, saved);
+            if (saved.v !== THEME_DEFAULT.v) {
+                theme.bg = THEME_DEFAULT.bg;
+                theme.text = THEME_DEFAULT.text;
+                theme.gridColor = THEME_DEFAULT.gridColor;
+                theme.v = THEME_DEFAULT.v;
+                saveTheme();
+            }
+        }
     } catch (e) {}
     S.startBalance = theme.balance;
     S.balance = theme.balance;
@@ -1906,7 +2322,6 @@ function applyTheme() {
 
     document.documentElement.style.setProperty('--pos', theme.up);
     document.documentElement.style.setProperty('--neg', theme.down);
-    document.documentElement.style.setProperty('--bg-0', theme.bg);
 }
 
 function syncThemeInputs() {
@@ -2107,10 +2522,13 @@ function initTicket() {
         const entry = ticketPrice();
         if (entry === null) return;
         if (sizeMode === 'qty') {
-            $('rp-qty').value = (maxQty(entry) * (+$('rp-pct').value / 100)).toFixed(6);
+            const q = maxQty(entry) * (+$('rp-pct').value / 100);
+            $('rp-qty').value = $('rp-qty-unit').value === 'quote'
+                ? (q * entry).toFixed(2) : q.toFixed(6);
         }
         updateTicket();
     });
+    $('rp-qty-unit').addEventListener('change', updateTicket);
 
     $('rp-buy').addEventListener('click',  () => placeOrder('long'));
     $('rp-sell').addEventListener('click', () => placeOrder('short'));
@@ -2140,21 +2558,24 @@ function init() {
     dateEl.max = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
     dateEl.value = new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10);
 
-    $('rp-symbol').addEventListener('change', () => {
-        if (hasWorkToLose() && !confirm('Changing symbol clears the session. Continue?')) return;
+    $('rp-symbol').addEventListener('change', async () => {
+        if (hasWorkToLose() && !await ask('Change symbol?',
+            'The session — position, orders and trade log — is cleared.', 'Change symbol')) return;
         resetAccount(true);
         $('rp-tk-icon').textContent = $('rp-symbol').value.charAt(0);
         loadChart();
     });
-    $('rp-tf').addEventListener('change', () => {
-        if (S.mode === 'replay' &&
-            !confirm('Changing timeframe ends the current replay. Continue?')) {
+    $('rp-tf').addEventListener('change', async () => {
+        if (S.mode === 'replay' && !await ask('Change timeframe?',
+            'This ends the current replay session.', 'Change timeframe')) {
             $('rp-tf').value = String(S.tfMin); return;
         }
         loadChart();
     });
-    $('rp-reset-acct').addEventListener('click', () => {
-        if (hasWorkToLose() && !confirm('Reset the simulated account and clear the trade log?')) return;
+    $('rp-reset-acct').addEventListener('click', async () => {
+        if (hasWorkToLose() && !await ask('Reset the account?',
+            'Balance returns to the starting figure and the trade log is emptied. ' +
+            'Export it first if you want to keep it.', 'Reset account')) return;
         resetAccount(true); updateEquity();
     });
 
@@ -2164,8 +2585,10 @@ function init() {
         setCutPoint(Date.parse(v + 'T00:00:00Z'));
     });
     $('rp-start-replay').addEventListener('click', startReplay);
-    $('rp-exit-replay').addEventListener('click', () => {
-        if (hasWorkToLose() && !confirm('Leaving replay keeps your trade log but closes the session. Continue?')) return;
+    $('rp-exit-replay').addEventListener('click', async () => {
+        if (hasWorkToLose() && !await ask('Leave replay?',
+            'Your trade log is kept. The replay session closes and the chart returns to live.',
+            'Back to live chart')) return;
         loadChart();
     });
 
@@ -2183,6 +2606,9 @@ function init() {
     $('rp-settings-open').addEventListener('click', () => { $('rp-set').hidden = false; });
     $('rp-set-close').addEventListener('click', () => { $('rp-set').hidden = true; });
     $('rp-set').addEventListener('click', e => { if (e.target.id === 'rp-set') $('rp-set').hidden = true; });
+    $('rp-ask-yes').addEventListener('click', () => answer(true));
+    $('rp-ask-no').addEventListener('click', () => answer(false));
+    $('rp-ask').addEventListener('click', e => { if (e.target.id === 'rp-ask') answer(false); });
 
     // replay controls live behind their own button rather than sitting on the
     // chart permanently
@@ -2190,6 +2616,7 @@ function init() {
         if (S.mode === 'replay') { $('rp-exit-replay').click(); return; }
         const bar = $('rp-cutbar');
         bar.hidden = !bar.hidden;
+        syncHud();
     });
 
     // Where the pointer is relative to the two axes. Both are drawn inside
@@ -2219,6 +2646,10 @@ function init() {
     // the time axis on wheel but has no vertical equivalent, so this drives
     // the price scale's margins instead: smaller margins let the candles fill
     // more height (zoom in), larger ones compress them (zoom out).
+    //
+    // It MUST run in the capture phase. The chart's own wheel handler is on a
+    // canvas inside this element, so in the bubble phase it had already
+    // zoomed east-west by the time we could call stopPropagation.
     let priceMargins = { top: 0.1, bottom: 0.1 };
     $('rp-chart-wrap').addEventListener('wheel', e => {
         if (!overAxis(e).price) return;          // over the plot: leave it alone
@@ -2231,10 +2662,41 @@ function init() {
         };
         try { chart.priceScale('right').applyOptions({ scaleMargins: priceMargins }); }
         catch (err) {}
-    }, { passive: false });
+    }, { passive: false, capture: true });
 
     makeDraggable($('rp-transport'), 'bt.replay.pos.transport');
     makeDraggable($('rp-hud'), 'bt.replay.pos.hud');
+
+    // indicator settings dialog
+    $('rp-icfg-close').addEventListener('click', closeIndCfg);
+    $('rp-icfg-ok').addEventListener('click', closeIndCfg);
+    $('rp-icfg').addEventListener('click', e => { if (e.target.id === 'rp-icfg') closeIndCfg(); });
+    $('rp-icfg-del').addEventListener('click', () => {
+        if (icfgId !== null) { removeIndicator(icfgId); updateIndCount(); }
+        closeIndCfg();
+    });
+    document.querySelectorAll('#rp-icfg-tabs button').forEach(b =>
+        b.addEventListener('click', () => {
+            icfgTab = b.dataset.itab;
+            document.querySelectorAll('#rp-icfg-tabs button').forEach(x =>
+                x.classList.toggle('active', x === b));
+            renderIndCfg();
+        }));
+
+    // the on-chart indicator list folds away
+    $('rp-leg-toggle').addEventListener('click', () => {
+        legendCollapsed = !legendCollapsed;
+        $('rp-leg-toggle').classList.toggle('collapsed', legendCollapsed);
+        try { localStorage.setItem('bt.replay.legendCollapsed', legendCollapsed ? '1' : '0'); } catch (e) {}
+        renderLegend();
+    });
+    try {
+        legendCollapsed = localStorage.getItem('bt.replay.legendCollapsed') === '1';
+        $('rp-leg-toggle').classList.toggle('collapsed', legendCollapsed);
+    } catch (e) {}
+
+    // export / save
+    $('rp-export').addEventListener('click', () => openExportMenu($('rp-export')));
 
     // indicator picker
     $('rp-ind-open').addEventListener('click', openIndModal);
@@ -2287,8 +2749,12 @@ function init() {
     });
 
     document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !$('rp-ask').hidden)  { answer(false); return; }
+        if (e.key === 'Escape' && !$('rp-icfg').hidden) { closeIndCfg(); return; }
         if (e.key === 'Escape' && !$('rp-modal').hidden) { closeIndModal(); return; }
         if (e.key === 'Escape' && !$('rp-set').hidden) { $('rp-set').hidden = true; return; }
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z' ||
+             e.key === 'y' || e.key === 'Y')) return;   // the tools own undo
         if (/input|select|textarea/i.test(e.target.tagName)) return;
         if (e.code === 'Space')      { e.preventDefault(); $('rp-playpause').click(); }
         if (e.code === 'ArrowRight') { e.preventDefault(); $('rp-step').click(); }

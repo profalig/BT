@@ -30,6 +30,10 @@ let bars = [];               // last painted data — magnet + future extrapolat
 let magnet = false;
 let lockAll = false;
 let hideAll = false;
+let hoverId = null;          // shape under the pointer — drives label reveal
+let history = [];            // undo stack of serialised snapshots
+let histAt = -1;
+let restoring = false;
 
 const SEL  = '#5aa9f0';
 const HIT  = 8;
@@ -206,6 +210,7 @@ function attach(_chart, _series, _host, opts) {
 
     buildRail();
     buildHud();
+    requestAnimationFrame(watchPriceScale);
     return api;
 }
 
@@ -218,6 +223,21 @@ function resize() {
     cvs.style.height = r.height + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     render(); place();
+}
+
+/* Lightweight Charts fires a subscription for the TIME scale but nothing for
+   the PRICE scale, so a vertical drag or zoom moved the candles and left the
+   drawings behind until an unrelated horizontal change forced a repaint.
+   Two coordinate probes a frame is cheap and catches every change. */
+let scaleSig = null;
+function watchPriceScale() {
+    requestAnimationFrame(watchPriceScale);
+    if (!series || !shapes.length) return;
+    const a = series.coordinateToPrice(0);
+    const b = series.coordinateToPrice(120);
+    if (a === null || b === null) return;
+    const sig = a.toFixed(6) + '|' + b.toFixed(6);
+    if (sig !== scaleSig) { scaleSig = sig; render(); place(); }
 }
 
 // -------------------------------------------------------------- coordinates
@@ -358,6 +378,17 @@ function hitTest(x, y) {
                 if (distToSegment(x, y, pts[j].x, pts[j].y, pts[j + 1].x, pts[j + 1].y) <= HIT)
                     return { id: s.id, handle: -1 };
             }
+        } else if (k === 'position') {
+            // Must mirror drawPosition exactly. It clamps the box to a
+            // minimum width so the shape stays visible when the chart is
+            // zoomed out, and without the same clamp here the drawn box was
+            // far wider than the part of it you could actually click.
+            const l = pts[0].x;
+            const rr = Math.max(pts[1].x, pts[2] ? pts[2].x : pts[1].x, l + 70) + 8;
+            const ys = pts.map(q => q.y);
+            const t = Math.min.apply(null, ys), b = Math.max.apply(null, ys);
+            if (x >= l - HIT && x <= rr + HIT && y >= t - HIT && y <= b + HIT)
+                return { id: s.id, handle: -1 };
         } else if (k === 'text' || k === 'plabel' || k === 'marker' || k === 'flag') {
             if (Math.abs(x - pts[0].x) <= 48 && Math.abs(y - pts[0].y) <= 18)
                 return { id: s.id, handle: -1 };
@@ -459,6 +490,12 @@ function onDown(e) {
 }
 
 function onHover(e) {
+    if (!drag && !pending && !fromUI(e)) {
+        const p = toChart(e);
+        const hit = p ? hitTest(p.x, p.y) : null;
+        const id = hit ? hit.id : null;
+        if (id !== hoverId) { hoverId = id; render(); }
+    }
     if (!pending || drag || fromUI(e)) return;
     const p = toChart(e);
     if (!p) return;
@@ -482,8 +519,13 @@ function onMove(e) {
             // entry and leave the box with no risk side.
             const risk = Math.abs(s.pts[0].price - p.price)
                       || Math.abs(s.pts[0].price) * 0.005 || 1;
-            s.pts[1] = { time: p.time, price: dir > 0 ? s.pts[0].price - risk : s.pts[0].price + risk };
-            s.pts[2] = { time: p.time, price: dir > 0 ? s.pts[0].price + risk * 2 : s.pts[0].price - risk * 2 };
+            // The entry is the box's left edge and it always opens forward.
+            // Letting the drag pull the far edge behind the entry is what
+            // made a position drawn at the live price stretch off to the
+            // left of the chart.
+            const t = Math.max(p.time, s.pts[0].time + (barStep() || 3600) * 3);
+            s.pts[1] = { time: t, price: dir > 0 ? s.pts[0].price - risk : s.pts[0].price + risk };
+            s.pts[2] = { time: t, price: dir > 0 ? s.pts[0].price + risk * 2 : s.pts[0].price - risk * 2 };
         } else {
             s.pts[1] = { time: p.time, price: p.price };
         }
@@ -574,6 +616,13 @@ function onDblClick(e) {
 
 function onKey(e) {
     if (/input|select|textarea/i.test(e.target.tagName) || e.target.isContentEditable) return;
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        if (e.shiftKey) redo(); else undo();
+        return;
+    }
+    if (mod && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); redo(); return; }
     if (e.key === 'Escape') {
         if (pending) { if (pending.pts.length > 2) pending.pts.pop(); finishPending(); return; }
         setTool('cursor'); selected = null; closeHud(); closeSettings(); render(); return;
@@ -591,7 +640,31 @@ function remove(id) {
     closeHud(); closeSettings(); commit();
 }
 
-function commit() { render(); place(); if (onChange) onChange(serialize()); }
+function commit() {
+    render(); place();
+    pushHistory();
+    if (onChange) onChange(serialize());
+}
+
+/* Undo covers every shape edit — create, move, reshape, restyle, lock,
+   delete, clear. Snapshots are the whole drawing set, which is small enough
+   that diffing would cost more than it saved. */
+function pushHistory() {
+    if (restoring) return;
+    const snap = JSON.stringify(serialize());
+    if (histAt >= 0 && history[histAt] === snap) return;
+    history = history.slice(0, histAt + 1);
+    history.push(snap);
+    if (history.length > 80) { history.shift(); histAt--; }
+    histAt = history.length - 1;
+}
+function applySnapshot(json) {
+    restoring = true;
+    try { load(JSON.parse(json)); } finally { restoring = false; }
+    if (onChange) onChange(serialize());
+}
+function undo() { if (histAt > 0) { histAt--; applySnapshot(history[histAt]); } }
+function redo() { if (histAt < history.length - 1) { histAt++; applySnapshot(history[histAt]); } }
 
 /* The position tool doubles as an order ticket: drawing one loads the panel,
    and the toolbar's Trade button sends it. Two verbs, one shape. */
@@ -950,8 +1023,9 @@ function drawPosition(s, pts, st, on) {
     const target = s.pts[2] ? s.pts[2].price : entry;
     const yE = Y(entry), yS = Y(stop), yT = Y(target);
     if (yE === null || yS === null || yT === null) return;
-    const l = Math.min(pts[0].x, pts[1].x);
-    const r = Math.max(pts[0].x, pts[1].x, pts[2] ? pts[2].x : 0) + 8;
+    // The entry is the left edge; the box only ever opens forward in time.
+    const l = pts[0].x;
+    const r = Math.max(pts[1].x, pts[2] ? pts[2].x : pts[1].x, l + 70) + 8;
 
     ctx.save();
     ctx.setLineDash([]);
@@ -968,17 +1042,22 @@ function drawPosition(s, pts, st, on) {
     ctx.lineWidth = 1.6;
     seg(l, yE, r, yE);
 
-    const risk = Math.abs(entry - stop), reward = Math.abs(target - entry);
-    const rr2 = risk ? reward / risk : 0;
-    const side = (st.dir || 1) > 0 ? 'LONG' : 'SHORT';
-    label(side + '  entry ' + money(entry), l + 4, yE - 6, st.line || '#f7a600');
-    label('stop ' + money(stop) + '   -' + money(risk), l + 4, yS + (yS > yE ? 14 : -6), '#ef454a');
-    label('target ' + money(target) + '   +' + money(reward) + '   ' + rr2.toFixed(2) + 'R',
-          l + 4, yT + (yT > yE ? 14 : -6), '#20b26c');
-
-    // All three levels are grabbable, always — the reward side is not locked
-    // to any ratio.
-    handle(pts[0].x, yE); handle(pts[1].x, yS); handle(pts[2] ? pts[2].x : pts[1].x, yT);
+    // The numbers are noise until you are actually looking at this position,
+    // so they only appear on hover or while it is selected.
+    const show = on || hoverId === s.id;
+    if (show) {
+        const risk = Math.abs(entry - stop), reward = Math.abs(target - entry);
+        const rr2 = risk ? reward / risk : 0;
+        const side = (st.dir || 1) > 0 ? 'LONG' : 'SHORT';
+        label(side + '  entry ' + money(entry), l + 4, yE - 6, st.line || '#f7a600');
+        label('stop ' + money(stop) + '   -' + money(risk),
+              l + 4, yS + (yS > yE ? 14 : -6), '#ef454a');
+        label('target ' + money(target) + '   +' + money(reward) + '   ' + rr2.toFixed(2) + 'R',
+              l + 4, yT + (yT > yE ? 14 : -6), '#20b26c');
+        // All three levels are grabbable — the reward side is not locked to
+        // any ratio.
+        handle(pts[0].x, yE); handle(pts[1].x, yS); handle(pts[2] ? pts[2].x : pts[1].x, yT);
+    }
     ctx.restore();
 }
 
@@ -1166,7 +1245,20 @@ function buildRail() {
             if (u === 'magnet') { magnet = !magnet; b.classList.toggle('on', magnet); }
             if (u === 'lock')   { lockAll = !lockAll; b.classList.toggle('on', lockAll); closeHud(); render(); }
             if (u === 'hide')   { hideAll = !hideAll; b.classList.toggle('on', hideAll); closeHud(); render(); }
-            if (u === 'clear')  { if (shapes.length && confirm('Remove all ' + shapes.length + ' drawings?')) api.clear(); }
+            if (u === 'clear' && shapes.length) {
+                const n = shapes.length;
+                const go = ok => { if (ok) api.clear(); };
+                // The host page owns the styled dialog; fall back only if it
+                // has not registered one.
+                if (window.BTConfirm) {
+                    window.BTConfirm('Remove all drawings?',
+                        n === 1 ? 'This deletes the one drawing on this chart. '
+                                + 'It can be undone with Ctrl+Z.'
+                                : 'This deletes all ' + n + ' drawings on this chart. '
+                                + 'It can be undone with Ctrl+Z.',
+                        'Remove all').then(go);
+                } else go(confirm('Remove all ' + n + ' drawings?'));
+            }
         }));
 
     document.addEventListener('mousedown', e => {
@@ -1208,12 +1300,44 @@ function closeFly() {
 
 let hudEl = null, hudId = null;
 
+let hudOffset = { dx: 0, dy: 0 };   // where the trader dragged it to
+
 function buildHud() {
     hudEl = document.createElement('div');
     hudEl.id = 'rp-tb';
     hudEl.className = 'rp-tb';
     hudEl.hidden = true;
     host.appendChild(hudEl);
+
+    /* The toolbar sits over the shape it belongs to, which is exactly where
+       you often need to see. Dragging stores an OFFSET rather than a fixed
+       point, so it still follows the next shape you select — just from
+       wherever you like it. */
+    let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+    hudEl.addEventListener('mousedown', e => {
+        if (e.target.closest('button')) return;
+        dragging = true;
+        sx = e.clientX; sy = e.clientY;
+        ox = hudOffset.dx; oy = hudOffset.dy;
+        hudEl.classList.add('dragging');
+        e.preventDefault(); e.stopPropagation();
+    });
+    window.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        hudOffset = { dx: ox + e.clientX - sx, dy: oy + e.clientY - sy };
+        const sh = shapes.find(x => x.id === selected);
+        if (sh) placeHud(sh);
+    });
+    window.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        hudEl.classList.remove('dragging');
+        try { localStorage.setItem('bt.replay.tbOffset', JSON.stringify(hudOffset)); } catch (e) {}
+    });
+    try {
+        const o = JSON.parse(localStorage.getItem('bt.replay.tbOffset') || 'null');
+        if (o && isFinite(o.dx) && isFinite(o.dy)) hudOffset = o;
+    } catch (e) {}
 }
 
 function dashIcon(d) {
@@ -1342,8 +1466,8 @@ function placeHud(s) {
     const cx = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2;
     const top = Math.min.apply(null, ys);
     const w = hudEl.offsetWidth || 320, h = hudEl.offsetHeight || 32;
-    hudEl.style.left = Math.max(6, Math.min(cvs.clientWidth - w - 6, cx - w / 2)) + 'px';
-    hudEl.style.top  = Math.max(6, Math.min(cvs.clientHeight - h - 6, top - h - 12)) + 'px';
+    hudEl.style.left = Math.max(6, Math.min(cvs.clientWidth - w - 6, cx - w / 2 + hudOffset.dx)) + 'px';
+    hudEl.style.top  = Math.max(6, Math.min(cvs.clientHeight - h - 6, top - h - 12 + hudOffset.dy)) + 'px';
 }
 function closeHud() { if (hudEl) hudEl.hidden = true; hudId = null; closePop(); }
 
@@ -1624,6 +1748,7 @@ const api = {
     clear: function () { shapes = []; selected = null; closeHud(); closeSettings(); commit(); },
     count: function () { return shapes.length; },
     setBars: function (d) { bars = d || []; },
+    undo: undo, redo: redo,
     serialize: serialize,
     load: load,
     render: render

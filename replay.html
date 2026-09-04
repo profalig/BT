@@ -157,6 +157,11 @@
 
             <div id="rp-legend-wrap" class="rp-legend-wrap">
                 <div id="rp-ohlc" class="rp-ohlc"></div>
+                <button id="rp-leg-toggle" class="rp-leg-toggle" hidden
+                        title="Collapse the indicator list">
+                    <i class="fa-solid fa-chevron-down"></i>
+                    <span id="rp-leg-n">0</span>&nbsp;<span id="rp-leg-word">indicators</span>
+                </button>
                 <div id="rp-legend" class="rp-legend"></div>
             </div>
 
@@ -215,6 +220,9 @@
                 <button class="rp-tab" data-tab="cal">Calendar</button>
                 <button class="rp-tab" data-tab="jour">Journal</button>
                 <span class="rp-tabs-spacer"></span>
+                <button class="rp-tab-icon" id="rp-export" title="Save or export this session">
+                    <i class="fa-solid fa-file-arrow-down"></i>
+                </button>
                 <button class="rp-tab-icon" id="rp-dock-toggle" title="Collapse / expand">
                     <i class="fa-solid fa-chevron-down"></i>
                 </button>
@@ -355,7 +363,10 @@
             <div class="rp-inp" id="rp-qty-row">
                 <span class="rp-inp-lab">Quantity</span>
                 <input type="number" id="rp-qty" step="any" placeholder="0.000">
-                <span class="rp-inp-unit" id="rp-qty-unit">BTC</span>
+                <select class="rp-inp-unit sel" id="rp-qty-unit" title="Quantity unit">
+                    <option value="base">BTC</option>
+                    <option value="quote">USDT</option>
+                </select>
             </div>
 
             <div class="rp-slider">
@@ -470,6 +481,39 @@
             <div class="rp-set-actions">
                 <button id="rp-set-reset" class="rp-btn">Reset to defaults</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===========================================  indicator settings  ==== -->
+<div id="rp-icfg" class="rp-modal" hidden>
+    <div class="rp-modal-card narrow" role="dialog" aria-label="Indicator settings">
+        <header class="rp-modal-head">
+            <h2 id="rp-icfg-title">Indicator</h2>
+            <button id="rp-icfg-close" class="rp-modal-x" aria-label="Close">&times;</button>
+        </header>
+        <nav class="rp-tr-tabs" id="rp-icfg-tabs">
+            <button class="active" data-itab="inputs">Inputs</button>
+            <button data-itab="style">Style</button>
+        </nav>
+        <div class="rp-set-body" id="rp-icfg-body"></div>
+        <div class="rp-icfg-foot">
+            <button class="rp-btn danger" id="rp-icfg-del">Remove indicator</button>
+            <button class="rp-btn accent" id="rp-icfg-ok">Done</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================================================  confirmation  ==== -->
+<div id="rp-ask" class="rp-modal" hidden>
+    <div class="rp-modal-card tiny" role="dialog" aria-modal="true" aria-labelledby="rp-ask-title">
+        <header class="rp-modal-head">
+            <h2 id="rp-ask-title">Are you sure?</h2>
+        </header>
+        <div class="rp-ask-body"><p id="rp-ask-text"></p></div>
+        <div class="rp-ask-foot">
+            <button class="rp-btn" id="rp-ask-no">Cancel</button>
+            <button class="rp-btn accent" id="rp-ask-yes">Continue</button>
         </div>
     </div>
 </div>
