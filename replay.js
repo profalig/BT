@@ -219,6 +219,7 @@ async function loadChart(preserveView) {
         $('rp-hud').hidden = false;
         updateModeUI();
         openStream();
+        restoreLayout();
     } catch (e) {
         status('Could not load market data: ' + e.message +
                '. Binance may be unreachable from your network.', 'error');
@@ -587,6 +588,7 @@ function addIndicator(type, params, code) {
     }
     activeInd.push(item);
     renderIndicatorList();
+    saveIndicators();
     refreshIndicators(lastPainted);
     return item;
 }
@@ -597,6 +599,7 @@ function removeIndicator(id) {
     activeInd[i].lines.forEach(l => { try { chart.removeSeries(l); } catch (e) {} });
     activeInd.splice(i, 1);
     renderIndicatorList();
+    saveIndicators();
 }
 
 function refreshIndicators(data) {
@@ -956,6 +959,42 @@ function openIndModal() {
 }
 function closeIndModal() { $('rp-modal').hidden = true; }
 
+// ------------------------------------------------------------- persistence
+
+/* Drawings and the indicator set are saved per symbol as you work and
+   restored on load, so a layout survives a reload without anyone having to
+   remember to save it. localStorage is per-browser and can be unavailable
+   (private windows, blocked site data), so every access is guarded and the
+   terminal simply works without persistence when it fails. */
+
+const storeKey = kind => 'bt.replay.' + kind + '.' + S.symbol;
+
+function saveDrawings(list) {
+    try { localStorage.setItem(storeKey('draw'), JSON.stringify(list || [])); }
+    catch (e) {}
+}
+function saveIndicators() {
+    try {
+        localStorage.setItem(storeKey('ind'), JSON.stringify(
+            activeInd.map(a => ({ type: a.type, params: a.params, code: a.code }))));
+    } catch (e) {}
+}
+function restoreLayout() {
+    let draw = null, ind = null;
+    try { draw = JSON.parse(localStorage.getItem(storeKey('draw')) || 'null'); } catch (e) {}
+    try { ind  = JSON.parse(localStorage.getItem(storeKey('ind'))  || 'null'); } catch (e) {}
+
+    if (window.BTTools) BTTools.load(draw || []);
+
+    while (activeInd.length) removeIndicator(activeInd[0].id);
+    if (Array.isArray(ind)) {
+        for (const i of ind) {
+            try { addIndicator(i.type, i.params, i.code); } catch (e) {}
+        }
+    }
+    updateIndCount();
+}
+
 // ----------------------------------------------------------------- wiring
 
 function init() {
@@ -1042,7 +1081,7 @@ function init() {
 
     // drawing tools
     if (window.BTTools) {
-        BTTools.attach(chart, series, $('rp-chart-wrap'));
+        BTTools.attach(chart, series, $('rp-chart-wrap'), { onChange: saveDrawings });
         document.querySelectorAll('.rp-rail-btn[data-tool]').forEach(b =>
             b.addEventListener('click', () => BTTools.setTool(b.dataset.tool)));
         $('rp-clear-draw').addEventListener('click', () => BTTools.clear());
