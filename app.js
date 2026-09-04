@@ -1363,7 +1363,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 showTacticalModal(
                     'UPLINK SECURED', 
-                    `System parameters received! 1 Backtest Credit used. <b>${newCredits} credit(s) remaining</b>.<br><br>Our engineering team will conduct a multi-threaded data analysis and compile your report shortly.`, 
+                    `System parameters received! 1 Backtest Credit used. <b>${newCredits} credit(s) remaining</b>.<br><br>Your rules go to the engineering desk to be turned into code and run against real historical data. The report lands in your inbox, and in MY REPORTS, as soon as it is out.`, 
                     true
                 );
 
