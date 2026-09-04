@@ -3132,3 +3132,13 @@ body.landed .module-details .action-btn {
 /* An infinity sign needs less room than a number and reads better slightly
    larger. */
 .rail-credit-n.is-unlimited { font-size: 3rem; line-height: 0.95; }
+
+
+/* The pricing card scrolls when the viewport is short, but a bright native
+   scrollbar down the inside edge of a dark premium panel looks like a
+   rendering fault. It still scrolls — the track is simply not drawn. */
+.subscription-modal-card {
+    scrollbar-width: none;              /* Firefox */
+    -ms-overflow-style: none;           /* old Edge */
+}
+.subscription-modal-card::-webkit-scrollbar { width: 0; height: 0; }

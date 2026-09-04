@@ -49,7 +49,21 @@ function db() {
 
 function entitle(profile, session, degraded) {
     const raw  = profile && typeof profile.plan === 'string' ? profile.plan.trim().toLowerCase() : '';
-    const plan = PLANS[raw] || null;
+    let plan = PLANS[raw] || null;
+
+    /* A plan that has run out is no plan. The webhook normally clears it on
+       cancellation, but a webhook that never arrives — Stripe outage, the
+       worker asleep, the endpoint moved — would otherwise leave someone with
+       access forever. The date is the backstop; no date means no expiry. */
+    const until = profile && profile.plan_expires_at;
+    if (plan && until) {
+        const t = Date.parse(until);
+        if (isFinite(t) && t < Date.now()) plan = null;
+    }
+    /* Stripe says past_due or unpaid before it says cancelled. Trust it. */
+    const st = profile && typeof profile.plan_status === 'string'
+        ? profile.plan_status.trim().toLowerCase() : '';
+    if (plan && st && st !== 'active' && st !== 'trialing') plan = null;
     const credits = profile ? (+profile.credits || 0) : 0;
     return {
         signedIn:  !!(session && session.user),
