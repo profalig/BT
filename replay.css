@@ -426,17 +426,22 @@ body.is-replay .rp-transport { box-shadow: 0 10px 34px rgba(0,0,0,.6); }
 }
 .rp-ohlc i { font-style: normal; color: var(--text-3); }
 .rp-legend { display: flex; flex-direction: column; gap: 2px; }
+/* No plate behind the rows. A translucent black slab over the candles is
+   heavier than the text it carries; a shadow keeps it readable over any
+   background without covering the chart. */
 .rp-leg-row {
     display: flex; align-items: center; gap: 7px;
-    padding: 2px 7px;
-    background: rgba(11,14,17,.6);
+    padding: 1px 4px;
+    background: none;
     border: 1px solid transparent; border-radius: 4px;
     font-size: .83rem; color: var(--text-2);
-    pointer-events: auto; cursor: pointer; user-select: none;
+    pointer-events: auto; cursor: default; user-select: none;
     font-variant-numeric: tabular-nums;
+    text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 2px rgba(0,0,0,.8);
 }
-.rp-leg-row:hover { border-color: var(--hairline); background: rgba(11,14,17,.92); }
-.rp-leg-dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+.rp-leg-row:hover { background: rgba(255,255,255,.04); }
+.rp-leg-dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto;
+    box-shadow: 0 0 3px rgba(0,0,0,.9); }
 .rp-leg-row b { color: var(--text-1); font-weight: 600; }
 .rp-leg-err { color: var(--neg); font-weight: 700; }
 /* The controls live in the row permanently. Revealing them on hover changed
@@ -455,12 +460,21 @@ body.is-replay .rp-transport { box-shadow: 0 10px 34px rgba(0,0,0,.6); }
 .rp-leg-toggle {
     align-self: flex-start;
     display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(11,14,17,.6); border: 1px solid transparent;
-    border-radius: 4px; padding: 2px 8px; margin-bottom: 1px;
+    background: none; border: 1px solid transparent;
+    border-radius: 4px; padding: 1px 4px;
     color: var(--text-3); font: inherit; font-size: .74rem;
     cursor: pointer; pointer-events: auto; user-select: none;
+    text-shadow: 0 1px 3px rgba(0,0,0,.9);
 }
-.rp-leg-toggle:hover { border-color: var(--hairline); color: var(--text-1); }
+.rp-leg-toggle:hover { background: rgba(255,255,255,.04); color: var(--text-1); }
+/* The list opens and closes in place. It is never removed from the flow, so
+   nothing above or beside it shifts when you fold it away. */
+.rp-legend {
+    overflow: hidden;
+    transition: max-height .18s ease, opacity .18s ease;
+    max-height: 60vh; opacity: 1;
+}
+.rp-legend.folded { max-height: 0; opacity: 0; }
 .rp-leg-toggle i { transition: transform .16s; font-size: .68rem; }
 .rp-leg-toggle.collapsed i { transform: rotate(-90deg); }
 .rp-leg-toggle span { color: var(--text-2); font-weight: 600; }
@@ -1050,3 +1064,195 @@ body.dock-collapsed .rp-tab-icon i { transform: rotate(180deg); }
 .rp-tb { cursor: grab; }
 .rp-tb.dragging { cursor: grabbing; border-color: var(--accent); }
 .rp-tb button { cursor: pointer; }
+
+
+/* ============================================  instrument picker  ==== */
+.rp-inst-btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    height: 38px; padding: 0 13px;
+    background: var(--bg-2); color: var(--text-1);
+    border: 1px solid var(--hairline); border-radius: var(--radius);
+    font: inherit; cursor: pointer; white-space: nowrap;
+    transition: border-color .16s, background .16s;
+}
+.rp-inst-btn:hover { border-color: var(--accent); background: rgba(247,166,0,.08); }
+.rp-inst-btn b { font-size: 1.02rem; font-weight: 700; letter-spacing: -.2px; }
+.rp-inst-btn i { color: var(--text-3); font-size: .78rem; }
+.rp-inst-tag {
+    font-size: .66rem; letter-spacing: 1.2px; font-weight: 700;
+    color: var(--accent); background: rgba(247,166,0,.13);
+    border: 1px solid rgba(247,166,0,.3);
+    border-radius: 3px; padding: 2px 6px;
+}
+
+#rp-inst .rp-modal-card { width: min(680px, 100%); max-height: min(660px, 90vh); }
+.rp-tr-tabs.scroll { overflow-x: auto; gap: 14px; }
+.rp-tr-tabs.scroll button { white-space: nowrap; }
+.rp-inst-body { overflow-y: auto; padding: 8px 10px 14px; min-height: 0; }
+.rp-inst-row {
+    display: grid;
+    grid-template-columns: 30px minmax(0,1fr) auto auto;
+    align-items: center; gap: 12px;
+    padding: 9px 10px; border-radius: var(--radius);
+    cursor: pointer; border: 1px solid transparent;
+}
+.rp-inst-row:hover { background: var(--bg-2); border-color: var(--hairline); }
+.rp-inst-row.on { background: rgba(247,166,0,.1); border-color: rgba(247,166,0,.4); }
+.rp-inst-star {
+    background: none; border: none; cursor: pointer; padding: 2px;
+    color: var(--text-3); font-size: .95rem; line-height: 1;
+}
+.rp-inst-star.on { color: var(--accent); }
+.rp-inst-star:hover { color: var(--accent-2); }
+.rp-inst-id { display: flex; flex-direction: column; min-width: 0; }
+.rp-inst-id b { font-size: .95rem; font-weight: 600; }
+.rp-inst-id span {
+    font-size: .8rem; color: var(--text-3);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rp-inst-px { font-variant-numeric: tabular-nums; font-size: .93rem; text-align: right; }
+.rp-inst-chg {
+    font-variant-numeric: tabular-nums; font-size: .87rem;
+    min-width: 74px; text-align: right;
+}
+.rp-inst-note {
+    padding: 22px 16px; color: var(--text-2); font-size: .93rem; line-height: 1.6;
+}
+.rp-inst-note b { color: var(--text-1); }
+.rp-inst-note ul { margin: 10px 0 0; padding-left: 20px; }
+.rp-inst-note li { margin-bottom: 5px; }
+
+/* ==================================================  date wheel  ==== */
+.rp-date-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--bg-2); color: var(--text-1);
+    border: 1px solid var(--hairline); border-radius: 5px;
+    padding: 6px 11px; font: inherit; font-size: .87rem; cursor: pointer;
+}
+.rp-date-btn:hover { border-color: var(--accent); }
+.rp-date-btn i { color: var(--accent); font-size: .85rem; }
+
+.rp-wheel {
+    position: relative;
+    display: grid; grid-template-columns: 1fr 1.5fr 1fr;
+    gap: 4px; padding: 10px 18px 4px;
+    height: 232px;
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent);
+            mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent);
+}
+/* the selected band sits behind the columns, iOS-style */
+.rp-wheel-band {
+    position: absolute; left: 12px; right: 12px; top: 50%;
+    transform: translateY(-50%);
+    height: 40px; border-radius: 8px;
+    background: rgba(247,166,0,.1);
+    border-top: 1px solid rgba(247,166,0,.35);
+    border-bottom: 1px solid rgba(247,166,0,.35);
+    pointer-events: none;
+}
+.rp-wheel-col {
+    overflow-y: scroll; scroll-snap-type: y mandatory;
+    scrollbar-width: none; text-align: center;
+}
+.rp-wheel-col::-webkit-scrollbar { display: none; }
+.rp-wheel-col > div {
+    height: 40px; line-height: 40px; scroll-snap-align: center;
+    font-size: 1.05rem; font-variant-numeric: tabular-nums;
+    color: var(--text-3); cursor: pointer;
+    transition: color .12s, transform .12s;
+}
+.rp-wheel-col > div.sel {
+    color: var(--text-1); font-weight: 700; transform: scale(1.06);
+}
+.rp-wheel-col > div.pad { cursor: default; }
+.rp-wheel-note {
+    margin-right: auto; color: var(--text-3); font-size: .82rem;
+}
+
+/* saved sessions in the export menu: each row can be removed on its own */
+.rp-sess-row { display: flex; align-items: center; gap: 2px; }
+.rp-sess-row > button:first-child { flex: 1; min-width: 0; }
+.rp-sess-del {
+    background: none; border: none; color: var(--text-3);
+    cursor: pointer; padding: 5px 8px; font-size: .85rem; border-radius: 5px;
+    flex: 0 0 auto;
+}
+.rp-sess-del:hover { color: var(--neg); background: rgba(239,69,74,.12); }
+.rp-pop-foot {
+    border-top: 1px solid var(--hairline); margin-top: 6px; padding-top: 6px;
+}
+
+
+/* ==========================================  performance, restructured ==
+
+   Same hierarchy as the Backtest Machine report so the two read as one
+   product: one headline figure, then the seven numbers that decide whether a
+   system is worth trading, then the curve, then everything else. A flat grid
+   of twenty equal tiles asks the reader to do the ranking themselves. */
+.rp-hero {
+    display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
+    padding: 16px 18px;
+    background: var(--bg-2);
+    border: 1px solid var(--hairline); border-radius: var(--radius);
+}
+.rp-hero-main { display: flex; flex-direction: column; gap: 2px; }
+.rp-hero-label {
+    font-size: .72rem; letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--text-3); font-weight: 600;
+}
+.rp-hero-value { font-size: 2.3rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.rp-hero-sub { font-size: .93rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.rp-hero-right { margin-left: auto; text-align: right; display: flex; flex-direction: column; gap: 3px; }
+.rp-hero-right span { font-size: .85rem; color: var(--text-3); }
+.rp-hero-right b { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+
+.rp-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; }
+.rp-kpi {
+    display: flex; flex-direction: column; gap: 3px;
+    padding: 11px 13px;
+    background: var(--bg-1); border: 1px solid var(--hairline); border-radius: var(--radius);
+}
+.rp-kpi-label {
+    font-size: .72rem; letter-spacing: 1.1px; text-transform: uppercase;
+    color: var(--text-3); font-weight: 600;
+}
+.rp-kpi-value { font-size: 1.45rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.rp-kpi-sub { font-size: .78rem; color: var(--text-3); }
+.rp-perf-h {
+    margin: 4px 0 0; font-size: .72rem; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--text-3); font-weight: 700;
+}
+
+
+/* ================================================  right-click menu  ==== */
+.rp-ctx { min-width: 232px; padding: 5px; }
+.rp-ctx .rp-menu button { text-transform: none; gap: 10px; padding: 7px 9px; }
+.rp-ctx .rp-menu button i { width: 15px; color: var(--text-3); font-size: .85rem; text-align: center; }
+.rp-ctx .rp-menu button:hover i { color: var(--accent); }
+.rp-ctx .rp-menu button.danger:hover { background: rgba(239,69,74,.13); color: var(--neg); }
+.rp-ctx .rp-menu button.danger:hover i { color: var(--neg); }
+.rp-ctx-sep { display: block; height: 1px; background: var(--hairline); margin: 5px 4px; }
+
+
+/* a labelled control reads faster than a lone glyph on a crowded tab bar */
+.rp-tab-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: none; border: none; border-left: 1px solid var(--hairline);
+    color: var(--text-2); font: inherit; font-size: .85rem; font-weight: 500;
+    padding: 0 14px; cursor: pointer; white-space: nowrap;
+    transition: color .16s;
+}
+.rp-tab-btn i { color: var(--accent); font-size: .9rem; }
+.rp-tab-btn:hover { color: var(--text-1); }
+
+.rp-pop-note {
+    padding: 8px 10px 4px; color: var(--text-3);
+    font-size: .78rem; line-height: 1.5; max-width: 260px;
+}
+.rp-pop-note b { color: var(--text-2); }
+.rp-layout-name {
+    width: 100%; background: var(--bg-2); color: var(--text-1);
+    border: 1px solid var(--hairline); border-radius: 5px;
+    padding: 7px 9px; font: inherit; font-size: .85rem; margin: 4px 0 6px;
+}
+.rp-layout-name:focus { outline: none; border-color: var(--accent); }

@@ -66,6 +66,124 @@ const MARKETS = {
     // forex feed, so this cannot follow the same shape.
 };
 
+/* ------------------------------------------------------- instruments ----
+
+   The catalogue is built from the exchange's own instrument list rather than
+   hard-coded, so it is never out of date. Categories are honest about what
+   the venue actually carries:
+
+     crypto  487 USDT pairs, BTC back to Aug 2017
+     fx      EUR/USD, plus genuine USD crosses against EM currencies
+     metal   gold, via the two fully-backed tokens (1 token = 1 troy ounce)
+     other   stocks, indices and energy — NOT on this venue at any price, so
+             the tab says so instead of pretending
+
+   Anything we cannot actually price is not listed as though it were there.  */
+
+const FIATS = ['EUR', 'GBP', 'AUD', 'JPY', 'CHF', 'CAD', 'NZD', 'TRY', 'BRL',
+               'ZAR', 'MXN', 'PLN', 'RON', 'CZK', 'ARS', 'COP', 'UAH', 'NGN'];
+const STABLES = ['USDT', 'USDC', 'FDUSD', 'TUSD', 'DAI', 'USD', 'USD1', 'EURI', 'BUSD'];
+const METALS = { PAXG: 'Gold — PAX Gold (1 token = 1 fine troy oz)',
+                 XAUT: 'Gold — Tether Gold (1 token = 1 fine troy oz)' };
+
+const ASSET_NAMES = {
+    BTC: 'Bitcoin', ETH: 'Ethereum', SOL: 'Solana', BNB: 'BNB', XRP: 'XRP',
+    ADA: 'Cardano', DOGE: 'Dogecoin', LINK: 'Chainlink', AVAX: 'Avalanche',
+    LTC: 'Litecoin', DOT: 'Polkadot', MATIC: 'Polygon', TRX: 'TRON',
+    ATOM: 'Cosmos', UNI: 'Uniswap', NEAR: 'NEAR Protocol', ARB: 'Arbitrum',
+    OP: 'Optimism', APT: 'Aptos', FIL: 'Filecoin', ETC: 'Ethereum Classic',
+    BCH: 'Bitcoin Cash', SHIB: 'Shiba Inu', PEPE: 'Pepe', SUI: 'Sui',
+    INJ: 'Injective', TIA: 'Celestia', SEI: 'Sei', RNDR: 'Render',
+    EUR: 'Euro', GBP: 'Pound sterling', AUD: 'Australian dollar',
+    JPY: 'Japanese yen', TRY: 'Turkish lira', BRL: 'Brazilian real',
+    ZAR: 'South African rand', MXN: 'Mexican peso', ARS: 'Argentine peso',
+    COP: 'Colombian peso', USDT: 'Tether', USDC: 'USD Coin'
+};
+
+let CATALOGUE = null;          // [{symbol, base, quote, cat, name, px, chg}]
+let favourites = [];
+try { favourites = JSON.parse(localStorage.getItem('bt.replay.favs') || 'null')
+        || ['BTCUSDT', 'ETHUSDT', 'PAXGUSDT', 'EURUSDT']; }
+catch (e) { favourites = ['BTCUSDT', 'ETHUSDT', 'PAXGUSDT', 'EURUSDT']; }
+const saveFavs = () => {
+    try { localStorage.setItem('bt.replay.favs', JSON.stringify(favourites)); } catch (e) {}
+};
+
+/* Categories are deliberately strict about what belongs in a tab, and
+   everything else stays reachable through search rather than padding the
+   lists. Ranking by raw quote volume put BTCJPY and MARSCOINTRY above
+   BTCUSDT, because a volume denominated in yen or lira is a bigger NUMBER
+   without being a bigger market — so the quote currency is ranked first and
+   volume only breaks ties within it. */
+const QUOTE_RANK = { USDT: 0, USDC: 1, FDUSD: 2, TUSD: 3 };
+const STABLE_ONLY = ['USDT', 'USDC', 'FDUSD', 'TUSD', 'DAI', 'USD', 'USD1', 'BUSD'];
+
+function categorise(base, quote) {
+    const bMetal = !!METALS[base];
+    const bStable = STABLE_ONLY.includes(base);
+    const qStable = STABLE_ONLY.includes(quote);
+    const bFiat = FIATS.includes(base);
+    const qFiat = FIATS.includes(quote);
+
+    // Gold, quoted in dollars. TRY- and BTC-quoted gold is real but nobody
+    // charts it, so it stays searchable instead of filling the tab.
+    if (bMetal) return (quote === 'USDT' || quote === 'USDC') ? 'metal' : 'alt';
+
+    // Currencies: a fiat against the dollar, in either direction. Two
+    // stablecoins against each other is not a currency pair in any useful
+    // sense, so USDC/USDT and friends are excluded.
+    if (bFiat && qStable) return 'fx';
+    if (bStable && qFiat) return 'fx';
+    if (bStable && qStable) return 'alt';
+
+    // Crypto proper: priced in dollars. The yen- and lira-quoted books are
+    // thin and duplicate the USDT ones.
+    if (quote === 'USDT') return 'crypto';
+    return 'alt';
+}
+
+function instrumentName(base, quote, cat) {
+    if (METALS[base]) return METALS[base] + (quote === 'USDC' ? ' / USDC' : '');
+    const nm = a => ASSET_NAMES[a] || a;
+    if (cat === 'fx' || cat === 'alt') {
+        const b = STABLE_ONLY.includes(base) ? 'US dollar' : nm(base);
+        const q = STABLE_ONLY.includes(quote) ? 'US dollar' : nm(quote);
+        if (FIATS.includes(base) || FIATS.includes(quote)) return b + ' / ' + q;
+    }
+    return nm(base);
+}
+
+async function loadCatalogue() {
+    if (CATALOGUE) return CATALOGUE;
+    const [info, tick] = await Promise.all([
+        fetch(BINANCE + '/exchangeInfo').then(r => r.json()),
+        fetch(BINANCE + '/ticker/24hr').then(r => r.json()).catch(() => [])
+    ]);
+    const px = {};
+    (tick || []).forEach(t => { px[t.symbol] = { last: +t.lastPrice, chg: +t.priceChangePercent, vol: +t.quoteVolume }; });
+
+    CATALOGUE = info.symbols
+        .filter(x => x.status === 'TRADING' &&
+                     (x.quoteAsset === 'USDT' || METALS[x.baseAsset] || FIATS.includes(x.quoteAsset)))
+        .map(x => {
+            const cat = categorise(x.baseAsset, x.quoteAsset);
+            const t = px[x.symbol] || {};
+            return {
+                symbol: x.symbol, base: x.baseAsset, quote: x.quoteAsset, cat: cat,
+                name: instrumentName(x.baseAsset, x.quoteAsset, cat),
+                px: t.last, chg: t.chg, vol: t.vol || 0
+            };
+        })
+        // Busiest first: the instruments people actually trade come to the top
+        // without anyone maintaining a ranking by hand.
+        .sort((a, b) => {
+            const qa = QUOTE_RANK[a.quote] === undefined ? 9 : QUOTE_RANK[a.quote];
+            const qb = QUOTE_RANK[b.quote] === undefined ? 9 : QUOTE_RANK[b.quote];
+            return qa - qb || b.vol - a.vol;
+        });
+    return CATALOGUE;
+}
+
 // ------------------------------------------------------------------- state
 
 const S = {
@@ -289,7 +407,6 @@ const toBar = k => ({ time: k.t / 1000, open: k.o, high: k.h, low: k.l, close: k
 
 async function loadChart() {
     const src = MARKETS[S.market];
-    S.symbol = $('rp-symbol').value;
     S.tfMin  = +$('rp-tf').value;
 
     S.hist = []; S.oldestMs = null; S.noMoreHistory = false;
@@ -904,7 +1021,9 @@ function renderLegend() {
     $('rp-leg-n').textContent = activeInd.length;
     $('rp-leg-word').textContent = activeInd.length === 1 ? 'indicator' : 'indicators';
     if (!activeInd.length) { box.innerHTML = ''; return; }
-    if (legendCollapsed) { box.innerHTML = ''; return; }
+    // Fold with a class, never by emptying: removing the rows collapsed the
+    // block and shifted everything around it.
+    box.classList.toggle('folded', legendCollapsed);
 
     box.innerHTML = activeInd.map(a => {
         const col = (a.styles[0] && a.styles[0].color) || a.params.color;
@@ -916,8 +1035,7 @@ function renderLegend() {
         // The controls are always in the row, never revealed on hover: a row
         // that changes width when the pointer crosses it shoves everything
         // beside it out of the way.
-        return '<div class="rp-leg-row' + (a.hidden ? ' off' : '') + '" data-leg="' + a.id +
-                 '" title="Double-click for settings">' +
+        return '<div class="rp-leg-row' + (a.hidden ? ' off' : '') + '" data-leg="' + a.id + '">' +
                  '<span class="rp-leg-dot" style="background:' + col + '"></span>' +
                  '<span class="rp-leg-name">' + label + '</span>' + val +
                  (a.error ? '<span class="rp-leg-err" title="' +
@@ -1397,18 +1515,30 @@ window.BTOrder = {
         showTab(S.position ? 'pos' : 'ord');
     },
 
-    fromDrawing(d) {
+    fromDrawing(d, announce) {
         slMode = 'price';
         segSet('rp-slmode', 'sl', 'price');
         $('rp-stop').value = d.stop.toFixed(pdp());
         if (d.target !== null && d.target !== undefined) $('rp-target').value = d.target.toFixed(pdp());
-        if (S.mode === 'replay' && Math.abs(d.entry - (currentPrice() || d.entry)) > 1e-9) {
+        const mark = currentPrice();
+        // An entry away from the market is a resting order in either mode —
+        // this used to be gated on replay, so on the live chart the drawn
+        // entry was quietly ignored and the ticket stayed at market.
+        if (mark !== null && Math.abs(d.entry - mark) / mark > 0.00005) {
             otype = 'limit';
             segSet('rp-otype', 'otype', 'limit');
             $('rp-price-row').hidden = false;
             $('rp-price').value = d.entry.toFixed(pdp());
         }
         updateTicket();
+        if (announce) {
+            const panel = $('rp-trade');
+            panel.classList.remove('flash');
+            void panel.offsetWidth;              // restart the animation
+            panel.classList.add('flash');
+            status('Entry, stop and target copied to the order panel.');
+            setTimeout(hideStatus, 2400);
+        }
     }
 };
 
@@ -1621,35 +1751,66 @@ function stats() {
 
 function renderMetrics() {
     const s = stats();
-    const cell = (label, value, cls) =>
-        '<div><span>' + label + '</span><b class="' + (cls || '') + '">' + value + '</b></div>';
+    const has = s.n > 0;
+    const ret = (S.balance - S.startBalance) / S.startBalance * 100;
+
+    // ---- one headline figure
+    $('rp-hero').innerHTML =
+        '<div class="rp-hero-main">' +
+          '<span class="rp-hero-label">Net profit and loss</span>' +
+          '<span class="rp-hero-value ' + (s.net >= 0 ? 'val-pos' : 'val-neg') + '">' +
+            (has ? signed(s.net) : '—') + '</span>' +
+          '<span class="rp-hero-sub">' + money(S.startBalance) + ' &rarr; ' +
+            money(S.balance) + '  (' + (ret >= 0 ? '+' : '') + fmt(ret, 2) + '%)</span>' +
+        '</div>' +
+        '<div class="rp-hero-right">' +
+          '<span>' + s.n + (s.n === 1 ? ' trade' : ' trades') + ' &middot; ' +
+            S.symbol + ' ' + TF_LABEL[S.tfMin] + '</span>' +
+          '<b class="' + (s.winRate >= 50 ? 'val-pos' : '') + '">' +
+            (has ? fmt(s.winRate, 1) + '% win rate' : '—') + '</b>' +
+        '</div>';
+
+    // ---- the seven that decide whether a system is worth trading
+    const sharpe = sharpeOf(S.trades.filter(t => t.closedAt));
+    const kpi = (label, value, sub, tone) =>
+        '<div class="rp-kpi">' +
+          '<span class="rp-kpi-label">' + label + '</span>' +
+          '<span class="rp-kpi-value ' + (tone || '') + '">' + value + '</span>' +
+          '<span class="rp-kpi-sub">' + sub + '</span>' +
+        '</div>';
+    $('rp-kpis').innerHTML =
+        kpi('Profit factor', has ? (s.pf === Infinity ? '∞' : fmt(s.pf, 2)) : '—',
+            'gross win / gross loss', has && s.pf >= 1 ? 'val-pos' : has ? 'val-neg' : '') +
+        kpi('Max drawdown', has ? fmt(S.maxDD, 1) + '%' : '—', 'peak to trough', 'val-neg') +
+        kpi('Expectancy', has ? signed(s.expectancy) : '—', 'per trade',
+            s.expectancy >= 0 ? 'val-pos' : 'val-neg') +
+        kpi('Average R', has ? (s.avgR >= 0 ? '+' : '') + fmt(s.avgR, 2) + 'R' : '—',
+            'risk multiples', s.avgR >= 0 ? 'val-pos' : 'val-neg') +
+        kpi('Sharpe', sharpe === null ? '—' : fmt(sharpe, 2),
+            sharpe === null ? 'needs 5+ trades' : 'risk-adjusted') +
+        kpi('Avg win', has ? money(s.avgWin) : '—', 'per winning trade', 'val-pos') +
+        kpi('Avg loss', has ? money(s.avgLoss) : '—', 'per losing trade', 'val-neg');
+
+    // ---- supporting detail
     const h = m => {
         if (!m) return '—';
         const d = Math.floor(m / 86400), hh = Math.floor(m % 86400 / 3600), mm = Math.floor(m % 3600 / 60);
         return (d ? d + 'd ' : '') + (hh ? hh + 'h ' : '') + (d ? '' : mm + 'm');
     };
+    const cell = (label, value, cls) =>
+        '<div><span>' + label + '</span><b class="' + (cls || '') + '">' + value + '</b></div>';
     $('rp-metrics').innerHTML =
-        cell('Trades', s.n) +
-        cell('Win rate', s.n ? fmt(s.winRate, 1) + '%' : '—', s.winRate >= 50 ? 'val-pos' : '') +
-        cell('Net P&amp;L', s.n ? signed(s.net) : '—', s.net >= 0 ? 'val-pos' : 'val-neg') +
-        cell('Return', s.n ? (s.net >= 0 ? '+' : '') + fmt(s.net / S.startBalance * 100, 2) + '%' : '—',
-             s.net >= 0 ? 'val-pos' : 'val-neg') +
-        cell('Profit factor', s.n ? (s.pf === Infinity ? '∞' : fmt(s.pf, 2)) : '—') +
-        cell('Expectancy', s.n ? signed(s.expectancy) : '—', s.expectancy >= 0 ? 'val-pos' : 'val-neg') +
-        cell('Avg R', s.n ? (s.avgR >= 0 ? '+' : '') + fmt(s.avgR, 2) + 'R' : '—',
-             s.avgR >= 0 ? 'val-pos' : 'val-neg') +
-        cell('Max drawdown', s.n ? fmt(S.maxDD, 1) + '%' : '—', 'val-neg') +
-        cell('Max DD ($)', s.n ? money(S.maxDDAbs) : '—', 'val-neg') +
-        cell('Gross profit', s.n ? money(s.gross) : '—', 'val-pos') +
-        cell('Gross loss', s.n ? money(s.loss) : '—', 'val-neg') +
-        cell('Avg win', s.n ? money(s.avgWin) : '—', 'val-pos') +
-        cell('Avg loss', s.n ? money(s.avgLoss) : '—', 'val-neg') +
-        cell('Best trade', s.n ? signed(s.bestWin) : '—', 'val-pos') +
-        cell('Worst trade', s.n ? signed(s.worstLoss) : '—', 'val-neg') +
-        cell('Win streak', s.n ? s.bestStreak : '—') +
-        cell('Loss streak', s.n ? s.worstStreak : '—') +
-        cell('Avg hold', s.n ? h(s.avgHold) : '—') +
-        cell('Fees paid', s.n ? money(s.fees) : '—') +
+        cell('Wins', has ? s.wins : '—', 'val-pos') +
+        cell('Losses', has ? s.losses : '—', 'val-neg') +
+        cell('Gross profit', has ? money(s.gross) : '—', 'val-pos') +
+        cell('Gross loss', has ? money(s.loss) : '—', 'val-neg') +
+        cell('Best trade', has ? signed(s.bestWin) : '—', 'val-pos') +
+        cell('Worst trade', has ? signed(s.worstLoss) : '—', 'val-neg') +
+        cell('Win streak', has ? s.bestStreak : '—') +
+        cell('Loss streak', has ? s.worstStreak : '—') +
+        cell('Max DD ($)', has ? money(S.maxDDAbs) : '—', 'val-neg') +
+        cell('Avg hold', has ? h(s.avgHold) : '—') +
+        cell('Fees paid', has ? money(s.fees) : '—') +
         cell('Balance', money(S.balance));
 }
 
@@ -2089,6 +2250,215 @@ function sharpeOf(trades) {
     return sd ? +(mean / sd).toFixed(2) : null;
 }
 
+
+/* ------------------------------------------------------------ PDF report
+
+   Built as a print document rather than through a PDF library: the browser's
+   own "Save as PDF" already produces a proper, selectable, vector PDF, and
+   this way the report is laid out in the same CSS as everything else instead
+   of being re-implemented in drawing primitives. It follows the Backtest
+   Machine report exactly — one hero figure, the KPI row, equity and drawdown,
+   monthly bars, R distribution, then the trade log — so a replay session and
+   a submitted system read as the same document. */
+
+function svgArea(data, opts) {
+    opts = opts || {};
+    const W = 720, H = opts.height || 170, pad = 26;
+    if (!data || data.length < 2) return '<p class="pr-empty">Not enough data.</p>';
+    const vals = data.map(d => d.v);
+    let lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    if (opts.below) hi = Math.max(hi, 0);
+    if (lo === hi) { lo -= 1; hi += 1; }
+    const X = i => pad + i / (data.length - 1) * (W - pad * 2);
+    const Y = v => H - pad - (v - lo) / (hi - lo) * (H - pad * 2);
+    const line = data.map((d, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(d.v).toFixed(1)).join(' ');
+    const base = opts.below ? Y(0) : H - pad;
+    const col = opts.colour || '#20b26c';
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="pr-chart">' +
+        '<path d="' + line + ' L' + X(data.length - 1).toFixed(1) + ' ' + base.toFixed(1) +
+          ' L' + X(0).toFixed(1) + ' ' + base.toFixed(1) + ' Z" fill="' + col + '" opacity=".16"/>' +
+        '<path d="' + line + '" fill="none" stroke="' + col + '" stroke-width="2"/>' +
+        '<text x="' + pad + '" y="14" class="pr-ax">' + (opts.fmt ? opts.fmt(hi) : hi.toFixed(0)) + '</text>' +
+        '<text x="' + pad + '" y="' + (H - 6) + '" class="pr-ax">' +
+          (opts.fmt ? opts.fmt(lo) : lo.toFixed(0)) + '</text>' +
+        '</svg>';
+}
+
+function svgBars(data, opts) {
+    opts = opts || {};
+    const W = 720, H = 150, pad = 26;
+    if (!data || !data.length) return '<p class="pr-empty">Not enough data.</p>';
+    const vals = data.map(d => d.v);
+    const hi = Math.max.apply(null, vals.concat([0]));
+    const lo = Math.min.apply(null, vals.concat([0]));
+    const span = (hi - lo) || 1;
+    const zero = H - pad - (0 - lo) / span * (H - pad * 2);
+    const bw = (W - pad * 2) / data.length * 0.62;
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="pr-chart">' +
+        '<line x1="' + pad + '" y1="' + zero.toFixed(1) + '" x2="' + (W - pad) +
+          '" y2="' + zero.toFixed(1) + '" stroke="#c9ced6" stroke-width="1"/>' +
+        data.map((d, i) => {
+            const cx = pad + (i + 0.5) / data.length * (W - pad * 2);
+            const y = H - pad - (d.v - lo) / span * (H - pad * 2);
+            const top = Math.min(y, zero), h = Math.abs(y - zero) || 1;
+            const col = opts.single || (d.v >= 0 ? '#20b26c' : '#ef454a');
+            return '<rect x="' + (cx - bw / 2).toFixed(1) + '" y="' + top.toFixed(1) +
+                   '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) +
+                   '" fill="' + col + '" rx="2"/>' +
+                   '<text x="' + cx.toFixed(1) + '" y="' + (H - 8) +
+                   '" class="pr-ax mid">' + d.t + '</text>';
+        }).join('') + '</svg>';
+}
+
+function buildPrintReport() {
+    const m = buildReport();
+    const st = stats();
+    const esc = t => String(t == null ? '' : t).replace(/[&<>]/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    const mny = v => (v < 0 ? '-$' : '$') +
+        Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const kpi = (l, v, sub, tone) =>
+        '<div class="pr-kpi"><span class="pr-kl">' + l + '</span>' +
+        '<span class="pr-kv ' + (tone || '') + '">' + v + '</span>' +
+        '<span class="pr-ks">' + sub + '</span></div>';
+
+    const rows = (m.trades || []).slice(0, 300).map((t, i) =>
+        '<tr><td>' + (i + 1) + '</td><td>' + esc(t.symbol) + '</td><td>' + esc(t.side) +
+        '</td><td class="n">' + t.entry + '</td><td class="n">' + t.exit +
+        '</td><td class="n ' + (t.r >= 0 ? 'pos' : 'neg') + '">' + (t.r >= 0 ? '+' : '') + t.r.toFixed(2) +
+        'R</td><td class="n ' + (t.pnl >= 0 ? 'pos' : 'neg') + '">' + mny(t.pnl) + '</td></tr>').join('');
+
+    return '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+    '<title>BarTest Replay — ' + esc(m.symbol) + ' ' + esc(m.timeframe) + '</title>' +
+    '<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">' +
+    '<style>' +
+    '@page{size:A4;margin:14mm}' +
+    'body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:#14171c;margin:0;font-size:11px}' +
+    '.pr-head{display:flex;align-items:flex-start;gap:16px;border-bottom:2px solid #14171c;padding-bottom:12px}' +
+    '.pr-mark{width:34px;height:34px;border-radius:9px;background:#f7a600;display:grid;place-items:center;' +
+      'color:#14171c;font-weight:700;font-size:15px;flex:0 0 auto}' +
+    '.pr-head h1{margin:0;font-size:19px;letter-spacing:-.3px}' +
+    '.pr-head p{margin:3px 0 0;color:#5d646e;font-size:11px}' +
+    '.pr-head .right{margin-left:auto;text-align:right;color:#5d646e;font-size:10px;line-height:1.6}' +
+    '.pr-hero{display:flex;align-items:baseline;gap:20px;margin:16px 0 14px;padding:14px 16px;' +
+      'background:#f5f6f8;border-radius:8px}' +
+    '.pr-hero .v{font-size:34px;font-weight:700;line-height:1}' +
+    '.pr-hero .s{color:#5d646e;font-size:12px}' +
+    '.pr-hero .r{margin-left:auto;text-align:right}' +
+    '.pr-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}' +
+    '.pr-kpi{border:1px solid #dfe3e8;border-radius:7px;padding:9px 11px}' +
+    '.pr-kl{display:block;font-size:9px;letter-spacing:.9px;text-transform:uppercase;color:#7c838d;font-weight:600}' +
+    '.pr-kv{display:block;font-size:17px;font-weight:700;margin:3px 0 1px}' +
+    '.pr-ks{display:block;font-size:9px;color:#8b929b}' +
+    'h2{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#7c838d;' +
+      'margin:18px 0 7px;border-bottom:1px solid #dfe3e8;padding-bottom:5px}' +
+    '.pr-chart{width:100%;height:auto;display:block}' +
+    '.pr-ax{font-size:9px;fill:#8b929b}.pr-ax.mid{text-anchor:middle}' +
+    '.pr-empty{color:#8b929b;font-size:11px;margin:6px 0}' +
+    'table{width:100%;border-collapse:collapse;font-size:10px}' +
+    'th{text-align:left;font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:#7c838d;' +
+      'border-bottom:1px solid #cfd4da;padding:5px 6px}' +
+    'td{padding:4px 6px;border-bottom:1px solid #eef0f3}' +
+    'td.n{text-align:right;font-variant-numeric:tabular-nums}' +
+    '.pos{color:#0d8a56}.neg{color:#cc3238}' +
+    '.pr-foot{margin-top:18px;padding-top:10px;border-top:1px solid #dfe3e8;' +
+      'color:#8b929b;font-size:9px;line-height:1.6}' +
+    '@media print{.pr-noprint{display:none}}' +
+    '.pr-noprint{position:fixed;top:12px;right:12px;background:#f7a600;color:#14171c;border:none;' +
+      'border-radius:6px;padding:9px 16px;font:inherit;font-weight:700;cursor:pointer;font-size:12px}' +
+    '</style></head><body>' +
+
+    '<button class="pr-noprint" onclick="window.print()">Save as PDF</button>' +
+
+    '<div class="pr-head"><div class="pr-mark">B</div>' +
+      '<div><h1>' + esc(m.symbol) + ' &middot; ' + esc(m.timeframe) + '</h1>' +
+      '<p>Replay session &middot; ' + esc(m.venue) + ' &middot; ' +
+        (m.periodStart ? esc(m.periodStart) + ' → ' + esc(m.periodEnd) : 'no closed trades') + '</p></div>' +
+      '<div class="right"><b>BarTest Replay</b><br>Generated ' +
+        new Date().toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) +
+        '<br>Fees ' + S.feeBps + ' bps both sides</div></div>' +
+
+    '<div class="pr-hero"><div><div class="v ' + (m.netReturnPct >= 0 ? 'pos' : 'neg') + '">' +
+      (m.netReturnPct >= 0 ? '+' : '') + m.netReturnPct.toFixed(2) + '%</div>' +
+      '<div class="s">' + mny(m.startBalance) + ' → ' + mny(m.endBalance) + '</div></div>' +
+      '<div class="r"><div class="v">' + m.totalTrades + '</div>' +
+      '<div class="s">' + (m.totalTrades === 1 ? 'trade' : 'trades') + ' &middot; ' +
+        m.winRatePct.toFixed(1) + '% win rate</div></div></div>' +
+
+    '<div class="pr-kpis">' +
+      kpi('Profit factor', m.profitFactor === null ? '∞' : m.profitFactor.toFixed(2),
+          'gross win / gross loss', m.profitFactor >= 1 ? 'pos' : 'neg') +
+      kpi('Max drawdown', m.maxDrawdownPct.toFixed(2) + '%', 'peak to trough', 'neg') +
+      kpi('Expectancy', mny(m.expectancy), 'per trade', m.expectancy >= 0 ? 'pos' : 'neg') +
+      kpi('Sharpe', m.sharpe === null ? '—' : m.sharpe.toFixed(2),
+          m.sharpe === null ? 'needs 5+ trades' : 'risk-adjusted') +
+      kpi('Average win', mny(m.avgWin), 'per winning trade', 'pos') +
+      kpi('Average loss', mny(m.avgLoss), 'per losing trade', 'neg') +
+      kpi('Worst streak', m.longestLossStreak, 'consecutive losses') +
+      kpi('Fees paid', mny(m.feesPaid), 'both sides') +
+    '</div>' +
+
+    '<h2>Equity</h2>' + svgArea(m.equity, { fmt: v => mny(v) }) +
+    '<h2>Drawdown</h2>' + svgArea(m.drawdown, { colour: '#ef454a', below: true, height: 140,
+        fmt: v => v.toFixed(1) + '%' }) +
+    '<h2>Monthly return</h2>' + svgBars(m.monthly) +
+    '<h2>R-multiple distribution</h2>' + svgBars(m.rBuckets, { single: '#5aa9f0' }) +
+    '<h2>Trade log' + (m.trades.length > 300 ? ' (first 300 of ' + m.trades.length + ')' : '') + '</h2>' +
+    (rows ? '<table><thead><tr><th>#</th><th>Symbol</th><th>Side</th><th class="n">Opened</th>' +
+      '<th class="n">Closed</th><th class="n">R</th><th class="n">P&amp;L</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table>'
+          : '<p class="pr-empty">No closed trades.</p>') +
+
+    '<div class="pr-foot">Simulated results from historical replay on ' + esc(m.venue) +
+      ' data. Fills are stepped through 1-minute bars and, where a single minute ' +
+      'touches both the stop and the target, the stop is taken first. Both sides of ' +
+      'every trade are charged ' + S.feeBps + ' bps. Simulated performance does not ' +
+      'establish that a system will behave the same way traded live.</div>' +
+
+    '</body></html>';
+}
+
+/* The chart and the drawings live on separate canvases stacked on top of one
+   another, so a snapshot has to composite them rather than grab either one. */
+function saveChartImage() {
+    try {
+        const wrap = $('rp-chart-wrap');
+        const src = wrap.querySelectorAll('canvas');
+        const out = document.createElement('canvas');
+        const r = wrap.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        out.width = Math.round(r.width * dpr);
+        out.height = Math.round(r.height * dpr);
+        const g = out.getContext('2d');
+        g.fillStyle = theme.bg;
+        g.fillRect(0, 0, out.width, out.height);
+        src.forEach(c => {
+            const cr = c.getBoundingClientRect();
+            try {
+                g.drawImage(c, Math.round((cr.left - r.left) * dpr), Math.round((cr.top - r.top) * dpr),
+                            Math.round(cr.width * dpr), Math.round(cr.height * dpr));
+            } catch (e) {}
+        });
+        out.toBlob(b => {
+            if (!b) return;
+            const url = URL.createObjectURL(b);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'bartest-' + stamp() + '.png';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 4000);
+        });
+    } catch (e) { status('Could not capture the chart.', 'error'); setTimeout(hideStatus, 2600); }
+}
+
+function exportPdf() {
+    const w = window.open('', '_blank');
+    if (!w) { status('Allow pop-ups to open the report.', 'error'); setTimeout(hideStatus, 3200); return; }
+    w.document.write(buildPrintReport());
+    w.document.close();
+    // Let the webfont and the SVG land before the print dialog measures it.
+    setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 700);
+}
+
 function tradesCsv() {
     const head = ['#', 'symbol', 'timeframe', 'side', 'qty', 'entry', 'exit',
                   'opened_utc', 'closed_utc', 'exit_reason', 'r', 'pnl', 'fees', 'note', 'tags'];
@@ -2126,7 +2496,8 @@ function saveSession() {
     const all = listSessions();
     all.unshift({
         id: Date.now(),
-        label: S.symbol + ' ' + TF_LABEL[S.tfMin] + '  ' + S.trades.length + ' trades  ' +
+        label: S.symbol + ' ' + TF_LABEL[S.tfMin] + '  ' + S.trades.length +
+               (S.trades.length === 1 ? ' trade  ' : ' trades  ') +
                new Date().toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }),
         symbol: S.symbol, tfMin: S.tfMin, cursorMs: S.cursorMs, mode: S.mode,
         startBalance: S.startBalance, balance: S.balance,
@@ -2164,6 +2535,30 @@ async function loadSession(id) {
     setTimeout(hideStatus, 2600);
 }
 
+/* Saved sessions are the trader's own record — they must be removable one by
+   one and in bulk, or the list becomes a drawer nobody can tidy. */
+async function deleteSession(id) {
+    const all = listSessions();
+    const one = all.find(x => x.id === id);
+    if (!one) return;
+    if (!await ask('Delete this session?', one.label +
+        '\n\nThis cannot be undone. Export it first if you want to keep the record.',
+        'Delete')) return;
+    try { localStorage.setItem(SESS_KEY, JSON.stringify(all.filter(x => x.id !== id))); }
+    catch (e) {}
+    status('Session deleted.'); setTimeout(hideStatus, 2200);
+}
+
+async function wipeSessions() {
+    const n = listSessions().length;
+    if (!n) return;
+    if (!await ask('Delete all saved sessions?',
+        'All ' + n + ' saved sessions are removed from this browser. ' +
+        'This cannot be undone.', 'Delete all')) return;
+    try { localStorage.removeItem(SESS_KEY); } catch (e) {}
+    status('All saved sessions deleted.'); setTimeout(hideStatus, 2200);
+}
+
 function openExportMenu(anchor) {
     document.querySelectorAll('.rp-pop').forEach(n => n.remove());
     const sessions = listSessions();
@@ -2171,17 +2566,26 @@ function openExportMenu(anchor) {
     pop.className = 'rp-pop rp-export-pop';
     pop.innerHTML =
         '<div class="rp-menu">' +
-          '<button data-x="report"><i class="fa-solid fa-chart-line"></i>' +
-            '<span>Export report (JSON)</span></button>' +
+          '<button data-x="pdf"><i class="fa-regular fa-file-pdf"></i>' +
+            '<span>Performance report (PDF)</span></button>' +
           '<button data-x="csv"><i class="fa-solid fa-table"></i>' +
-            '<span>Export trade log (CSV)</span></button>' +
+            '<span>Trade log (CSV)</span></button>' +
+          '<button data-x="report"><i class="fa-solid fa-code"></i>' +
+            '<span>Raw data (JSON)</span></button>' +
           '<button data-x="save"><i class="fa-solid fa-floppy-disk"></i>' +
             '<span>Save session</span></button>' +
         '</div>' +
         (sessions.length
             ? '<h5>Saved sessions</h5><div class="rp-menu">' + sessions.map(x =>
-                '<button data-load="' + x.id + '"><i class="fa-solid fa-clock-rotate-left"></i>' +
-                '<span>' + x.label + '</span></button>').join('') + '</div>'
+                '<div class="rp-sess-row">' +
+                  '<button data-load="' + x.id + '"><i class="fa-solid fa-clock-rotate-left"></i>' +
+                  '<span>' + x.label + '</span></button>' +
+                  '<button class="rp-sess-del" data-del="' + x.id + '" ' +
+                    'title="Delete this session"><i class="fa-solid fa-trash-can"></i></button>' +
+                '</div>').join('') + '</div>' +
+              '<div class="rp-menu rp-pop-foot"><button data-x="wipe">' +
+                '<i class="fa-solid fa-broom"></i><span>Delete all saved sessions</span>' +
+              '</button></div>'
             : '');
     document.body.appendChild(pop);
     const r = anchor.getBoundingClientRect();
@@ -2199,16 +2603,350 @@ function openExportMenu(anchor) {
             status('No trades to export yet.', 'error');
             setTimeout(hideStatus, 2600); close(); return;
         }
+        if (x === 'pdf') exportPdf();
         if (x === 'report') download('bartest-report-' + stamp() + '.json',
             JSON.stringify(buildReport(), null, 2), 'application/json');
         if (x === 'csv') download('bartest-trades-' + stamp() + '.csv',
             tradesCsv(), 'text/csv;charset=utf-8');
         if (x === 'save') saveSession();
+        if (x === 'wipe') { close(); wipeSessions(); return; }
         close();
+    }));
+    pop.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', e => {
+        e.stopPropagation();
+        close();
+        deleteSession(+b.dataset.del);
     }));
     pop.querySelectorAll('[data-load]').forEach(b => b.addEventListener('click', () => {
         loadSession(+b.dataset.load); close();
     }));
+}
+
+
+/* ------------------------------------------------------- chart layouts ---
+
+   A layout is how the chart LOOKS and what is on it — instrument, timeframe,
+   theme, indicators and drawings. It is deliberately separate from a saved
+   session, which is what you DID: the trades, orders and balance. People
+   reuse a layout every day and archive a session once.
+
+   Both live in this browser's storage. Carrying them between machines needs
+   an account, which needs the sign-in the marketing site already has a
+   backend for — that is a wiring job, not something to fake with a menu. */
+
+const LAYOUT_KEY = 'bt.replay.layouts';
+function listLayouts() {
+    try { return JSON.parse(localStorage.getItem(LAYOUT_KEY) || '[]'); } catch (e) { return []; }
+}
+function writeLayouts(all) {
+    try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(all.slice(0, 30))); return true; }
+    catch (e) { status('Could not save — browser storage is full or blocked.', 'error'); return false; }
+}
+
+function saveLayout(name) {
+    const all = listLayouts().filter(x => x.name !== name);
+    all.unshift({
+        id: Date.now(), name: name,
+        symbol: S.symbol, tfMin: S.tfMin,
+        theme: Object.assign({}, theme),
+        drawings: window.BTTools ? BTTools.serialize() : [],
+        indicators: activeInd.map(a => ({ type: a.type, params: a.params, code: a.code, styles: a.styles })),
+        at: new Date().toISOString()
+    });
+    if (!writeLayouts(all)) return;
+    status('Layout "' + name + '" saved.');
+    setTimeout(hideStatus, 2400);
+}
+
+async function applyLayout(id) {
+    const L = listLayouts().find(x => x.id === id);
+    if (!L) return;
+    theme = Object.assign({}, THEME_DEFAULT, L.theme || {});
+    syncThemeInputs(); saveTheme();
+    $('rp-tf').value = String(L.tfMin);
+    const symChanged = L.symbol !== S.symbol;
+    S.symbol = L.symbol;
+    syncInstButton();
+    $('rp-tk-icon').textContent = L.symbol.charAt(0);
+
+    pendingLayout = L;      // drawings and indicators land after the data does
+    rebuildSeries(); applyTheme();
+    await loadChart();
+    status('Layout "' + L.name + '" loaded.');
+    setTimeout(hideStatus, 2400);
+}
+
+let pendingLayout = null;
+
+async function deleteLayout(id) {
+    const all = listLayouts();
+    const one = all.find(x => x.id === id);
+    if (!one) return;
+    if (!await ask('Delete this layout?', '"' + one.name + '" is removed from this browser. ' +
+        'Your trades and saved sessions are untouched.', 'Delete')) return;
+    writeLayouts(all.filter(x => x.id !== id));
+    status('Layout deleted.'); setTimeout(hideStatus, 2200);
+}
+
+function openLayoutMenu(anchor) {
+    document.querySelectorAll('.rp-pop').forEach(n => n.remove());
+    const all = listLayouts();
+    const pop = document.createElement('div');
+    pop.className = 'rp-pop rp-export-pop';
+    pop.innerHTML =
+        '<h5>Save this chart</h5>' +
+        '<input class="rp-layout-name" id="rp-layout-name" placeholder="Layout name" ' +
+          'value="' + (S.symbol + ' ' + TF_LABEL[S.tfMin]) + '" autocomplete="off">' +
+        '<div class="rp-menu"><button data-save><i class="fa-solid fa-floppy-disk"></i>' +
+          '<span>Save layout</span></button></div>' +
+        (all.length
+            ? '<h5>Your layouts</h5><div class="rp-menu">' + all.map(x =>
+                '<div class="rp-sess-row">' +
+                  '<button data-load="' + x.id + '"><i class="fa-regular fa-image"></i><span>' +
+                    x.name.replace(/</g, '&lt;') + '</span></button>' +
+                  '<button class="rp-sess-del" data-del="' + x.id + '" title="Delete">' +
+                    '<i class="fa-solid fa-trash-can"></i></button>' +
+                '</div>').join('') + '</div>'
+            : '') +
+        '<div class="rp-pop-note"><b>Saved in this browser.</b> Layouts follow the ' +
+        'device, not you — signing in to carry them between machines is not built yet.</div>';
+    document.body.appendChild(pop);
+    const r = anchor.getBoundingClientRect();
+    pop.style.left = Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8, r.left)) + 'px';
+    pop.style.top = (r.bottom + 6) + 'px';
+
+    const close = () => { pop.remove(); document.removeEventListener('mousedown', out); };
+    function out(e) { if (!pop.contains(e.target) && e.target !== anchor) close(); }
+    setTimeout(() => document.addEventListener('mousedown', out), 0);
+
+    pop.querySelector('[data-save]').addEventListener('click', () => {
+        const n = (pop.querySelector('#rp-layout-name').value || '').trim();
+        if (!n) return;
+        saveLayout(n); close();
+    });
+    pop.querySelectorAll('[data-load]').forEach(b =>
+        b.addEventListener('click', () => { close(); applyLayout(+b.dataset.load); }));
+    pop.querySelectorAll('[data-del]').forEach(b =>
+        b.addEventListener('click', e => { e.stopPropagation(); close(); deleteLayout(+b.dataset.del); }));
+}
+
+// ============================================== instrument picker UI
+
+let instCat = 'fav';
+
+function catLabel(c) {
+    return c === 'metal' ? 'METALS' : c === 'fx' ? 'FOREX' : 'CRYPTO';
+}
+
+// A few pairs deserve their own display name in the header button.
+const PAIR_NAMES = { PAXGUSDT: 'GOLD', XAUTUSDT: 'GOLD', EURUSDT: 'EUR/USD' };
+
+function syncInstButton() {
+    const row = CATALOGUE && CATALOGUE.find(x => x.symbol === S.symbol);
+    $('rp-inst-name').textContent = S.symbol;
+    $('rp-inst-cat').textContent = catLabel(row ? row.cat : 'crypto');
+}
+
+async function openInstPicker() {
+    $('rp-inst').hidden = false;
+    $('rp-inst-list').innerHTML = '<div class="rp-inst-note">Loading instruments…</div>';
+    setTimeout(() => $('rp-inst-search').focus(), 40);
+    try { await loadCatalogue(); } catch (e) {
+        $('rp-inst-list').innerHTML =
+            '<div class="rp-inst-note">Could not reach the exchange: ' + e.message + '</div>';
+        return;
+    }
+    renderInstList();
+}
+function closeInstPicker() { $('rp-inst').hidden = true; }
+
+function renderInstList() {
+    const box = $('rp-inst-list');
+    const q = $('rp-inst-search').value.trim().toLowerCase();
+    if (!CATALOGUE) return;
+
+    if (instCat === 'other' && !q) {
+        box.innerHTML =
+            '<div class="rp-inst-note">' +
+            '<b>Stocks, indices and energy are not on this feed.</b><br>' +
+            'The chart is priced from Binance, which carries crypto, a handful of ' +
+            'currency crosses and tokenised gold — and nothing else. Rather than ' +
+            'list instruments that would not load, they are absent until there is ' +
+            'a feed behind them.' +
+            '<ul>' +
+              '<li>Equities and indices (S&amp;P 500, NASDAQ, single stocks) need a ' +
+                  'licensed market-data provider.</li>' +
+              '<li>Oil and other energy need the same.</li>' +
+              '<li>Forex majors beyond EUR/USD need 1-minute history we host ' +
+                  'ourselves — the same job as taking forex back to 2010.</li>' +
+            '</ul>' +
+            'Gold is already available under <b>Metals</b>, and EUR/USD under ' +
+            '<b>Forex</b>, because those genuinely price here.' +
+            '</div>';
+        return;
+    }
+
+    let rows = CATALOGUE;
+    if (q) {
+        rows = rows.filter(x => x.symbol.toLowerCase().includes(q) ||
+                                (x.name || '').toLowerCase().includes(q));
+    } else if (instCat === 'fav') {
+        rows = rows.filter(x => favourites.includes(x.symbol));
+    } else {
+        rows = rows.filter(x => x.cat === instCat);
+    }
+    // Within a search, put the dollar-quoted books first too.
+    if (q) rows = rows.filter(x => x.cat !== 'alt' || favourites.includes(x.symbol) || q.length > 2);
+    rows = rows.slice(0, 300);
+
+    if (!rows.length) {
+        box.innerHTML = '<div class="rp-inst-note">' +
+            (instCat === 'fav' && !q
+                ? 'No favourites yet — tap the star beside any instrument to keep it here.'
+                : 'Nothing matches that search.') + '</div>';
+        return;
+    }
+
+    box.innerHTML = rows.map(x => {
+        const fav = favourites.includes(x.symbol);
+        const chg = isFinite(x.chg) ? x.chg : null;
+        return '<div class="rp-inst-row' + (x.symbol === S.symbol ? ' on' : '') +
+                 '" data-sym="' + x.symbol + '">' +
+                 '<button class="rp-inst-star' + (fav ? ' on' : '') + '" data-fav="' + x.symbol +
+                   '" title="' + (fav ? 'Remove from favourites' : 'Add to favourites') + '">' +
+                   '<i class="fa-' + (fav ? 'solid' : 'regular') + ' fa-star"></i></button>' +
+                 '<span class="rp-inst-id"><b>' + x.symbol + '</b><span>' + x.name + '</span></span>' +
+                 '<span class="rp-inst-px">' + (isFinite(x.px) ? fmt(x.px, x.px < 1 ? 6 : 2) : '—') + '</span>' +
+                 '<span class="rp-inst-chg ' + (chg === null ? '' : chg >= 0 ? 'val-pos' : 'val-neg') + '">' +
+                   (chg === null ? '—' : (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%') + '</span>' +
+               '</div>';
+    }).join('');
+
+    box.querySelectorAll('[data-fav]').forEach(b =>
+        b.addEventListener('click', e => {
+            e.stopPropagation();
+            const sym = b.dataset.fav;
+            const i = favourites.indexOf(sym);
+            if (i >= 0) favourites.splice(i, 1); else favourites.push(sym);
+            saveFavs(); renderInstList();
+        }));
+    box.querySelectorAll('.rp-inst-row').forEach(row =>
+        row.addEventListener('click', () => pickInstrument(row.dataset.sym)));
+}
+
+async function pickInstrument(sym) {
+    if (sym === S.symbol) { closeInstPicker(); return; }
+    if (hasWorkToLose() && !await ask('Change instrument?',
+        'The session — position, orders and trade log — is cleared. ' +
+        'Export or save it first if you want to keep it.', 'Change instrument')) return;
+    closeInstPicker();
+    S.symbol = sym;
+    resetAccount(true);
+    syncInstButton();
+    $('rp-tk-icon').textContent = sym.charAt(0);
+    loadChart();
+}
+
+// =================================================== date wheel picker
+
+/* A rolling wheel rather than the browser's calendar grid: picking a month in
+   2019 took four interactions there and takes one flick here. Built on CSS
+   scroll snapping, so it inherits real momentum on both mouse and touch. */
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+let wheelDate = { d: 1, m: 0, y: 2024 };
+
+function daysIn(y, m) { return new Date(Date.UTC(y, m + 1, 0)).getUTCDate(); }
+
+function buildWheel() {
+    const earliest = new Date(MARKETS.crypto.earliest);
+    const maxY = new Date().getUTCFullYear();
+    const years = [];
+    for (let y = earliest.getUTCFullYear(); y <= maxY; y++) years.push(y);
+
+    const col = w => $('rp-wheel').querySelector('[data-w="' + w + '"]');
+    const fill = (el, items, sel) => {
+        el.innerHTML = '<div class="pad"></div><div class="pad"></div>' +
+            items.map(v => '<div data-v="' + v.value + '">' + v.label + '</div>').join('') +
+            '<div class="pad"></div><div class="pad"></div>';
+        el.querySelectorAll('[data-v]').forEach(d =>
+            d.addEventListener('click', () => {
+                d.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }));
+        const target = el.querySelector('[data-v="' + sel + '"]');
+        if (target) el.scrollTop = target.offsetTop - el.clientHeight / 2 + 20;
+    };
+
+    fill(col('day'), Array.from({ length: daysIn(wheelDate.y, wheelDate.m) },
+        (_, i) => ({ value: i + 1, label: i + 1 })), wheelDate.d);
+    fill(col('month'), MONTHS.map((m, i) => ({ value: i, label: m })), wheelDate.m);
+    fill(col('year'), years.map(y => ({ value: y, label: y })), wheelDate.y);
+
+    ['day', 'month', 'year'].forEach(w => {
+        const el = col(w);
+        let t = null;
+        el.onscroll = () => {
+            clearTimeout(t);
+            t = setTimeout(() => readWheel(w), 90);
+            markWheel(el);
+        };
+        markWheel(el);
+    });
+    noteWheel();
+}
+
+function markWheel(el) {
+    const mid = el.scrollTop + el.clientHeight / 2;
+    let best = null, bd = Infinity;
+    el.querySelectorAll('[data-v]').forEach(d => {
+        const c = d.offsetTop + d.offsetHeight / 2;
+        const dist = Math.abs(c - mid);
+        if (dist < bd) { bd = dist; best = d; }
+        d.classList.remove('sel');
+    });
+    if (best) best.classList.add('sel');
+    return best;
+}
+
+function readWheel(which) {
+    const el = $('rp-wheel').querySelector('[data-w="' + which + '"]');
+    const best = markWheel(el);
+    if (!best) return;
+    const v = +best.dataset.v;
+    if (which === 'day') wheelDate.d = v;
+    if (which === 'month') wheelDate.m = v;
+    if (which === 'year') wheelDate.y = v;
+
+    // A short month must not leave the day on the 31st.
+    const max = daysIn(wheelDate.y, wheelDate.m);
+    if (wheelDate.d > max) { wheelDate.d = max; buildWheel(); return; }
+    if (which !== 'day') {
+        const dayCol = $('rp-wheel').querySelector('[data-w="day"]');
+        if (dayCol.querySelectorAll('[data-v]').length !== max) { buildWheel(); return; }
+    }
+    noteWheel();
+}
+
+function noteWheel() {
+    const ms = Date.UTC(wheelDate.y, wheelDate.m, wheelDate.d);
+    const earliest = Date.parse(MARKETS.crypto.earliest);
+    const latest = Date.now() - 86400000;
+    const note = $('rp-wheel-note');
+    if (ms < earliest) note.textContent = 'Before this market existed';
+    else if (ms > latest) note.textContent = 'Too recent to replay';
+    else note.textContent = new Date(ms).toLocaleDateString(undefined,
+        { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+    $('rp-datew-ok').disabled = ms < earliest || ms > latest;
+}
+
+function wheelLabel() {
+    return new Date(Date.UTC(wheelDate.y, wheelDate.m, wheelDate.d))
+        .toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+
+function openDateWheel() {
+    $('rp-datew').hidden = false;
+    buildWheel();
 }
 
 // ------------------------------------------------------------- persistence
@@ -2232,6 +2970,16 @@ function saveIndicators() {
 }
 function restoreLayout() {
     let draw = null, ind = null;
+    if (pendingLayout) {
+        const L = pendingLayout; pendingLayout = null;
+        if (window.BTTools) BTTools.load(L.drawings || []);
+        while (activeInd.length) removeIndicator(activeInd[0].id);
+        (L.indicators || []).forEach(i => {
+            try { addIndicator(i.type, i.params, i.code, i.styles); } catch (e) {}
+        });
+        updateIndCount();
+        return;
+    }
     try { draw = JSON.parse(localStorage.getItem(storeKey('draw')) || 'null'); } catch (e) {}
     try { ind  = JSON.parse(localStorage.getItem(storeKey('ind'))  || 'null'); } catch (e) {}
 
@@ -2550,20 +3298,34 @@ function init() {
     bindThemeInputs();
     applyTheme();
 
-    $('rp-symbol').innerHTML = MARKETS.crypto.symbols
-        .map(s => `<option value="${s}">${s}</option>`).join('');
+    // instrument picker
+    const start = new Date(Date.now() - 400 * 86400000);
+    wheelDate = { d: start.getUTCDate(), m: start.getUTCMonth(), y: start.getUTCFullYear() };
+    $('rp-date-label').textContent = wheelLabel();
+    syncInstButton();
+    loadCatalogue().then(syncInstButton).catch(() => {});
 
-    const dateEl = $('rp-date');
-    dateEl.min = MARKETS.crypto.earliest;
-    dateEl.max = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    dateEl.value = new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10);
+    $('rp-inst-open').addEventListener('click', openInstPicker);
+    $('rp-inst-close').addEventListener('click', closeInstPicker);
+    $('rp-inst').addEventListener('click', e => { if (e.target.id === 'rp-inst') closeInstPicker(); });
+    $('rp-inst-search').addEventListener('input', renderInstList);
+    document.querySelectorAll('#rp-inst-tabs button').forEach(b =>
+        b.addEventListener('click', () => {
+            instCat = b.dataset.cat;
+            document.querySelectorAll('#rp-inst-tabs button').forEach(x =>
+                x.classList.toggle('active', x === b));
+            renderInstList();
+        }));
 
-    $('rp-symbol').addEventListener('change', async () => {
-        if (hasWorkToLose() && !await ask('Change symbol?',
-            'The session — position, orders and trade log — is cleared.', 'Change symbol')) return;
-        resetAccount(true);
-        $('rp-tk-icon').textContent = $('rp-symbol').value.charAt(0);
-        loadChart();
+    // date wheel
+    $('rp-date-btn').addEventListener('click', openDateWheel);
+    $('rp-datew-close').addEventListener('click', () => { $('rp-datew').hidden = true; });
+    $('rp-datew-cancel').addEventListener('click', () => { $('rp-datew').hidden = true; });
+    $('rp-datew').addEventListener('click', e => { if (e.target.id === 'rp-datew') $('rp-datew').hidden = true; });
+    $('rp-datew-ok').addEventListener('click', () => {
+        $('rp-datew').hidden = true;
+        $('rp-date-label').textContent = wheelLabel();
+        setCutPoint(Date.UTC(wheelDate.y, wheelDate.m, wheelDate.d));
     });
     $('rp-tf').addEventListener('change', async () => {
         if (S.mode === 'replay' && !await ask('Change timeframe?',
@@ -2579,11 +3341,8 @@ function init() {
         resetAccount(true); updateEquity();
     });
 
-    $('rp-jump').addEventListener('click', () => {
-        const v = $('rp-date').value;
-        if (!v) return;
-        setCutPoint(Date.parse(v + 'T00:00:00Z'));
-    });
+    $('rp-jump').addEventListener('click', () =>
+        setCutPoint(Date.UTC(wheelDate.y, wheelDate.m, wheelDate.d)));
     $('rp-start-replay').addEventListener('click', startReplay);
     $('rp-exit-replay').addEventListener('click', async () => {
         if (hasWorkToLose() && !await ask('Leave replay?',
@@ -2697,6 +3456,7 @@ function init() {
 
     // export / save
     $('rp-export').addEventListener('click', () => openExportMenu($('rp-export')));
+    $('rp-layout-open').addEventListener('click', () => openLayoutMenu($('rp-layout-open')));
 
     // indicator picker
     $('rp-ind-open').addEventListener('click', openIndModal);
@@ -2720,7 +3480,16 @@ function init() {
 
     // drawing tools
     if (window.BTTools) {
-        BTTools.attach(chart, series, $('rp-chart-wrap'), { onChange: saveDrawings });
+        BTTools.attach(chart, series, $('rp-chart-wrap'), {
+            onChange: saveDrawings,
+            menu: () => [
+                { icon: 'reset', label: 'Reset chart view',
+                  run: () => { try { chart.timeScale().fitContent(); } catch (e) {} } },
+                { icon: 'chart', label: 'Chart settings…',
+                  run: () => { $('rp-set').hidden = false; } },
+                { icon: 'image', label: 'Save chart as image', run: saveChartImage }
+            ]
+        });
         BTTools.setTool('cursor');
     }
 
@@ -2750,6 +3519,8 @@ function init() {
 
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape' && !$('rp-ask').hidden)  { answer(false); return; }
+        if (e.key === 'Escape' && !$('rp-datew').hidden) { $('rp-datew').hidden = true; return; }
+        if (e.key === 'Escape' && !$('rp-inst').hidden) { closeInstPicker(); return; }
         if (e.key === 'Escape' && !$('rp-icfg').hidden) { closeIndCfg(); return; }
         if (e.key === 'Escape' && !$('rp-modal').hidden) { closeIndModal(); return; }
         if (e.key === 'Escape' && !$('rp-set').hidden) { $('rp-set').hidden = true; return; }

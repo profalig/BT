@@ -45,17 +45,11 @@
     </div>
 
     <div class="rp-controls">
-        <label class="rp-field">
-            <span>Market</span>
-            <select id="rp-market">
-                <option value="crypto">Crypto</option>
-                <option value="fx" disabled>Forex (coming)</option>
-            </select>
-        </label>
-        <label class="rp-field">
-            <span>Symbol</span>
-            <select id="rp-symbol"></select>
-        </label>
+        <button id="rp-inst-open" class="rp-inst-btn" title="Change instrument">
+            <span class="rp-inst-tag" id="rp-inst-cat">CRYPTO</span>
+            <b id="rp-inst-name">BTCUSDT</b>
+            <i class="fa-solid fa-chevron-down"></i>
+        </button>
         <label class="rp-field">
             <span>Timeframe</span>
             <select id="rp-tf">
@@ -93,6 +87,17 @@
                 <path d="M8.6 7.4 L13.4 10 L8.6 12.6 Z" fill="#20b26c"/>
             </svg>
             <span>Replay</span>
+        </button>
+
+        <button id="rp-layout-open" class="rp-tool-btn" title="Save or load a chart layout">
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+                <path d="M3.5 3.5h9l4 4v9a1 1 0 0 1-1 1h-12a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1z"
+                      fill="none" stroke="#5aa9f0" stroke-width="1.8" stroke-linejoin="round"/>
+                <path d="M6.5 3.5v5h6v-5" fill="none" stroke="#f7a600" stroke-width="1.8"
+                      stroke-linejoin="round"/>
+                <rect x="6.5" y="11" width="7" height="5.5" fill="#20b26c" opacity=".8"/>
+            </svg>
+            <span>Layouts</span>
         </button>
 
         <button id="rp-settings-open" class="rp-tool-btn" title="Chart settings">
@@ -178,7 +183,10 @@
                 <div id="rp-cutbar" class="rp-cutbar" hidden>
                     <i class="fa-solid fa-scissors"></i>
                     <span class="rp-hud-text"><b>Double-click a candle</b> to replay from there &mdash; or</span>
-                    <input type="date" id="rp-date">
+                    <button type="button" id="rp-date-btn" class="rp-date-btn">
+                        <i class="fa-regular fa-calendar"></i>
+                        <span id="rp-date-label">1 Jan 2024</span>
+                    </button>
                     <button id="rp-jump" class="rp-btn">Use date</button>
                     <span class="rp-cut-label" id="rp-cut-label">no point chosen</span>
                     <button id="rp-start-replay" class="rp-btn accent" disabled>
@@ -220,8 +228,8 @@
                 <button class="rp-tab" data-tab="cal">Calendar</button>
                 <button class="rp-tab" data-tab="jour">Journal</button>
                 <span class="rp-tabs-spacer"></span>
-                <button class="rp-tab-icon" id="rp-export" title="Save or export this session">
-                    <i class="fa-solid fa-file-arrow-down"></i>
+                <button class="rp-tab-btn" id="rp-export" title="Export this session's results">
+                    <i class="fa-solid fa-file-export"></i><span>Export</span>
                 </button>
                 <button class="rp-tab-icon" id="rp-dock-toggle" title="Collapse / expand">
                     <i class="fa-solid fa-chevron-down"></i>
@@ -279,11 +287,14 @@
 
                 <div class="rp-pane" data-pane="perf">
                     <div class="rp-perf">
-                        <div class="rp-metrics" id="rp-metrics"></div>
+                        <div class="rp-hero" id="rp-hero"></div>
+                        <div class="rp-kpis" id="rp-kpis"></div>
                         <div class="rp-curve">
                             <h4>Equity curve</h4>
                             <canvas id="rp-equity-curve"></canvas>
                         </div>
+                        <h4 class="rp-perf-h">Everything else</h4>
+                        <div class="rp-metrics" id="rp-metrics"></div>
                     </div>
                 </div>
 
@@ -481,6 +492,50 @@
             <div class="rp-set-actions">
                 <button id="rp-set-reset" class="rp-btn">Reset to defaults</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================================================  instruments  ==== -->
+<div id="rp-inst" class="rp-modal" hidden>
+    <div class="rp-modal-card" role="dialog" aria-label="Instruments">
+        <header class="rp-modal-head">
+            <h2>Instruments</h2>
+            <button id="rp-inst-close" class="rp-modal-x" aria-label="Close">&times;</button>
+        </header>
+        <div class="rp-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="rp-inst-search" placeholder="Search symbol or name&hellip;"
+                   autocomplete="off" spellcheck="false">
+        </div>
+        <nav class="rp-tr-tabs scroll" id="rp-inst-tabs">
+            <button class="active" data-cat="fav">Favourites</button>
+            <button data-cat="crypto">Crypto</button>
+            <button data-cat="fx">Forex</button>
+            <button data-cat="metal">Metals</button>
+            <button data-cat="other">Stocks, indices &amp; energy</button>
+        </nav>
+        <div class="rp-inst-body" id="rp-inst-list"></div>
+    </div>
+</div>
+
+<!-- ===================================================  date wheel  ==== -->
+<div id="rp-datew" class="rp-modal" hidden>
+    <div class="rp-modal-card tiny" role="dialog" aria-label="Choose a date">
+        <header class="rp-modal-head">
+            <h2>Replay from</h2>
+            <button id="rp-datew-close" class="rp-modal-x" aria-label="Close">&times;</button>
+        </header>
+        <div class="rp-wheel" id="rp-wheel">
+            <div class="rp-wheel-band" aria-hidden="true"></div>
+            <div class="rp-wheel-col" data-w="day"></div>
+            <div class="rp-wheel-col" data-w="month"></div>
+            <div class="rp-wheel-col" data-w="year"></div>
+        </div>
+        <div class="rp-ask-foot">
+            <span class="rp-wheel-note" id="rp-wheel-note"></span>
+            <button class="rp-btn" id="rp-datew-cancel">Cancel</button>
+            <button class="rp-btn accent" id="rp-datew-ok">Choose</button>
         </div>
     </div>
 </div>

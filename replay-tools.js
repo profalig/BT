@@ -25,6 +25,7 @@ let drag = null;
 let pending = null;          // multi-click shape under construction
 let seq = 0;
 let onChange = null;
+let onMenu = null;
 let bars = [];               // last painted data — magnet + future extrapolation
 
 let magnet = false;
@@ -194,6 +195,7 @@ function rememberStyle(s) {
 function attach(_chart, _series, _host, opts) {
     chart = _chart; series = _series; host = _host;
     onChange = (opts && opts.onChange) || null;
+    onMenu = (opts && opts.menu) || null;
     cvs = document.getElementById('rp-draw');
     ctx = cvs.getContext('2d');
 
@@ -203,6 +205,7 @@ function attach(_chart, _series, _host, opts) {
 
     host.addEventListener('mousedown', onDown, true);
     host.addEventListener('dblclick', onDblClick, true);
+    host.addEventListener('contextmenu', onContext, true);
     host.addEventListener('mousemove', onHover);
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
@@ -614,6 +617,108 @@ function onDblClick(e) {
     openSettings(hit.id);
 }
 
+/* Right-click was doing nothing at all. On a chart it should answer the two
+   questions you have when you point at a price: what is here, and what can I
+   put here. A shape under the pointer adds its own verbs above those. */
+let menuEl = null;
+function closeMenu() {
+    if (menuEl) { menuEl.remove(); menuEl = null; }
+}
+
+function onContext(e) {
+    if (fromUI(e)) return;
+    const p = toChart(e);
+    if (!p) return;
+    e.preventDefault(); e.stopPropagation();
+
+    const hit = hitTest(p.x, p.y);
+    const items = [];
+
+    if (hit) {
+        const sh = shapes.find(x => x.id === hit.id);
+        selected = hit.id; render(); place();
+        items.push({ icon: 'gear', label: 'Settings…', run: () => openSettings(sh.id) });
+        items.push({ icon: 'clone', label: 'Duplicate', run: () => {
+            const step = bars.length > 1 ? (bars[1].time - bars[0].time) * 6 : 3600;
+            shapes.push({ id: ++seq, tool: sh.tool,
+                pts: sh.pts.map(q => ({ time: q.time + step, price: q.price })),
+                style: Object.assign({}, sh.style), locked: false, hidden: false });
+            selected = shapes[shapes.length - 1].id;
+            commit();
+        }});
+        items.push({ icon: 'lock', label: sh.locked ? 'Unlock' : 'Lock',
+                     run: () => { sh.locked = !sh.locked; commit(); } });
+        items.push({ icon: 'eye', label: 'Hide', run: () => { sh.hidden = true; commit(); } });
+        items.push({ icon: 'trash', label: 'Remove', danger: true, run: () => remove(sh.id) });
+        items.push({ sep: true });
+    }
+
+    items.push({ icon: 'hline', label: 'Horizontal line at ' + money(p.price), run: () => {
+        const sh = newShape('hline', { time: p.time, price: p.price });
+        shapes.push(sh); selected = sh.id; commit();
+    }});
+    items.push({ icon: 'vline', label: 'Vertical line here', run: () => {
+        const sh = newShape('vline', { time: p.time, price: p.price });
+        shapes.push(sh); selected = sh.id; commit();
+    }});
+    items.push({ icon: 'position', label: 'Long position here', run: () => {
+        const sh = newShape('position', { time: p.time, price: p.price });
+        seedDefault(sh); shapes.push(sh); selected = sh.id;
+        sendToOrderPanel(sh); commit();
+    }});
+    items.push({ sep: true });
+    items.push({ icon: 'copy', label: 'Copy price  ' + money(p.price), run: () => {
+        try { navigator.clipboard.writeText(money(p.price)); } catch (err) {}
+    }});
+
+    // Whatever the host page wants to add — reset view, settings, snapshot.
+    const extra = (onMenu && onMenu(p)) || [];
+    if (extra.length) items.push({ sep: true });
+    extra.forEach(i => items.push(i));
+
+    showMenu(e.clientX, e.clientY, items);
+}
+
+const MENU_ICON = {
+    gear: '<i class="fa-solid fa-gear"></i>', clone: '<i class="fa-regular fa-clone"></i>',
+    lock: '<i class="fa-solid fa-lock"></i>', eye: '<i class="fa-solid fa-eye-slash"></i>',
+    trash: '<i class="fa-solid fa-trash-can"></i>',
+    hline: '<i class="fa-solid fa-minus"></i>', vline: '<i class="fa-solid fa-grip-lines-vertical"></i>',
+    position: '<i class="fa-solid fa-up-down"></i>', copy: '<i class="fa-regular fa-copy"></i>',
+    reset: '<i class="fa-solid fa-expand"></i>', image: '<i class="fa-regular fa-image"></i>',
+    chart: '<i class="fa-solid fa-sliders"></i>'
+};
+
+function showMenu(cx, cy, items) {
+    closeMenu();
+    menuEl = document.createElement('div');
+    menuEl.className = 'rp-pop rp-ctx';
+    menuEl.innerHTML = '<div class="rp-menu">' + items.map((i, n) =>
+        i.sep ? '<span class="rp-ctx-sep"></span>'
+              : '<button data-i="' + n + '"' + (i.danger ? ' class="danger"' : '') + '>' +
+                (MENU_ICON[i.icon] || '') + '<span>' + i.label + '</span></button>').join('') + '</div>';
+    document.body.appendChild(menuEl);
+    const w = menuEl.offsetWidth, h = menuEl.offsetHeight;
+    menuEl.style.left = Math.max(6, Math.min(window.innerWidth - w - 6, cx)) + 'px';
+    menuEl.style.top = Math.max(6, Math.min(window.innerHeight - h - 6, cy)) + 'px';
+    menuEl.querySelectorAll('[data-i]').forEach(b =>
+        b.addEventListener('click', () => {
+            const it = items[+b.dataset.i];
+            closeMenu();
+            if (it && it.run) it.run();
+        }));
+    setTimeout(() => {
+        document.addEventListener('mousedown', outside);
+        document.addEventListener('contextmenu', outside);
+    }, 0);
+    function outside(ev) {
+        if (menuEl && menuEl.contains(ev.target)) return;
+        document.removeEventListener('mousedown', outside);
+        document.removeEventListener('contextmenu', outside);
+        closeMenu();
+    }
+}
+
 function onKey(e) {
     if (/input|select|textarea/i.test(e.target.tagName) || e.target.isContentEditable) return;
     const mod = e.ctrlKey || e.metaKey;
@@ -624,6 +729,7 @@ function onKey(e) {
     }
     if (mod && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); redo(); return; }
     if (e.key === 'Escape') {
+        if (menuEl) { closeMenu(); return; }
         if (pending) { if (pending.pts.length > 2) pending.pts.pop(); finishPending(); return; }
         setTool('cursor'); selected = null; closeHud(); closeSettings(); render(); return;
     }
@@ -678,9 +784,9 @@ function drawnOrder(s) {
         target: s.pts[2] ? s.pts[2].price : null
     };
 }
-function sendToOrderPanel(s) {
+function sendToOrderPanel(s, announce) {
     const o = drawnOrder(s);
-    if (o && window.BTOrder && window.BTOrder.fromDrawing) window.BTOrder.fromDrawing(o);
+    if (o && window.BTOrder && window.BTOrder.fromDrawing) window.BTOrder.fromDrawing(o, announce);
 }
 function submitDrawing(s) {
     const o = drawnOrder(s);
@@ -990,7 +1096,10 @@ function drawPriceLabel(s, pts, st) {
 }
 
 function drawMarker(pts, st) {
-    const d = st.dir || 1, x = pts[0].x, y = pts[0].y;
+    // Canvas y grows downward, so the shaft has to be laid out against the
+    // direction: dir 1 (up) puts the tip at the click point and the shaft
+    // BELOW it. Without the flip, "Arrow up" drew an arrow pointing down.
+    const d = -(st.dir || 1), x = pts[0].x, y = pts[0].y;
     ctx.save(); ctx.setLineDash([]); ctx.fillStyle = st.line;
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -1592,7 +1701,7 @@ function openSettings(id, focusText) {
           row('Target', '<input type="number" step="any" data-p="2" value="' + money(target) + '">') +
           '<div class="rp-cf-read"></div>' +
           '<button class="rp-btn accent full" data-act="trade">Trade this setup</button>' +
-          '<button class="rp-btn full" data-act="send">Load into the ticket</button>';
+          '<button class="rp-btn full" data-act="send">Copy levels to the order panel</button>';
     }
     body += row('Locked', '<input type="checkbox" data-lock' + (s.locked ? ' checked' : '') + '>');
 
@@ -1654,7 +1763,7 @@ function openSettings(id, focusText) {
     const send = cfgEl.querySelector('[data-act="send"]');
     if (send) send.addEventListener('click', () => {
         const sh = shapes.find(x => x.id === cfgId);
-        if (sh) sendToOrderPanel(sh);
+        if (sh) sendToOrderPanel(sh, true);
     });
     const trade = cfgEl.querySelector('[data-act="trade"]');
     if (trade) trade.addEventListener('click', () => {
