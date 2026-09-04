@@ -153,6 +153,24 @@ def set_plan(user_id, plan_key, status="active", expires_at=None):
         except Exception as e2:
             print(f"❌ Plan write failed (is the `plan` column there?): {e2}")
 
+def period_end_of(sub_obj, get):
+    """When the current billing period ends.
+
+    Stripe moved current_period_start/end off the subscription and onto its
+    items in the 2025 API versions, and this account is on 2026-07-29.dahlia.
+    Reading only the top level returns None there, which would leave
+    plan_expires_at empty on every renewal. Try both, newest shape first.
+    """
+    items = get("items") or {}
+    data = items.get("data") if hasattr(items, "get") else getattr(items, "data", None)
+    if data:
+        first = data[0]
+        end = first.get("current_period_end") if hasattr(first, "get")             else getattr(first, "current_period_end", None)
+        if end:
+            return end
+    return get("current_period_end")
+
+
 def backtest_plan_of(user_id):
     """The user's plan, if it includes the Backtest Machine.
 
@@ -378,7 +396,7 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                     else (lambda k, d=None: getattr(sub_obj, k, d))
                 customer_id = get("customer")
                 status = str(get("status", "") or "")
-                period_end = get("current_period_end")
+                period_end = period_end_of(sub_obj, get)
                 uid = plan_for_stripe_customer(customer_id)
 
                 if not uid:
