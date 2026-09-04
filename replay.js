@@ -582,9 +582,10 @@ function addIndicator(type, params, code) {
         params: Object.assign({}, def ? def.params : {}, params || {}),
         code: code || null, lines: [], error: null
     };
+    const col = item.params.color || IND_COLORS[indSeq % IND_COLORS.length];
+    item.params.color = col;
     for (let i = 0; i < count; i++) {
-        item.lines.push(makeLine(def ? def.pane : 'price',
-            IND_COLORS[(indSeq + i) % IND_COLORS.length], i === 0 ? 2 : 1));
+        item.lines.push(makeLine(def ? def.pane : 'price', col, i === 0 ? 2 : 1));
     }
     activeInd.push(item);
     renderIndicatorList();
@@ -648,15 +649,28 @@ function renderIndicatorList() {
         const err = a.error
             ? '<span class="rp-ind-err" title="' + a.error.replace(/"/g, '&quot;') + '">error</span>'
             : '';
-        return '<div class="rp-ind-item">' +
-               '<span class="rp-ind-dot" style="background:' +
-               IND_COLORS[a.id % IND_COLORS.length] + '"></span>' +
+        const col = a.params.color || IND_COLORS[a.id % IND_COLORS.length];
+        return '<div class="rp-ind-wrap">' +
+               '<div class="rp-ind-item">' +
+               '<span class="rp-ind-dot" style="background:' + col + '"></span>' +
                '<span class="rp-ind-name">' + label + '</span>' + err +
+               '<button class="rp-ind-gear" data-gear="' + a.id + '" title="Settings">' +
+                 '<i class="fa-solid fa-gear"></i></button>' +
                '<button class="rp-ind-x" data-ind="' + a.id + '" title="Remove">&times;</button>' +
-               '</div>';
+               '</div>' + indicatorSettingsHTML(a) + '</div>';
     }).join('');
     box.querySelectorAll('.rp-ind-x').forEach(b =>
         b.addEventListener('click', () => { removeIndicator(+b.dataset.ind); updateIndCount(); }));
+    box.querySelectorAll('.rp-ind-gear').forEach(b =>
+        b.addEventListener('click', () => {
+            const cfg = box.querySelector('.rp-ind-cfg[data-cfg="' + b.dataset.gear + '"]');
+            if (cfg) cfg.classList.toggle('open');
+        }));
+    box.querySelectorAll('.rp-ind-cfg input').forEach(inp =>
+        inp.addEventListener('input', () => {
+            const id = +inp.closest('.rp-ind-cfg').dataset.cfg;
+            applyIndicatorParam(id, inp.dataset.k, inp.value);
+        }));
 }
 
 // ------------------------------------------------------------ order engine
@@ -834,7 +848,8 @@ function updateModeUI() {
     const replay = S.mode === 'replay';
     document.body.classList.toggle('is-replay', replay);
     $('rp-transport').hidden = !replay;
-    $('rp-cutbar').hidden = replay;
+    if (replay) $('rp-cutbar').hidden = true;   // opened from the Replay button
+    $('rp-replay-open').classList.toggle('on', replay);
     $('rp-exit-replay').hidden = !replay;
     $('rp-mode').textContent = replay ? 'REPLAY' : 'BROWSE';
     $('rp-mode').className = 'rp-mode ' + (replay ? 'on' : '');
@@ -995,7 +1010,176 @@ function restoreLayout() {
     updateIndCount();
 }
 
+// ----------------------------------------------------- appearance settings
+
+/* Chart appearance is a global preference, not a per-symbol one, so it is
+   stored on its own key and applied on load before any data arrives. The
+   shape mirrors what TradingView exposes: candle colours, borders, wicks,
+   hollow bodies, background, grid and crosshair. */
+
+const THEME_DEFAULT = {
+    up: '#12a184', down: '#e2564e',
+    borders: true, wicks: true, hollow: false,
+    bg: '#08080a', text: '#a8abb3',
+    grid: true, gridColor: '#1b1b20',
+    crosshair: true, magnet: false
+};
+let theme = Object.assign({}, THEME_DEFAULT);
+
+function loadTheme() {
+    try {
+        const raw = localStorage.getItem('bt.replay.theme');
+        if (raw) theme = Object.assign({}, THEME_DEFAULT, JSON.parse(raw));
+    } catch (e) {}
+}
+function saveTheme() {
+    try { localStorage.setItem('bt.replay.theme', JSON.stringify(theme)); } catch (e) {}
+}
+
+function applyTheme() {
+    if (!chart || !series) return;
+    chart.applyOptions({
+        layout: { background: { color: theme.bg }, textColor: theme.text },
+        grid: {
+            vertLines: { visible: theme.grid, color: theme.gridColor },
+            horzLines: { visible: theme.grid, color: theme.gridColor }
+        },
+        crosshair: {
+            mode: theme.magnet ? LightweightCharts.CrosshairMode.Magnet
+                               : LightweightCharts.CrosshairMode.Normal,
+            vertLine: { visible: theme.crosshair, labelVisible: theme.crosshair },
+            horzLine: { visible: theme.crosshair, labelVisible: theme.crosshair }
+        }
+    });
+    series.applyOptions({
+        // Hollow up-candles are drawn by giving the body the background
+        // colour and leaving the border coloured, which is how every
+        // platform renders them.
+        upColor: theme.hollow ? theme.bg : theme.up,
+        downColor: theme.down,
+        borderVisible: theme.borders,
+        borderUpColor: theme.up,
+        borderDownColor: theme.down,
+        wickVisible: theme.wicks,
+        wickUpColor: theme.up,
+        wickDownColor: theme.down
+    });
+    document.documentElement.style.setProperty('--pos', theme.up);
+    document.documentElement.style.setProperty('--neg', theme.down);
+}
+
+function syncThemeInputs() {
+    $('set-up').value = theme.up;
+    $('set-down').value = theme.down;
+    $('set-borders').checked = theme.borders;
+    $('set-wicks').checked = theme.wicks;
+    $('set-hollow').checked = theme.hollow;
+    $('set-bg').value = theme.bg;
+    $('set-text').value = theme.text;
+    $('set-grid').checked = theme.grid;
+    $('set-gridc').value = theme.gridColor;
+    $('set-cross').checked = theme.crosshair;
+    $('set-magnet').checked = theme.magnet;
+}
+
+function bindThemeInputs() {
+    const map = {
+        'set-up': 'up', 'set-down': 'down', 'set-bg': 'bg',
+        'set-text': 'text', 'set-gridc': 'gridColor'
+    };
+    Object.keys(map).forEach(id => $(id).addEventListener('input', e => {
+        theme[map[id]] = e.target.value; applyTheme(); saveTheme();
+    }));
+    const checks = {
+        'set-borders': 'borders', 'set-wicks': 'wicks', 'set-hollow': 'hollow',
+        'set-grid': 'grid', 'set-cross': 'crosshair', 'set-magnet': 'magnet'
+    };
+    Object.keys(checks).forEach(id => $(id).addEventListener('change', e => {
+        theme[checks[id]] = e.target.checked; applyTheme(); saveTheme();
+    }));
+    $('rp-set-reset').addEventListener('click', () => {
+        theme = Object.assign({}, THEME_DEFAULT);
+        syncThemeInputs(); applyTheme(); saveTheme();
+    });
+}
+
+// ------------------------------------------------- per-indicator settings
+
+// Every indicator carries its own period, colour and (where relevant)
+// multiplier, editable in place and saved with the rest of the layout.
+function indicatorSettingsHTML(a) {
+    const def = IND[a.type];
+    const rows = [];
+    if (a.type !== 'custom' && def && def.params.period !== undefined) {
+        rows.push('<label>Period<input type="number" min="1" max="400" value="' +
+                  (a.params.period || 20) + '" data-k="period"></label>');
+    }
+    if (a.type === 'bb') {
+        rows.push('<label>Mult<input type="number" min="0.5" max="5" step="0.1" value="' +
+                  (a.params.mult || 2) + '" data-k="mult"></label>');
+    }
+    rows.push('<label>Colour<input type="color" value="' + (a.params.color || IND_COLORS[a.id % IND_COLORS.length]) +
+              '" data-k="color"></label>');
+    return '<div class="rp-ind-cfg" data-cfg="' + a.id + '">' + rows.join('') + '</div>';
+}
+
+function applyIndicatorParam(id, key, value) {
+    const a = activeInd.find(x => x.id === id);
+    if (!a) return;
+    a.params[key] = key === 'color' ? value : (+value || a.params[key]);
+    if (key === 'color') {
+        a.lines.forEach((l, i) => l.applyOptions({ color: value, lineWidth: i === 0 ? 2 : 1 }));
+    }
+    refreshIndicators(lastPainted);
+    saveIndicators();
+    renderIndicatorList();
+}
+
 // ----------------------------------------------------------------- wiring
+
+// Cards are reordered by dragging their header. Order is remembered so a
+// trader's layout is theirs, not ours.
+function initCardDrag() {
+    const side = $('rp-side');
+    let dragged = null;
+    side.querySelectorAll('.rp-card').forEach(card => {
+        card.addEventListener('dragstart', e => {
+            dragged = card; card.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            try { e.dataTransfer.setData('text/plain', ''); } catch (err) {}
+        });
+        card.addEventListener('dragend', () => {
+            card.classList.remove('dragging'); dragged = null; saveCardOrder();
+        });
+    });
+    side.addEventListener('dragover', e => {
+        e.preventDefault();
+        if (!dragged) return;
+        const after = [...side.querySelectorAll('.rp-card:not(.dragging)')]
+            .find(c => e.clientY <= c.getBoundingClientRect().top + c.offsetHeight / 2);
+        if (after) side.insertBefore(dragged, after);
+        else side.appendChild(dragged);
+    });
+    restoreCardOrder();
+}
+function saveCardOrder() {
+    try {
+        localStorage.setItem('bt.replay.cards', JSON.stringify(
+            [...$('rp-side').querySelectorAll('.rp-card h3')]
+                .map(h => h.textContent.trim())));
+    } catch (e) {}
+}
+function restoreCardOrder() {
+    let order = null;
+    try { order = JSON.parse(localStorage.getItem('bt.replay.cards') || 'null'); } catch (e) {}
+    if (!Array.isArray(order)) return;
+    const side = $('rp-side');
+    order.forEach(name => {
+        const card = [...side.querySelectorAll('.rp-card')]
+            .find(c => c.querySelector('h3').textContent.trim() === name);
+        if (card) side.appendChild(card);
+    });
+}
 
 function init() {
     if (typeof LightweightCharts === 'undefined') {
@@ -1058,6 +1242,26 @@ function init() {
         if (S.position && p !== null) closePosition(p, 'manual');
     });
     ['rp-risk', 'rp-stop'].forEach(id => $(id).addEventListener('input', updateSizingHint));
+
+    // chart settings
+    loadTheme();
+    syncThemeInputs();
+    bindThemeInputs();
+    applyTheme();
+    $('rp-settings-open').addEventListener('click', () => { $('rp-set').hidden = false; });
+    $('rp-set-close').addEventListener('click', () => { $('rp-set').hidden = true; });
+    $('rp-set').addEventListener('click', e => { if (e.target.id === 'rp-set') $('rp-set').hidden = true; });
+
+    // replay controls live behind their own button rather than sitting on the
+    // chart permanently
+    $('rp-replay-open').addEventListener('click', () => {
+        if (S.mode === 'replay') { $('rp-exit-replay').click(); return; }
+        const bar = $('rp-cutbar');
+        bar.hidden = !bar.hidden;
+    });
+
+    // sidebar cards can be reordered by dragging
+    initCardDrag();
 
     // indicator picker
     $('rp-ind-open').addEventListener('click', openIndModal);

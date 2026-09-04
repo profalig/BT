@@ -525,3 +525,67 @@ body.is-replay .rp-transport { box-shadow: 0 10px 34px rgba(0,0,0,.6); }
     #rp-rail { flex-direction: row; border-right: none; border-bottom: 1px solid var(--hairline); }
     .rp-modal-body { grid-template-columns: 1fr; }
 }
+
+/* ---------- settings modal ---------- */
+.rp-modal-card.narrow { width: min(480px, 100%); }
+.rp-set-body { padding: 14px 18px 18px; overflow-y: auto; }
+.rp-set-body h4 {
+    margin: 14px 0 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: .62rem; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--text-3);
+}
+.rp-set-body h4:first-child { margin-top: 0; }
+.rp-set-row {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 9px;
+}
+.rp-set-row label { font-size: .78rem; color: var(--text-2); }
+.rp-set-row label.chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.rp-set-row input[type="color"] {
+    width: 34px; height: 26px; padding: 0;
+    background: var(--bg-2); border: 1px solid var(--hairline);
+    border-radius: 4px; cursor: pointer;
+}
+.rp-set-row input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+.rp-set-actions { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--hairline); }
+
+/* ---------- per-indicator settings ---------- */
+.rp-ind-wrap { display: flex; flex-direction: column; }
+.rp-ind-gear {
+    background: none; border: none; color: var(--text-3);
+    cursor: pointer; font-size: .72rem; padding: 0 3px;
+}
+.rp-ind-gear:hover { color: var(--accent); }
+.rp-ind-cfg {
+    display: none;
+    gap: 10px; flex-wrap: wrap;
+    padding: 8px 9px; margin-top: -1px;
+    background: var(--bg-0);
+    border: 1px solid var(--hairline); border-top: none;
+    border-radius: 0 0 5px 5px;
+}
+.rp-ind-cfg.open { display: flex; }
+.rp-ind-cfg label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: .7rem; color: var(--text-3);
+}
+.rp-ind-cfg input[type="number"] {
+    width: 58px; background: var(--bg-2); color: var(--text-1);
+    border: 1px solid var(--hairline); border-radius: 4px;
+    padding: 3px 5px; font-family: 'Share Tech Mono', monospace; font-size: .72rem;
+}
+.rp-ind-cfg input[type="color"] {
+    width: 28px; height: 22px; padding: 0;
+    background: var(--bg-2); border: 1px solid var(--hairline);
+    border-radius: 4px; cursor: pointer;
+}
+
+/* ---------- draggable side cards ---------- */
+.rp-card[draggable="true"] h3 { cursor: grab; user-select: none; }
+.rp-card.dragging { opacity: .45; }
+.rp-grip { margin-right: 7px; opacity: .5; font-size: .7rem; }
+.rp-card[draggable="true"]:hover .rp-grip { opacity: .9; color: var(--accent); }
+
+/* active state on the replay button */
+.rp-tool-btn.on { border-color: var(--accent); background: rgba(240,178,90,.12); }

@@ -54,6 +54,26 @@
             <b id="rp-ind-count" hidden>0</b>
         </button>
 
+        <button id="rp-replay-open" class="rp-tool-btn" title="Replay">
+            <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true">
+                <path d="M10 3 A7 7 0 1 1 3.6 7.2" fill="none" stroke="#f0b25a"
+                      stroke-width="2" stroke-linecap="round"/>
+                <path d="M3 3.2 L3.6 7.6 L8 7" fill="none" stroke="#f0b25a"
+                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8.6 7.4 L13.4 10 L8.6 12.6 Z" fill="#12a184"/>
+            </svg>
+            <span>Replay</span>
+        </button>
+
+        <button id="rp-settings-open" class="rp-tool-btn" title="Chart settings">
+            <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true">
+                <circle cx="10" cy="10" r="2.6" fill="none" stroke="#c58af0" stroke-width="2"/>
+                <path d="M10 1.8v2.6M10 15.6v2.6M18.2 10h-2.6M4.4 10H1.8M15.8 4.2l-1.8 1.8M6 14l-1.8 1.8M15.8 15.8L14 14M6 6L4.2 4.2"
+                      stroke="#5aa9f0" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <span>Settings</span>
+        </button>
+
         <span class="rp-mode" id="rp-mode">BROWSE</span>
         <span class="rp-live" id="rp-live" hidden>
             <span class="rp-live-dot"></span>LIVE <b id="rp-livePrice">—</b>
@@ -104,7 +124,7 @@
         </div>
 
         <div id="rp-hud" class="rp-hud" hidden>
-            <div id="rp-cutbar" class="rp-cutbar">
+            <div id="rp-cutbar" class="rp-cutbar" hidden>
                 <i class="fa-solid fa-scissors"></i>
                 <span class="rp-hud-text"><b>Double-click a candle</b> to replay from there &mdash; or</span>
                 <input type="date" id="rp-date">
@@ -139,8 +159,8 @@
     </section>
 
     <aside id="rp-side">
-        <div class="rp-card">
-            <h3>Order</h3>
+        <div class="rp-card" draggable="true">
+            <h3><i class="fa-solid fa-grip-vertical rp-grip"></i>Order</h3>
             <div class="rp-row">
                 <label class="rp-field wide">
                     <span>Risk %</span>
@@ -167,13 +187,13 @@
             <button id="rp-close" class="rp-btn ghost" disabled>Close position at market</button>
         </div>
 
-        <div class="rp-card">
-            <h3>Position</h3>
+        <div class="rp-card" draggable="true">
+            <h3><i class="fa-solid fa-grip-vertical rp-grip"></i>Position</h3>
             <div id="rp-position" class="rp-empty">Flat — no open position.</div>
         </div>
 
-        <div class="rp-card">
-            <h3>Session stats</h3>
+        <div class="rp-card" draggable="true">
+            <h3><i class="fa-solid fa-grip-vertical rp-grip"></i>Session stats</h3>
             <div class="rp-stats" id="rp-stats">
                 <div><span>Trades</span><b id="st-trades">0</b></div>
                 <div><span>Win rate</span><b id="st-win">—</b></div>
@@ -184,8 +204,8 @@
             </div>
         </div>
 
-        <div class="rp-card">
-            <h3>Trade log</h3>
+        <div class="rp-card" draggable="true">
+            <h3><i class="fa-solid fa-grip-vertical rp-grip"></i>Trade log</h3>
             <div class="rp-log-wrap">
                 <table class="rp-log">
                     <thead>
@@ -197,6 +217,47 @@
         </div>
     </aside>
 </main>
+
+<div id="rp-set" class="rp-modal" hidden>
+    <div class="rp-modal-card narrow" role="dialog" aria-label="Chart settings">
+        <header class="rp-modal-head">
+            <h2>Chart settings</h2>
+            <button id="rp-set-close" class="rp-modal-x" aria-label="Close">&times;</button>
+        </header>
+        <div class="rp-set-body">
+            <h4>Candles</h4>
+            <div class="rp-set-row">
+                <label>Up</label><input type="color" id="set-up" value="#12a184">
+                <label>Down</label><input type="color" id="set-down" value="#e2564e">
+            </div>
+            <div class="rp-set-row">
+                <label class="chk"><input type="checkbox" id="set-borders" checked> Borders</label>
+                <label class="chk"><input type="checkbox" id="set-wicks" checked> Wicks</label>
+                <label class="chk"><input type="checkbox" id="set-hollow"> Hollow up-candles</label>
+            </div>
+
+            <h4>Background &amp; grid</h4>
+            <div class="rp-set-row">
+                <label>Background</label><input type="color" id="set-bg" value="#08080a">
+                <label>Text</label><input type="color" id="set-text" value="#a8abb3">
+            </div>
+            <div class="rp-set-row">
+                <label class="chk"><input type="checkbox" id="set-grid" checked> Show grid</label>
+                <label>Grid colour</label><input type="color" id="set-gridc" value="#1b1b20">
+            </div>
+
+            <h4>Crosshair</h4>
+            <div class="rp-set-row">
+                <label class="chk"><input type="checkbox" id="set-cross" checked> Show crosshair</label>
+                <label class="chk"><input type="checkbox" id="set-magnet"> Magnet to price</label>
+            </div>
+
+            <div class="rp-set-actions">
+                <button id="rp-set-reset" class="rp-btn">Reset to defaults</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div id="rp-modal" class="rp-modal" hidden>
     <div class="rp-modal-card" role="dialog" aria-label="Indicators">
