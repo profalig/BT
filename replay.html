@@ -100,6 +100,16 @@
             <span>Layouts</span>
         </button>
 
+        <button id="rp-help-open" class="rp-tool-btn" title="How to use the terminal">
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+                <circle cx="10" cy="10" r="8.2" fill="none" stroke="#5aa9f0" stroke-width="1.8"/>
+                <path d="M7.6 7.6a2.5 2.5 0 1 1 2.9 2.5v1.4" fill="none" stroke="#f7a600"
+                      stroke-width="1.9" stroke-linecap="round"/>
+                <circle cx="10.4" cy="14.3" r="1.15" fill="#20b26c"/>
+            </svg>
+            <span>Guide</span>
+        </button>
+
         <button id="rp-settings-open" class="rp-tool-btn" title="Chart settings">
             <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
                 <circle cx="10" cy="10" r="2.6" fill="none" stroke="#c58af0" stroke-width="2"/>
@@ -495,6 +505,20 @@
             <div class="rp-set-actions">
                 <button id="rp-set-reset" class="rp-btn">Reset to defaults</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================  guide  ==== -->
+<div id="rp-help" class="rp-modal" hidden>
+    <div class="rp-modal-card" role="dialog" aria-label="Guide">
+        <header class="rp-modal-head">
+            <h2>How this works</h2>
+            <button id="rp-help-close" class="rp-modal-x" aria-label="Close">&times;</button>
+        </header>
+        <div class="rp-help-body">
+            <nav class="rp-help-nav" id="rp-help-nav"></nav>
+            <article class="rp-help-doc" id="rp-help-doc"></article>
         </div>
     </div>
 </div>

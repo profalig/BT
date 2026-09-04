@@ -188,9 +188,15 @@ const ASSET_NAMES = {
 
 let CATALOGUE = null;          // [{symbol, base, quote, cat, name, px, chg}]
 let favourites = [];
-try { favourites = JSON.parse(localStorage.getItem('bt.replay.favs') || 'null')
-        || ['BTCUSDT', 'ETHUSDT', 'PAXGUSDT', 'EURUSDT']; }
-catch (e) { favourites = ['BTCUSDT', 'ETHUSDT', 'PAXGUSDT', 'EURUSDT']; }
+const DEFAULT_FAVS = ['BTCUSDT', 'ETHUSDT', 'PAXGUSDT', 'EURUSD', 'GBPUSD'];
+try { favourites = JSON.parse(localStorage.getItem('bt.replay.favs') || 'null') || DEFAULT_FAVS.slice(); }
+catch (e) { favourites = DEFAULT_FAVS.slice(); }
+// EURUSDT was the stand-in before there was a real forex feed; anyone who
+// still has it starred gets the genuine pair instead.
+if (favourites.indexOf('EURUSDT') >= 0) {
+    favourites = favourites.filter(x => x !== 'EURUSDT');
+    if (favourites.indexOf('EURUSD') < 0) favourites.push('EURUSD');
+}
 const saveFavs = () => {
     try { localStorage.setItem('bt.replay.favs', JSON.stringify(favourites)); } catch (e) {}
 };
@@ -467,9 +473,12 @@ function buildChart() {
     });
 
     chart.subscribeCrosshairMove(param => {
-        if (!param || !param.time) { renderOHLC(null); return; }
-        const bar = lastPainted.find(b => b.time === param.time);
-        renderOHLC(bar || null);
+        // Falling back to the last bar rather than clearing: an empty block
+        // has no height, so every indicator row below it jumped up the moment
+        // the pointer left a candle and dropped back when it returned.
+        const last = lastPainted[lastPainted.length - 1] || null;
+        if (!param || !param.time) { renderOHLC(last); return; }
+        renderOHLC(lastPainted.find(b => b.time === param.time) || last);
     });
 }
 
@@ -870,10 +879,10 @@ const IND = {
                 return out;
             } },
     bb: {
-        label: 'Bollinger', pane: 'price', params: { period: 20, mult: 2 }, multi: 3,
+        label: 'Bollinger', pane: 'price', params: { period: 20, mult: 2, maType: 'SMA' }, multi: 3,
         outputs: ['Basis', 'Upper', 'Lower'], src: true,
         calc: (b, p) => {
-            const c = srcOf(b, p.source), ma = movingAvg(c, p.period);
+            const c = srcOf(b, p.source), ma = smooth(c, p.period, p.maType);
             const up = [], lo = [];
             for (let i = 0; i < c.length; i++) {
                 if (ma[i] === null) { up.push(null); lo.push(null); continue; }
@@ -887,7 +896,9 @@ const IND = {
         }
     },
     rsi: {
-        label: 'RSI', pane: 'lower', params: { period: 14 }, src: true,
+        label: 'RSI', pane: 'lower', multi: 3,
+        outputs: ['RSI', 'Overbought', 'Oversold'],
+        params: { period: 14, upper: 70, lower: 30 }, src: true,
         calc: (b, p) => {
             const c = srcOf(b, p.source), out = new Array(c.length).fill(null);
             let g = 0, l = 0;
@@ -906,46 +917,60 @@ const IND = {
                     out[i] = l === 0 ? 100 : 100 - 100 / (1 + g / l);
                 }
             }
-            return out;
+            // Constant bands, so the thresholds move with the setting instead
+            // of living in someone's head.
+            const band = v => out.map(x => x === null ? null : v);
+            return [out, band(+p.upper), band(+p.lower)];
         }
     },
     macd: {
-        label: 'MACD', pane: 'lower', params: { period: 12, slow: 26, signal: 9 }, multi: 2,
-        outputs: ['MACD', 'Signal'], src: true,
+        label: 'MACD', pane: 'lower', params: { period: 12, slow: 26, signal: 9 }, multi: 3,
+        outputs: ['MACD', 'Signal', 'Histogram'], kinds: ['line', 'line', 'histogram'],
+        src: true,
         calc: (b, p) => {
             const c = srcOf(b, p.source);
             const f = expAvg(c, p.period), s = expAvg(c, p.slow);
             const line = c.map((_, i) => (f[i] === null || s[i] === null) ? null : f[i] - s[i]);
             const clean = line.map(v => v === null ? 0 : v);
             const sig = expAvg(clean, p.signal).map((v, i) => line[i] === null ? null : v);
-            return [line, sig];
+            // The histogram is the whole point of the study — the spread
+            // between the line and its signal, which is what crosses zero.
+            const hist = line.map((v, i) => (v === null || sig[i] === null) ? null : v - sig[i]);
+            return [line, sig, hist];
         }
     },
     atr: {
-        label: 'ATR', pane: 'lower', params: { period: 14 },
+        label: 'ATR', pane: 'lower', params: { period: 14, maType: 'RMA' },
         calc: (b, p) => {
             const tr = b.map((x, i) => i === 0 ? x.high - x.low : Math.max(
                 x.high - x.low,
                 Math.abs(x.high - b[i - 1].close),
                 Math.abs(x.low - b[i - 1].close)));
-            return expAvg(tr, p.period);
+            return smooth(tr, p.period, p.maType);
         }
     },
     stoch: {
-        label: 'Stochastic', pane: 'lower', params: { period: 14, signal: 3 }, multi: 2,
-        outputs: ['%K', '%D'],
+        label: 'Stochastic', pane: 'lower', multi: 4,
+        outputs: ['%K', '%D', 'Overbought', 'Oversold'],
+        params: { period: 14, smoothK: 1, signal: 3, upper: 80, lower: 20 },
         calc: (b, p) => {
-            const k = new Array(b.length).fill(null);
+            const raw = new Array(b.length).fill(null);
             for (let i = p.period - 1; i < b.length; i++) {
                 let hi = -Infinity, lo = Infinity;
                 for (let j = i - p.period + 1; j <= i; j++) {
                     hi = Math.max(hi, b[j].high); lo = Math.min(lo, b[j].low);
                 }
-                k[i] = hi === lo ? 50 : (b[i].close - lo) / (hi - lo) * 100;
+                raw[i] = hi === lo ? 50 : (b[i].close - lo) / (hi - lo) * 100;
             }
-            const d = movingAvg(k.map(v => v === null ? 0 : v), p.signal)
-                        .map((v, i) => k[i] === null ? null : v);
-            return [k, d];
+            // Smoothing %K is what separates the fast stochastic from the slow.
+            const kS = +p.smoothK > 1
+                ? movingAvg(raw.map(v => v === null ? 0 : v), +p.smoothK)
+                    .map((v, i) => raw[i] === null ? null : v)
+                : raw;
+            const d = movingAvg(kS.map(v => v === null ? 0 : v), p.signal)
+                        .map((v, i) => kS[i] === null ? null : v);
+            const band = v => kS.map(x => x === null ? null : v);
+            return [kS, d, band(+p.upper), band(+p.lower)];
         }
     },
     vwap: {
@@ -1028,6 +1053,47 @@ function srcOf(bars, name) {
     }
 }
 
+/* The smoothing family is an input in every serious platform: an RMA-based
+   RSI and an SMA-based one disagree, and a trader needs to say which they
+   mean rather than inherit ours. */
+const MA_TYPES = ['SMA', 'EMA', 'WMA', 'RMA'];
+function smooth(v, n, type) {
+    if (type === 'EMA') return expAvg(v, n);
+    if (type === 'RMA') return rmaAvg(v, n);
+    if (type === 'WMA') return wmaAvg(v, n);
+    return movingAvg(v, n);
+}
+function rmaAvg(v, n) {
+    const out = new Array(v.length).fill(null);
+    let prev = null;
+    for (let i = 0; i < v.length; i++) {
+        prev = prev === null ? v[i] : (prev * (n - 1) + v[i]) / n;
+        if (i >= n - 1) out[i] = prev;
+    }
+    return out;
+}
+function wmaAvg(v, n) {
+    const out = new Array(v.length).fill(null);
+    const denom = n * (n + 1) / 2;
+    for (let i = n - 1; i < v.length; i++) {
+        let acc = 0;
+        for (let k = 0; k < n; k++) acc += v[i - k] * (n - k);
+        out[i] = acc / denom;
+    }
+    return out;
+}
+
+// Shift a plot forward or back in time, the way TradingView's Offset does.
+function shift(arr, by) {
+    if (!by) return arr;
+    const out = new Array(arr.length).fill(null);
+    for (let i = 0; i < arr.length; i++) {
+        const j = i - by;
+        if (j >= 0 && j < arr.length) out[i] = arr[j];
+    }
+    return out;
+}
+
 function movingAvg(v, n) {
     const out = new Array(v.length).fill(null);
     let sum = 0;
@@ -1065,15 +1131,24 @@ function lineOpts(st) {
     };
 }
 
-function makeLine(pane, st) {
+function makeLine(pane, st, kind) {
     const opts = lineOpts(st);
-    if (pane === 'lower') {
-        opts.priceScaleId = 'ind-lower';
-        const ls = chart.addLineSeries(opts);
-        chart.priceScale('ind-lower').applyOptions({ scaleMargins: { top: 0.78, bottom: 0 } });
-        return ls;
+    const lower = pane === 'lower';
+    if (lower) opts.priceScaleId = 'ind-lower';
+    let sref;
+    if (kind === 'histogram') {
+        // A histogram takes a colour, not a line width, and each bar is
+        // coloured by its own sign at paint time.
+        sref = chart.addHistogramSeries({
+            color: st.color, priceScaleId: opts.priceScaleId,
+            priceLineVisible: false, lastValueVisible: false,
+            visible: st.visible !== false
+        });
+    } else {
+        sref = chart.addLineSeries(opts);
     }
-    return chart.addLineSeries(opts);
+    if (lower) chart.priceScale('ind-lower').applyOptions({ scaleMargins: { top: 0.78, bottom: 0 } });
+    return sref;
 }
 
 // Secondary plots of the same indicator are dimmed shades of its main colour,
@@ -1102,7 +1177,8 @@ function addIndicator(type, params, code, styles) {
             { color: shade(col, i), width: i === 0 ? 2 : 1, dash: 'solid', visible: true },
             (styles && styles[i]) || {});
         item.styles.push(st);
-        item.lines.push(makeLine(def ? def.pane : 'price', st));
+        item.kinds = (def && def.kinds) || [];
+        item.lines.push(makeLine(def ? def.pane : 'price', st, item.kinds[i]));
     }
     activeInd.push(item);
     renderIndicatorList();
@@ -1112,7 +1188,12 @@ function addIndicator(type, params, code, styles) {
 }
 
 function applyLineStyle(item, i) {
-    try { item.lines[i].applyOptions(lineOpts(item.styles[i])); } catch (e) {}
+    const st = item.styles[i];
+    try {
+        item.lines[i].applyOptions((item.kinds || [])[i] === 'histogram'
+            ? { color: st.color, visible: st.visible !== false }
+            : lineOpts(st));
+    } catch (e) {}
 }
 
 function removeIndicator(id) {
@@ -1154,10 +1235,20 @@ function refreshIndicators(data) {
         a.error = null;
         const sets = Array.isArray(res[0]) ? res : [res];
         a.lines.forEach((line, li) => {
-            const vals = sets[li] || [];
+            let vals = sets[li] || [];
+            const off = +a.params.offset || 0;
+            if (off) vals = shift(vals, off);
+            const hist = (a.kinds || [])[li] === 'histogram';
+            const up = a.styles[li].color;
+            const dn = a.styles[li].colorDown || '#ef454a';
             line.setData(data
-                .map((b, i) => ({ time: b.time, value: vals[i] }))
-                .filter(x => x.value !== null && x.value !== undefined && isFinite(x.value)));
+                .map((b, i) => {
+                    const v = vals[i];
+                    if (v === null || v === undefined || !isFinite(v)) return null;
+                    return hist ? { time: b.time, value: v, color: v >= 0 ? up : dn }
+                                : { time: b.time, value: v };
+                })
+                .filter(Boolean));
         });
         // Keep the computed values so a double-click on the LINE can find
         // which indicator it landed on, not only a click on the legend.
@@ -1299,6 +1390,14 @@ function renderIndCfg() {
             if (def.params.slow !== undefined)   h += num('slow', 'Slow length', 2, 500);
             if (def.params.signal !== undefined) h += num('signal', 'Signal smoothing', 1, 100);
             if (def.params.mult !== undefined)   h += num('mult', 'Std dev multiplier', 0.1, 10, 0.1);
+            if (def.params.smoothK !== undefined) h += num('smoothK', '%K smoothing', 1, 50);
+            if (def.params.upper !== undefined)  h += num('upper', 'Upper band', 1, 100);
+            if (def.params.lower !== undefined)  h += num('lower', 'Lower band', 0, 99);
+            if (def.params.maType !== undefined) {
+                h += row('Smoothing', '<select data-p="maType">' + MA_TYPES.map(o =>
+                    '<option value="' + o + '"' + (a.params.maType === o ? ' selected' : '') +
+                    '>' + o + '</option>').join('') + '</select>');
+            }
             if (def.params.anchor !== undefined) {
                 h += row('Anchor period', '<select data-p="anchor">' + ANCHORS.map(o =>
                     '<option value="' + o + '"' + (a.params.anchor === o ? ' selected' : '') +
@@ -1317,6 +1416,10 @@ function renderIndCfg() {
                      '<input type="number" min="0.1" max="10" step="0.1" data-p="b' + n + 'm" value="' +
                      a.params['b' + n + 'm'] + '"></div>';
             });
+            // Offset applies to every study, so it is added once at the end
+            // rather than declared on each of them.
+            h += row('Offset (bars)', '<input type="number" min="-500" max="500" data-p="offset" value="' +
+                     (a.params.offset || 0) + '">');
             if (!h) h = '<p class="rp-hint">This indicator has no inputs to configure.</p>';
         }
         box.innerHTML = h;
@@ -2966,6 +3069,200 @@ function openLayoutMenu(anchor) {
         b.addEventListener('click', e => { e.stopPropagation(); close(); deleteLayout(+b.dataset.del); }));
 }
 
+
+/* ------------------------------------------------------------- the guide
+
+   Written as steps rather than a feature list, because the questions people
+   actually arrive with are "how do I replay this" and "how big should this
+   trade be" — not "what does that icon do". Each topic ends with the thing
+   that is easy to get wrong. */
+
+const GUIDE_ICON = {
+    replay: '<circle cx="12" cy="12" r="9" fill="none" stroke="#f7a600" stroke-width="1.8"/>' +
+            '<path d="M10 8.5l5 3.5-5 3.5z" fill="#20b26c"/>',
+    trade:  '<path d="M3 17l5-6 4 3 8-9" fill="none" stroke="#20b26c" stroke-width="2" ' +
+            'stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="11" r="2" fill="#f7a600"/>',
+    size:   '<rect x="3" y="4" width="18" height="7" rx="1.5" fill="#20b26c" opacity=".35"/>' +
+            '<rect x="3" y="13" width="18" height="7" rx="1.5" fill="#ef454a" opacity=".35"/>' +
+            '<path d="M3 12h18" stroke="#f7a600" stroke-width="2"/>',
+    tools:  '<path d="M4 20L20 4" stroke="#5aa9f0" stroke-width="2" stroke-linecap="round"/>' +
+            '<path d="M12 3l1.6 3.4L17 8l-3.4 1.6L12 13l-1.6-3.4L7 8l3.4-1.6z" fill="#f7a600"/>',
+    ind:    '<path d="M3 16l5-7 4 4 6-9" fill="none" stroke="#5aa9f0" stroke-width="2" ' +
+            'stroke-linecap="round" stroke-linejoin="round"/><path d="M3 21h18" stroke="#c58af0" stroke-width="2"/>',
+    save:   '<path d="M4 4h12l4 4v12H4z" fill="none" stroke="#5aa9f0" stroke-width="1.8" ' +
+            'stroke-linejoin="round"/><rect x="8" y="4" width="7" height="5" fill="#f7a600"/>' +
+            '<rect x="8" y="13" width="8" height="7" fill="#20b26c" opacity=".8"/>',
+    report: '<path d="M5 3h9l5 5v13H5z" fill="none" stroke="#5aa9f0" stroke-width="1.8" ' +
+            'stroke-linejoin="round"/><path d="M8 13h3v5H8zM13 10h3v8h-3z" fill="#20b26c"/>',
+    market: '<circle cx="12" cy="12" r="9" fill="none" stroke="#5aa9f0" stroke-width="1.8"/>' +
+            '<path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18" fill="none" ' +
+            'stroke="#f7a600" stroke-width="1.4"/>'
+};
+
+const GUIDE = [
+    {
+        id: 'replay', icon: 'replay', title: 'Replay a market',
+        lede: 'Replay hides everything after a date you choose and gives it back one bar ' +
+              'at a time, so you read the chart the way you would have at the time.',
+        steps: [
+            ['Press <b>Replay</b> in the top bar. A strip appears over the chart.'],
+            ['Pick where to start: double-click any candle, or use the date wheel and press <b>Use date</b>.'],
+            ['Press <b>Start replay</b>. The chart cuts there and everything to the right is withheld.'],
+            ['Step forward with <kbd>→</kbd>, back with <kbd>←</kbd>, or play with <kbd>Space</kbd>. ' +
+             'The speed slider sets bars per second.',
+             'Stepping back rewinds your account too — trades taken after that bar un-happen.'],
+            ['<b>Back to full chart</b> ends the session and returns to live prices. Your trade log is kept.']
+        ],
+        note: 'You cannot cheat by dragging: future bars are not in the chart at all, ' +
+              'they sit in a buffer the drawing code cannot reach.'
+    },
+    {
+        id: 'trade', icon: 'trade', title: 'Place a trade',
+        lede: 'The right-hand panel is a full order ticket. It works during a replay and ' +
+              'on the live chart.',
+        steps: [
+            ['Choose <b>Market</b>, <b>Limit</b> or <b>Stop</b>. Limit and Stop reveal a price box; ' +
+             '<b>Last</b> fills it with the current price.'],
+            ['Set a <b>Stop</b> and a <b>Target</b> — by price, or switch to <b>By points</b> for a distance.'],
+            ['Check the readout: order value, margin, what you are risking, reward and R:R, ' +
+             'and the estimated liquidation.'],
+            ['Press <b>Buy / Long</b> or <b>Sell / Short</b>.'],
+            ['Working orders wait in <b>Open orders</b> until price reaches them. Filled ones show ' +
+             'in <b>Positions</b> and finish in <b>Trade history</b>.']
+        ],
+        note: 'Fills are stepped through 1-minute bars, and where one minute touches both your ' +
+              'stop and your target the <b>stop</b> is taken. Both sides pay the fee set in ' +
+              'chart settings, so results are never flattered.'
+    },
+    {
+        id: 'size', icon: 'size', title: 'Automatic position sizing',
+        lede: 'Say what you are willing to lose and the size is worked out for you, ' +
+              'so risk stays constant while stop distance changes.',
+        steps: [
+            ['Leave the ticket on <b>Risk %</b> and type the share of your balance you will risk — ' +
+             '1% is the usual starting point.'],
+            ['Set your stop. Quantity is recalculated the moment it changes: a wider stop buys ' +
+             'a smaller position, so the money at risk stays the same.'],
+            ['Switch to <b>Quantity</b> to size by hand instead — in the coin, or in USDT ' +
+             'using the unit selector.'],
+            ['The percentage slider sizes against the most you could hold at your current leverage.'],
+            ['Faster still: draw a <b>Long position</b> or <b>Short position</b> on the chart, ' +
+             'drag the entry, stop and target where you want them, then press <b>Trade</b> on ' +
+             'its toolbar.',
+             'A setup drawn away from the current price is sent as a resting order at that price, ' +
+             'not snapped onto the last candle.']
+        ],
+        note: 'Risk on stop includes both fees, which is why it is a little larger than ' +
+              'stop distance times quantity.'
+    },
+    {
+        id: 'tools', icon: 'tools', title: 'Drawing and favourite tools',
+        lede: 'Forty tools in seven groups on the left rail. Everything is saved per ' +
+              'instrument as you draw.',
+        steps: [
+            ['Click a rail icon to use the tool showing; click its small corner arrow ' +
+             '(or right-click it) to open the group and pick another.'],
+            ['Star any tool in that menu to pin it. Pinned tools appear at the top of the ' +
+             '<b>right-click menu</b> anywhere on the chart.'],
+            ['Select a drawing and a toolbar floats above it: colour, fill, width, line style, ' +
+             'extends, lock, duplicate, settings, delete. Drag the toolbar if it is in the way.'],
+            ['Double-click a drawing for its full settings. Fibonacci levels can be added, ' +
+             'removed, recoloured and switched off one by one.'],
+            ['<kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> redoes, ' +
+             '<kbd>Delete</kbd> removes the selected drawing, <kbd>Esc</kbd> cancels.']
+        ],
+        note: 'The magnet on the rail snaps new points to the nearest open, high, low or close.'
+    },
+    {
+        id: 'ind', icon: 'ind', title: 'Indicators and your own code',
+        lede: 'Nine built-in studies, each with the inputs and per-plot styling you would ' +
+              'expect — plus a place for the strategy you measured in the Backtest Machine.',
+        steps: [
+            ['Press <b>Indicators</b>, search, and click one to add it.'],
+            ['Double-click the plotted line — or the row in the top-left list — to open its settings.'],
+            ['<b>Inputs</b> holds length, source, smoothing, bands and offset. <b>Style</b> gives every ' +
+             'plot its own colour, width, line style and visibility.'],
+            ['In the top-left list, the eye hides a study, the gear opens it, the cross removes it, ' +
+             'and the arrow folds the whole list away.'],
+            ['For your own logic, open <b>Add your own system code</b> on the right of the ' +
+             'indicators panel. Write a function body over <code>bars</code> that returns one ' +
+             'value per bar.',
+             'It runs only in your browser, on your code. Pine Script cannot run outside ' +
+             'TradingView, so this is the equivalent that is genuinely yours.']
+        ],
+        note: 'In replay, studies only ever see the bars revealed so far — they are recomputed ' +
+              'from what is on screen, so stepping back cannot leak the future into them.'
+    },
+    {
+        id: 'market', icon: 'market', title: 'Choosing an instrument',
+        lede: 'Crypto and gold are priced from Binance; currencies come from the European ' +
+              'Central Bank daily reference rates.',
+        steps: [
+            ['Click the instrument button in the top bar to open the picker.'],
+            ['Use the tabs — Favourites, Crypto, Forex, Commodities — or search within the open tab.'],
+            ['Star anything to keep it in Favourites.'],
+            ['Crypto and gold have minute data back to 2017 and 2020, so every timeframe works ' +
+             'and replay steps minute by minute.'],
+            ['Forex reaches back to 1999, but it is one close per business day. It therefore draws ' +
+             'as a line rather than candles, only the daily timeframe is offered, and fills ' +
+             'resolve on the day.',
+             'Inventing an open, high and low from a single daily close would be making data up, ' +
+             'so it is not done.']
+        ],
+        note: 'Shares, indices and oil are absent because neither feed carries them — not ' +
+              'because they were forgotten.'
+    },
+    {
+        id: 'save', icon: 'save', title: 'Layouts and sessions',
+        lede: 'Two different things worth keeping: how the chart looks, and what you did on it.',
+        steps: [
+            ['<b>Layouts</b> in the top bar saves the instrument, timeframe, theme, indicators ' +
+             'and drawings under a name. Reuse it every day.'],
+            ['<b>Save / load</b> at the bottom right stores a trading session: your trades, ' +
+             'working orders and balance.'],
+            ['Reload either from its own menu; delete them there too, one at a time or all at once.']
+        ],
+        note: 'Both live in this browser. Carrying them between machines needs an account, ' +
+              'which is not built yet.'
+    },
+    {
+        id: 'report', icon: 'report', title: 'Reading and exporting results',
+        lede: 'Every trade is measured the same way the Backtest Machine measures a submitted ' +
+              'system, so the two can be compared directly.',
+        steps: [
+            ['<b>Performance</b> leads with net P&amp;L, then the seven figures that decide whether ' +
+             'a system is worth trading, then the equity curve.'],
+            ['<b>Calendar</b> shows profit and loss by day; <b>Journal</b> keeps a note and tags ' +
+             'against each trade.'],
+            ['<b>Export</b> gives a <b>PDF report</b> in the Backtest Machine format, a <b>CSV</b> ' +
+             'trade log, or the raw <b>JSON</b> behind them.']
+        ],
+        note: 'Profit factor under 1 means the losses outweigh the wins. Sharpe is withheld ' +
+              'below five trades, because three trades is not a sample.'
+    }
+];
+
+let guideAt = 'replay';
+
+function renderGuide() {
+    const nav = $('rp-help-nav');
+    nav.innerHTML = GUIDE.map(g =>
+        '<button data-g="' + g.id + '"' + (g.id === guideAt ? ' class="active"' : '') + '>' +
+          '<svg viewBox="0 0 24 24" width="18" height="18">' + GUIDE_ICON[g.icon] + '</svg>' +
+          '<span>' + g.title + '</span></button>').join('');
+    nav.querySelectorAll('[data-g]').forEach(b =>
+        b.addEventListener('click', () => { guideAt = b.dataset.g; renderGuide(); }));
+
+    const g = GUIDE.find(x => x.id === guideAt) || GUIDE[0];
+    $('rp-help-doc').innerHTML =
+        '<h3>' + g.title + '</h3><p class="lede">' + g.lede + '</p>' +
+        g.steps.map((st, i) =>
+            '<div class="rp-help-step"><span class="rp-help-num">' + (i + 1) + '</span>' +
+            '<p>' + st[0] + (st[1] ? '<em>' + st[1] + '</em>' : '') + '</p></div>').join('') +
+        (g.note ? '<div class="rp-help-note">' + g.note + '</div>' : '');
+    $('rp-help-doc').scrollTop = 0;
+}
+
 // ============================================== instrument picker UI
 
 let instCat = 'fav';
@@ -3616,6 +3913,10 @@ function init() {
         if (S.playing) runLoop();
     });
 
+    $('rp-help-open').addEventListener('click', () => { $('rp-help').hidden = false; renderGuide(); });
+    $('rp-help-close').addEventListener('click', () => { $('rp-help').hidden = true; });
+    $('rp-help').addEventListener('click', e => { if (e.target.id === 'rp-help') $('rp-help').hidden = true; });
+
     $('rp-settings-open').addEventListener('click', () => { $('rp-set').hidden = false; });
     $('rp-set-close').addEventListener('click', () => { $('rp-set').hidden = true; });
     $('rp-set').addEventListener('click', e => { if (e.target.id === 'rp-set') $('rp-set').hidden = true; });
@@ -3812,6 +4113,7 @@ function init() {
 
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape' && !$('rp-ask').hidden)  { answer(false); return; }
+        if (e.key === 'Escape' && !$('rp-help').hidden) { $('rp-help').hidden = true; return; }
         if (e.key === 'Escape' && !$('rp-datew').hidden) { $('rp-datew').hidden = true; return; }
         if (e.key === 'Escape' && !$('rp-inst').hidden) { closeInstPicker(); return; }
         if (e.key === 'Escape' && !$('rp-icfg').hidden) { closeIndCfg(); return; }

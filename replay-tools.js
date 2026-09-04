@@ -37,9 +37,22 @@ let histAt = -1;
 let restoring = false;
 
 const SEL  = '#5aa9f0';
-const HIT  = 8;
-const FIB  = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
-const FIBE = [0, 0.618, 1, 1.618, 2.618, 4.236];
+const HIT  = 10;
+/* Level sets are DATA on the shape, not constants in this file, so a trader
+   can add the 1.13 they use, drop the 0.786 they never look at, and recolour
+   the rest — the way every charting platform lets them. */
+const LEVEL_COLOURS = ['#ef454a', '#ff9f43', '#f7a600', '#20b26c', '#00c2c2',
+                       '#5aa9f0', '#c58af0', '#ff7ac6', '#8c9099'];
+const lvl = ratios => ratios.map((r, i) =>
+    ({ r: r, on: true, c: LEVEL_COLOURS[i % LEVEL_COLOURS.length] }));
+
+const DEFAULT_LEVELS = {
+    fib:     [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1],
+    fibext:  [0, 0.618, 1, 1.618, 2.618, 4.236],
+    fibfan:  [0.236, 0.382, 0.5, 0.618, 0.786],
+    fibtime: [0, 1, 2, 3, 5, 8, 13, 21],
+    gann:    [1, 2, 3, 4, 8]
+};
 
 // ============================================================ tool catalogue
 
@@ -62,16 +75,23 @@ const T = {
     hray:        { name: 'Horizontal ray',        kind: 'hray',  pts: 1, cap: 'line' },
     vline:       { name: 'Vertical line',         kind: 'vline', pts: 1, cap: 'line' },
     crossline:   { name: 'Cross line',            kind: 'cross', pts: 1, cap: 'line' },
-    channel:     { name: 'Parallel channel',      kind: 'channel', pts: 3, cap: 'area' },
+    channel:     { name: 'Parallel channel',      kind: 'channel', pts: 3, cap: 'area',
+                   extend: true },
     pitchfork:   { name: 'Pitchfork',             kind: 'fork',    pts: 3, cap: 'area' },
-    gann:        { name: 'Gann fan',              kind: 'gann',    pts: 2, cap: 'levels' },
+    gann:        { name: 'Gann fan',              kind: 'gann',    pts: 2, cap: 'levels',
+                   levels: 'gann' },
 
-    fib:         { name: 'Fib retracement',       kind: 'fib',     pts: 2, cap: 'levels' },
-    fibext:      { name: 'Fib extension',         kind: 'fibext',  pts: 3, cap: 'levels' },
-    fibfan:      { name: 'Fib fan',               kind: 'fibfan',  pts: 2, cap: 'levels' },
-    fibtime:     { name: 'Fib time zones',        kind: 'fibtime', pts: 2, cap: 'levels' },
+    fib:         { name: 'Fib retracement',       kind: 'fib',     pts: 2, cap: 'levels',
+                   levels: 'fib', extend: true },
+    fibext:      { name: 'Fib extension',         kind: 'fibext',  pts: 3, cap: 'levels',
+                   levels: 'fibext', extend: true },
+    fibfan:      { name: 'Fib fan',               kind: 'fibfan',  pts: 2, cap: 'levels',
+                   levels: 'fibfan' },
+    fibtime:     { name: 'Fib time zones',        kind: 'fibtime', pts: 2, cap: 'levels',
+                   levels: 'fibtime' },
 
-    rect:        { name: 'Rectangle',             kind: 'rect',    pts: 2, cap: 'area' },
+    rect:        { name: 'Rectangle',             kind: 'rect',    pts: 2, cap: 'area',
+                   extend: true },
     orderblock:  { name: 'Order block',           kind: 'ob',      pts: 2, cap: 'area',
                    preset: { line: '#5aa9f0', fill: '#5aa9f0', fillOpacity: 0.18, text: 'OB' } },
     ellipse:     { name: 'Ellipse',               kind: 'ellipse', pts: 2, cap: 'area' },
@@ -175,7 +195,12 @@ const DEFAULT_STYLE = {
     extendLeft: false, extendRight: false,
     arrowLeft: false, arrowRight: false,
     text: '', fontSize: 12, bold: false, italic: false, textColor: '#eaecef',
-    showLabels: true, showAngle: false, closed: false, dir: 1
+    showLabels: true, showAngle: false, closed: false, dir: 1,
+    // level tools
+    levels: null, reverse: false, fillLevels: true,
+    showPrices: true, showPercent: true,
+    // parallel channel
+    middle: false
 };
 
 const PALETTE = ['#f7a600', '#20b26c', '#ef454a', '#5aa9f0', '#c58af0', '#eaecef',
@@ -422,7 +447,16 @@ function fromUI(e) {
 function newShape(t, p) {
     const sp = T[t];
     const st = Object.assign({}, DEFAULT_STYLE, lastStyle[t] || {}, sp.preset || {});
+    if (sp.levels && !Array.isArray(st.levels)) st.levels = lvl(DEFAULT_LEVELS[sp.levels]);
     return { id: ++seq, tool: t, pts: [p], style: st, locked: false, hidden: false };
+}
+
+// Shapes drawn before levels were editable fall back to the tool's defaults
+// rather than drawing nothing at all.
+function levelsOf(sh) {
+    const st = styleOf(sh);
+    return Array.isArray(st.levels) && st.levels.length
+        ? st.levels : lvl(DEFAULT_LEVELS[spec(sh).levels] || []);
 }
 
 function onDown(e) {
@@ -653,6 +687,17 @@ function onContext(e) {
         items.push({ sep: true });
     }
 
+    // Pinned tools first: reaching for your own four should not mean
+    // travelling to the rail and opening a fly-out.
+    const pinned = favTools.filter(t => T[t]);
+    if (pinned.length) {
+        pinned.forEach(t => items.push({
+            svg: ICO[t], label: T[t].name,
+            run: () => setTool(t)
+        }));
+        items.push({ sep: true });
+    }
+
     items.push({ icon: 'hline', label: 'Horizontal line at ' + money(p.price), run: () => {
         const sh = newShape('hline', { time: p.time, price: p.price });
         shapes.push(sh); selected = sh.id; commit();
@@ -661,11 +706,13 @@ function onContext(e) {
         const sh = newShape('vline', { time: p.time, price: p.price });
         shapes.push(sh); selected = sh.id; commit();
     }});
-    items.push({ icon: 'position', label: 'Long position here', run: () => {
-        const sh = newShape('position', { time: p.time, price: p.price });
+    const dropPosition = tool => () => {
+        const sh = newShape(tool, { time: p.time, price: p.price });
         seedDefault(sh); shapes.push(sh); selected = sh.id;
         sendToOrderPanel(sh); commit();
-    }});
+    };
+    items.push({ icon: 'position',  label: 'Long position here',  run: dropPosition('position') });
+    items.push({ icon: 'positionS', label: 'Short position here', run: dropPosition('positionS') });
     items.push({ sep: true });
     items.push({ icon: 'copy', label: 'Copy price  ' + money(p.price), run: () => {
         try { navigator.clipboard.writeText(money(p.price)); } catch (err) {}
@@ -684,7 +731,9 @@ const MENU_ICON = {
     lock: '<i class="fa-solid fa-lock"></i>', eye: '<i class="fa-solid fa-eye-slash"></i>',
     trash: '<i class="fa-solid fa-trash-can"></i>',
     hline: '<i class="fa-solid fa-minus"></i>', vline: '<i class="fa-solid fa-grip-lines-vertical"></i>',
-    position: '<i class="fa-solid fa-up-down"></i>', copy: '<i class="fa-regular fa-copy"></i>',
+    position: '<i class="fa-solid fa-arrow-trend-up"></i>',
+    positionS: '<i class="fa-solid fa-arrow-trend-down"></i>',
+    copy: '<i class="fa-regular fa-copy"></i>',
     reset: '<i class="fa-solid fa-expand"></i>', image: '<i class="fa-regular fa-image"></i>',
     chart: '<i class="fa-solid fa-sliders"></i>'
 };
@@ -693,10 +742,14 @@ function showMenu(cx, cy, items) {
     closeMenu();
     menuEl = document.createElement('div');
     menuEl.className = 'rp-pop rp-ctx';
-    menuEl.innerHTML = '<div class="rp-menu">' + items.map((i, n) =>
-        i.sep ? '<span class="rp-ctx-sep"></span>'
-              : '<button data-i="' + n + '"' + (i.danger ? ' class="danger"' : '') + '>' +
-                (MENU_ICON[i.icon] || '') + '<span>' + i.label + '</span></button>').join('') + '</div>';
+    menuEl.innerHTML = '<div class="rp-menu">' + items.map((i, n) => {
+        if (i.sep) return '<span class="rp-ctx-sep"></span>';
+        const ic = i.svg
+            ? '<svg viewBox="0 0 24 24" width="16" height="16">' + i.svg + '</svg>'
+            : (MENU_ICON[i.icon] || '');
+        return '<button data-i="' + n + '"' + (i.danger ? ' class="danger"' : '') + '>' +
+               ic + '<span>' + i.label + '</span></button>';
+    }).join('') + '</div>';
     document.body.appendChild(menuEl);
     const w = menuEl.offsetWidth, h = menuEl.offsetHeight;
     menuEl.style.left = Math.max(6, Math.min(window.innerWidth - w - 6, cx)) + 'px';
@@ -825,14 +878,14 @@ function drawShape(s) {
     else if (kind === 'cross') { seg(0, pts[0].y, w, pts[0].y); seg(pts[0].x, 0, pts[0].x, h); }
     else if (kind === 'channel') drawChannel(pts, st);
     else if (kind === 'fork') drawFork(pts, st);
-    else if (kind === 'gann') drawGann(pts);
+    else if (kind === 'gann') drawGann(s, pts);
     else if (kind === 'rect' || kind === 'ob') drawRect(s, pts, st, kind);
     else if (kind === 'ellipse') drawEllipse(pts, st);
     else if (kind === 'poly' || kind === 'pattern') drawPoly(s, pts, st, kind);
     else if (kind === 'fib') drawFib(s, pts);
     else if (kind === 'fibext') drawFibExt(s, pts, st);
-    else if (kind === 'fibfan') drawFibFan(pts);
-    else if (kind === 'fibtime') drawFibTime(pts, h);
+    else if (kind === 'fibfan') drawFibFan(s, pts);
+    else if (kind === 'fibtime') drawFibTime(s, pts, h);
     else if (kind === 'text') text(st.text || 'Text', pts[0].x, pts[0].y, st);
     else if (kind === 'callout') drawCallout(pts, st);
     else if (kind === 'plabel') drawPriceLabel(s, pts, st);
@@ -896,14 +949,29 @@ function drawChannel(pts, st) {
     const span = (pts[1].x - pts[0].x) || 1;
     const onLine = pts[0].y + (pts[1].y - pts[0].y) * ((pts[2].x - pts[0].x) / span);
     const off = pts[2].y - onLine;
+
+    // Extending runs both rails the same distance along the channel's own
+    // slope, so they stay parallel however far they go.
+    let a = { x: pts[0].x, y: pts[0].y }, b = { x: pts[1].x, y: pts[1].y };
+    const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+    const far = 4000;
+    if (st.extendRight) b = { x: b.x + dx / len * far, y: b.y + dy / len * far };
+    if (st.extendLeft)  a = { x: a.x - dx / len * far, y: a.y - dy / len * far };
+
     ctx.save(); ctx.setLineDash([]);
     ctx.fillStyle = rgba(st.fill, st.fillOpacity);
     ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y); ctx.lineTo(pts[1].x, pts[1].y);
-    ctx.lineTo(pts[1].x, pts[1].y + off); ctx.lineTo(pts[0].x, pts[0].y + off);
+    ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+    ctx.lineTo(b.x, b.y + off); ctx.lineTo(a.x, a.y + off);
     ctx.closePath(); ctx.fill(); ctx.restore();
-    seg(pts[0].x, pts[0].y, pts[1].x, pts[1].y);
-    seg(pts[0].x, pts[0].y + off, pts[1].x, pts[1].y + off);
+
+    seg(a.x, a.y, b.x, b.y);
+    seg(a.x, a.y + off, b.x, b.y + off);
+    if (st.middle) {
+        ctx.save(); ctx.setLineDash([5, 4]); ctx.globalAlpha = .75;
+        seg(a.x, a.y + off / 2, b.x, b.y + off / 2);
+        ctx.restore();
+    }
 }
 
 /* Andrews pitchfork: a median line from the pivot through the midpoint of
@@ -935,22 +1003,25 @@ function drawFork(pts, st) {
 
 /* Gann fan: the second point sets the 1x1, every other ray is a whole-number
    multiple of that slope in time or in price. */
-function drawGann(pts) {
+function drawGann(sh, pts) {
     const dx = pts[1].x - pts[0].x, dy = pts[1].y - pts[0].y;
-    const R = [[1, 8], [1, 4], [1, 3], [1, 2], [1, 1], [2, 1], [3, 1], [4, 1], [8, 1]];
     ctx.save();
-    R.forEach((r, i) => {
-        const t = r[0], p = r[1];
-        ctx.strokeStyle = (t === 1 && p === 1) ? '#f7a600' : levelColour(i);
-        ctx.lineWidth = (t === 1 && p === 1) ? 1.8 : 1.1;
-        seg(pts[0].x, pts[0].y, pts[0].x + dx * t * 5, pts[0].y + dy * p * 5);
+    // Each ratio draws both ways: n bars per unit of price, and the reverse.
+    levelsOf(sh).filter(L => L.on).forEach(L => {
+        const n = L.r || 1;
+        ctx.strokeStyle = L.c;
+        ctx.lineWidth = n === 1 ? 1.9 : 1.1;
+        seg(pts[0].x, pts[0].y, pts[0].x + dx * n * 5, pts[0].y + dy * 5);
+        if (n !== 1) seg(pts[0].x, pts[0].y, pts[0].x + dx * 5, pts[0].y + dy * n * 5);
     });
     ctx.restore();
 }
 
 function drawRect(s, pts, st, kind) {
-    const x = Math.min(pts[0].x, pts[1].x), y = Math.min(pts[0].y, pts[1].y);
-    const w = Math.abs(pts[1].x - pts[0].x), h = Math.abs(pts[1].y - pts[0].y);
+    const x0 = Math.min(pts[0].x, pts[1].x), y = Math.min(pts[0].y, pts[1].y);
+    const x = st.extendLeft ? 0 : x0;
+    const rightEdge = st.extendRight ? cvs.clientWidth : Math.max(pts[0].x, pts[1].x);
+    const w = rightEdge - x, h = Math.abs(pts[1].y - pts[0].y);
     ctx.save(); ctx.setLineDash([]);
     ctx.fillStyle = rgba(st.fill, st.fillOpacity);
     ctx.fillRect(x, y, w, h); ctx.restore();
@@ -990,23 +1061,57 @@ function levelColour(i) {
     return cols[i % cols.length];
 }
 
-function drawFib(s, pts) {
-    const a = s.pts[0].price, b = s.pts[1].price;
-    const l = Math.min(pts[0].x, pts[1].x), r = Math.max(pts[0].x, pts[1].x);
+/* One routine draws every horizontal level set. The levels themselves, their
+   colours, whether each is shown, the fill between them and how far they run
+   are all the shape's own settings now. */
+function drawLevels(sh, l, r, priceAt) {
+    const st = styleOf(sh);
+    const levels = levelsOf(sh).filter(L => L.on);
+    const right = st.extendRight ? cvs.clientWidth : r + 60;
+    const left  = st.extendLeft ? 0 : l;
     ctx.save();
-    FIB.forEach((f, i) => {
-        const price = b + (a - b) * f;
+    ctx.setLineDash(dashOf(st.dash));
+    ctx.lineWidth = +st.width;
+
+    // Bands between neighbouring levels, lightest thing on the chart.
+    if (st.fillLevels && levels.length > 1) {
+        ctx.setLineDash([]);
+        for (let i = 0; i < levels.length - 1; i++) {
+            const y1 = Y(priceAt(levels[i].r)), y2 = Y(priceAt(levels[i + 1].r));
+            if (y1 === null || y2 === null) continue;
+            ctx.fillStyle = rgba(levels[i].c, 0.07);
+            ctx.fillRect(left, Math.min(y1, y2), right - left, Math.abs(y2 - y1));
+        }
+        ctx.setLineDash(dashOf(st.dash));
+    }
+
+    ctx.font = '12px "IBM Plex Mono", monospace';
+    levels.forEach(L => {
+        const price = priceAt(L.r);
         const y = Y(price);
         if (y === null) return;
-        ctx.strokeStyle = levelColour(i);
-        ctx.fillStyle = ctx.strokeStyle;
-        ctx.globalAlpha = (f === 0 || f === 1) ? 1 : 0.8;
-        seg(l, y, r + 60, y);
-        ctx.globalAlpha = 1;
-        ctx.font = '12px "IBM Plex Mono", monospace';
-        ctx.fillText((f * 100).toFixed(1) + '%  ' + money(price), l + 4, y - 4);
+        ctx.strokeStyle = L.c;
+        ctx.fillStyle = L.c;
+        seg(left, y, right, y);
+        let label = '';
+        if (st.showPercent) label += (L.r * 100).toFixed(1) + '%';
+        if (st.showPrices)  label += (label ? '  ' : '') + money(price);
+        if (label) ctx.fillText(label, left + 5, y - 4);
     });
     ctx.restore();
+}
+
+function drawFib(s, pts) {
+    const st = styleOf(s);
+    // Reverse swaps which end of the leg counts as zero.
+    const a = st.reverse ? s.pts[1].price : s.pts[0].price;
+    const b = st.reverse ? s.pts[0].price : s.pts[1].price;
+    const l = Math.min(pts[0].x, pts[1].x), r = Math.max(pts[0].x, pts[1].x);
+    ctx.save(); ctx.setLineDash([3, 3]); ctx.globalAlpha = .5;
+    ctx.strokeStyle = st.line;
+    seg(pts[0].x, pts[0].y, pts[1].x, pts[1].y);
+    ctx.restore();
+    drawLevels(s, l, r, f => b + (a - b) * f);
 }
 
 function drawFibExt(s, pts, st) {
@@ -1017,39 +1122,29 @@ function drawFibExt(s, pts, st) {
     ctx.restore();
     const base = s.pts[2].price, span = s.pts[1].price - s.pts[0].price;
     const l = Math.min(pts[0].x, pts[1].x, pts[2].x), r = Math.max(pts[0].x, pts[1].x, pts[2].x);
-    ctx.save();
-    FIBE.forEach((f, i) => {
-        const price = base + span * f, y = Y(price);
-        if (y === null) return;
-        ctx.strokeStyle = levelColour(i); ctx.fillStyle = ctx.strokeStyle;
-        seg(l, y, r + 70, y);
-        ctx.font = '12px "IBM Plex Mono", monospace';
-        ctx.fillText((f * 100).toFixed(1) + '%  ' + money(price), l + 4, y - 4);
-    });
-    ctx.restore();
+    drawLevels(s, l, r, f => base + span * f);
 }
 
-function drawFibFan(pts) {
+function drawFibFan(sh, pts) {
     const dx = pts[1].x - pts[0].x, dy = pts[1].y - pts[0].y;
     ctx.save();
-    FIB.forEach((f, i) => {
-        ctx.strokeStyle = levelColour(i);
-        seg(pts[0].x, pts[0].y, pts[0].x + dx * 6, pts[0].y + dy * f * 6);
+    levelsOf(sh).filter(L => L.on).forEach(L => {
+        ctx.strokeStyle = L.c;
+        seg(pts[0].x, pts[0].y, pts[0].x + dx * 6, pts[0].y + dy * L.r * 6);
     });
     ctx.restore();
 }
 
-function drawFibTime(pts, h) {
+function drawFibTime(sh, pts, h) {
     const dx = pts[1].x - pts[0].x;
-    const F = [0, 1, 2, 3, 5, 8, 13, 21];
     ctx.save();
-    F.forEach((f, i) => {
-        ctx.strokeStyle = levelColour(i);
-        ctx.fillStyle = ctx.strokeStyle;
-        const x = pts[0].x + dx * f;
+    ctx.font = '12px "IBM Plex Mono", monospace';
+    levelsOf(sh).filter(L => L.on).forEach(L => {
+        ctx.strokeStyle = L.c;
+        ctx.fillStyle = L.c;
+        const x = pts[0].x + dx * L.r;
         seg(x, 0, x, h);
-        ctx.font = '12px "IBM Plex Mono", monospace';
-        ctx.fillText(String(f), x + 3, 14);
+        ctx.fillText(String(L.r), x + 3, 14);
     });
     ctx.restore();
 }
@@ -1304,6 +1399,22 @@ function icon(name) {
            (ICO[name] || '') + '</svg>';
 }
 
+/* Starred tools. Forty tools behind seven fly-outs is thorough but slow when
+   you reach for the same four all day, so they can be pinned and are then one
+   right-click away anywhere on the chart. */
+let favTools = [];
+try { favTools = JSON.parse(localStorage.getItem('bt.replay.favtools') || 'null') ||
+                 ['trend', 'hline', 'fib', 'position']; }
+catch (e) { favTools = ['trend', 'hline', 'fib', 'position']; }
+function saveFavTools() {
+    try { localStorage.setItem('bt.replay.favtools', JSON.stringify(favTools)); } catch (e) {}
+}
+function toggleFavTool(t) {
+    const i = favTools.indexOf(t);
+    if (i >= 0) favTools.splice(i, 1); else favTools.push(t);
+    saveFavTools();
+}
+
 let railEl = null, openFly = null;
 let groupPick = {};
 try { groupPick = JSON.parse(localStorage.getItem('bt.replay.grouppick') || '{}'); }
@@ -1371,7 +1482,11 @@ function buildRail() {
         }));
 
     document.addEventListener('mousedown', e => {
-        if (openFly && !e.target.closest('.rp-flyout, .rp-tgroup')) closeFly();
+        // Not every mousedown targets an element — a document- or text-node
+        // target has no closest() and threw straight through this handler.
+        if (!openFly) return;
+        const t = e.target;
+        if (!t || typeof t.closest !== 'function' || !t.closest('.rp-flyout, .rp-tgroup')) closeFly();
     });
 }
 
@@ -1380,13 +1495,23 @@ function flyout(g, el) {
     const box = document.createElement('div');
     box.className = 'rp-flyout';
     box.innerHTML = '<h5>' + g.name + '</h5>' + g.tools.map(t =>
-        '<button data-tool="' + t + '"' + (tool === t ? ' class="on"' : '') + '>' +
-          icon(t) + '<span>' + T[t].name + '</span></button>').join('');
+        '<div class="rp-fly-row">' +
+          '<button data-tool="' + t + '"' + (tool === t ? ' class="on"' : '') + '>' +
+            icon(t) + '<span>' + T[t].name + '</span></button>' +
+          '<button class="rp-fly-star' + (favTools.indexOf(t) >= 0 ? ' on' : '') +
+            '" data-fav="' + t + '" title="Pin to the right-click menu">&#9733;</button>' +
+        '</div>').join('');
     document.body.appendChild(box);
     const r = el.getBoundingClientRect();
     box.style.left = (r.right + 6) + 'px';
     box.style.top = Math.max(8, Math.min(window.innerHeight - box.offsetHeight - 8, r.top - 4)) + 'px';
-    box.querySelectorAll('button').forEach(b =>
+    box.querySelectorAll('[data-fav]').forEach(b =>
+        b.addEventListener('click', e => {
+            e.stopPropagation();
+            toggleFavTool(b.dataset.fav);
+            b.classList.toggle('on');
+        }));
+    box.querySelectorAll('[data-tool]').forEach(b =>
         b.addEventListener('click', () => {
             const t = b.dataset.tool;
             groupPick[g.id] = t;
@@ -1681,14 +1806,35 @@ function openSettings(id, focusText) {
         body += row('Fill opacity', '<input type="range" min="0" max="100" data-s="fillOpacity" data-pct value="' +
             Math.round(st.fillOpacity * 100) + '">');
     }
-    if (kind === 'line') {
+    if (kind === 'line' || spec(s).extend) {
         body += row('Extend left', '<input type="checkbox" data-s="extendLeft"' + (st.extendLeft ? ' checked' : '') + '>');
         body += row('Extend right', '<input type="checkbox" data-s="extendRight"' + (st.extendRight ? ' checked' : '') + '>');
+    }
+    if (kind === 'line') {
         body += row('Arrow head', '<input type="checkbox" data-s="arrowRight"' + (st.arrowRight ? ' checked' : '') + '>');
         body += row('Show angle', '<input type="checkbox" data-s="showAngle"' + (st.showAngle ? ' checked' : '') + '>');
     }
+    if (kind === 'channel') {
+        body += row('Centre line', '<input type="checkbox" data-s="middle"' + (st.middle ? ' checked' : '') + '>');
+    }
     if (cap === 'line' || cap === 'area') {
         body += row('Show stats', '<input type="checkbox" data-s="showLabels"' + (st.showLabels ? ' checked' : '') + '>');
+    }
+    if (spec(s).levels) {
+        body += row('Reverse', '<input type="checkbox" data-s="reverse"' + (st.reverse ? ' checked' : '') + '>');
+        body += row('Show ratios', '<input type="checkbox" data-s="showPercent"' + (st.showPercent ? ' checked' : '') + '>');
+        body += row('Show prices', '<input type="checkbox" data-s="showPrices"' + (st.showPrices ? ' checked' : '') + '>');
+        body += row('Shade between', '<input type="checkbox" data-s="fillLevels"' + (st.fillLevels ? ' checked' : '') + '>');
+        body += '<div class="rp-lv-head"><span>Levels</span>' +
+                '<button data-act="lvreset" title="Back to the defaults">Reset</button></div>' +
+                '<div class="rp-lv-list">' + levelsOf(s).map((L, i) =>
+                  '<div class="rp-lv-row" data-lv="' + i + '">' +
+                    '<input type="checkbox" data-lk="on"' + (L.on ? ' checked' : '') + '>' +
+                    '<input type="number" step="any" data-lk="r" value="' + L.r + '">' +
+                    '<input type="color" data-lk="c" value="' + L.c + '">' +
+                    '<button data-lvdel="' + i + '" title="Remove">&times;</button>' +
+                  '</div>').join('') + '</div>' +
+                '<button class="rp-btn full" data-act="lvadd">+ Add level</button>';
     }
     if (kind === 'position') {
         const entry = s.pts[0].price, stop = s.pts[1].price;
@@ -1746,6 +1892,50 @@ function openSettings(id, focusText) {
             render(); readout(sh);
             if (onChange) onChange(serialize());
         }));
+
+    // Levels are edited in place; the shape keeps its own copy so two fibs on
+    // one chart can carry different sets.
+    function writeLevels(next) {
+        const sh = shapes.find(x => x.id === cfgId);
+        if (!sh) return;
+        sh.style = Object.assign(styleOf(sh), { levels: next });
+        rememberStyle(sh);
+        commit();
+        openSettings(cfgId);
+    }
+    cfgEl.querySelectorAll('.rp-lv-row [data-lk]').forEach(inp =>
+        inp.addEventListener('input', () => {
+            const sh = shapes.find(x => x.id === cfgId);
+            if (!sh) return;
+            const i = +inp.closest('.rp-lv-row').dataset.lv;
+            const next = levelsOf(sh).map(L => ({ r: L.r, on: L.on, c: L.c }));
+            const k = inp.dataset.lk;
+            next[i][k] = k === 'on' ? inp.checked : k === 'r' ? parseFloat(inp.value) : inp.value;
+            sh.style = Object.assign(styleOf(sh), { levels: next });
+            rememberStyle(sh);
+            render();
+            if (onChange) onChange(serialize());
+        }));
+    cfgEl.querySelectorAll('[data-lvdel]').forEach(b =>
+        b.addEventListener('click', () => {
+            const sh = shapes.find(x => x.id === cfgId);
+            if (!sh) return;
+            const next = levelsOf(sh).filter((_, i) => i !== +b.dataset.lvdel);
+            writeLevels(next);
+        }));
+    const lvAdd = cfgEl.querySelector('[data-act="lvadd"]');
+    if (lvAdd) lvAdd.addEventListener('click', () => {
+        const sh = shapes.find(x => x.id === cfgId);
+        if (!sh) return;
+        const cur = levelsOf(sh).map(L => ({ r: L.r, on: L.on, c: L.c }));
+        cur.push({ r: 1.618, on: true, c: LEVEL_COLOURS[cur.length % LEVEL_COLOURS.length] });
+        writeLevels(cur);
+    });
+    const lvReset = cfgEl.querySelector('[data-act="lvreset"]');
+    if (lvReset) lvReset.addEventListener('click', () => {
+        const sh = shapes.find(x => x.id === cfgId);
+        if (sh) writeLevels(lvl(DEFAULT_LEVELS[spec(sh).levels] || []));
+    });
 
     const dirSel = cfgEl.querySelector('[data-dir]');
     if (dirSel) dirSel.addEventListener('change', () => {
