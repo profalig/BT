@@ -307,8 +307,8 @@
                     <span class="branch-dot"></span>
                     <span class="branch-card">
                         <span class="branch-tag">03</span>
-                        <span class="branch-title">System Databank</span>
-                        <span class="branch-sub">A curated vault of tested strategies</span>
+                        <span class="branch-title">System Building Factory</span>
+                        <span class="branch-sub">Where tested systems are built and released</span>
                     </span>
                 </a>
                 <a class="branch" data-id="campus" data-side="right" style="--bx:69%; --by:55%; --px:55%; --py:54%">
@@ -316,7 +316,7 @@
                     <span class="branch-dot"></span>
                     <span class="branch-card">
                         <span class="branch-tag">04</span>
-                        <span class="branch-title">Backtesting Campus</span>
+                        <span class="branch-title">Trading Campus</span>
                         <span class="branch-sub">Learn to build and prove your own edge</span>
                     </span>
                 </a>
@@ -325,7 +325,7 @@
                     <span class="branch-dot"></span>
                     <span class="branch-card">
                         <span class="branch-tag">05</span>
-                        <span class="branch-title">About The Factory</span>
+                        <span class="branch-title">About BarTest</span>
                         <span class="branch-sub">How the numbers are actually produced</span>
                     </span>
                 </a>
@@ -402,7 +402,6 @@
 
     <!-- HUD MODULE OVERLAY -->
     <div id="cinematic-overlay">
-        <button id="return-btn"><i class="fa-solid fa-plane-departure"></i> DISENGAGE TRACKING</button>
         <div class="module-details">
             <div class="corner-bracket top-left"></div><div class="corner-bracket top-right"></div>
             <div class="corner-bracket bottom-left"></div><div class="corner-bracket bottom-right"></div>
@@ -414,6 +413,7 @@
             <ul class="module-points" id="module-points"></ul>
             <div class="stats-grid" id="stats-grid"></div>
             <button class="action-btn" id="module-action-btn">INITIALIZE MODULE <i class="fa-solid fa-chevron-right"></i></button>
+            <button id="return-btn"><i class="fa-solid fa-arrow-left-long"></i> BACK TO THE TREE</button>
         </div>
     </div>
 
@@ -424,26 +424,65 @@
         
         <div class="submission-console">
             <button id="abort-console-btn"><i class="fa-solid fa-xmark"></i> ABORT UPLINK</button>
+
             <div class="console-header">
+                <span class="console-kicker">// SEC-01 &middot; BACKTEST MACHINE</span>
                 <h2>SYSTEM SUBMISSION PROTOCOL</h2>
-                <p>Deploy your system architecture to our core. Submitting consumes <b>1 Backtest Credit</b> from your account.</p>
+                <p>Describe your system once. It is run against real historical data across
+                   bull, bear and ranging markets, and comes back as a full report.</p>
             </div>
 
-            <form id="system-submit-form">
-                <div class="input-group">
-                    <label>SYSTEM DESIGNATION</label>
-                    <input type="text" id="system-name" placeholder="e.g., Mean Reversion Alpha v2" required>
-                </div>
-                <div class="input-group">
-                    <label>CONTACT COMM-LINK (Email)</label>
-                    <input type="email" id="contact-email" placeholder="Where should we send the data analysis?" required>
-                </div>
-                <div class="input-group">
-                    <label>SYSTEM ARCHITECTURE & RULES</label>
-                    <textarea id="system-rules" placeholder="Define your logic. Include entry/exit criteria, timeframes, asset classes, and risk management parameters..." rows="6" required></textarea>
-                </div>
-                <button type="submit" id="submit-btn" class="submit-system-btn">INITIATE DEEP BACKTEST (1 CREDIT) <i class="fa-solid fa-bolt"></i></button>
-            </form>
+            <div class="console-grid">
+                <form id="system-submit-form">
+                    <div class="input-group">
+                        <label><span class="ig-step">1</span> SYSTEM DESIGNATION</label>
+                        <input type="text" id="system-name" placeholder="e.g., Mean Reversion Alpha v2" required>
+                    </div>
+                    <div class="input-group">
+                        <label><span class="ig-step">2</span> CONTACT COMM-LINK (Email)</label>
+                        <input type="email" id="contact-email" placeholder="Where should we send the data analysis?" required>
+                    </div>
+                    <div class="input-group">
+                        <label><span class="ig-step">3</span> SYSTEM ARCHITECTURE &amp; RULES</label>
+                        <textarea id="system-rules" placeholder="Define your logic. Include entry/exit criteria, timeframes, asset classes, and risk management parameters..." rows="7" required></textarea>
+                        <span class="ig-hint">The more exact the rules, the less we have to assume.</span>
+                    </div>
+                    <button type="submit" id="submit-btn" class="submit-system-btn">INITIATE DEEP BACKTEST (1 CREDIT) <i class="fa-solid fa-bolt"></i></button>
+                </form>
+
+                <aside class="console-rail">
+                    <div class="rail-card rail-credits">
+                        <div class="rail-credit-n" id="console-credits">&mdash;</div>
+                        <div class="rail-credit-l">BACKTEST CREDITS</div>
+                        <div class="rail-credit-who" id="console-who">not signed in</div>
+                    </div>
+
+                    <button type="button" id="console-reports-btn" class="rail-btn primary">
+                        <i class="fa-solid fa-folder-open"></i> MY REPORTS
+                    </button>
+                    <button type="button" id="console-plans-btn" class="rail-btn">
+                        <i class="fa-solid fa-plus"></i> GET MORE CREDITS
+                    </button>
+
+                    <div class="rail-card">
+                        <div class="rail-title">WHAT COMES BACK</div>
+                        <ul class="rail-list">
+                            <li><i class="fa-solid fa-layer-group"></i>
+                                <span><b>Multi-regime results</b>Bull, bear and ranging — not one lucky stretch.</span></li>
+                            <li><i class="fa-solid fa-list-check"></i>
+                                <span><b>Every trade, listed</b>Entries, exits and execution times, wins and losses alike.</span></li>
+                            <li><i class="fa-solid fa-file-pdf"></i>
+                                <span><b>A PDF report</b>Win rate, drawdown, profit factor and the compounding curve.</span></li>
+                        </ul>
+                    </div>
+
+                    <p class="rail-foot">
+                        <i class="fa-solid fa-clock"></i>
+                        Reports are compiled by hand by the engineering desk, so they take a
+                        little time. You are emailed the moment yours is ready.
+                    </p>
+                </aside>
+            </div>
         </div>
     </div>
 
@@ -506,7 +545,7 @@
                     <button class="tier-btn select-tier-btn" data-plan="Backtest Access" data-tier="machine" data-price-id="price_1U16NFCWCAQzKASWoUezwHKg" data-credits="3" data-mode="payment">PAY WITH CARD ($29)</button>
                     
                     <!-- NEW CRYPTO BUTTON -->
-                    <button class="tier-btn crypto-pay-btn" onclick="openCryptoModal('Backtest Access', 29, 3)" style="margin-top: 8px; border-color: #00ff66; color: #00ff66; background: rgba(0, 255, 102, 0.05); font-weight: bold;">
+                    <button class="tier-btn crypto-pay-btn" onclick="openCryptoModal('Backtest Access', 29, 3, 'machine')" style="margin-top: 8px; border-color: #00ff66; color: #00ff66; background: rgba(0, 255, 102, 0.05); font-weight: bold;">
                         <i class="fa-solid fa-coins"></i> PAY WITH USDC
                     </button>
                 </div>
@@ -526,7 +565,7 @@
                     <button class="tier-btn featured-btn select-tier-btn" data-plan="Replay Access" data-tier="replay" data-price-id="price_1U16Q9CWCAQzKASWjG2gvbvf" data-credits="0" data-mode="payment"><i class="fa-solid fa-bolt"></i> PAY WITH CARD ($79)</button>
 
                     <!-- NEW CRYPTO BUTTON -->
-                    <button class="tier-btn crypto-pay-btn" onclick="openCryptoModal('Replay Access', 79, 0)" style="margin-top: 8px; border-color: #00ff66; color: #00ff66; background: rgba(0, 255, 102, 0.1); font-weight: bold;">
+                    <button class="tier-btn crypto-pay-btn" onclick="openCryptoModal('Replay Access', 79, 0, 'replay')" style="margin-top: 8px; border-color: #00ff66; color: #00ff66; background: rgba(0, 255, 102, 0.1); font-weight: bold;">
                         <i class="fa-solid fa-coins"></i> PAY WITH USDC
                     </button>
                 </div>
@@ -545,7 +584,7 @@
                     <button class="tier-btn select-tier-btn" data-plan="Full Access" data-tier="full" data-price-id="price_1U16RuCWCAQzKASW1SCBeQhn" data-credits="40" data-mode="subscription" style="border-color:#ffd700; color:#ffd700;"><i class="fa-solid fa-crown"></i> CARD SUB ($199)</button>
 
                     <!-- NEW CRYPTO BUTTON -->
-                    <button class="tier-btn crypto-pay-btn" onclick="openCryptoModal('Full Access', 199, 40)" style="margin-top: 8px; border-color: #ffd700; color: #ffd700; background: rgba(255, 215, 0, 0.05); font-weight: bold;">
+                    <button class="tier-btn crypto-pay-btn" onclick="openCryptoModal('Full Access', 199, 40, 'full')" style="margin-top: 8px; border-color: #ffd700; color: #ffd700; background: rgba(255, 215, 0, 0.05); font-weight: bold;">
                         <i class="fa-solid fa-coins"></i> PAY WITH USDC
                     </button>
                 </div>
@@ -553,7 +592,7 @@
 
             <p class="sub-note">
                 <i class="fa-solid fa-screwdriver-wrench"></i>
-                <span><b>Backtesting Campus</b> and the <b>System Databank</b> are still under
+                <span><b>Trading Campus</b> and the <b>System Building Factory</b> are still under
                 development and are not part of any tier yet. They will be added as they open —
                 no tier is priced for them today.</span>
             </p>
@@ -778,7 +817,7 @@
         
         <!-- Header -->
         <div class="databank-header">
-          <h2>SEC-02 // SYSTEM DATABANK</h2>
+          <h2>SEC-02 // SYSTEM BUILDING FACTORY</h2>
           <button class="close-btn" onclick="closeDatabankModal()">[X]</button>
         </div>
     

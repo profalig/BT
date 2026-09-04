@@ -1461,15 +1461,24 @@ body.dock-collapsed .rp-tab-icon i { transform: rotate(180deg); }
     font-size: .64rem; font-weight: 800; letter-spacing: 1.4px;
     padding: 3px 8px; border-radius: 20px;
 }
-.rp-preview-text { flex: 1 1 auto; min-width: 0; }
+.rp-preview-text { flex: 0 1 auto; min-width: 0; }
+.rp-preview-fill { flex: 1 1 auto; }
 .rp-preview-cta {
-    flex: 0 0 auto;
+    display: inline-flex; align-items: center; gap: 7px;
+    flex: 0 0 auto; margin-left: -2px;
     background: var(--accent); color: #17130a;
-    border: none; border-radius: var(--radius);
-    padding: 6px 14px; font: inherit; font-size: .84rem; font-weight: 700;
+    border: none; border-radius: 20px;
+    padding: 5px 13px 5px 10px; font: inherit; font-size: .83rem; font-weight: 700;
     cursor: pointer;
+    box-shadow: 0 2px 10px rgba(247,166,0,.28);
 }
-.rp-preview-cta:hover { filter: brightness(1.08); }
+.rp-preview-cta:hover { filter: brightness(1.09); transform: translateY(-1px); }
+.rp-preview-cta svg { flex: 0 0 auto; }
+
+@media (max-width: 720px) {
+    .rp-preview { flex-wrap: wrap; gap: 8px; }
+    .rp-preview-fill { display: none; }
+}
 
 /* A locked control still looks like itself — it has to, or the preview stops
    showing what the product is — but it says it is locked on hover. */

@@ -1,6 +1,7 @@
 import os
 import time
 import json
+import datetime
 import requests
 import threading
 import stripe
@@ -112,6 +113,63 @@ def verify_ethereum_usdc_tx(tx_hash, required_usdc_amount):
         return False, f"Ethereum RPC Error: {str(e)}"
 
 # ==========================================
+# PLAN HELPERS
+# ==========================================
+VALID_PLANS = ("machine", "replay", "full")
+
+def clean_plan(raw):
+    """machine | replay | full, or "" for anything else."""
+    p = (raw or "")
+    if not isinstance(p, str):
+        p = str(p)
+    p = p.strip().lower()
+    return p if p in VALID_PLANS else ""
+
+def set_plan(user_id, plan_key, status="active", expires_at=None):
+    """Write the plan to user_profiles.
+
+    Deliberately isolated and swallowed. Three of these columns may not exist
+    yet -- see the note in bt-access.js -- and a payment must never fail
+    because the schema has not caught up:
+
+        alter table user_profiles add column plan text;
+        alter table user_profiles add column plan_status text;
+        alter table user_profiles add column plan_expires_at timestamptz;
+    """
+    if not user_id or not plan_key:
+        return
+    payload = {"plan": plan_key, "plan_status": status}
+    if expires_at:
+        payload["plan_expires_at"] = expires_at
+    try:
+        supabase.table("user_profiles").update(payload).eq("id", user_id).execute()
+        print(f"🎫 PLAN: {user_id} -> {plan_key} ({status})")
+    except Exception as e:
+        # Retry with the plan alone, in case only the newer columns are missing.
+        try:
+            supabase.table("user_profiles").update({"plan": plan_key}).eq("id", user_id).execute()
+            print(f"🎫 PLAN (basic): {user_id} -> {plan_key}. Add plan_status / "
+                  f"plan_expires_at for renewals and cancellations. ({e})")
+        except Exception as e2:
+            print(f"❌ Plan write failed (is the `plan` column there?): {e2}")
+
+def plan_for_stripe_customer(customer_id):
+    """Which user a Stripe customer belongs to, for renewals and cancellations
+    that arrive with no client_reference_id on them."""
+    if not customer_id:
+        return None
+    try:
+        res = supabase.table("user_profiles").select("id") \
+            .eq("stripe_customer_id", customer_id).execute()
+        if res.data:
+            return res.data[0].get("id")
+    except Exception as e:
+        print(f"⚠️ Cannot map Stripe customer {customer_id} "
+              f"(add a stripe_customer_id column to user_profiles): {e}")
+    return None
+
+
+# ==========================================
 # 2. HTTP SERVER & STRIPE WEBHOOK HANDLER
 # ==========================================
 class WebhookAndHealthHandler(BaseHTTPRequestHandler):
@@ -152,7 +210,7 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                 checkout_mode = data.get("mode", "payment")
                 # machine | replay | full. Rides along in the session metadata
                 # and is written to user_profiles.plan when payment completes.
-                plan_key = data.get("planKey", "") or ""
+                plan_key = clean_plan(data.get("planKey"))
 
                 origin = self.headers.get("Origin", "https://your-frontend-domain.com")
 
@@ -220,10 +278,13 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                 customer_email = customer_details.get("email") if hasattr(customer_details, "get") else getattr(customer_details, "email", None)
                 
                 credits_str = metadata.get("credits", "0") if hasattr(metadata, "get") else getattr(metadata, "credits", "0")
-                plan_key = metadata.get("plan", "") if hasattr(metadata, "get") else getattr(metadata, "plan", "")
-                plan_key = (plan_key or "").strip().lower()
-                if plan_key not in ("machine", "replay", "full"):
-                    plan_key = ""
+                plan_key = clean_plan(
+                    metadata.get("plan", "") if hasattr(metadata, "get")
+                    else getattr(metadata, "plan", ""))
+                stripe_customer = (session_obj.get("customer") if hasattr(session_obj, "get")
+                                   else getattr(session_obj, "customer", None))
+                stripe_sub = (session_obj.get("subscription") if hasattr(session_obj, "get")
+                              else getattr(session_obj, "subscription", None))
 
                 try:
                     credits_purchased = int(credits_str)
@@ -266,17 +327,77 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                     print("⚠️ SKIPPED CREDIT UPDATE: Either User ID is missing or Credits equals 0.")
 
                 # The plan is written on its own, for two reasons: the Replay
-                # tier grants no credits at all, so the block above is skipped
-                # for it entirely; and until `alter table user_profiles add
-                # column plan text;` has been run this update fails, which must
-                # never take the credit grant down with it.
-                if user_id and plan_key:
+                # tier grants no credits at all, so the credit block above is
+                # skipped for it entirely; and the columns may not exist yet,
+                # which must never take the credit grant down with it.
+                set_plan(user_id, plan_key)
+
+                # Keep the Stripe ids so a renewal or a cancellation -- which
+                # arrive with no reference to our user -- can be matched back.
+                if user_id and (stripe_customer or stripe_sub):
+                    ids = {}
+                    if stripe_customer:
+                        ids["stripe_customer_id"] = str(stripe_customer)
+                    if stripe_sub:
+                        ids["stripe_subscription_id"] = str(stripe_sub)
                     try:
-                        supabase.table("user_profiles").update(
-                            {"plan": plan_key}).eq("id", user_id).execute()
-                        print(f"🎫 PLAN SET: User {user_id} is now on '{plan_key}'.")
+                        supabase.table("user_profiles").update(ids).eq("id", user_id).execute()
                     except Exception as e:
-                        print(f"❌ Plan update failed (is the `plan` column there?): {e}")
+                        print(f"⚠️ Could not store Stripe ids "
+                              f"(add stripe_customer_id / stripe_subscription_id): {e}")
+
+            # --------------------------------------------------------------
+            # A subscription that lapses has to actually close the door. Card
+            # declined, cancelled, refunded: without these three the customer
+            # keeps everything they stopped paying for.
+            # --------------------------------------------------------------
+            elif event["type"] in ("customer.subscription.updated",
+                                   "customer.subscription.deleted"):
+                sub_obj = event["data"]["object"]
+                get = (lambda k, d=None: sub_obj.get(k, d)) if hasattr(sub_obj, "get") \
+                    else (lambda k, d=None: getattr(sub_obj, k, d))
+                customer_id = get("customer")
+                status = str(get("status", "") or "")
+                period_end = get("current_period_end")
+                uid = plan_for_stripe_customer(customer_id)
+
+                if not uid:
+                    print(f"⚠️ Subscription {status} for unknown customer {customer_id}.")
+                else:
+                    metadata = get("metadata", {}) or {}
+                    plan_key = clean_plan(metadata.get("plan") if hasattr(metadata, "get") else None)
+                    alive = (event["type"] != "customer.subscription.deleted"
+                             and status in ("active", "trialing"))
+                    try:
+                        expires = (datetime.datetime.utcfromtimestamp(int(period_end)).isoformat() + "Z") \
+                            if period_end else None
+                    except Exception:
+                        expires = None
+
+                    if alive:
+                        # The plan itself does not change on a renewal, only how
+                        # long it runs for, so only overwrite it when Stripe
+                        # actually tells us which one.
+                        if plan_key:
+                            set_plan(uid, plan_key, "active", expires)
+                        else:
+                            try:
+                                payload = {"plan_status": "active"}
+                                if expires:
+                                    payload["plan_expires_at"] = expires
+                                supabase.table("user_profiles").update(payload) \
+                                    .eq("id", uid).execute()
+                            except Exception as e:
+                                print(f"⚠️ Could not extend subscription for {uid}: {e}")
+                        print(f"🔁 SUBSCRIPTION ACTIVE: {uid} until {expires}")
+                    else:
+                        try:
+                            supabase.table("user_profiles").update(
+                                {"plan": None, "plan_status": status or "canceled"}
+                            ).eq("id", uid).execute()
+                            print(f"🚪 SUBSCRIPTION CLOSED: {uid} ({status})")
+                        except Exception as e:
+                            print(f"❌ Could not close subscription for {uid}: {e}")
 
             self.send_response(200)
             self._set_cors_headers()
@@ -296,6 +417,7 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                 credits_to_add = int(data.get("creditsToAdd", 0))
                 price_usdc = float(data.get("priceUsdc", 0.0))
                 plan_name = data.get("planName", "USDC Plan")
+                plan_key = clean_plan(data.get("planKey"))
 
                 if not user_id or not tx_hash:
                     self.send_response(400)
@@ -346,12 +468,20 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                     new_credits = credits_to_add
                     supabase.table("user_profiles").insert({"id": user_id, "credits": new_credits}).execute()
 
-                # 5. Telegram Notification
+                # 5. Grant the plan. A USDC payment buys exactly what the card
+                #    buys; only the rail is different. It is one-off rather than
+                #    recurring, so it carries its own expiry.
+                if plan_key:
+                    expires = (datetime.datetime.utcnow() +
+                               datetime.timedelta(days=30)).isoformat() + "Z"
+                    set_plan(user_id, plan_key, "active", expires)
+
+                # 6. Telegram Notification
                 explorer_url = f"https://solscan.io/tx/{tx_hash}" if network == "solana" else f"https://etherscan.io/tx/{tx_hash}"
                 send_telegram_alert(
                     f"⚡ <b>AUTOMATED USDC PAYMENT VERIFIED!</b>\n\n"
                     f"👤 <b>User ID:</b> <code>{user_id}</code>\n"
-                    f"📦 <b>Plan:</b> {plan_name}\n"
+                    f"📦 <b>Plan:</b> {plan_name}" + (f" ({plan_key})" if plan_key else "") + "\n"
                     f"💳 <b>Credits Added:</b> +{credits_to_add} (Total: {new_credits})\n"
                     f"🌐 <b>Network:</b> {network.upper()}\n"
                     f"🔗 <b>Tx:</b> <a href='{explorer_url}'>View on Explorer</a>"

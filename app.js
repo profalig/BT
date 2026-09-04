@@ -32,8 +32,8 @@ const planetData = {
         stats: [{ label: "MARKETS", val: "Crypto / FX" }, { label: "HISTORY", val: "Since 1999" }, { label: "FILLS", val: "1-Minute" }, { label: "EXPORT", val: "PDF / CSV" }]
     },
     databank: {
-        tag: "VAULT // SEC-02", title: "System Databank", color: "#e4e6ea",
-        lead: "A curated vault of quantitative trading strategies.",
+        tag: "FACTORY // SEC-02", title: "System Building Factory", color: "#e4e6ea",
+        lead: "Where quantitative trading systems are built and released.",
         body: "Every week our engineering team researches, refines and releases new algorithmic models across crypto and forex markets.",
         points: [
             { icon: "fa-flask", title: "Researched weekly",
@@ -46,7 +46,7 @@ const planetData = {
         stats: [{ label: "STATUS", val: "ONLINE" }, { label: "UPDATES", val: "Weekly" }, { label: "COVERAGE", val: "Crypto / FX" }, { label: "VALIDATION", val: "Required" }]
     },
     about: {
-        tag: "IDENTITY // SEC-03", title: "About The Factory", color: "#d2d5db",
+        tag: "IDENTITY // SEC-03", title: "About BarTest", color: "#d2d5db",
         lead: "Our numbers do not come out of thin air.",
         body: "We are professional quantitative backtesters delivering institutional-grade market data across multi-year historical cycles.",
         points: [
@@ -71,7 +71,7 @@ const planetData = {
         stats: [{ label: "COMM LINK", val: "Encrypted" }, { label: "RESPONSE", val: "Active" }, { label: "LOCATION", val: "Italy" }, { label: "NETWORK", val: "Open" }]
     },
     campus: {
-        tag: "ACADEMY // SEC-05", title: "Backtesting Campus", color: "#ffe9c4",
+        tag: "ACADEMY // SEC-05", title: "Trading Campus", color: "#ffe9c4",
         lead: "The training ground for quantitative analysis.",
         body: "Built to teach deep data analysis, AI applications, statistical study design and high-level data fetching.",
         points: [
@@ -727,7 +727,7 @@ function openService(id) {
     // the panel feel considered instead of dumped on screen.
     let i = 0;
     moduleDetails.querySelectorAll(
-        '.module-tag, h2, .module-rule, .module-lead, #module-desc, .module-point, .stat-card, .action-btn'
+        '.module-tag, h2, .module-rule, .module-lead, #module-desc, .module-point, .stat-card, .action-btn, #return-btn'
     ).forEach(el => el.style.setProperty('--i', i++));
 
     // About and Contact are read-only — nothing to initialise.
@@ -789,6 +789,7 @@ actionBtn.addEventListener('click', async () => {
         if (titleContainer) titleContainer.style.opacity = '0';
         if (authCorner) authCorner.style.opacity = '0';
         
+        fillConsoleRail();
         setTimeout(() => {
             const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
             if (gasAtmosphere) gasAtmosphere.classList.add('active');
@@ -801,8 +802,8 @@ actionBtn.addEventListener('click', async () => {
     } else if (activeServiceId === 'databank') {
         openDatabankModal();
     } else if (activeServiceId === 'campus') {
-        showTacticalModal('BACKTESTING CAMPUS',
-            'The Campus is still under development. Registrations of interest are open for the ' +
+        showTacticalModal('TRADING CAMPUS',
+            'The Trading Campus is still under development. Registrations of interest are open for the ' +
             'first Quantitative Engineering cohort — reach the engineering desk through ' +
             'Contact Us and you will be told the moment it opens.', true);
     }
@@ -824,6 +825,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 400);
         try { history.replaceState(null, '', location.pathname); } catch (e) {}
     }
+});
+
+/* The console's own rail: how many credits are left, whose account this is,
+   and a way to your reports without closing the console to find them. */
+async function fillConsoleRail() {
+    const n   = document.getElementById('console-credits');
+    const who = document.getElementById('console-who');
+    if (!n || !who) return;
+    n.textContent = '—';
+    who.textContent = 'checking…';
+    if (!window.BTAccess) { who.textContent = ''; return; }
+    try {
+        const a = await BTAccess.get(true);
+        n.textContent = a.signedIn ? String(a.credits) : '—';
+        who.textContent = a.signedIn
+            ? (a.planLabel ? a.email + ' · ' + a.planLabel : a.email)
+            : 'not signed in';
+    } catch (e) { who.textContent = ''; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const rep = document.getElementById('console-reports-btn');
+    if (rep) rep.addEventListener('click', openUserReportsModal);
+    const pl = document.getElementById('console-plans-btn');
+    if (pl) pl.addEventListener('click', openSubscriptionModal);
 });
 
 // ABORT CONSOLE BUTTON
@@ -1965,14 +1991,16 @@ let currentCryptoState = {
     planName: "",
     amount: 0,
     credits: 0,
+    planKey: "",        // machine | replay | full — same field the card path sends
     network: "solana"
 };
 
 // 2. Open Crypto Modal
-function openCryptoModal(planName, amount, credits) {
+function openCryptoModal(planName, amount, credits, planKey) {
     currentCryptoState.planName = planName;
     currentCryptoState.amount = amount;
     currentCryptoState.credits = credits;
+    currentCryptoState.planKey = planKey || '';
     currentCryptoState.network = "solana"; // Default network
 
     // Update UI elements
@@ -2065,7 +2093,8 @@ async function submitTransactionForVerification() {
                 network: currentCryptoState.network,
                 creditsToAdd: currentCryptoState.credits,
                 priceUsdc: currentCryptoState.amount,
-                planName: currentCryptoState.planName
+                planName: currentCryptoState.planName,
+                planKey: currentCryptoState.planKey
             })
         });
 
