@@ -41,6 +41,9 @@
             </select>
         </label>
         <span class="rp-mode" id="rp-mode">BROWSE</span>
+        <span class="rp-live" id="rp-live" hidden>
+            <span class="rp-live-dot"></span>LIVE <b id="rp-livePrice">—</b>
+        </span>
     </div>
 
     <div class="rp-account">
@@ -63,7 +66,7 @@
         <div id="rp-hud" class="rp-hud" hidden>
             <div id="rp-cutbar" class="rp-cutbar">
                 <i class="fa-solid fa-scissors"></i>
-                <span class="rp-hud-text">Click any candle to cut the chart there &mdash; or</span>
+                <span class="rp-hud-text"><b>Double-click a candle</b> to replay from there &mdash; or</span>
                 <input type="date" id="rp-date">
                 <button id="rp-jump" class="rp-btn">Use date</button>
                 <span class="rp-cut-label" id="rp-cut-label">no point chosen</span>
@@ -80,7 +83,10 @@
             <button id="rp-playpause" class="rp-btn" title="Play / pause  (Space)">
                 <i class="fa-solid fa-play"></i>
             </button>
-            <button id="rp-step" class="rp-btn" title="Step one bar  (→)">
+            <button id="rp-back" class="rp-btn" title="Back one bar  (←)">
+                <i class="fa-solid fa-backward-step"></i>
+            </button>
+            <button id="rp-step" class="rp-btn" title="Forward one bar  (→)">
                 <i class="fa-solid fa-forward-step"></i>
             </button>
             <label class="rp-speed">

@@ -77,6 +77,11 @@ const S = {
 
     playing: false,
     speed: 6,
+    // One snapshot per revealed candle so stepping back is exact — it must
+    // rewind the account too, not just the chart, or the log would show
+    // trades that have not happened yet.
+    marks: [],
+    ws: null,
 
     startBalance: 10000,
     balance: 10000,
@@ -142,10 +147,21 @@ function buildChart() {
         if (r && r.from < 12) loadOlder();
     });
 
-    // Click a bar to choose the replay cut point.
+    // Single click marks the cut, double click commits it. Marking only was
+    // not enough: the natural gesture is to double-click a candle and expect
+    // the chart to cut there, and when nothing happened the forward candles
+    // stayed on screen with no way to advance.
+    let lastClickAt = 0, lastClickTime = null;
     chart.subscribeClick(param => {
         if (S.mode !== 'browse' || !param.time) return;
-        setCutPoint(param.time * 1000);
+        const now = Date.now(), ms = param.time * 1000;
+        if (now - lastClickAt < 450 && lastClickTime === param.time) {
+            setCutPoint(ms);
+            startReplay();
+        } else {
+            setCutPoint(ms);
+        }
+        lastClickAt = now; lastClickTime = param.time;
     });
 }
 
@@ -200,6 +216,7 @@ async function loadChart(preserveView) {
         hideStatus();
         $('rp-hud').hidden = false;
         updateModeUI();
+        openStream();
     } catch (e) {
         status('Could not load market data: ' + e.message +
                '. Binance may be unreachable from your network.', 'error');
@@ -218,6 +235,45 @@ async function loadOlder() {
         paint();
     } catch (e) { /* leave the chart as-is; panning simply stops extending */ }
     finally { S.loadingOlder = false; }
+}
+
+// ------------------------------------------------------- live price stream
+
+// Browse should be a LIVE chart, not a snapshot that goes stale until you
+// reload. Binance publishes a kline websocket per symbol and interval; the
+// open candle is updated in place on every tick and appended when it closes.
+function closeStream() {
+    if (S.ws) { try { S.ws.onclose = null; S.ws.close(); } catch (e) {} S.ws = null; }
+    $('rp-live').hidden = true;
+}
+
+function openStream() {
+    closeStream();
+    if (S.mode !== 'browse') return;
+    const stream = S.symbol.toLowerCase() + '@kline_' + TF_LABEL[S.tfMin];
+    let ws;
+    try { ws = new WebSocket('wss://stream.binance.com:9443/ws/' + stream); }
+    catch (e) { return; }
+    S.ws = ws;
+
+    ws.onopen = () => { $('rp-live').hidden = false; };
+    ws.onmessage = ev => {
+        if (S.mode !== 'browse') return;
+        let k;
+        try { k = JSON.parse(ev.data).k; } catch (e) { return; }
+        if (!k) return;
+        const bar = { time: k.t / 1000, open: +k.o, high: +k.h, low: +k.l, close: +k.c };
+        const last = S.hist[S.hist.length - 1];
+        if (last && last.time === bar.time) S.hist[S.hist.length - 1] = bar;
+        else if (!last || bar.time > last.time) S.hist.push(bar);
+        else return;
+        // update() rather than setData(): repainting the whole series on every
+        // tick would fight the user's pan and zoom.
+        try { series.update(bar); } catch (e) { paint(); }
+        $('rp-livePrice').textContent = fmt(bar.close);
+    };
+    ws.onclose = () => { $('rp-live').hidden = true; S.ws = null; };
+    ws.onerror  = () => { $('rp-live').hidden = true; };
 }
 
 // --------------------------------------------------------------- cut point
@@ -248,6 +304,7 @@ function exitReplayState() {
     S.mode = 'browse';
     S.cursorMs = null; S.bars1m = []; S.fillIdx = 0;
     S.working = null; S.revealed = []; S.exhausted = false;
+    S.marks = [];
     S.playing = false;
     clearPositionLines();
     updateModeUI();
@@ -266,6 +323,7 @@ async function startReplay() {
     // filters it to nothing and leaves an empty chart. Fetch the bars that
     // actually precede the cut instead, and only fall back to filtering when
     // the cut lands inside the window we happen to hold.
+    closeStream();      // replay is historical; a live tick would corrupt it
     status('Loading context before the cut…');
     const preloaded = S.hist.filter(b => b.time * 1000 < ms);
     if (preloaded.length >= 200) {
@@ -283,6 +341,7 @@ async function startReplay() {
     S.cursorMs = ms;
     S.mode = 'replay';
     S.bars1m = []; S.fillIdx = 0; S.working = null; S.revealed = [];
+    S.marks = [];
     S.exhausted = false; S.playing = false;
     S.balance = S.startBalance; S.position = null; S.trades = [];
     S.peakEquity = S.startBalance; S.maxDD = 0;
@@ -348,6 +407,18 @@ async function stepBar() {
         }
         return;
     }
+    S.marks.push({
+        fillIdx: S.fillIdx,
+        revealedLen: S.revealed.length,
+        working: S.working ? Object.assign({}, S.working) : null,
+        balance: S.balance,
+        tradesLen: S.trades.length,
+        position: S.position ? Object.assign({}, S.position) : null,
+        peakEquity: S.peakEquity,
+        maxDD: S.maxDD
+    });
+    if (S.marks.length > 5000) S.marks.shift();
+
     let closed = false;
     while (S.fillIdx < S.bars1m.length && !closed) {
         const b = S.bars1m[S.fillIdx++];
@@ -357,6 +428,26 @@ async function stepBar() {
     }
     paint();
     updateEquity();
+    $('rp-clock').textContent = S.working ? iso(S.working.time * 1000) : '—';
+}
+
+function stepBack() {
+    if (S.mode !== 'replay') return;
+    const m = S.marks.pop();
+    if (!m) return;
+    S.playing = false; syncTransport();
+    S.fillIdx = m.fillIdx;
+    S.revealed.length = m.revealedLen;
+    S.working = m.working;
+    S.balance = m.balance;
+    S.trades.length = m.tradesLen;      // un-happen anything after this bar
+    S.position = m.position;
+    S.peakEquity = m.peakEquity;
+    S.maxDD = m.maxDD;
+    drawPositionLines();
+    paint();
+    updateEquity();
+    renderPosition(); renderStats(); renderLog(); syncOrderButtons();
     $('rp-clock').textContent = S.working ? iso(S.working.time * 1000) : '—';
 }
 
@@ -607,6 +698,7 @@ function init() {
     $('rp-step').addEventListener('click', () => {
         S.playing = false; syncTransport(); stepBar();
     });
+    $('rp-back').addEventListener('click', stepBack);
     $('rp-speed').addEventListener('input', e => {
         S.speed = +e.target.value;
         $('rp-speed-val').innerHTML = S.speed + '&times;';
@@ -625,6 +717,7 @@ function init() {
         if (/input|select|textarea/i.test(e.target.tagName)) return;
         if (e.code === 'Space')      { e.preventDefault(); $('rp-playpause').click(); }
         if (e.code === 'ArrowRight') { e.preventDefault(); $('rp-step').click(); }
+        if (e.code === 'ArrowLeft')  { e.preventDefault(); $('rp-back').click(); }
     });
 
     updateEquity();
