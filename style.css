@@ -2800,3 +2800,154 @@ body {
        COMPLETED at this size — two per row gives it space. */
     .prof-stats   { grid-template-columns: repeat(2, 1fr) !important; }
 }
+
+/* ==========================================================================
+   SERVICE PANEL — lead / capability rows / metric strip
+   Replaces a paragraph slab plus four chunky boxes. The content is the same
+   claims, restructured so it can be scanned: one lead line, three capability
+   rows carrying the detail, then the metrics as a quiet strip rather than the
+   loudest thing in the panel. Children fade in one after another, which is
+   most of what makes it read as composed rather than dumped on screen.
+   ========================================================================== */
+.module-rule {
+    display: block;
+    width: 42px;
+    height: 2px;
+    margin: 0 0 14px;
+    border-radius: 2px;
+    opacity: 0.85;
+}
+
+.module-lead {
+    font-size: 1.02rem !important;
+    line-height: 1.45 !important;
+    font-weight: 600;
+    letter-spacing: 0.1px;
+    margin-bottom: 10px !important;
+}
+
+.module-details #module-desc {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: rgba(214, 222, 232, 0.72);
+    margin-bottom: 18px;
+}
+
+.module-points {
+    list-style: none;
+    margin: 0 0 20px;
+    padding: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+.module-point {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.module-point > i,
+.module-point a > i:first-child {
+    flex: 0 0 auto;
+    width: 16px;
+    margin-top: 2px;
+    font-size: 0.85rem;
+    text-align: center;
+    opacity: 0.9;
+}
+.mp-body  { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mp-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #eef2f6;
+    letter-spacing: 0.2px;
+}
+.mp-text  {
+    font-size: 0.76rem;
+    line-height: 1.45;
+    color: rgba(200, 210, 222, 0.62);
+}
+
+/* Contact rows are the action, so the whole row is the target. */
+.module-point.is-link { padding: 0; }
+.module-point.is-link a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 11px 4px 11px 0;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background 0.2s ease, padding-left 0.2s ease;
+}
+.module-point.is-link .mp-text { color: rgba(230, 238, 246, 0.9); }
+.mp-go {
+    margin-left: auto;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.28);
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+    .module-point.is-link a:hover {
+        background: rgba(255, 255, 255, 0.045);
+        padding-left: 8px;
+    }
+    .module-point.is-link a:hover .mp-go {
+        color: rgba(255, 255, 255, 0.75);
+        transform: translate(2px, -2px);
+    }
+}
+
+/* Metrics: a quiet strip, not four competing boxes. */
+.module-details .stats-grid {
+    gap: 0 !important;
+    margin-bottom: 22px !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.018);
+}
+.module-details .stat-card {
+    background: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 10px 12px !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+.module-details .stat-card:nth-child(2n)      { border-right: none !important; }
+.module-details .stat-card:nth-last-child(-n+2) { border-bottom: none !important; }
+.module-details .stat-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.58rem !important;
+    letter-spacing: 1.4px;
+    color: rgba(255, 255, 255, 0.38) !important;
+}
+.module-details .stat-value { font-size: 0.9rem !important; font-weight: 700; }
+
+/* Staggered entrance. --i is set per child in openService(). */
+@keyframes module-item-in {
+    from { opacity: 0; transform: translateY(9px); }
+    to   { opacity: 1; transform: none; }
+}
+body.landed .module-details .module-tag,
+body.landed .module-details h2,
+body.landed .module-details .module-rule,
+body.landed .module-details .module-lead,
+body.landed .module-details #module-desc,
+body.landed .module-details .module-point,
+body.landed .module-details .stat-card,
+body.landed .module-details .action-btn {
+    animation: module-item-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 45ms + 120ms);
+}
+@media (prefers-reduced-motion: reduce) {
+    body.landed .module-details * { animation: none !important; }
+}
+
+@media (max-width: 900px), (orientation: portrait) {
+    .module-lead { font-size: 0.94rem !important; }
+    .module-point { padding: 9px 0; }
+    .mp-title { font-size: 0.78rem; }
+    .mp-text  { font-size: 0.72rem; }
+}

@@ -4,27 +4,69 @@
 const planetData = {
     backtest: {
         tag: "ENGINE // SEC-01", title: "Backtest Machine", color: "#ffd9ac",
-        desc: "Submit your system architecture to our core. We conduct a highly accurate, multi-threaded data analysis and return a comprehensive intelligence report.<br><br>Understand your system's edge across multiple market regimes with precise metrics: absolute win/loss rates, maximum drawdown stress-tests, full trade logs, and deep statistical reliability checks.",
+        lead: "Submit a system. Get the truth about its edge.",
+        body: "Your architecture goes into our core for a highly accurate, multi-threaded analysis, and comes back as a comprehensive intelligence report.",
+        points: [
+            { icon: "fa-layer-group", title: "Multi-regime stress testing",
+              text: "Measured across bull, bear and ranging markets — not one lucky stretch." },
+            { icon: "fa-list-check", title: "Trade-by-trade logs",
+              text: "Every entry and exit recorded, with exact execution times." },
+            { icon: "fa-chart-line", title: "Deep statistical checks",
+              text: "Win/loss rates, maximum drawdown and reliability, computed on real tick data." }
+        ],
         stats: [{ label: "TICK ACCURACY", val: "99.9%" }, { label: "METRICS", val: "30+ Stats" }, { label: "STRESS TEST", val: "Regime Based" }, { label: "REPORTS", val: "Deep Data" }]
     },
     databank: {
         tag: "VAULT // SEC-02", title: "System Databank", color: "#e4e6ea",
-        desc: "Welcome to the System Databank, our curated vault of quantitative trading strategies. Every week, our engineering team researches, refines, and releases new algorithmic models across Crypto and Forex markets.<br><br>These concepts demonstrate verified surface-level profitability and serve as high-potential blueprints. Users are encouraged to run them through our Backtest Machine for deep statistical verification, multi-regime stress testing, and trade log analysis before live deployment.",
+        lead: "A curated vault of quantitative trading strategies.",
+        body: "Every week our engineering team researches, refines and releases new algorithmic models across crypto and forex markets.",
+        points: [
+            { icon: "fa-flask", title: "Researched weekly",
+              text: "New models released on a continuous research cycle." },
+            { icon: "fa-shield-halved", title: "Verified surface profitability",
+              text: "High-potential blueprints, not finished systems." },
+            { icon: "fa-arrow-right-arrow-left", title: "Built to be verified",
+              text: "Run any model through the Backtest Machine before live deployment." }
+        ],
         stats: [{ label: "STATUS", val: "ONLINE" }, { label: "UPDATES", val: "Weekly" }, { label: "COVERAGE", val: "Crypto / FX" }, { label: "VALIDATION", val: "Required" }]
     },
     about: {
         tag: "IDENTITY // SEC-03", title: "About The Factory", color: "#d2d5db",
-        desc: "We are professional quantitative backtesters delivering relentless, institutional-grade market data across multi-year historical cycles (2023, 2024, 2025, 2026 and beyond). Our numbers don't just come out of thin air—we give you itemized, trade-by-trade logs for every single buy and sell order, including wins, losses, and exact execution times.<br><br>Since deep historical lower-timeframe charts are nearly impossible to pull manually, we bring complete transparency to your screen. We calculate exact monthly and annual profits, proving how an initial balance with 2% risk scales over 1, 2, or 4 years. From maximum drawdown charts and win/loss ratios to consecutive loss streaks, we expose every dimension of your strategy so you know with 100% mathematical certainty that your system is truly profitable.",
-        stats: [{ label: "OUTPUT", val: "Detailed Report" }, { label: "RECORDS", val: "Trade Log" }, { label: "DATA", val: "Historical Backtest" }, { label: "METRICS", val: "Compounding Analysis" }]
+        lead: "Our numbers do not come out of thin air.",
+        body: "We are professional quantitative backtesters delivering institutional-grade market data across multi-year historical cycles.",
+        points: [
+            { icon: "fa-receipt", title: "Itemised execution records",
+              text: "Trade-by-trade logs for every buy and sell, wins and losses alike." },
+            { icon: "fa-clock-rotate-left", title: "Deep historical coverage",
+              text: "Lower-timeframe history that is near impossible to pull by hand." },
+            { icon: "fa-seedling", title: "Compounding proven, not claimed",
+              text: "Exactly how a balance at 2% risk scales over one, two or four years." }
+        ],
+        stats: [{ label: "OUTPUT", val: "Detailed Report" }, { label: "RECORDS", val: "Trade Log" }, { label: "DATA", val: "Historical" }, { label: "METRICS", val: "Compounding" }]
     },
     contact: {
         tag: "COMMS // SEC-04", title: "Contact Us", color: "#f0e2cf",
-        desc: "Direct comm-link to the engineering desk. Reach out for quantitative system discussions, data analytics, or professional networking.<br><br><span style='color:#ffd9ac'>Email:</span> backtest.factory@gmail.com<br><span style='color:#ffd9ac'>Telegram:</span> @Dr_AliSadeghi<br><span style='color:#ffd9ac'>Instagram:</span> backtest.factory",
+        lead: "Direct comm-link to the engineering desk.",
+        body: "Reach out for quantitative system discussions, data analytics, or professional networking.",
+        links: [
+            { icon: "fa-envelope", label: "Email", val: "backtest.factory@gmail.com", href: "mailto:backtest.factory@gmail.com" },
+            { icon: "fa-paper-plane", label: "Telegram", val: "@Dr_AliSadeghi", href: "https://t.me/Dr_AliSadeghi" },
+            { icon: "fa-instagram", label: "Instagram", val: "backtest.factory", href: "https://instagram.com/backtest.factory", brand: true }
+        ],
         stats: [{ label: "COMM LINK", val: "Encrypted" }, { label: "RESPONSE", val: "Active" }, { label: "LOCATION", val: "Italy" }, { label: "NETWORK", val: "Open" }]
     },
     campus: {
         tag: "ACADEMY // SEC-05", title: "Backtesting Campus", color: "#ffe9c4",
-        desc: "The ultimate training ground for quantitative analysis. Our campus is built to teach deep data analysis, AI applications, statistical studies, and high-level data fetching.<br><br>This curriculum is designed specifically for those who want to become professional backtesters, robust coders, and system engineers in the trading industry and beyond.",
+        lead: "The training ground for quantitative analysis.",
+        body: "Built to teach deep data analysis, AI applications, statistical study design and high-level data fetching.",
+        points: [
+            { icon: "fa-database", title: "Data and AI foundations",
+              text: "How to fetch, clean and interrogate market data at scale." },
+            { icon: "fa-square-root-variable", title: "Statistical study design",
+              text: "Build tests that can actually falsify an edge." },
+            { icon: "fa-code", title: "Production-grade code",
+              text: "For those becoming professional backtesters and system engineers." }
+        ],
         stats: [{ label: "CURRICULUM", val: "Data & AI" }, { label: "SKILLS", val: "Stats / Python" }, { label: "TARGET", val: "Pro Quants" }, { label: "STATUS", val: "Enrolling" }]
     }
 };
@@ -618,22 +660,59 @@ function openService(id) {
     activeServiceId = id;
     document.body.classList.add('warping');
 
+    const esc = t => String(t).replace(/[&<>"]/g, c =>
+        ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+
     document.getElementById('module-tag').innerText = data.tag;
     document.getElementById('module-tag').style.color = data.color;
     document.getElementById('module-title').innerText = data.title;
     document.getElementById('module-title').style.color = data.color;
-    document.getElementById('module-desc').innerHTML = data.desc;
+    document.getElementById('module-rule').style.background = data.color;
+    document.getElementById('module-lead').innerText = data.lead || '';
+    document.getElementById('module-lead').style.color = data.color;
+    document.getElementById('module-desc').innerText = data.body || '';
 
     moduleDetails.style.borderLeftColor = data.color;
     actionBtn.style.borderColor = data.color;
     actionBtn.style.color = data.color;
 
+    // Capability rows, or contact links where the row IS the action.
+    const rows = data.links
+        ? data.links.map(l => `
+            <li class="module-point is-link">
+              <a href="${esc(l.href)}"${/^https?:/.test(l.href) ? ' target="_blank" rel="noopener"' : ''}>
+                <i class="${l.brand ? 'fa-brands' : 'fa-solid'} ${esc(l.icon)}" style="color:${esc(data.color)}"></i>
+                <span class="mp-body">
+                  <span class="mp-title">${esc(l.label)}</span>
+                  <span class="mp-text">${esc(l.val)}</span>
+                </span>
+                <i class="fa-solid fa-arrow-up-right-from-square mp-go"></i>
+              </a>
+            </li>`).join('')
+        : (data.points || []).map(pt => `
+            <li class="module-point">
+              <i class="fa-solid ${esc(pt.icon)}" style="color:${esc(data.color)}"></i>
+              <span class="mp-body">
+                <span class="mp-title">${esc(pt.title)}</span>
+                <span class="mp-text">${esc(pt.text)}</span>
+              </span>
+            </li>`).join('');
+    document.getElementById('module-points').innerHTML = rows;
+
     document.getElementById('stats-grid').innerHTML = data.stats.map(st => `
         <div class="stat-card">
-            <span class="stat-title">${st.label}</span>
-            <span class="stat-value" style="color: ${data.color}">${st.val}</span>
+            <span class="stat-title">${esc(st.label)}</span>
+            <span class="stat-value" style="color: ${esc(data.color)}">${esc(st.val)}</span>
         </div>
     `).join('');
+
+    // Number the children so they can fade in one after another rather than
+    // the whole slab arriving at once — that stagger is most of what makes
+    // the panel feel considered instead of dumped on screen.
+    let i = 0;
+    moduleDetails.querySelectorAll(
+        '.module-tag, h2, .module-rule, .module-lead, #module-desc, .module-point, .stat-card, .action-btn'
+    ).forEach(el => el.style.setProperty('--i', i++));
 
     // About and Contact are read-only — nothing to initialise.
     actionBtn.style.display = (id === 'contact' || id === 'about') ? 'none' : 'flex';
