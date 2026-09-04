@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base href="/">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BarTest — Replay Terminal</title>
+
+    <link rel="stylesheet" href="replay.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header id="rp-top">
+    <a href="/" class="rp-back" title="Back to BarTest">
+        <i class="fa-solid fa-chevron-left"></i>
+    </a>
+    <span class="rp-brand">BarTest <em>Replay</em></span>
+
+    <div class="rp-controls">
+        <label class="rp-field">
+            <span>Market</span>
+            <select id="rp-market">
+                <option value="crypto">Crypto</option>
+                <option value="fx" disabled>Forex (coming)</option>
+            </select>
+        </label>
+        <label class="rp-field">
+            <span>Symbol</span>
+            <select id="rp-symbol"></select>
+        </label>
+        <label class="rp-field">
+            <span>Timeframe</span>
+            <select id="rp-tf">
+                <option value="1">1m</option>
+                <option value="5">5m</option>
+                <option value="15" selected>15m</option>
+                <option value="60">1h</option>
+                <option value="240">4h</option>
+            </select>
+        </label>
+        <label class="rp-field">
+            <span>Start date</span>
+            <input type="date" id="rp-date">
+        </label>
+        <button id="rp-load" class="rp-btn primary">
+            <i class="fa-solid fa-play"></i> Load session
+        </button>
+    </div>
+
+    <div class="rp-account">
+        <div class="rp-acct-item"><span>Balance</span><b id="rp-balance">—</b></div>
+        <div class="rp-acct-item"><span>Equity</span><b id="rp-equity">—</b></div>
+        <div class="rp-acct-item"><span>Open P&amp;L</span><b id="rp-openpl">—</b></div>
+    </div>
+</header>
+
+<main id="rp-main">
+    <section id="rp-chart-wrap">
+        <div id="rp-chart"></div>
+
+        <div id="rp-status" class="rp-status">
+            <i class="fa-solid fa-circle-info"></i>
+            <span id="rp-status-text">Choose a symbol and start date, then load a session.</span>
+        </div>
+
+        <div id="rp-transport" class="rp-transport" hidden>
+            <button id="rp-playpause" class="rp-btn" title="Play / pause  (Space)">
+                <i class="fa-solid fa-play"></i>
+            </button>
+            <button id="rp-step" class="rp-btn" title="Step one bar  (→)">
+                <i class="fa-solid fa-forward-step"></i>
+            </button>
+            <label class="rp-speed">
+                <span>Speed</span>
+                <input type="range" id="rp-speed" min="1" max="20" value="6">
+                <b id="rp-speed-val">6&times;</b>
+            </label>
+            <span class="rp-clock" id="rp-clock">—</span>
+        </div>
+    </section>
+
+    <aside id="rp-side">
+        <div class="rp-card">
+            <h3>Order</h3>
+            <div class="rp-row">
+                <label class="rp-field wide">
+                    <span>Risk %</span>
+                    <input type="number" id="rp-risk" value="1" min="0.1" max="20" step="0.1">
+                </label>
+                <label class="rp-field wide">
+                    <span>Stop (pts)</span>
+                    <input type="number" id="rp-stop" value="0" min="0" step="1">
+                </label>
+                <label class="rp-field wide">
+                    <span>Target (pts)</span>
+                    <input type="number" id="rp-target" value="0" min="0" step="1">
+                </label>
+            </div>
+            <p class="rp-hint" id="rp-sizing">Set a stop to size the position.</p>
+            <div class="rp-row rp-actions">
+                <button id="rp-buy" class="rp-btn buy" disabled>
+                    <i class="fa-solid fa-arrow-trend-up"></i> Buy
+                </button>
+                <button id="rp-sell" class="rp-btn sell" disabled>
+                    <i class="fa-solid fa-arrow-trend-down"></i> Sell
+                </button>
+            </div>
+            <button id="rp-close" class="rp-btn ghost" disabled>Close position at market</button>
+        </div>
+
+        <div class="rp-card">
+            <h3>Position</h3>
+            <div id="rp-position" class="rp-empty">Flat — no open position.</div>
+        </div>
+
+        <div class="rp-card">
+            <h3>Session stats</h3>
+            <div class="rp-stats" id="rp-stats">
+                <div><span>Trades</span><b id="st-trades">0</b></div>
+                <div><span>Win rate</span><b id="st-win">—</b></div>
+                <div><span>Net P&amp;L</span><b id="st-net">—</b></div>
+                <div><span>Profit factor</span><b id="st-pf">—</b></div>
+                <div><span>Max drawdown</span><b id="st-dd">—</b></div>
+                <div><span>Avg R</span><b id="st-r">—</b></div>
+            </div>
+        </div>
+
+        <div class="rp-card">
+            <h3>Trade log</h3>
+            <div class="rp-log-wrap">
+                <table class="rp-log">
+                    <thead>
+                        <tr><th>#</th><th>Side</th><th>Entry</th><th>Exit</th><th>R</th><th>P&amp;L</th></tr>
+                    </thead>
+                    <tbody id="rp-log"><tr><td colspan="6" class="rp-empty">No trades yet.</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </aside>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
+<script src="replay.js"></script>
+</body>
+</html>
