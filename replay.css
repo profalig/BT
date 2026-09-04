@@ -589,3 +589,39 @@ body.is-replay .rp-transport { box-shadow: 0 10px 34px rgba(0,0,0,.6); }
 
 /* active state on the replay button */
 .rp-tool-btn.on { border-color: var(--accent); background: rgba(240,178,90,.12); }
+
+/* draggable overlays */
+.rp-transport, .rp-hud { user-select: none; }
+.rp-transport.dragging, .rp-hud.dragging {
+    cursor: grabbing; box-shadow: 0 14px 40px rgba(0,0,0,.72);
+    border-color: var(--accent);
+}
+.rp-transport:hover, .rp-hud:hover { cursor: grab; }
+.rp-transport button, .rp-transport input,
+.rp-hud button, .rp-hud input, .rp-hud select { cursor: pointer; }
+
+
+/* ---------- on-chart indicator legend ---------- */
+.rp-legend {
+    position: absolute; left: 12px; top: 10px; z-index: 4;
+    display: flex; flex-direction: column; gap: 3px;
+    pointer-events: none;
+}
+.rp-leg-row {
+    display: flex; align-items: center; gap: 7px;
+    padding: 3px 8px;
+    background: rgba(8,8,10,.72);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: .7rem;
+    color: var(--text-2);
+    pointer-events: auto;
+    cursor: pointer;
+    user-select: none;
+}
+.rp-leg-row:hover { border-color: var(--hairline); background: rgba(8,8,10,.92); }
+.rp-leg-dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+.rp-leg-name { letter-spacing: .4px; }
+.rp-leg-row b { color: var(--text-1); font-weight: 600; }
+.rp-leg-err { color: var(--neg); font-weight: 700; }

@@ -147,21 +147,13 @@ function buildChart() {
         if (r && r.from < 12) loadOlder();
     });
 
-    // Single click marks the cut, double click commits it. Marking only was
-    // not enough: the natural gesture is to double-click a candle and expect
-    // the chart to cut there, and when nothing happened the forward candles
-    // stayed on screen with no way to advance.
-    let lastClickAt = 0, lastClickTime = null;
+    // Clicking a candle only chooses a cut point while the Replay panel is
+    // actually open. Before, every click dropped a "replay start" marker
+    // whether or not anyone was setting up a replay, which was noise.
     chart.subscribeClick(param => {
         if (S.mode !== 'browse' || !param.time) return;
-        const now = Date.now(), ms = param.time * 1000;
-        if (now - lastClickAt < 450 && lastClickTime === param.time) {
-            setCutPoint(ms);
-            startReplay();
-        } else {
-            setCutPoint(ms);
-        }
-        lastClickAt = now; lastClickTime = param.time;
+        if ($('rp-cutbar').hidden) return;
+        setCutPoint(param.time * 1000);
     });
 }
 
@@ -233,8 +225,13 @@ async function loadOlder() {
         const ks = await MARKETS[S.market].klines(S.symbol, TF_LABEL[S.tfMin],
                         { endTime: S.oldestMs - 1, limit: 1000 });
         if (!ks.length) { S.noMoreHistory = true; return; }
-        S.hist = ks.map(toBar).concat(S.hist);
-        S.oldestMs = ks[0].t;
+        // Belt and braces: only accept bars that really are older than what we
+        // hold, and in replay never anything at or past the cut.
+        const limit = S.mode === 'replay' && S.cursorMs ? Math.min(S.oldestMs, S.cursorMs) : S.oldestMs;
+        const older = ks.filter(k => k.t < limit);
+        if (!older.length) { S.noMoreHistory = true; return; }
+        S.hist = older.map(toBar).concat(S.hist);
+        S.oldestMs = older[0].t;
         paint();
     } catch (e) { /* leave the chart as-is; panning simply stops extending */ }
     finally { S.loadingOlder = false; }
@@ -344,6 +341,13 @@ async function startReplay() {
             return;
         }
     }
+    // The paging marker MUST follow the context swap. Left pointing at the
+    // browse window it describes a completely different era, and the first
+    // pan-left then fetches bars from that era and pastes them onto the
+    // chart — which is exactly how a Feb 2022 replay ended up with 2026
+    // prices sitting beside it.
+    S.oldestMs = S.hist.length ? S.hist[0].time * 1000 : null;
+    S.noMoreHistory = false;
     S.cursorMs = ms;
     S.mode = 'replay';
     S.bars1m = []; S.fillIdx = 0; S.working = null; S.revealed = [];
@@ -600,6 +604,7 @@ function removeIndicator(id) {
     activeInd[i].lines.forEach(l => { try { chart.removeSeries(l); } catch (e) {} });
     activeInd.splice(i, 1);
     renderIndicatorList();
+    renderLegend();
     saveIndicators();
 }
 
@@ -635,7 +640,55 @@ function refreshIndicators(data) {
                 .map((b, i) => ({ time: b.time, value: vals[i] }))
                 .filter(x => x.value !== null && x.value !== undefined && isFinite(x.value)));
         });
+        const primary = sets[0] || [];
+        for (let i = primary.length - 1; i >= 0; i--) {
+            if (primary[i] !== null && primary[i] !== undefined && isFinite(primary[i])) {
+                a.lastValue = primary[i]; break;
+            }
+        }
     }
+    renderLegend();
+}
+
+// On-chart legend. Click selects, double-click opens that indicator's
+// settings — the same gestures the platform traders already use.
+function renderLegend() {
+    const box = $('rp-legend');
+    if (!box) return;
+    if (!activeInd.length) { box.innerHTML = ''; return; }
+    box.innerHTML = activeInd.map(a => {
+        const col = a.params.color || IND_COLORS[a.id % IND_COLORS.length];
+        const label = a.type === 'custom' ? 'Custom script'
+            : IND[a.type].label + (a.params.period ? ' ' + a.params.period : '');
+        const last = a.lastValue;
+        const val = (last === null || last === undefined || !isFinite(last))
+            ? '' : '<b>' + fmt(last) + '</b>';
+        return '<div class="rp-leg-row" data-leg="' + a.id + '" title="Double-click for settings">' +
+                 '<span class="rp-leg-dot" style="background:' + col + '"></span>' +
+                 '<span class="rp-leg-name">' + label + '</span>' + val +
+                 (a.error ? '<span class="rp-leg-err">!</span>' : '') +
+               '</div>';
+    }).join('');
+    box.querySelectorAll('.rp-leg-row').forEach(row => {
+        row.addEventListener('dblclick', e => {
+            e.stopPropagation();
+            openIndSettings(+row.dataset.leg);
+        });
+    });
+}
+
+// Opens the picker with this indicator's own settings already expanded.
+function openIndSettings(id) {
+    openIndModal();
+    setTimeout(() => {
+        const cfg = document.querySelector('.rp-ind-cfg[data-cfg="' + id + '"]');
+        if (cfg) {
+            cfg.classList.add('open');
+            cfg.scrollIntoView({ block: 'nearest' });
+            const first = cfg.querySelector('input');
+            if (first) first.focus();
+        }
+    }, 60);
 }
 
 function renderIndicatorList() {
@@ -1181,6 +1234,51 @@ function restoreCardOrder() {
     });
 }
 
+// The transport sits over the chart, so wherever it defaults to it will be in
+// someone's way. Let it be dragged, and remember where it was put.
+function makeDraggable(el, key) {
+    let sx = 0, sy = 0, ox = 0, oy = 0, dragging = false;
+    try {
+        const saved = JSON.parse(localStorage.getItem(key) || 'null');
+        if (saved && isFinite(saved.x) && isFinite(saved.y)) place(saved.x, saved.y);
+    } catch (e) {}
+
+    function place(x, y) {
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+        el.style.bottom = 'auto';
+        el.style.transform = 'none';
+    }
+    el.addEventListener('mousedown', e => {
+        // Buttons and sliders inside keep working; only the bar itself drags.
+        if (e.target.closest('button, input, select, a')) return;
+        const r = el.getBoundingClientRect();
+        const host = el.offsetParent.getBoundingClientRect();
+        ox = r.left - host.left; oy = r.top - host.top;
+        sx = e.clientX; sy = e.clientY;
+        dragging = true;
+        el.classList.add('dragging');
+        e.preventDefault();
+    });
+    window.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        const host = el.offsetParent.getBoundingClientRect();
+        const x = Math.max(0, Math.min(host.width  - el.offsetWidth,  ox + e.clientX - sx));
+        const y = Math.max(0, Math.min(host.height - el.offsetHeight, oy + e.clientY - sy));
+        place(x, y);
+    });
+    window.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        el.classList.remove('dragging');
+        try {
+            localStorage.setItem(key, JSON.stringify({
+                x: parseFloat(el.style.left) || 0, y: parseFloat(el.style.top) || 0
+            }));
+        } catch (e) {}
+    });
+}
+
 function init() {
     if (typeof LightweightCharts === 'undefined') {
         status('Charting library failed to load. Check your connection and reload.', 'error');
@@ -1260,8 +1358,18 @@ function init() {
         bar.hidden = !bar.hidden;
     });
 
+    // Double-clicking the chart opens its settings, which is where the
+    // gesture leads on every other platform.
+    $('rp-chart-wrap').addEventListener('dblclick', e => {
+        if (e.target.closest('.rp-legend, .rp-transport, .rp-hud')) return;
+        if (!$('rp-cutbar').hidden) return;      // mid replay set-up
+        $('rp-set').hidden = false;
+    });
+
     // sidebar cards can be reordered by dragging
     initCardDrag();
+    makeDraggable($('rp-transport'), 'bt.replay.pos.transport');
+    makeDraggable($('rp-hud'), 'bt.replay.pos.hud');
 
     // indicator picker
     $('rp-ind-open').addEventListener('click', openIndModal);
