@@ -40,6 +40,20 @@
                 <option value="240">4h</option>
             </select>
         </label>
+        <button id="rp-ind-open" class="rp-tool-btn" title="Indicators">
+            <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true">
+                <path d="M2 14.5 L6 9 L9.5 12 L14 4.5" fill="none"
+                      stroke="#5aa9f0" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="6" cy="9" r="1.9" fill="#f0b25a"/>
+                <circle cx="14" cy="4.5" r="1.9" fill="#12a184"/>
+                <path d="M17.5 16.5 L17.5 8" stroke="#c58af0" stroke-width="2"
+                      stroke-linecap="round"/>
+            </svg>
+            <span>Indicators</span>
+            <b id="rp-ind-count" hidden>0</b>
+        </button>
+
         <span class="rp-mode" id="rp-mode">BROWSE</span>
         <span class="rp-live" id="rp-live" hidden>
             <span class="rp-live-dot"></span>LIVE <b id="rp-livePrice">—</b>
@@ -55,7 +69,30 @@
 </header>
 
 <main id="rp-main">
+    <nav id="rp-rail" aria-label="Drawing tools">
+        <button class="rp-rail-btn active" data-tool="cursor" title="Cursor  (Esc)">
+            <i class="fa-solid fa-arrow-pointer"></i>
+        </button>
+        <button class="rp-rail-btn" data-tool="hline" title="Horizontal line">
+            <i class="fa-solid fa-minus"></i>
+        </button>
+        <button class="rp-rail-btn" data-tool="trend" title="Trend line">
+            <i class="fa-solid fa-slash"></i>
+        </button>
+        <button class="rp-rail-btn" data-tool="rect" title="Rectangle / zone">
+            <i class="fa-regular fa-square"></i>
+        </button>
+        <button class="rp-rail-btn" data-tool="fib" title="Fibonacci retracement">
+            <i class="fa-solid fa-bars-staggered"></i>
+        </button>
+        <span class="rp-rail-sep"></span>
+        <button class="rp-rail-btn danger" id="rp-clear-draw" title="Clear all drawings">
+            <i class="fa-solid fa-trash-can"></i>
+        </button>
+    </nav>
+
     <section id="rp-chart-wrap">
+        <canvas id="rp-draw"></canvas>
         <div id="rp-chart"></div>
 
         <div id="rp-status" class="rp-status">
@@ -128,48 +165,6 @@
         </div>
 
         <div class="rp-card">
-            <h3>Indicators</h3>
-            <div class="rp-row">
-                <label class="rp-field wide">
-                    <span>Add</span>
-                    <select id="rp-ind-type">
-                        <option value="sma">SMA</option>
-                        <option value="ema">EMA</option>
-                        <option value="bb">Bollinger</option>
-                        <option value="rsi">RSI</option>
-                        <option value="atr">ATR</option>
-                        <option value="custom">Custom (JavaScript)</option>
-                    </select>
-                </label>
-                <label class="rp-field" style="width:74px">
-                    <span>Period</span>
-                    <input type="number" id="rp-ind-period" value="20" min="1" max="400">
-                </label>
-                <button id="rp-ind-add" class="rp-btn" style="align-self:flex-end">Add</button>
-            </div>
-
-            <div id="rp-ind-custom" hidden>
-                <p class="rp-hint">
-                    Write a function body over <code>bars</code> and return one value per bar.
-                    Pine Script only runs on TradingView&rsquo;s servers, so this is the
-                    equivalent that is actually ours.
-                </p>
-                <textarea id="rp-ind-code" spellcheck="false" rows="6">// bars: [{time, open, high, low, close}]
-// return: array of numbers (or null to skip a bar)
-const out = [];
-let sum = 0;
-for (let i = 0; i < bars.length; i++) {
-  sum += bars[i].close;
-  if (i >= 50) sum -= bars[i - 50].close;
-  out.push(i >= 49 ? sum / 50 : null);
-}
-return out;</textarea>
-            </div>
-
-            <div id="rp-ind-list" class="rp-ind-list"><div class="rp-empty">None active.</div></div>
-        </div>
-
-        <div class="rp-card">
             <h3>Position</h3>
             <div id="rp-position" class="rp-empty">Flat — no open position.</div>
         </div>
@@ -200,7 +195,53 @@ return out;</textarea>
     </aside>
 </main>
 
+<div id="rp-modal" class="rp-modal" hidden>
+    <div class="rp-modal-card" role="dialog" aria-label="Indicators">
+        <header class="rp-modal-head">
+            <h2>Indicators</h2>
+            <button id="rp-modal-close" class="rp-modal-x" aria-label="Close">&times;</button>
+        </header>
+
+        <div class="rp-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="rp-ind-search" placeholder="Search indicators&hellip;"
+                   autocomplete="off" spellcheck="false">
+        </div>
+
+        <div class="rp-modal-body">
+            <div class="rp-modal-col">
+                <h4>Library</h4>
+                <div id="rp-ind-catalog" class="rp-catalog"></div>
+            </div>
+            <div class="rp-modal-col">
+                <h4>On the chart <b id="rp-active-count">0</b></h4>
+                <div id="rp-ind-list" class="rp-ind-list"><div class="rp-empty">None active.</div></div>
+
+                <h4 style="margin-top:16px">Your own script</h4>
+                <p class="rp-hint">
+                    A function body over <code>bars</code>, returning one value per bar.
+                    Pine Script runs only on TradingView&rsquo;s servers, so this is the
+                    equivalent that is genuinely yours &mdash; and it is the same place a
+                    system measured in the Backtest Machine gets replayed.
+                </p>
+                <select id="rp-ind-template" class="rp-template">
+                    <option value="">Start from a template&hellip;</option>
+                    <option value="sma">Simple moving average</option>
+                    <option value="cross">MA cross signal (1 / -1 / 0)</option>
+                    <option value="range">Rolling high-low midpoint</option>
+                    <option value="mom">Momentum (close vs N bars ago)</option>
+                </select>
+                <textarea id="rp-ind-code" spellcheck="false" rows="8"></textarea>
+                <button id="rp-ind-addcustom" class="rp-btn primary" style="width:100%;justify-content:center;margin-top:8px">
+                    <i class="fa-solid fa-plus"></i> Add script to chart
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
+<script src="replay-tools.js"></script>
 <script src="replay.js"></script>
 </body>
 </html>

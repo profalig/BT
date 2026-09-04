@@ -653,7 +653,7 @@ function renderIndicatorList() {
                '</div>';
     }).join('');
     box.querySelectorAll('.rp-ind-x').forEach(b =>
-        b.addEventListener('click', () => removeIndicator(+b.dataset.ind)));
+        b.addEventListener('click', () => { removeIndicator(+b.dataset.ind); updateIndCount(); }));
 }
 
 // ------------------------------------------------------------ order engine
@@ -846,6 +846,116 @@ function updateSizingHint() {
         : 'Set a stop to size the position.';
 }
 
+// -------------------------------------------------- indicator picker modal
+
+// Searchable, because a list you have to scan is a list you stop using.
+const CATALOG = [
+    { type: 'sma',  name: 'Simple Moving Average',   short: 'SMA',
+      desc: 'Mean close over N bars.', tags: 'sma moving average trend mean' },
+    { type: 'ema',  name: 'Exponential Moving Average', short: 'EMA',
+      desc: 'Weights recent bars more heavily.', tags: 'ema exponential moving average trend' },
+    { type: 'bb',   name: 'Bollinger Bands',         short: 'BB',
+      desc: 'Moving average with standard-deviation envelopes.',
+      tags: 'bollinger bands volatility deviation envelope' },
+    { type: 'rsi',  name: 'Relative Strength Index', short: 'RSI',
+      desc: 'Momentum oscillator, 0 to 100. Own pane.',
+      tags: 'rsi relative strength momentum oscillator overbought oversold' },
+    { type: 'atr',  name: 'Average True Range',      short: 'ATR',
+      desc: 'Volatility in price terms. Useful for stop sizing. Own pane.',
+      tags: 'atr average true range volatility stop' }
+];
+
+const TEMPLATES = {
+    sma: `// Simple moving average
+const period = 50;
+const out = [];
+let sum = 0;
+for (let i = 0; i < bars.length; i++) {
+  sum += bars[i].close;
+  if (i >= period) sum -= bars[i - period].close;
+  out.push(i >= period - 1 ? sum / period : null);
+}
+return out;`,
+    cross: `// Fast/slow MA cross: 1 long, -1 short, 0 flat.
+// Return a signal series and read it straight off the chart.
+const fast = 10, slow = 30;
+const ma = (n, i) => {
+  if (i < n - 1) return null;
+  let s = 0; for (let k = i - n + 1; k <= i; k++) s += bars[k].close;
+  return s / n;
+};
+const out = [];
+for (let i = 0; i < bars.length; i++) {
+  const f = ma(fast, i), s = ma(slow, i);
+  out.push(f === null || s === null ? null : (f > s ? 1 : f < s ? -1 : 0));
+}
+return out;`,
+    range: `// Midpoint of the rolling N-bar high/low channel
+const period = 20;
+const out = [];
+for (let i = 0; i < bars.length; i++) {
+  if (i < period - 1) { out.push(null); continue; }
+  let hi = -Infinity, lo = Infinity;
+  for (let k = i - period + 1; k <= i; k++) {
+    if (bars[k].high > hi) hi = bars[k].high;
+    if (bars[k].low  < lo) lo = bars[k].low;
+  }
+  out.push((hi + lo) / 2);
+}
+return out;`,
+    mom: `// Momentum: close relative to N bars ago, in percent
+const period = 14;
+const out = [];
+for (let i = 0; i < bars.length; i++) {
+  out.push(i < period ? null
+    : (bars[i].close - bars[i - period].close) / bars[i - period].close * 100);
+}
+return out;`
+};
+
+function renderCatalog(filter) {
+    const q = (filter || '').trim().toLowerCase();
+    const hits = CATALOG.filter(c => !q ||
+        (c.name + ' ' + c.short + ' ' + c.tags).toLowerCase().includes(q));
+    const box = $('rp-ind-catalog');
+    if (!hits.length) {
+        box.innerHTML = '<div class="rp-empty">Nothing matches &ldquo;' +
+            q.replace(/</g, '&lt;') + '&rdquo;.</div>';
+        return;
+    }
+    box.innerHTML = hits.map(c =>
+        '<button class="rp-cat-item" data-type="' + c.type + '">' +
+          '<span class="rp-cat-short">' + c.short + '</span>' +
+          '<span class="rp-cat-body">' +
+            '<span class="rp-cat-name">' + c.name + '</span>' +
+            '<span class="rp-cat-desc">' + c.desc + '</span>' +
+          '</span>' +
+          '<i class="fa-solid fa-plus"></i>' +
+        '</button>').join('');
+    box.querySelectorAll('.rp-cat-item').forEach(b =>
+        b.addEventListener('click', () => {
+            addIndicator(b.dataset.type, {});
+            updateIndCount();
+        }));
+}
+
+function updateIndCount() {
+    const n = activeInd.length;
+    const badge = $('rp-ind-count');
+    badge.textContent = n;
+    badge.hidden = n === 0;
+    $('rp-active-count').textContent = n;
+}
+
+function openIndModal() {
+    $('rp-modal').hidden = false;
+    renderCatalog($('rp-ind-search').value);
+    renderIndicatorList();
+    updateIndCount();
+    setTimeout(() => $('rp-ind-search').focus(), 30);
+}
+function closeIndModal() { $('rp-modal').hidden = true; }
+
 // ----------------------------------------------------------------- wiring
 
 function init() {
@@ -910,22 +1020,36 @@ function init() {
     });
     ['rp-risk', 'rp-stop'].forEach(id => $(id).addEventListener('input', updateSizingHint));
 
-    $('rp-ind-type').addEventListener('change', e => {
-        const custom = e.target.value === 'custom';
-        $('rp-ind-custom').hidden = !custom;
-        $('rp-ind-period').disabled = custom || e.target.value === 'bb' ? false : false;
+    // indicator picker
+    $('rp-ind-open').addEventListener('click', openIndModal);
+    $('rp-modal-close').addEventListener('click', closeIndModal);
+    $('rp-modal').addEventListener('click', e => {
+        if (e.target.id === 'rp-modal') closeIndModal();   // backdrop
     });
-    $('rp-ind-add').addEventListener('click', () => {
-        const type = $('rp-ind-type').value;
-        if (type === 'custom') {
-            addIndicator('custom', {}, $('rp-ind-code').value);
-        } else {
-            addIndicator(type, { period: Math.max(1, +$('rp-ind-period').value || 20) });
-        }
+    $('rp-ind-search').addEventListener('input', e => renderCatalog(e.target.value));
+    $('rp-ind-template').addEventListener('change', e => {
+        if (TEMPLATES[e.target.value]) $('rp-ind-code').value = TEMPLATES[e.target.value];
     });
+    $('rp-ind-addcustom').addEventListener('click', () => {
+        const code = $('rp-ind-code').value.trim();
+        if (!code) return;
+        addIndicator('custom', {}, code);
+        updateIndCount();
+    });
+    $('rp-ind-code').value = TEMPLATES.sma;
     renderIndicatorList();
+    updateIndCount();
+
+    // drawing tools
+    if (window.BTTools) {
+        BTTools.attach(chart, series, $('rp-chart-wrap'));
+        document.querySelectorAll('.rp-rail-btn[data-tool]').forEach(b =>
+            b.addEventListener('click', () => BTTools.setTool(b.dataset.tool)));
+        $('rp-clear-draw').addEventListener('click', () => BTTools.clear());
+    }
 
     document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !$('rp-modal').hidden) { closeIndModal(); return; }
         if (/input|select|textarea/i.test(e.target.tagName)) return;
         if (e.code === 'Space')      { e.preventDefault(); $('rp-playpause').click(); }
         if (e.code === 'ArrowRight') { e.preventDefault(); $('rp-step').click(); }

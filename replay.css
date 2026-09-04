@@ -383,3 +383,145 @@ body.is-replay .rp-transport { box-shadow: 0 10px 34px rgba(0,0,0,.6); }
     background: var(--bg-2); padding: 1px 4px; border-radius: 3px;
     font-family: 'Share Tech Mono', monospace;
 }
+
+/* ==========================================================================
+   TOOL RAIL, DRAW LAYER, INDICATOR PICKER
+   ========================================================================== */
+
+#rp-main { grid-template-columns: 46px 1fr 330px; }
+
+#rp-rail {
+    background: var(--bg-1);
+    border-right: 1px solid var(--hairline);
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px; padding: 8px 0;
+}
+.rp-rail-btn {
+    width: 32px; height: 32px;
+    display: grid; place-items: center;
+    background: none; border: 1px solid transparent; border-radius: 6px;
+    color: var(--text-3); cursor: pointer;
+    font-size: .82rem;
+    transition: color .16s, background .16s, border-color .16s;
+}
+.rp-rail-btn:hover { color: var(--text-1); background: var(--bg-2); }
+.rp-rail-btn.active {
+    color: var(--accent); border-color: rgba(240,178,90,.45);
+    background: rgba(240,178,90,.1);
+}
+.rp-rail-btn.danger:hover { color: var(--neg); }
+.rp-rail-sep { width: 20px; height: 1px; background: var(--hairline); margin: 6px 0; }
+
+/* the drawing surface sits over the chart but under the overlays */
+#rp-draw {
+    position: absolute; inset: 0;
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* indicators button in the top bar */
+.rp-tool-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--bg-2); color: var(--text-1);
+    border: 1px solid var(--hairline); border-radius: 6px;
+    padding: 7px 11px; cursor: pointer;
+    font-family: 'Share Tech Mono', monospace; font-size: .74rem; letter-spacing: .8px;
+    align-self: center;
+    transition: border-color .16s, background .16s;
+}
+.rp-tool-btn:hover { border-color: var(--accent); background: rgba(240,178,90,.08); }
+.rp-tool-btn b {
+    background: var(--accent); color: #17120a;
+    border-radius: 9px; padding: 0 6px; font-size: .66rem;
+}
+
+/* ---------- modal ---------- */
+.rp-modal {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(3,3,4,.72);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+}
+.rp-modal-card {
+    width: min(920px, 100%); max-height: min(680px, 92vh);
+    background: var(--bg-1);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    box-shadow: 0 30px 90px rgba(0,0,0,.7);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+}
+.rp-modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; border-bottom: 1px solid var(--hairline);
+}
+.rp-modal-head h2 { margin: 0; font-size: 1rem; letter-spacing: .3px; }
+.rp-modal-x {
+    background: none; border: none; color: var(--text-3);
+    font-size: 1.5rem; line-height: 1; cursor: pointer; padding: 0 4px;
+}
+.rp-modal-x:hover { color: var(--text-1); }
+
+.rp-search { position: relative; padding: 12px 18px 0; }
+.rp-search i {
+    position: absolute; left: 30px; top: 50%; transform: translateY(-25%);
+    color: var(--text-3); font-size: .8rem;
+}
+.rp-search input {
+    width: 100%; background: var(--bg-2); color: var(--text-1);
+    border: 1px solid var(--hairline); border-radius: 6px;
+    padding: 9px 12px 9px 34px; font-size: .86rem;
+}
+.rp-search input:focus { outline: none; border-color: var(--accent); }
+
+.rp-modal-body {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+    padding: 14px 18px 18px; overflow-y: auto; min-height: 0;
+}
+.rp-modal-col { min-width: 0; }
+.rp-modal-col h4 {
+    margin: 0 0 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: .62rem; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--text-3);
+    display: flex; align-items: center; gap: 7px;
+}
+.rp-modal-col h4 b {
+    background: var(--bg-2); border: 1px solid var(--hairline);
+    border-radius: 8px; padding: 0 6px; color: var(--text-2);
+}
+
+.rp-catalog { display: flex; flex-direction: column; gap: 6px; }
+.rp-cat-item {
+    display: flex; align-items: center; gap: 11px; width: 100%;
+    background: var(--bg-0); border: 1px solid var(--hairline);
+    border-radius: 7px; padding: 9px 11px; cursor: pointer; text-align: left;
+    color: var(--text-1);
+    transition: border-color .16s, background .16s;
+}
+.rp-cat-item:hover { border-color: var(--accent); background: rgba(240,178,90,.06); }
+.rp-cat-item i { margin-left: auto; color: var(--text-3); font-size: .74rem; }
+.rp-cat-item:hover i { color: var(--accent); }
+.rp-cat-short {
+    font-family: 'Share Tech Mono', monospace; font-size: .62rem;
+    letter-spacing: 1px; color: var(--accent);
+    border: 1px solid rgba(240,178,90,.35); border-radius: 4px;
+    padding: 3px 6px; min-width: 42px; text-align: center; flex: 0 0 auto;
+}
+.rp-cat-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rp-cat-name { font-size: .82rem; font-weight: 600; }
+.rp-cat-desc { font-size: .72rem; color: var(--text-3); line-height: 1.35; }
+
+.rp-template {
+    width: 100%; background: var(--bg-2); color: var(--text-1);
+    border: 1px solid var(--hairline); border-radius: 5px;
+    padding: 7px 9px; font-size: .78rem; margin-bottom: 6px;
+}
+.rp-template:focus { outline: none; border-color: var(--accent); }
+
+@media (max-width: 900px) {
+    #rp-main { grid-template-columns: 1fr; }
+    #rp-rail { flex-direction: row; border-right: none; border-bottom: 1px solid var(--hairline); }
+    .rp-modal-body { grid-template-columns: 1fr; }
+}
