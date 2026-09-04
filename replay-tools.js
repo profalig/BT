@@ -60,6 +60,7 @@ const DEFAULT_LEVELS = {
 const T = {
     cursor:      { name: 'Cross',                 kind: 'nav',  pts: 0 },
     dot:         { name: 'Dot',                   kind: 'nav',  pts: 0 },
+    pointer:     { name: 'Arrow',                 kind: 'nav',  pts: 0 },
     eraser:      { name: 'Eraser',                kind: 'nav',  pts: 0 },
 
     trend:       { name: 'Trend line',            kind: 'line', pts: 2, cap: 'line' },
@@ -133,7 +134,8 @@ const T = {
 
 /* Colourful, purpose-built icons — the rail should read at a glance. */
 const ICO = {
-cursor:'<path d="M5 2.5v19l4.6-4.6h6.5z" fill="#f7a600"/>',
+cursor:'<path d="M12 2v20M2 12h20" stroke="#5aa9f0" stroke-width="1.6"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="#f7a600" stroke-width="1.8"/>',
+pointer:'<path d="M5 2.5v19l4.6-4.6h6.5z" fill="#f7a600"/>',
 dot:'<circle cx="12" cy="12" r="3.6" fill="#f7a600"/><circle cx="12" cy="12" r="8.5" fill="none" stroke="#5aa9f0" stroke-width="1.4" stroke-dasharray="2 3"/>',
 eraser:'<path d="M4 17l7-7 6 6-4 4H6z" fill="#ef454a" opacity=".75"/><path d="M11 10l4-4 6 6-4 4z" fill="#5aa9f0"/>',
 trend:'<path d="M3 20L21 5" stroke="#5aa9f0" stroke-width="2" stroke-linecap="round"/><circle cx="3" cy="20" r="2.4" fill="#f7a600"/><circle cx="21" cy="5" r="2.4" fill="#f7a600"/>',
@@ -180,7 +182,7 @@ trash:'<path d="M4 7h16" stroke="#ef454a" stroke-width="2" stroke-linecap="round
 };
 
 const GROUPS = [
-    { id: 'g-cursor', name: 'Cursors',                  tools: ['cursor', 'dot', 'eraser'] },
+    { id: 'g-cursor', name: 'Cursors',                  tools: ['cursor', 'dot', 'pointer', 'eraser'] },
     { id: 'g-lines',  name: 'Lines',                    tools: ['trend', 'ray', 'extended', 'arrow', 'angle', 'hline', 'hray', 'vline', 'crossline', 'channel', 'pitchfork'] },
     { id: 'g-fib',    name: 'Fibonacci & Gann',         tools: ['fib', 'fibext', 'fibfan', 'fibtime', 'gann'] },
     { id: 'g-shapes', name: 'Shapes & zones',           tools: ['rect', 'orderblock', 'ellipse', 'triangle', 'path'] },
@@ -234,6 +236,8 @@ function attach(_chart, _series, _host, opts) {
     host.addEventListener('mousemove', onHover);
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+    window.addEventListener('mousemove', onCfgMove);
+    window.addEventListener('mouseup', onCfgUp);
     document.addEventListener('keydown', onKey);
 
     buildRail();
@@ -481,7 +485,7 @@ function onDown(e) {
         return;
     }
 
-    if (tool !== 'cursor' && tool !== 'dot') {
+    if (!NAV[tool]) {
         e.preventDefault(); e.stopPropagation();
         const sp = T[tool];
         const s = newShape(tool, p);
@@ -489,7 +493,7 @@ function onDown(e) {
         if (sp.pts === 1) {
             shapes.push(s); selected = s.id; commit(); place();
             if (sp.cap === 'text') openSettings(s.id, true);
-            setTool('cursor');
+            setTool(navTool);
             return;
         }
         if (sp.pts === 2 || sp.drag) {
@@ -603,7 +607,7 @@ function onUp() {
                 return;
             }
         }
-        setTool('cursor');
+        setTool(navTool);
         rememberStyle(s);
         if (spec(s).cap === 'text') openSettings(s.id, true);
     }
@@ -629,7 +633,7 @@ function finishPending() {
     if (!s) return;
     if (s.pts.length < 2) { shapes = shapes.filter(x => x.id !== s.id); selected = null; }
     else rememberStyle(s);
-    setTool('cursor');
+    setTool(navTool);
     commit(); place();
 }
 
@@ -784,7 +788,7 @@ function onKey(e) {
     if (e.key === 'Escape') {
         if (menuEl) { closeMenu(); return; }
         if (pending) { if (pending.pts.length > 2) pending.pts.pop(); finishPending(); return; }
-        setTool('cursor'); selected = null; closeHud(); closeSettings(); render(); return;
+        setTool(navTool); selected = null; closeHud(); closeSettings(); render(); return;
     }
     if ((e.key === 'Delete' || e.key === 'Backspace') && selected !== null) {
         e.preventDefault(); remove(selected);
@@ -1825,7 +1829,7 @@ function openSettings(id, focusText) {
         body += row('Show ratios', '<input type="checkbox" data-s="showPercent"' + (st.showPercent ? ' checked' : '') + '>');
         body += row('Show prices', '<input type="checkbox" data-s="showPrices"' + (st.showPrices ? ' checked' : '') + '>');
         body += row('Shade between', '<input type="checkbox" data-s="fillLevels"' + (st.fillLevels ? ' checked' : '') + '>');
-        body += '<div class="rp-lv-head"><span>Levels</span>' +
+        body += '<div class="rp-lv-head"><span>Levels <i>' + levelsOf(s).length + '</i></span>' +
                 '<button data-act="lvreset" title="Back to the defaults">Reset</button></div>' +
                 '<div class="rp-lv-list">' + levelsOf(s).map((L, i) =>
                   '<div class="rp-lv-row" data-lv="' + i + '">' +
@@ -1862,6 +1866,7 @@ function openSettings(id, focusText) {
           '<button class="rp-btn" data-act="done">Done</button>' +
         '</div></div>';
     host.appendChild(cfgEl);
+    cfgEl.querySelector('header').addEventListener('mousedown', onCfgDown);
     placeSettings();
     readout(s);
 
@@ -1982,6 +1987,12 @@ function readout(s) {
         '<span>Bars <b>' + barsBetween(s.pts[0].time, (s.pts[2] || s.pts[1]).time) + '</b></span>';
 }
 
+/* Like the floating toolbar, the dialog opens beside its drawing and is
+   dragged by its header. What is stored is an OFFSET, not a fixed point, so it
+   still follows the next drawing you open — just from where you put it. */
+let cfgOffset = { dx: 0, dy: 0 };
+let cfgDrag = null;
+
 function placeSettings() {
     if (!cfgEl || cfgId === null) return;
     const s = shapes.find(x => x.id === cfgId);
@@ -1989,8 +2000,32 @@ function placeSettings() {
     const p = pxOf(s.pts[0]);
     if (!p) return;
     const w = cfgEl.offsetWidth || 236, h = cfgEl.offsetHeight || 280;
-    cfgEl.style.left = Math.max(6, Math.min(cvs.clientWidth - w - 6, p.x + 18)) + 'px';
-    cfgEl.style.top  = Math.max(6, Math.min(Math.max(6, cvs.clientHeight - h - 6), p.y + 8)) + 'px';
+    const x = p.x + 18 + cfgOffset.dx, y = p.y + 8 + cfgOffset.dy;
+    const cx = Math.max(6, Math.min(Math.max(6, cvs.clientWidth  - w - 6), x));
+    const cy = Math.max(6, Math.min(Math.max(6, cvs.clientHeight - h - 6), y));
+    /* Store the clamp back into the offset while dragging. Without this the
+       offset keeps growing past the edge and the panel refuses to come back
+       until you have dragged all the invisible distance out again. */
+    if (cfgDrag) { cfgOffset.dx += cx - x; cfgOffset.dy += cy - y; }
+    cfgEl.style.left = cx + 'px';
+    cfgEl.style.top  = cy + 'px';
+}
+function onCfgDown(e) {
+    if (!cfgEl || e.target.closest('button')) return;
+    cfgDrag = { sx: e.clientX, sy: e.clientY, dx: cfgOffset.dx, dy: cfgOffset.dy };
+    cfgEl.classList.add('dragging');
+    e.preventDefault(); e.stopPropagation();
+}
+function onCfgMove(e) {
+    if (!cfgDrag) return;
+    cfgOffset = { dx: cfgDrag.dx + e.clientX - cfgDrag.sx,
+                  dy: cfgDrag.dy + e.clientY - cfgDrag.sy };
+    placeSettings();
+}
+function onCfgUp() {
+    if (!cfgDrag) return;
+    cfgDrag = null;
+    if (cfgEl) cfgEl.classList.remove('dragging');
 }
 function closeSettings() { if (cfgEl) { cfgEl.remove(); cfgEl = null; cfgId = null; } }
 
@@ -2022,12 +2057,45 @@ function migrate(st) {
 
 // --------------------------------------------------------------------- api
 
+/* The cursor group is not decoration. Cross keeps the chart's crosshair, Dot
+   swaps it for a ring that follows the pointer, Arrow takes both away, and the
+   eraser carries its own pointer — each one has to change the CHART as well as
+   the CSS cursor, or picking Dot appeared to do nothing at all. */
+function svgCursor(inner, hot) {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22">' + inner + '</svg>';
+    return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '") ' + hot + ', crosshair';
+}
+const CURSORS = {
+    cursor:  'crosshair',
+    pointer: 'default',
+    dot:     svgCursor('<circle cx="11" cy="11" r="5" fill="none" stroke="#f7a600" stroke-width="2"/>' +
+                       '<circle cx="11" cy="11" r="1.4" fill="#f7a600"/>', '11 11'),
+    eraser:  svgCursor('<path d="M3 15l7-7 7 7-4 4H7z" fill="#ef454a" opacity=".85" ' +
+                       'stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round"/>', '4 18')
+};
+const NAV = { cursor: 1, dot: 1, pointer: 1 };
+let navTool = 'cursor';        // the cursor to fall back to when a shape is done
+
+function applyCursorMode(t) {
+    const css = CURSORS[t] || 'crosshair';
+    if (cvs)  cvs.style.cursor = css;
+    if (host) host.style.cursor = css;
+    if (!chart) return;
+    const lines = t !== 'dot' && t !== 'pointer';
+    try {
+        chart.applyOptions({ crosshair: {
+            vertLine: { visible: lines, labelVisible: t !== 'pointer' },
+            horzLine: { visible: lines, labelVisible: t !== 'pointer' }
+        } });
+    } catch (e) {}
+}
+
 function setTool(t) {
     if (pending) { shapes = shapes.filter(x => x.id !== pending.id); pending = null; }
     tool = t;
-    const nav = t === 'cursor' || t === 'dot';
-    if (cvs) cvs.style.cursor = nav ? 'default' : 'crosshair';
-    if (host) host.style.cursor = nav ? '' : 'crosshair';
+    const nav = !!NAV[t];
+    if (nav) navTool = t;
+    applyCursorMode(t);
     if (railEl) railEl.querySelectorAll('.rp-rail-btn[data-pick]').forEach(b =>
         b.classList.toggle('active', b.dataset.pick === t));
     const nameEl = document.getElementById('rp-tool-name');
@@ -2043,6 +2111,7 @@ function setTool(t) {
 const api = {
     attach: attach,
     setTool: setTool,
+    getTool: function () { return tool; },
     tools: T,
     clear: function () { shapes = []; selected = null; closeHud(); closeSettings(); commit(); },
     count: function () { return shapes.length; },

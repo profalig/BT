@@ -1187,19 +1187,38 @@ function addIndicator(type, params, code, styles) {
     return item;
 }
 
+/* Clicking a study has to LOOK like it did something, or people click again
+   and again wondering whether they missed. The selected study's plots thicken
+   and its row in the top-left list is marked; everything else is untouched. */
+let selInd = null;
+
 function applyLineStyle(item, i) {
     const st = item.styles[i];
+    const on = item.id === selInd;
     try {
         item.lines[i].applyOptions((item.kinds || [])[i] === 'histogram'
             ? { color: st.color, visible: st.visible !== false }
-            : lineOpts(st));
+            : Object.assign(lineOpts(st), on
+                ? { lineWidth: Math.min(4, (+st.width || 2) + 1), crosshairMarkerVisible: true }
+                : {}));
     } catch (e) {}
+}
+
+function selectIndicator(id) {
+    if (selInd === id) return;
+    const was = selInd;
+    selInd = id;
+    activeInd.forEach(a => {
+        if (a.id === was || a.id === id) a.lines.forEach((_, i) => applyLineStyle(a, i));
+    });
+    renderLegend();
 }
 
 function removeIndicator(id) {
     const i = activeInd.findIndex(a => a.id === id);
     if (i < 0) return;
     activeInd[i].lines.forEach(l => { try { chart.removeSeries(l); } catch (e) {} });
+    if (selInd === id) selInd = null;
     activeInd.splice(i, 1);
     renderIndicatorList();
     renderLegend();
@@ -1310,7 +1329,8 @@ function renderLegend() {
         // The controls are always in the row, never revealed on hover: a row
         // that changes width when the pointer crosses it shoves everything
         // beside it out of the way.
-        return '<div class="rp-leg-row' + (a.hidden ? ' off' : '') + '" data-leg="' + a.id + '">' +
+        return '<div class="rp-leg-row' + (a.hidden ? ' off' : '') +
+                 (a.id === selInd ? ' sel' : '') + '" data-leg="' + a.id + '">' +
                  '<span class="rp-leg-dot" style="background:' + col + '"></span>' +
                  '<span class="rp-leg-name">' + label + '</span>' + val +
                  (a.error ? '<span class="rp-leg-err" title="' +
@@ -1325,11 +1345,21 @@ function renderLegend() {
                  '</span>' +
                '</div>';
     }).join('');
-    box.querySelectorAll('.rp-leg-row').forEach(row =>
+    box.querySelectorAll('.rp-leg-row').forEach(row => {
+        row.addEventListener('click', e => {
+            if (e.target.closest('button')) return;
+            /* Stop here. Selecting re-renders the legend, which detaches this
+               node — and a detached target makes the chart's own click guard
+               (`closest('.rp-legend-wrap')`) miss, so the click read as a
+               click on empty chart and cleared the selection again. */
+            e.stopPropagation();
+            selectIndicator(+row.dataset.leg);
+        });
         row.addEventListener('dblclick', e => {
             e.stopPropagation();
             openIndSettings(+row.dataset.leg);
-        }));
+        });
+    });
     box.querySelectorAll('[data-eye]').forEach(b =>
         b.addEventListener('click', e => {
             e.stopPropagation();
@@ -3099,146 +3129,132 @@ const GUIDE_ICON = {
             'stroke="#f7a600" stroke-width="1.4"/>'
 };
 
+/* Each topic is a short, scannable card: a one-line lede, steps that lead with
+   what you are doing rather than a paragraph to wade through, the keys that go
+   with it, and one thing worth knowing that people get wrong. Anything longer
+   than a line does not get read. */
 const GUIDE = [
     {
-        id: 'replay', icon: 'replay', title: 'Replay a market',
-        lede: 'Replay hides everything after a date you choose and gives it back one bar ' +
-              'at a time, so you read the chart the way you would have at the time.',
+        id: 'replay', icon: 'replay', group: 'Start here', title: 'Replay a market',
+        lede: 'Hide everything after a date, then take it back one bar at a time.',
         steps: [
-            ['Press <b>Replay</b> in the top bar. A strip appears over the chart.'],
-            ['Pick where to start: double-click any candle, or use the date wheel and press <b>Use date</b>.'],
-            ['Press <b>Start replay</b>. The chart cuts there and everything to the right is withheld.'],
-            ['Step forward with <kbd>→</kbd>, back with <kbd>←</kbd>, or play with <kbd>Space</kbd>. ' +
-             'The speed slider sets bars per second.',
-             'Stepping back rewinds your account too — trades taken after that bar un-happen.'],
-            ['<b>Back to full chart</b> ends the session and returns to live prices. Your trade log is kept.']
+            ['Open it', 'Press <b>Replay</b> in the top bar.'],
+            ['Choose the moment', 'Double-click any candle, or roll the date wheel and press <b>Use date</b>.'],
+            ['Cut the chart', '<b>Start replay</b> withholds every bar after that point.'],
+            ['Move through it', 'Step one bar at a time, or press play and set bars per second.'],
+            ['Come back', '<b>Back to full chart</b> returns to live prices. Your trade log survives.']
         ],
-        note: 'You cannot cheat by dragging: future bars are not in the chart at all, ' +
-              'they sit in a buffer the drawing code cannot reach.'
+        keys: [['&rarr;', 'Next bar'], ['&larr;', 'Back a bar'], ['Space', 'Play / pause']],
+        note: 'Stepping back rewinds your account too — trades taken after that bar un-happen. ' +
+              'Future bars are never in the chart at all, so they cannot be peeked at.'
     },
     {
-        id: 'trade', icon: 'trade', title: 'Place a trade',
-        lede: 'The right-hand panel is a full order ticket. It works during a replay and ' +
-              'on the live chart.',
+        id: 'market', icon: 'market', group: 'Start here', title: 'Choosing an instrument',
+        short: 'Instruments',
+        lede: 'Crypto and gold are priced from Binance, currencies from the European Central Bank.',
         steps: [
-            ['Choose <b>Market</b>, <b>Limit</b> or <b>Stop</b>. Limit and Stop reveal a price box; ' +
-             '<b>Last</b> fills it with the current price.'],
-            ['Set a <b>Stop</b> and a <b>Target</b> — by price, or switch to <b>By points</b> for a distance.'],
-            ['Check the readout: order value, margin, what you are risking, reward and R:R, ' +
-             'and the estimated liquidation.'],
-            ['Press <b>Buy / Long</b> or <b>Sell / Short</b>.'],
-            ['Working orders wait in <b>Open orders</b> until price reaches them. Filled ones show ' +
-             'in <b>Positions</b> and finish in <b>Trade history</b>.']
+            ['Open the picker', 'Click the instrument button in the top bar.'],
+            ['Browse', 'Tabs for Favourites, Crypto, Forex and Commodities. Search stays inside the open tab.'],
+            ['Keep what you use', 'Star anything to pin it to Favourites.'],
+            ['Crypto', 'Minute data back to 2017 — every timeframe works and replay steps minute by minute.'],
+            ['Forex', 'Daily closes back to 1999. One price a day, so it draws as a line and fills resolve on the day.']
         ],
-        note: 'Fills are stepped through 1-minute bars, and where one minute touches both your ' +
-              'stop and your target the <b>stop</b> is taken. Both sides pay the fee set in ' +
-              'chart settings, so results are never flattered.'
+        note: 'Shares, indices and oil are missing because neither feed carries them — ' +
+              'not because they were forgotten.'
     },
     {
-        id: 'size', icon: 'size', title: 'Automatic position sizing',
-        lede: 'Say what you are willing to lose and the size is worked out for you, ' +
-              'so risk stays constant while stop distance changes.',
+        id: 'trade', icon: 'trade', group: 'Trading', title: 'Place a trade',
+        lede: 'The right-hand panel is a full order ticket. It works live and in replay.',
         steps: [
-            ['Leave the ticket on <b>Risk %</b> and type the share of your balance you will risk — ' +
-             '1% is the usual starting point.'],
-            ['Set your stop. Quantity is recalculated the moment it changes: a wider stop buys ' +
-             'a smaller position, so the money at risk stays the same.'],
-            ['Switch to <b>Quantity</b> to size by hand instead — in the coin, or in USDT ' +
-             'using the unit selector.'],
-            ['The percentage slider sizes against the most you could hold at your current leverage.'],
-            ['Faster still: draw a <b>Long position</b> or <b>Short position</b> on the chart, ' +
-             'drag the entry, stop and target where you want them, then press <b>Trade</b> on ' +
-             'its toolbar.',
-             'A setup drawn away from the current price is sent as a resting order at that price, ' +
-             'not snapped onto the last candle.']
+            ['Order type', 'Market, Limit or Stop. <b>Last</b> fills the price box with the current price.'],
+            ['Protect it', 'Set a stop and a target — by price, or by distance in points.'],
+            ['Read the ticket', 'Order value, margin, risk, reward, R:R and the estimated liquidation.'],
+            ['Send it', '<b>Buy / Long</b> or <b>Sell / Short</b>.'],
+            ['Follow it', 'Working orders wait in Open orders, fills show in Positions, ' +
+                          'closed trades land in Trade history.']
         ],
-        note: 'Risk on stop includes both fees, which is why it is a little larger than ' +
-              'stop distance times quantity.'
+        note: 'Fills step through 1-minute bars, and where one minute touches both your stop and ' +
+              'your target the <b>stop</b> is taken. Both sides pay the fee, so nothing is flattered.'
     },
     {
-        id: 'tools', icon: 'tools', title: 'Drawing and favourite tools',
-        lede: 'Forty tools in seven groups on the left rail. Everything is saved per ' +
-              'instrument as you draw.',
+        id: 'size', icon: 'size', group: 'Trading', title: 'Automatic position sizing',
+        short: 'Position sizing',
+        lede: 'Say what you are willing to lose and the size follows your stop.',
         steps: [
-            ['Click a rail icon to use the tool showing; click its small corner arrow ' +
-             '(or right-click it) to open the group and pick another.'],
-            ['Star any tool in that menu to pin it. Pinned tools appear at the top of the ' +
-             '<b>right-click menu</b> anywhere on the chart.'],
-            ['Select a drawing and a toolbar floats above it: colour, fill, width, line style, ' +
-             'extends, lock, duplicate, settings, delete. Drag the toolbar if it is in the way.'],
-            ['Double-click a drawing for its full settings. Fibonacci levels can be added, ' +
-             'removed, recoloured and switched off one by one.'],
-            ['<kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> redoes, ' +
-             '<kbd>Delete</kbd> removes the selected drawing, <kbd>Esc</kbd> cancels.']
+            ['Set the risk', 'Leave the ticket on <b>Risk %</b> and type the share of your balance. ' +
+                             '1% is the usual start.'],
+            ['Move your stop', 'Quantity is recalculated instantly — a wider stop buys a smaller position.'],
+            ['Or size by hand', 'Switch to <b>Quantity</b> and type it, in the coin or in USDT.'],
+            ['Or draw it', 'Drag a <b>Long</b> or <b>Short position</b> on the chart, then press ' +
+                           '<b>Trade</b> on its toolbar.']
         ],
-        note: 'The magnet on the rail snaps new points to the nearest open, high, low or close.'
+        note: 'Risk on stop includes both fees, which is why it reads a little above stop distance ' +
+              '&times; quantity. A setup drawn away from price is sent as a resting order there, ' +
+              'not snapped onto the last candle.'
     },
     {
-        id: 'ind', icon: 'ind', title: 'Indicators and your own code',
-        lede: 'Nine built-in studies, each with the inputs and per-plot styling you would ' +
-              'expect — plus a place for the strategy you measured in the Backtest Machine.',
+        id: 'tools', icon: 'tools', group: 'Charting', title: 'Drawing tools',
+        lede: 'Forty tools in seven groups on the left rail, saved per instrument as you draw.',
         steps: [
-            ['Press <b>Indicators</b>, search, and click one to add it.'],
-            ['Double-click the plotted line — or the row in the top-left list — to open its settings.'],
-            ['<b>Inputs</b> holds length, source, smoothing, bands and offset. <b>Style</b> gives every ' +
-             'plot its own colour, width, line style and visibility.'],
-            ['In the top-left list, the eye hides a study, the gear opens it, the cross removes it, ' +
-             'and the arrow folds the whole list away.'],
-            ['For your own logic, open <b>Add your own system code</b> on the right of the ' +
-             'indicators panel. Write a function body over <code>bars</code> that returns one ' +
-             'value per bar.',
-             'It runs only in your browser, on your code. Pine Script cannot run outside ' +
-             'TradingView, so this is the equivalent that is genuinely yours.']
+            ['Pick one', 'Click a rail icon to use the tool showing; its corner arrow — or a ' +
+                         'right-click — opens the whole group.'],
+            ['Pin your favourites', 'Star a tool in that menu and it appears at the top of the ' +
+                                    'right-click menu, anywhere on the chart.'],
+            ['Restyle it', 'Select a drawing and a toolbar floats above it. Drag the toolbar if ' +
+                           'it sits where you need to look.'],
+            ['Go deeper', 'Double-click for full settings. Fibonacci levels can be edited, added, ' +
+                          'recoloured or switched off one by one.']
         ],
-        note: 'In replay, studies only ever see the bars revealed so far — they are recomputed ' +
-              'from what is on screen, so stepping back cannot leak the future into them.'
+        keys: [['Ctrl+Z', 'Undo'], ['Ctrl+Shift+Z', 'Redo'], ['Del', 'Delete selected'], ['Esc', 'Cancel']],
+        note: 'The magnet on the rail snaps new points to the nearest open, high, low or close. ' +
+              'The cursor group above it swaps the crosshair for a dot, an arrow, or the eraser.'
     },
     {
-        id: 'market', icon: 'market', title: 'Choosing an instrument',
-        lede: 'Crypto and gold are priced from Binance; currencies come from the European ' +
-              'Central Bank daily reference rates.',
+        id: 'ind', icon: 'ind', group: 'Charting', title: 'Indicators and your own code',
+        short: 'Indicators & code',
+        lede: 'Nine studies with real inputs, plus a place for the system you measured in the ' +
+              'Backtest Machine.',
         steps: [
-            ['Click the instrument button in the top bar to open the picker.'],
-            ['Use the tabs — Favourites, Crypto, Forex, Commodities — or search within the open tab.'],
-            ['Star anything to keep it in Favourites.'],
-            ['Crypto and gold have minute data back to 2017 and 2020, so every timeframe works ' +
-             'and replay steps minute by minute.'],
-            ['Forex reaches back to 1999, but it is one close per business day. It therefore draws ' +
-             'as a line rather than candles, only the daily timeframe is offered, and fills ' +
-             'resolve on the day.',
-             'Inventing an open, high and low from a single daily close would be making data up, ' +
-             'so it is not done.']
+            ['Add one', 'Press <b>Indicators</b>, search, click.'],
+            ['Select it', 'Click its line on the chart — the line thickens and its row in the ' +
+                          'top-left list lights up.'],
+            ['Edit it', 'Double-click the line or the row. <b>Inputs</b> on one tab, per-plot ' +
+                        '<b>Style</b> on the other.'],
+            ['Manage the list', 'Eye hides, gear opens, cross removes, and the arrow folds the ' +
+                                'whole list away.'],
+            ['Run your own', '<b>Add your own system code</b> takes a function body over ' +
+                             '<code>bars</code> that returns one value per bar.']
         ],
-        note: 'Shares, indices and oil are absent because neither feed carries them — not ' +
-              'because they were forgotten.'
+        note: 'In replay a study only ever sees the bars revealed so far — it is recomputed from ' +
+              'what is on screen, so stepping back cannot leak the future into it.'
     },
     {
-        id: 'save', icon: 'save', title: 'Layouts and sessions',
+        id: 'report', icon: 'report', group: 'Results', title: 'Reading and exporting results',
+        short: 'Results & export',
+        lede: 'Measured the same way the Backtest Machine measures a submitted system, so the two compare.',
+        steps: [
+            ['Performance', 'Net P&amp;L first, then the seven figures that decide a system, then ' +
+                            'the equity curve.'],
+            ['Calendar', 'Profit and loss laid out day by day.'],
+            ['Journal', 'A note and tags against every trade.'],
+            ['Export', 'A <b>PDF</b> report in the Backtest Machine format, a <b>CSV</b> trade log, ' +
+                       'or the raw <b>JSON</b> behind both.']
+        ],
+        note: 'Profit factor under 1 means the losses outweigh the wins. Sharpe is withheld below ' +
+              'five trades, because three trades is not a sample.'
+    },
+    {
+        id: 'save', icon: 'save', group: 'Results', title: 'Layouts and sessions',
+        short: 'Layouts & sessions',
         lede: 'Two different things worth keeping: how the chart looks, and what you did on it.',
         steps: [
-            ['<b>Layouts</b> in the top bar saves the instrument, timeframe, theme, indicators ' +
-             'and drawings under a name. Reuse it every day.'],
-            ['<b>Save / load</b> at the bottom right stores a trading session: your trades, ' +
-             'working orders and balance.'],
-            ['Reload either from its own menu; delete them there too, one at a time or all at once.']
+            ['Layouts', 'Instrument, timeframe, theme, indicators and drawings, saved under a name.'],
+            ['Sessions', '<b>Save / load</b> at the bottom right keeps your trades, working orders ' +
+                         'and balance.'],
+            ['Clear up', 'Reload or delete either from its own menu — one at a time, or all at once.']
         ],
         note: 'Both live in this browser. Carrying them between machines needs an account, ' +
               'which is not built yet.'
-    },
-    {
-        id: 'report', icon: 'report', title: 'Reading and exporting results',
-        lede: 'Every trade is measured the same way the Backtest Machine measures a submitted ' +
-              'system, so the two can be compared directly.',
-        steps: [
-            ['<b>Performance</b> leads with net P&amp;L, then the seven figures that decide whether ' +
-             'a system is worth trading, then the equity curve.'],
-            ['<b>Calendar</b> shows profit and loss by day; <b>Journal</b> keeps a note and tags ' +
-             'against each trade.'],
-            ['<b>Export</b> gives a <b>PDF report</b> in the Backtest Machine format, a <b>CSV</b> ' +
-             'trade log, or the raw <b>JSON</b> behind them.']
-        ],
-        note: 'Profit factor under 1 means the losses outweigh the wins. Sharpe is withheld ' +
-              'below five trades, because three trades is not a sample.'
     }
 ];
 
@@ -3246,19 +3262,26 @@ let guideAt = 'replay';
 
 function renderGuide() {
     const nav = $('rp-help-nav');
-    nav.innerHTML = GUIDE.map(g =>
-        '<button data-g="' + g.id + '"' + (g.id === guideAt ? ' class="active"' : '') + '>' +
+    let last = null;
+    nav.innerHTML = GUIDE.map(g => {
+        const head = g.group !== last ? '<h6>' + g.group + '</h6>' : '';
+        last = g.group;
+        return head + '<button data-g="' + g.id + '"' + (g.id === guideAt ? ' class="active"' : '') + '>' +
           '<svg viewBox="0 0 24 24" width="18" height="18">' + GUIDE_ICON[g.icon] + '</svg>' +
-          '<span>' + g.title + '</span></button>').join('');
+          '<span>' + (g.short || g.title) + '</span></button>';
+    }).join('');
     nav.querySelectorAll('[data-g]').forEach(b =>
         b.addEventListener('click', () => { guideAt = b.dataset.g; renderGuide(); }));
 
     const g = GUIDE.find(x => x.id === guideAt) || GUIDE[0];
     $('rp-help-doc').innerHTML =
+        '<span class="rp-help-kicker">' + g.group + '</span>' +
         '<h3>' + g.title + '</h3><p class="lede">' + g.lede + '</p>' +
-        g.steps.map((st, i) =>
-            '<div class="rp-help-step"><span class="rp-help-num">' + (i + 1) + '</span>' +
-            '<p>' + st[0] + (st[1] ? '<em>' + st[1] + '</em>' : '') + '</p></div>').join('') +
+        '<ol class="rp-help-steps">' + g.steps.map((st, i) =>
+            '<li class="rp-help-step"><span class="rp-help-num">' + (i + 1) + '</span>' +
+            '<div><b>' + st[0] + '</b><p>' + st[1] + '</p></div></li>').join('') + '</ol>' +
+        (g.keys ? '<div class="rp-help-keys">' + g.keys.map(k =>
+            '<span><kbd>' + k[0] + '</kbd>' + k[1] + '</span>').join('') + '</div>' : '') +
         (g.note ? '<div class="rp-help-note">' + g.note + '</div>' : '');
     $('rp-help-doc').scrollTop = 0;
 }
@@ -3976,6 +3999,16 @@ function init() {
         }
         return best;
     }
+
+    /* A single click on a plot selects the study. Only while a cursor tool is
+       in hand — during drawing the click belongs to the shape being made. */
+    $('rp-chart-wrap').addEventListener('click', e => {
+        if (e.target.closest('.rp-legend-wrap, .rp-transport, .rp-hud, .rp-cf, .rp-tb, .rp-ctx')) return;
+        const t = window.BTTools && BTTools.getTool ? BTTools.getTool() : 'cursor';
+        if (t !== 'cursor' && t !== 'dot' && t !== 'pointer') return;
+        const hit = indicatorAt(e);
+        selectIndicator(hit ? hit.id : null);
+    });
 
     $('rp-chart-wrap').addEventListener('dblclick', e => {
         if (e.target.closest('.rp-legend-wrap, .rp-transport, .rp-hud, .rp-cf, .rp-tb')) return;
