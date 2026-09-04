@@ -1358,13 +1358,50 @@ function init() {
         bar.hidden = !bar.hidden;
     });
 
-    // Double-clicking the chart opens its settings, which is where the
-    // gesture leads on every other platform.
+    // Where the pointer is relative to the two axes. Both are drawn inside
+    // the same container as the plot, so without asking the library how wide
+    // and tall they are we cannot tell an axis gesture from a chart one.
+    function overAxis(e) {
+        const r = $('rp-chart-wrap').getBoundingClientRect();
+        let pw = 0, th = 0;
+        try { pw = chart.priceScale('right').width(); } catch (err) {}
+        try { th = chart.timeScale().height(); } catch (err) {}
+        return {
+            price: e.clientX >= r.right - pw,
+            time:  e.clientY >= r.bottom - th,
+            rect: r
+        };
+    }
+
+    // Double-clicking an axis is the library's own "reset the view" gesture,
+    // so settings must stay out of the way there and only answer to a
+    // double-click on the plot itself.
     $('rp-chart-wrap').addEventListener('dblclick', e => {
-        if (e.target.closest('.rp-legend, .rp-transport, .rp-hud')) return;
+        if (e.target.closest('.rp-legend, .rp-transport, .rp-hud, .rp-draw-cfg')) return;
         if (!$('rp-cutbar').hidden) return;      // mid replay set-up
+        const where = overAxis(e);
+        if (where.price || where.time) return;   // axis double-click: let it reset
         $('rp-set').hidden = false;
     });
+
+    // Scrolling over the price axis should stretch and squash the chart
+    // vertically, the way dragging that axis already does. The library zooms
+    // the time axis on wheel but has no vertical equivalent, so this drives
+    // the price scale's margins instead: smaller margins let the candles fill
+    // more height (zoom in), larger ones compress them (zoom out).
+    let priceMargins = { top: 0.1, bottom: 0.1 };
+    $('rp-chart-wrap').addEventListener('wheel', e => {
+        if (!overAxis(e).price) return;          // over the plot: leave it alone
+        e.preventDefault();
+        e.stopPropagation();
+        const k = e.deltaY > 0 ? 1.12 : 1 / 1.12;
+        priceMargins = {
+            top:    Math.min(0.42, Math.max(0.005, priceMargins.top * k)),
+            bottom: Math.min(0.42, Math.max(0.005, priceMargins.bottom * k))
+        };
+        try { chart.priceScale('right').applyOptions({ scaleMargins: priceMargins }); }
+        catch (err) {}
+    }, { passive: false });
 
     // sidebar cards can be reordered by dragging
     initCardDrag();

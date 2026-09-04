@@ -174,10 +174,17 @@ function onMove(e) {
         s.pts[1] = { time: p.time, price: p.price };
         if (s.type === 'position') {
             const risk = s.pts[0].price - s.pts[1].price;
-            s.pts[2] = { time: p.time, price: s.pts[0].price + risk * 2 };  // initial only
+            // 2R is only the starting target; it is freely draggable after.
+            s.pts[2] = { time: p.time, price: s.pts[0].price + risk * 2 };
         }
     } else if (drag.mode === 'handle') {
-        s.pts[drag.handle] = { time: p.time, price: p.price };
+        // A position's three levels are horizontal: their time only sets how
+        // wide the box is, so dragging one must change PRICE ALONE. Writing
+        // the cursor's time as well made the whole box slide sideways while
+        // you were only trying to move a level up or down.
+        s.pts[drag.handle] = (s.type === 'position')
+            ? { time: s.pts[drag.handle].time, price: p.price }
+            : { time: p.time, price: p.price };
     } else {
         const dt = p.time - drag.from.time, dp = p.price - drag.from.price;
         s.pts = drag.orig.map(q => ({ time: q.time + dt, price: q.price + dp }));
