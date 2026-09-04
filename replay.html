@@ -128,6 +128,48 @@
         </div>
 
         <div class="rp-card">
+            <h3>Indicators</h3>
+            <div class="rp-row">
+                <label class="rp-field wide">
+                    <span>Add</span>
+                    <select id="rp-ind-type">
+                        <option value="sma">SMA</option>
+                        <option value="ema">EMA</option>
+                        <option value="bb">Bollinger</option>
+                        <option value="rsi">RSI</option>
+                        <option value="atr">ATR</option>
+                        <option value="custom">Custom (JavaScript)</option>
+                    </select>
+                </label>
+                <label class="rp-field" style="width:74px">
+                    <span>Period</span>
+                    <input type="number" id="rp-ind-period" value="20" min="1" max="400">
+                </label>
+                <button id="rp-ind-add" class="rp-btn" style="align-self:flex-end">Add</button>
+            </div>
+
+            <div id="rp-ind-custom" hidden>
+                <p class="rp-hint">
+                    Write a function body over <code>bars</code> and return one value per bar.
+                    Pine Script only runs on TradingView&rsquo;s servers, so this is the
+                    equivalent that is actually ours.
+                </p>
+                <textarea id="rp-ind-code" spellcheck="false" rows="6">// bars: [{time, open, high, low, close}]
+// return: array of numbers (or null to skip a bar)
+const out = [];
+let sum = 0;
+for (let i = 0; i < bars.length; i++) {
+  sum += bars[i].close;
+  if (i >= 50) sum -= bars[i - 50].close;
+  out.push(i >= 49 ? sum / 50 : null);
+}
+return out;</textarea>
+            </div>
+
+            <div id="rp-ind-list" class="rp-ind-list"><div class="rp-empty">None active.</div></div>
+        </div>
+
+        <div class="rp-card">
             <h3>Position</h3>
             <div id="rp-position" class="rp-empty">Flat — no open position.</div>
         </div>

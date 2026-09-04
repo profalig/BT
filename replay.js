@@ -191,6 +191,8 @@ function paint() {
     }
     try { series.setData(data); }
     catch (e) { console.error('[replay] setData rejected', e, data.slice(0, 3), data.slice(-3)); }
+    lastPainted = data;
+    refreshIndicators(data);
 }
 
 const toBar = k => ({ time: k.t / 1000, open: k.o, high: k.h, low: k.l, close: k.c });
@@ -312,11 +314,14 @@ function exitReplayState() {
 
 function hasWorkToLose() { return !!S.position || S.trades.length > 0; }
 
+let startingReplay = false;
 async function startReplay() {
     const ms = S.cutCandidate;
-    if (!ms) return;
+    if (!ms || startingReplay) return;
     if (hasWorkToLose() &&
         !confirm('Starting a new replay clears the open position and trade log. Continue?')) return;
+    startingReplay = true;
+    try {
 
     // Context before the cut stays on screen. What is already loaded is the
     // browse window, which sits at the PRESENT — so cutting at an older date
@@ -362,6 +367,7 @@ async function startReplay() {
     updateModeUI();
     updateEquity();
     updateSizingHint();
+    } finally { startingReplay = false; }
 }
 
 async function ensure1m() {
@@ -457,6 +463,197 @@ function runLoop() {
     if (!S.playing) return;
     loopTimer = setTimeout(async () => { await stepBar(); runLoop(); },
                            Math.max(30, 1000 / S.speed));
+}
+
+// ------------------------------------------------------------- indicators
+
+/* Indicators are recomputed from whatever the chart is currently showing, so
+   in replay they see exactly the bars revealed so far and never the future.
+   That is why they are driven from paint() rather than kept in their own
+   cache: a cached indicator would leak lookahead the moment you stepped
+   backward, which is precisely the thing this tool exists to prevent. */
+
+const IND = {
+    sma: {
+        label: 'SMA', pane: 'price', params: { period: 20 },
+        calc: (b, p) => movingAvg(b.map(x => x.close), p.period)
+    },
+    ema: {
+        label: 'EMA', pane: 'price', params: { period: 21 },
+        calc: (b, p) => expAvg(b.map(x => x.close), p.period)
+    },
+    bb: {
+        label: 'Bollinger', pane: 'price', params: { period: 20, mult: 2 }, multi: 3,
+        calc: (b, p) => {
+            const c = b.map(x => x.close), ma = movingAvg(c, p.period);
+            const up = [], lo = [];
+            for (let i = 0; i < c.length; i++) {
+                if (ma[i] === null) { up.push(null); lo.push(null); continue; }
+                let sum = 0;
+                for (let j = i - p.period + 1; j <= i; j++) sum += Math.pow(c[j] - ma[i], 2);
+                const sd = Math.sqrt(sum / p.period);
+                up.push(ma[i] + p.mult * sd);
+                lo.push(ma[i] - p.mult * sd);
+            }
+            return [ma, up, lo];
+        }
+    },
+    rsi: {
+        label: 'RSI', pane: 'lower', params: { period: 14 },
+        calc: (b, p) => {
+            const c = b.map(x => x.close), out = new Array(c.length).fill(null);
+            let g = 0, l = 0;
+            for (let i = 1; i < c.length; i++) {
+                const d = c[i] - c[i - 1];
+                const up = d > 0 ? d : 0, dn = d < 0 ? -d : 0;
+                if (i <= p.period) {
+                    g += up; l += dn;
+                    if (i === p.period) {
+                        g /= p.period; l /= p.period;
+                        out[i] = l === 0 ? 100 : 100 - 100 / (1 + g / l);
+                    }
+                } else {
+                    g = (g * (p.period - 1) + up) / p.period;
+                    l = (l * (p.period - 1) + dn) / p.period;
+                    out[i] = l === 0 ? 100 : 100 - 100 / (1 + g / l);
+                }
+            }
+            return out;
+        }
+    },
+    atr: {
+        label: 'ATR', pane: 'lower', params: { period: 14 },
+        calc: (b, p) => {
+            const tr = b.map((x, i) => i === 0 ? x.high - x.low : Math.max(
+                x.high - x.low,
+                Math.abs(x.high - b[i - 1].close),
+                Math.abs(x.low - b[i - 1].close)));
+            return expAvg(tr, p.period);
+        }
+    }
+};
+
+function movingAvg(v, n) {
+    const out = new Array(v.length).fill(null);
+    let sum = 0;
+    for (let i = 0; i < v.length; i++) {
+        sum += v[i];
+        if (i >= n) sum -= v[i - n];
+        if (i >= n - 1) out[i] = sum / n;
+    }
+    return out;
+}
+function expAvg(v, n) {
+    const out = new Array(v.length).fill(null), k = 2 / (n + 1);
+    let prev = null;
+    for (let i = 0; i < v.length; i++) {
+        prev = prev === null ? v[i] : v[i] * k + prev * (1 - k);
+        if (i >= n - 1) out[i] = prev;
+    }
+    return out;
+}
+
+const IND_COLORS = ['#f0b25a', '#5aa9f0', '#c58af0', '#12a184', '#e2564e', '#8ad6f0'];
+let indSeq = 0;
+const activeInd = [];
+let lastPainted = [];
+
+function makeLine(pane, color, width) {
+    const opts = {
+        color: color, lineWidth: width || 2,
+        priceLineVisible: false, lastValueVisible: false,
+        crosshairMarkerVisible: false
+    };
+    if (pane === 'lower') {
+        opts.priceScaleId = 'ind-lower';
+        const ls = chart.addLineSeries(opts);
+        chart.priceScale('ind-lower').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+        return ls;
+    }
+    return chart.addLineSeries(opts);
+}
+
+function addIndicator(type, params, code) {
+    const def = IND[type];
+    const count = (def && def.multi) || 1;
+    const item = {
+        id: ++indSeq, type: type,
+        params: Object.assign({}, def ? def.params : {}, params || {}),
+        code: code || null, lines: [], error: null
+    };
+    for (let i = 0; i < count; i++) {
+        item.lines.push(makeLine(def ? def.pane : 'price',
+            IND_COLORS[(indSeq + i) % IND_COLORS.length], i === 0 ? 2 : 1));
+    }
+    activeInd.push(item);
+    renderIndicatorList();
+    refreshIndicators(lastPainted);
+    return item;
+}
+
+function removeIndicator(id) {
+    const i = activeInd.findIndex(a => a.id === id);
+    if (i < 0) return;
+    activeInd[i].lines.forEach(l => { try { chart.removeSeries(l); } catch (e) {} });
+    activeInd.splice(i, 1);
+    renderIndicatorList();
+}
+
+function refreshIndicators(data) {
+    if (!data || !data.length) {
+        activeInd.forEach(a => a.lines.forEach(l => l.setData([])));
+        return;
+    }
+    for (const a of activeInd) {
+        let res;
+        try {
+            if (a.type === 'custom') {
+                // Runs only in this browser, on code the user wrote themselves.
+                const fn = new Function('bars', a.code);
+                res = fn(data.map(b => ({
+                    time: b.time, open: b.open, high: b.high, low: b.low, close: b.close
+                })));
+                if (!Array.isArray(res)) throw new Error('must return an array');
+            } else {
+                res = IND[a.type].calc(data, a.params);
+            }
+        } catch (e) {
+            a.error = e.message;
+            a.lines.forEach(l => l.setData([]));
+            renderIndicatorList();
+            continue;
+        }
+        a.error = null;
+        const sets = Array.isArray(res[0]) ? res : [res];
+        a.lines.forEach((line, li) => {
+            const vals = sets[li] || [];
+            line.setData(data
+                .map((b, i) => ({ time: b.time, value: vals[i] }))
+                .filter(x => x.value !== null && x.value !== undefined && isFinite(x.value)));
+        });
+    }
+}
+
+function renderIndicatorList() {
+    const box = $('rp-ind-list');
+    if (!box) return;
+    if (!activeInd.length) { box.innerHTML = '<div class="rp-empty">None active.</div>'; return; }
+    box.innerHTML = activeInd.map(a => {
+        const label = a.type === 'custom'
+            ? 'Custom'
+            : IND[a.type].label + (a.params.period ? ' ' + a.params.period : '');
+        const err = a.error
+            ? '<span class="rp-ind-err" title="' + a.error.replace(/"/g, '&quot;') + '">error</span>'
+            : '';
+        return '<div class="rp-ind-item">' +
+               '<span class="rp-ind-dot" style="background:' +
+               IND_COLORS[a.id % IND_COLORS.length] + '"></span>' +
+               '<span class="rp-ind-name">' + label + '</span>' + err +
+               '<button class="rp-ind-x" data-ind="' + a.id + '" title="Remove">&times;</button>' +
+               '</div>';
+    }).join('');
+    box.querySelectorAll('.rp-ind-x').forEach(b =>
+        b.addEventListener('click', () => removeIndicator(+b.dataset.ind)));
 }
 
 // ------------------------------------------------------------ order engine
@@ -712,6 +909,21 @@ function init() {
         if (S.position && p !== null) closePosition(p, 'manual');
     });
     ['rp-risk', 'rp-stop'].forEach(id => $(id).addEventListener('input', updateSizingHint));
+
+    $('rp-ind-type').addEventListener('change', e => {
+        const custom = e.target.value === 'custom';
+        $('rp-ind-custom').hidden = !custom;
+        $('rp-ind-period').disabled = custom || e.target.value === 'bb' ? false : false;
+    });
+    $('rp-ind-add').addEventListener('click', () => {
+        const type = $('rp-ind-type').value;
+        if (type === 'custom') {
+            addIndicator('custom', {}, $('rp-ind-code').value);
+        } else {
+            addIndicator(type, { period: Math.max(1, +$('rp-ind-period').value || 20) });
+        }
+    });
+    renderIndicatorList();
 
     document.addEventListener('keydown', e => {
         if (/input|select|textarea/i.test(e.target.tagName)) return;
