@@ -1441,3 +1441,43 @@ body.dock-collapsed .rp-tab-icon i { transform: rotate(180deg); }
     .rp-help-nav { flex-direction: row; overflow-x: auto; border-right: none;
                    border-bottom: 1px solid var(--hairline); }
 }
+
+
+/* ====================================================  preview banner  ==== */
+/* Shown to anyone without the Replay plan. The terminal stays fully
+   browsable — every tab, every dialog, the live chart — and only the
+   controls that produce something are stopped. */
+.rp-preview {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 14px;
+    background: linear-gradient(90deg, rgba(247,166,0,.14), rgba(247,166,0,.04));
+    border-bottom: 1px solid rgba(247,166,0,.32);
+    font-size: .86rem; color: var(--text-2);
+    flex: 0 0 auto;
+}
+.rp-preview-badge {
+    flex: 0 0 auto;
+    background: var(--accent); color: #17130a;
+    font-size: .64rem; font-weight: 800; letter-spacing: 1.4px;
+    padding: 3px 8px; border-radius: 20px;
+}
+.rp-preview-text { flex: 1 1 auto; min-width: 0; }
+.rp-preview-cta {
+    flex: 0 0 auto;
+    background: var(--accent); color: #17130a;
+    border: none; border-radius: var(--radius);
+    padding: 6px 14px; font: inherit; font-size: .84rem; font-weight: 700;
+    cursor: pointer;
+}
+.rp-preview-cta:hover { filter: brightness(1.08); }
+
+/* A locked control still looks like itself — it has to, or the preview stops
+   showing what the product is — but it says it is locked on hover. */
+body.rp-locked .rp-locked-ctl { position: relative; }
+body.rp-locked .rp-locked-ctl::after {
+    content: '';
+    position: absolute; top: 4px; right: 5px;
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 0 2px rgba(247,166,0,.22);
+    pointer-events: none;
+}

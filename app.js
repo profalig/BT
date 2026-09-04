@@ -734,10 +734,24 @@ function openService(id) {
     actionBtn.style.display = (id === 'contact' || id === 'about') ? 'none' : 'flex';
     // "INITIALIZE MODULE" is right for a machine you feed a system to. A
     // terminal you simply open deserves to say so.
-    actionBtn.innerHTML = (data.action || 'INITIALIZE MODULE') +
-        ' <i class="fa-solid fa-chevron-right"></i>';
+    setActionLabel(data.action || 'INITIALIZE MODULE');
+    /* Everything above About and Contact needs an account. Say so on the
+       button rather than letting someone press it and be refused — and only
+       once the session is known, so a slow network cannot flash the wrong
+       label at a member. */
+    if (window.BTAccess && id !== 'contact' && id !== 'about') {
+        const forId = id;
+        BTAccess.get().then(a => {
+            if (activeServiceId !== forId) return;
+            if (!a.signedIn) setActionLabel('SIGN IN TO INITIALIZE');
+        });
+    }
 
     setTimeout(() => document.body.classList.add('landed'), 60);
+}
+
+function setActionLabel(text) {
+    actionBtn.innerHTML = text + ' <i class="fa-solid fa-chevron-right"></i>';
 }
 
 function closeService() {
@@ -749,8 +763,24 @@ function closeService() {
 returnBtn.addEventListener('click', closeService);
 
 // INITIALIZE MODULE BUTTON LOGIC
-actionBtn.addEventListener('click', () => {
+actionBtn.addEventListener('click', async () => {
     if (!activeServiceId) return;
+
+    /* One gate for every service that is not About or Contact. It runs
+       before anything opens, so nothing behind it has to check again. */
+    if (window.BTAccess) {
+        const access = await BTAccess.get();
+        if (!access.signedIn) {
+            document.body.classList.remove('landed');
+            showTacticalModal('CLEARANCE REQUIRED',
+                'Create an account or sign in to initialise this module. ' +
+                'Registration is free and comes with one backtest credit.', false);
+            if (window.setAuthMode) window.setAuthMode('signin');
+            const am = document.getElementById('auth-modal-overlay');
+            if (am) am.classList.add('active');
+            return;
+        }
+    }
 
     if (activeServiceId === 'backtest') {
         document.body.classList.remove('landed');
@@ -764,13 +794,35 @@ actionBtn.addEventListener('click', () => {
             if (gasAtmosphere) gasAtmosphere.classList.add('active');
         }, 800);
     } else if (activeServiceId === 'replay') {
-        // Its own tab: the terminal is an application, and losing the scroll
-        // position on this page to get back would be its own small punishment.
-        window.open('replay.html', '_blank', 'noopener');
+        // Same tab. The terminal carries a back arrow that returns here, and
+        // the browser's own Back button restores this scroll position, which
+        // a second tab never would.
+        window.location.href = 'replay.html';
     } else if (activeServiceId === 'databank') {
         openDatabankModal();
     } else if (activeServiceId === 'campus') {
-        showTacticalModal('BACKTESTING CAMPUS', 'Enrolling now for the upcoming Quantitative Engineering cohort. Reach the engineering desk through Contact Us to apply.', true);
+        showTacticalModal('BACKTESTING CAMPUS',
+            'The Campus is still under development. Registrations of interest are open for the ' +
+            'first Quantitative Engineering cohort — reach the engineering desk through ' +
+            'Contact Us and you will be told the moment it opens.', true);
+    }
+});
+
+/* The replay terminal sends anyone who hits a locked control back here with
+   ?plans=1, and so does a Stripe cancellation. Open the pricing for them
+   rather than dropping them at the top of the page wondering what happened. */
+document.addEventListener('DOMContentLoaded', () => {
+    const wants = location.search;
+    if (/[?&]plans=1/.test(wants) || /[?&]signin=1/.test(wants)) {
+        const signin = /[?&]signin=1/.test(wants);
+        setTimeout(() => {
+            if (signin) {
+                if (window.setAuthMode) window.setAuthMode('signin');
+                const am = document.getElementById('auth-modal-overlay');
+                if (am) am.classList.add('active');
+            } else openSubscriptionModal();
+        }, 400);
+        try { history.replaceState(null, '', location.pathname); } catch (e) {}
     }
 });
 
@@ -879,6 +931,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 let supabaseClient = null;
 if (window.supabase) {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // bt-access.js reads the same session from here rather than building a
+    // second client: two clients on one origin race each other's refresh.
+    window.supabaseClient = supabaseClient;
 }
 
 // USER PROFILE ENGINE
@@ -1133,6 +1188,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const creditsToAdd = button.getAttribute('data-credits') || '0';
             const mode = button.getAttribute('data-mode') || 'subscription';
             const planName = button.getAttribute('data-plan') || 'Plan';
+            // machine | replay | full — what the webhook writes to
+            // user_profiles.plan, and what gates the two products.
+            const planKey = button.getAttribute('data-tier') || '';
 
             if (!priceId || priceId.includes('ID_HERE')) {
                 showTacticalModal('CONFIGURATION NOTICE', `Stripe Price ID for ${planName} is missing. Update the <code>data-price-id</code> attribute in index.html.`, false);
@@ -1166,7 +1224,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         priceId: priceId,
                         userId: session.user.id,
                         creditsToAdd: parseInt(creditsToAdd, 10),
-                        mode: mode
+                        mode: mode,
+                        planKey: planKey
                     })
                 });
 
@@ -1315,6 +1374,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (authSubmitBtn) authSubmitBtn.innerHTML = 'CREATE CLEARANCE (1 FREE CREDIT) <i class="fa-solid fa-user-plus"></i>';
         }
     }
+
+    // The branch gate lives outside this closure and needs to open the same
+    // panel on the same tab.
+    window.setAuthMode = setAuthMode;
 
     if (tabSignIn && tabSignUp) {
         tabSignIn.addEventListener('click', () => setAuthMode('signin'));

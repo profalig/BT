@@ -150,6 +150,9 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                 user_id = data.get("userId")
                 credits_to_add = data.get("creditsToAdd", 0)
                 checkout_mode = data.get("mode", "payment")
+                # machine | replay | full. Rides along in the session metadata
+                # and is written to user_profiles.plan when payment completes.
+                plan_key = data.get("planKey", "") or ""
 
                 origin = self.headers.get("Origin", "https://your-frontend-domain.com")
 
@@ -163,7 +166,8 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                     cancel_url=f"{origin}?payment=cancelled",
                     client_reference_id=user_id,
                     metadata={
-                        "credits": str(credits_to_add)
+                        "credits": str(credits_to_add),
+                        "plan": plan_key
                     }
                 )
 
@@ -216,7 +220,11 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                 customer_email = customer_details.get("email") if hasattr(customer_details, "get") else getattr(customer_details, "email", None)
                 
                 credits_str = metadata.get("credits", "0") if hasattr(metadata, "get") else getattr(metadata, "credits", "0")
-                
+                plan_key = metadata.get("plan", "") if hasattr(metadata, "get") else getattr(metadata, "plan", "")
+                plan_key = (plan_key or "").strip().lower()
+                if plan_key not in ("machine", "replay", "full"):
+                    plan_key = ""
+
                 try:
                     credits_purchased = int(credits_str)
                 except ValueError:
@@ -255,7 +263,20 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                     except Exception as e:
                         print(f"❌ Supabase Credit Update Failed: {e}")
                 else:
-                    print("⚠️ SKIPPED DATABASE UPDATE: Either User ID is missing or Credits equals 0.")
+                    print("⚠️ SKIPPED CREDIT UPDATE: Either User ID is missing or Credits equals 0.")
+
+                # The plan is written on its own, for two reasons: the Replay
+                # tier grants no credits at all, so the block above is skipped
+                # for it entirely; and until `alter table user_profiles add
+                # column plan text;` has been run this update fails, which must
+                # never take the credit grant down with it.
+                if user_id and plan_key:
+                    try:
+                        supabase.table("user_profiles").update(
+                            {"plan": plan_key}).eq("id", user_id).execute()
+                        print(f"🎫 PLAN SET: User {user_id} is now on '{plan_key}'.")
+                    except Exception as e:
+                        print(f"❌ Plan update failed (is the `plan` column there?): {e}")
 
             self.send_response(200)
             self._set_cors_headers()

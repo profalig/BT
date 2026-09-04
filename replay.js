@@ -1810,6 +1810,10 @@ function resetAccount(full) {
    from the one you drew. */
 window.BTOrder = {
     submit(d) {
+        // A drawn position is a second route to a trade, so it meets the same
+        // gate as the ticket's Buy and Sell buttons. Guarding the entry point
+        // rather than the buttons covers every path into it.
+        if (locked) { upsell(); return; }
         const mark = currentPrice();
         if (mark === null) { status('No price on the chart yet.', 'error'); return; }
         if (S.position) { status('Close the open position first.', 'error'); return; }
@@ -4167,6 +4171,110 @@ function init() {
     updateModeUI();
     renderAll();
     loadChart();          // open on a real chart, not an empty panel
+
+    wireBackLink();
+    lockGate();
+    applyAccess();        // resolves later; the terminal is usable meanwhile
+}
+
+
+// ============================================================ access gate
+
+/* Anyone can open this terminal and look at all of it: every tab, every
+   dialog, a live chart. What a plan buys is the ability to DO something with
+   it — replay a market, take a trade, keep a session, take the numbers away.
+   Those controls are stopped in one place rather than in each handler, in the
+   capture phase, so a control that is rebuilt later is still covered. */
+const LOCKED_CTL = [
+    '#rp-replay-open', '#rp-start-replay',            // replaying
+    '#rp-buy', '#rp-sell', '#rp-close',               // trading
+    '#rp-sessions', '#rp-export', '#rp-layout-open',  // keeping and taking away
+    '#rp-code-card'                                   // your own system code
+].join(',');
+
+let locked = false;      // no plan, or not signed in at all
+let lockWhy = '';
+
+function lockGate() {
+    document.addEventListener('click', e => {
+        if (!locked) return;
+        const hit = e.target.closest && e.target.closest(LOCKED_CTL);
+        if (!hit) return;
+        e.preventDefault();
+        e.stopPropagation();
+        upsell();
+    }, true);
+
+    const cta = $('rp-preview-cta');
+    if (cta) cta.addEventListener('click', () => { location.href = backToSite(); });
+}
+
+function upsell() {
+    const signedOut = lockWhy === 'signedout';
+    ask(signedOut ? 'Sign in to use the terminal' : 'This needs the Replay plan',
+        signedOut
+            ? 'The chart is yours to look at either way. Replaying a market, taking a ' +
+              'trade, keeping a session and exporting results need an account and the ' +
+              'BarTest Replay plan.'
+            : 'Replaying a market, taking a trade, keeping a session and exporting ' +
+              'results are part of BarTest Replay & Chart. Full Access includes the ' +
+              'Backtest Machine as well.',
+        signedOut ? 'Sign in' : 'See the plans')
+        .then(go => { if (go) location.href = backToSite(); });
+}
+
+/* Someone signed out needs the sign-in panel; someone signed in without the
+   plan needs the price list. Sending both to the same place wastes a click. */
+function backToSite() {
+    return lockWhy === 'signedout' ? '/?signin=1' : '/?plans=1';
+}
+
+/* Access is re-read after anything that could have changed it, so the state
+   has to be able to go back as well as forward. */
+function unlockTerminal() {
+    locked = false; lockWhy = '';
+    document.body.classList.remove('rp-locked');
+    const bar = $('rp-preview');
+    if (bar) bar.hidden = true;
+    document.querySelectorAll('.rp-locked-ctl').forEach(el => el.classList.remove('rp-locked-ctl'));
+}
+
+async function applyAccess() {
+    if (!window.BTAccess) return;                 // offline or blocked: leave it open
+    let a;
+    try { a = await BTAccess.get(); } catch (e) { return; }
+    // Paid for it — or we could not check, which must not lock anyone out.
+    if (a.replay || (a.degraded && a.signedIn)) { unlockTerminal(); return; }
+
+    locked = true;
+    lockWhy = a.signedIn ? 'noplan' : 'signedout';
+    document.body.classList.add('rp-locked');
+
+    const bar = $('rp-preview');
+    if (bar) {
+        bar.hidden = false;
+        const text = $('rp-preview-text');
+        if (text) text.textContent = a.signedIn
+            ? 'Look around freely — every tab and every panel is open. Replaying, ' +
+              'trading, saving and exporting need the BarTest Replay plan.'
+            : 'You are not signed in. Look around freely; replaying, trading, saving ' +
+              'and exporting need an account and the BarTest Replay plan.';
+        const cta = $('rp-preview-cta');
+        if (cta) cta.textContent = a.signedIn ? 'See the plans' : 'Sign in';
+    }
+    document.querySelectorAll(LOCKED_CTL).forEach(el => el.classList.add('rp-locked-ctl'));
+}
+
+/* The back arrow should feel like a back arrow. Coming from the site, step
+   back through history so the hero keeps its scroll position; arriving here
+   directly, go to the site root instead of a dead end. */
+function wireBackLink() {
+    const link = document.querySelector('a.rp-back');
+    if (!link) return;
+    link.addEventListener('click', e => {
+        const sameSite = document.referrer && document.referrer.indexOf(location.origin) === 0;
+        if (sameSite && history.length > 1) { e.preventDefault(); history.back(); }
+    });
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
