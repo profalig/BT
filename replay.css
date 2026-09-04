@@ -257,3 +257,48 @@ body { display: flex; flex-direction: column; }
     #rp-side { border-left: none; border-top: 1px solid var(--hairline); }
     .rp-account { margin-left: 0; width: 100%; justify-content: space-between; }
 }
+
+/* ---------- browse / replay mode bar ---------- */
+.rp-mode {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: .6rem; letter-spacing: 1.6px;
+    padding: 4px 9px; border-radius: 3px;
+    border: 1px solid var(--hairline);
+    color: var(--text-3);
+    align-self: center;
+}
+.rp-mode.on { color: var(--accent); border-color: rgba(240,178,90,.5); background: rgba(240,178,90,.1); }
+
+.rp-hud {
+    position: absolute;
+    left: 50%; top: 14px;
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(8,8,10,.93);
+    border: 1px solid var(--hairline);
+    border-radius: 30px;
+    padding: 7px 14px;
+    backdrop-filter: blur(8px);
+    max-width: calc(100% - 32px);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.rp-cutbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.rp-cutbar > i { color: var(--accent); }
+.rp-hud-text { font-size: .76rem; color: var(--text-2); }
+.rp-cutbar input[type="date"] {
+    background: var(--bg-2); color: var(--text-1);
+    border: 1px solid var(--hairline); border-radius: 5px;
+    padding: 5px 7px;
+    font-family: 'Share Tech Mono', monospace; font-size: .76rem;
+}
+.rp-cut-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: .72rem; color: var(--accent);
+    min-width: 130px;
+}
+.rp-hud .rp-btn { padding: 6px 11px; font-size: .72rem; }
+
+/* In replay the transport is the primary control, so lift it clear of the
+   chart edge and give it more presence than the browse bar. */
+body.is-replay .rp-transport { box-shadow: 0 10px 34px rgba(0,0,0,.6); }

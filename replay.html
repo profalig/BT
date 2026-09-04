@@ -40,20 +40,15 @@
                 <option value="240">4h</option>
             </select>
         </label>
-        <label class="rp-field">
-            <span>Start date</span>
-            <input type="date" id="rp-date">
-        </label>
-        <button id="rp-load" class="rp-btn primary">
-            <i class="fa-solid fa-play"></i> Load session
-        </button>
+        <span class="rp-mode" id="rp-mode">BROWSE</span>
     </div>
 
     <div class="rp-account">
-        <div class="rp-acct-item"><span>Balance</span><b id="rp-balance">—</b></div>
-        <div class="rp-acct-item"><span>Equity</span><b id="rp-equity">—</b></div>
-        <div class="rp-acct-item"><span>Open P&amp;L</span><b id="rp-openpl">—</b></div>
+        <div class="rp-acct-item"><span>Balance</span><b id="rp-balance">&mdash;</b></div>
+        <div class="rp-acct-item"><span>Equity</span><b id="rp-equity">&mdash;</b></div>
+        <div class="rp-acct-item"><span>Open P&amp;L</span><b id="rp-openpl">&mdash;</b></div>
     </div>
+
 </header>
 
 <main id="rp-main">
@@ -63,6 +58,22 @@
         <div id="rp-status" class="rp-status">
             <i class="fa-solid fa-circle-info"></i>
             <span id="rp-status-text">Choose a symbol and start date, then load a session.</span>
+        </div>
+
+        <div id="rp-hud" class="rp-hud" hidden>
+            <div id="rp-cutbar" class="rp-cutbar">
+                <i class="fa-solid fa-scissors"></i>
+                <span class="rp-hud-text">Click any candle to cut the chart there &mdash; or</span>
+                <input type="date" id="rp-date">
+                <button id="rp-jump" class="rp-btn">Use date</button>
+                <span class="rp-cut-label" id="rp-cut-label">no point chosen</span>
+                <button id="rp-start-replay" class="rp-btn primary" disabled>
+                    <i class="fa-solid fa-play"></i> Start replay
+                </button>
+            </div>
+            <button id="rp-exit-replay" class="rp-btn" hidden>
+                <i class="fa-solid fa-arrow-left"></i> Back to full chart
+            </button>
         </div>
 
         <div id="rp-transport" class="rp-transport" hidden>
