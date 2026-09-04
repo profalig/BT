@@ -16,6 +16,21 @@ const planetData = {
         ],
         stats: [{ label: "TICK ACCURACY", val: "99.9%" }, { label: "METRICS", val: "30+ Stats" }, { label: "STRESS TEST", val: "Regime Based" }, { label: "REPORTS", val: "Deep Data" }]
     },
+    replay: {
+        tag: "TERMINAL // SEC-06", title: "BarTest Replay", color: "#ffc98a",
+        lead: "Trade the past, one candle at a time.",
+        action: "OPEN THE TERMINAL",
+        body: "A full charting terminal that hides the future. Choose any date, step the market forward bar by bar and trade it with a real order ticket — then read the result the same way the Backtest Machine reads a submitted system.",
+        points: [
+            { icon: "fa-backward-step", title: "Replay any market",
+              text: "The chart is cut at your date and the bars after it are withheld, not merely hidden." },
+            { icon: "fa-receipt", title: "A real order ticket",
+              text: "Market, limit and stop orders, leverage, fees on both sides and automatic position sizing from your risk." },
+            { icon: "fa-pen-ruler", title: "Forty drawing tools and nine studies",
+              text: "Fibonacci, channels, patterns and positions, plus a place to run your own system code." }
+        ],
+        stats: [{ label: "MARKETS", val: "Crypto / FX" }, { label: "HISTORY", val: "Since 1999" }, { label: "FILLS", val: "1-Minute" }, { label: "EXPORT", val: "PDF / CSV" }]
+    },
     databank: {
         tag: "VAULT // SEC-02", title: "System Databank", color: "#e4e6ea",
         lead: "A curated vault of quantitative trading strategies.",
@@ -271,11 +286,12 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
         [0.000, 0.00],   // held on the room — SCROLL TO BEGIN
         [0.060, 0.35],
         [0.170, 1.30],   // camera has pushed in; the seedling is about to grow
-        [0.300, 1.95],   // branch 1
-        [0.420, 2.55],   // branch 2
-        [0.540, 3.15],   // branch 3
-        [0.660, 3.70],   // branch 4
-        [0.790, 4.35],   // branch 5
+        [0.290, 1.95],   // branch 1
+        [0.390, 2.45],   // branch 2
+        [0.490, 2.90],   // branch 3
+        [0.590, 3.35],   // branch 4
+        [0.690, 3.80],   // branch 5
+        [0.790, 4.35],   // branch 6
         [0.900, 5.10]    // full tree, settled
     ];
 
@@ -288,7 +304,7 @@ function clamp01(v) { return Math.min(Math.max(v, 0), 1); }
     // position is always live, so this can never go blank. The cards lead
     // the picture by the easing interval (a couple hundred ms), which reads
     // as nothing next to a hero that might not render at all.
-    const BRANCH_AT = [0.315, 0.435, 0.555, 0.675, 0.805];
+    const BRANCH_AT = [0.305, 0.405, 0.505, 0.605, 0.705, 0.805];
     const GLOW_FROM = 0.17;
     const GLOW_TO   = 0.72;
 
@@ -716,6 +732,10 @@ function openService(id) {
 
     // About and Contact are read-only — nothing to initialise.
     actionBtn.style.display = (id === 'contact' || id === 'about') ? 'none' : 'flex';
+    // "INITIALIZE MODULE" is right for a machine you feed a system to. A
+    // terminal you simply open deserves to say so.
+    actionBtn.innerHTML = (data.action || 'INITIALIZE MODULE') +
+        ' <i class="fa-solid fa-chevron-right"></i>';
 
     setTimeout(() => document.body.classList.add('landed'), 60);
 }
@@ -743,6 +763,10 @@ actionBtn.addEventListener('click', () => {
             const gasAtmosphere = document.getElementById('gas-giant-atmosphere');
             if (gasAtmosphere) gasAtmosphere.classList.add('active');
         }, 800);
+    } else if (activeServiceId === 'replay') {
+        // Its own tab: the terminal is an application, and losing the scroll
+        // position on this page to get back would be its own small punishment.
+        window.open('replay.html', '_blank', 'noopener');
     } else if (activeServiceId === 'databank') {
         openDatabankModal();
     } else if (activeServiceId === 'campus') {

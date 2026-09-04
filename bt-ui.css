@@ -1,0 +1,125 @@
+/* ==========================================================================
+   BarTest — shared form controls (see bt-ui.js)
+
+   Loaded by every page, so each colour falls back to a literal: the replay
+   terminal defines the --bg / --text variables, the marketing page does not.
+   ========================================================================== */
+
+/* ------------------------------------------------------------- steppers -- */
+
+/* The browser's own spinner is drawn by the platform and cannot be styled,
+   so it goes and ours takes its place. */
+.bt-num > input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+    padding-right: 21px;
+}
+.bt-num > input[type="number"]::-webkit-outer-spin-button,
+.bt-num > input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none; margin: 0;
+}
+
+.bt-num { position: relative; display: inline-flex; align-items: stretch; }
+.bt-num-btns {
+    position: absolute; right: 2px; top: 2px; bottom: 2px;
+    width: 16px; display: flex; flex-direction: column;
+    opacity: .55; transition: opacity .12s;
+}
+.bt-num:hover .bt-num-btns,
+.bt-num:focus-within .bt-num-btns { opacity: 1; }
+.bt-num-btns button {
+    flex: 1 1 50%; min-height: 0;
+    display: grid; place-items: center;
+    background: none; border: none; padding: 0; margin: 0;
+    border-radius: 3px; cursor: pointer;
+    color: var(--text-3, #8c9099);
+}
+.bt-num-btns button:hover {
+    background: var(--bg-3, #262b33);
+    color: var(--accent, #f7a600);
+}
+.bt-num-btns button:active { color: var(--accent, #f7a600); transform: translateY(.5px); }
+.bt-num-btns svg { width: 9px; height: 5px; display: block; }
+
+/* ------------------------------------------------------- colour swatches -- */
+
+/* The real input stays in the DOM — it holds the value everything else reads
+   — but it is never seen or focused. */
+.bt-color-src {
+    position: absolute !important;
+    width: 1px !important; height: 1px !important;
+    padding: 0 !important; margin: -1px !important; border: 0 !important;
+    opacity: 0 !important; pointer-events: none !important;
+    clip: rect(0 0 0 0); clip-path: inset(50%); overflow: hidden;
+}
+
+.bt-swatch {
+    width: 34px; height: 24px; flex: 0 0 auto;
+    padding: 0; cursor: pointer;
+    border: 1px solid var(--hair-2, #2c323b);
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .35);
+}
+.bt-swatch:hover  { border-color: var(--accent, #f7a600); }
+.bt-swatch:focus-visible { outline: 2px solid var(--accent, #f7a600); outline-offset: 1px; }
+
+/* --------------------------------------------------------- the palette --- */
+
+.bt-pop {
+    position: fixed; z-index: 4000;
+    width: 214px; padding: 9px;
+    background: var(--bg-1, #14181d);
+    border: 1px solid var(--hair-2, #2c323b);
+    border-radius: 9px;
+    box-shadow: 0 20px 54px rgba(0, 0, 0, .7);
+    font-family: inherit;
+}
+.bt-pop-h {
+    margin: 2px 2px 6px;
+    font-size: .64rem; font-weight: 700; letter-spacing: 1.4px;
+    text-transform: uppercase; color: var(--text-3, #8c9099);
+}
+.bt-pop-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
+    margin-bottom: 9px;
+}
+.bt-chip {
+    width: 100%; aspect-ratio: 1 / 1; min-height: 26px;
+    padding: 0; cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, .13);
+    border-radius: 5px;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .3);
+    transition: transform .1s;
+}
+.bt-chip:hover { transform: scale(1.12); border-color: rgba(255, 255, 255, .45); }
+.bt-chip.on {
+    border-color: var(--accent, #f7a600);
+    box-shadow: 0 0 0 2px var(--bg-1, #14181d), 0 0 0 3px var(--accent, #f7a600);
+}
+.bt-pop-foot {
+    display: flex; align-items: center; gap: 7px;
+    padding-top: 8px; border-top: 1px solid var(--hairline, #21262e);
+}
+.bt-pop-custom {
+    position: relative; display: flex; align-items: center; gap: 6px;
+    flex: 1 1 auto; min-width: 0; cursor: pointer;
+    font-size: .78rem; color: var(--text-2, #c9ced6);
+}
+.bt-pop-custom .bt-chip-any {
+    width: 20px; height: 20px; min-height: 0; flex: 0 0 auto; aspect-ratio: auto;
+    pointer-events: none;
+}
+.bt-pop-custom input[type="color"] {
+    position: absolute; left: 0; bottom: 0; width: 20px; height: 1px;
+    opacity: 0; border: none; padding: 0;
+}
+.bt-pop-hex {
+    flex: 0 0 74px; width: 74px;
+    background: var(--bg-2, #1b2027); color: var(--text-1, #eaecef);
+    border: 1px solid var(--hairline, #21262e); border-radius: 4px;
+    padding: 4px 6px; font: inherit; font-size: .76rem;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    text-transform: lowercase;
+}
+.bt-pop-hex:focus { outline: none; border-color: var(--accent, #f7a600); }
+.bt-pop-hex.bad   { border-color: var(--neg, #ef454a); }

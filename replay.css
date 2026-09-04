@@ -524,7 +524,7 @@ body.is-replay .rp-transport { box-shadow: 0 10px 34px rgba(0,0,0,.6); }
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     margin-top: 8px; font-size: .85rem; color: var(--text-2);
 }
-.rp-pop-row input[type="color"] {
+.rp-pop-row input[type="color"], .rp-pop-row .bt-swatch {
     width: 30px; height: 22px; padding: 0; cursor: pointer;
     background: var(--bg-2); border: 1px solid var(--hairline); border-radius: 4px;
 }
@@ -571,7 +571,7 @@ body.is-replay .rp-transport { box-shadow: 0 10px 34px rgba(0,0,0,.6); }
     padding: 4px 6px; font: inherit; font-size: .86rem;
 }
 .rp-cf-row textarea { resize: vertical; font-family: inherit; }
-.rp-cf-row input[type="color"] {
+.rp-cf-row input[type="color"], .rp-cf-row .bt-swatch {
     width: 34px; height: 24px; padding: 0; cursor: pointer;
     background: var(--bg-2); border: 1px solid var(--hairline); border-radius: 4px;
 }
@@ -914,7 +914,7 @@ body.dock-collapsed .rp-tab-icon i { transform: rotate(180deg); }
     width: 58px; background: var(--bg-2); color: var(--text-1);
     border: 1px solid var(--hairline); border-radius: 4px; padding: 3px 5px; font: inherit; font-size: .85rem;
 }
-.rp-ind-cfg input[type="color"] {
+.rp-ind-cfg input[type="color"], .rp-ind-cfg .bt-swatch {
     width: 28px; height: 22px; padding: 0; cursor: pointer;
     background: var(--bg-2); border: 1px solid var(--hairline); border-radius: 4px;
 }
@@ -944,7 +944,7 @@ body.dock-collapsed .rp-tab-icon i { transform: rotate(180deg); }
 .rp-set-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 9px; }
 .rp-set-row label { font-size: .89rem; color: var(--text-2); }
 .rp-set-row label.chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
-.rp-set-row input[type="color"] {
+.rp-set-row input[type="color"], .rp-set-row .bt-swatch {
     width: 34px; height: 26px; padding: 0; cursor: pointer;
     background: var(--bg-2); border: 1px solid var(--hairline); border-radius: 4px;
 }
@@ -1022,7 +1022,7 @@ body.dock-collapsed .rp-tab-icon i { transform: rotate(180deg); }
     background: var(--bg-2); border: 1px solid var(--hairline); border-radius: var(--radius);
 }
 .rp-plot-name { font-size: .91rem; font-weight: 500; }
-.rp-plot-row input[type="color"] {
+.rp-plot-row input[type="color"], .rp-plot-row .bt-swatch {
     width: 38px; height: 26px; padding: 0; cursor: pointer;
     background: var(--bg-0); border: 1px solid var(--hairline); border-radius: 4px;
 }
@@ -1324,7 +1324,7 @@ body.dock-collapsed .rp-tab-icon i { transform: rotate(180deg); }
     padding: 4px 6px; font: inherit; font-size: .8rem;
     font-variant-numeric: tabular-nums;
 }
-.rp-lv-row input[type="color"] {
+.rp-lv-row input[type="color"], .rp-lv-row .bt-swatch {
     width: 30px; height: 24px; padding: 0; cursor: pointer;
     background: var(--bg-2); border: 1px solid var(--hairline); border-radius: 4px;
 }

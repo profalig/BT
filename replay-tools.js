@@ -1745,18 +1745,33 @@ function popAt(anchor, html) {
     return popEl;
 }
 
+/* One shelf of colours across the whole product: the ten everyone uses,
+   then the last three the trader mixed themselves. BTUI owns both lists so
+   the toolbar here and the swatches in every dialog stay in step. */
+function paletteColours() {
+    return window.BTUI ? window.BTUI.swatches() : PALETTE;
+}
+
 function palette(anchor, current, cb, fillShape) {
     const p = popAt(anchor,
-        '<div class="rp-pal">' + PALETTE.map(c =>
+        '<div class="rp-pal">' + paletteColours().map(c =>
             '<button data-c="' + c + '" style="background:' + c + '"' +
             (c === current ? ' class="on"' : '') + '></button>').join('') + '</div>' +
         (fillShape ? '<label class="rp-pop-row">Opacity<input type="range" min="0" max="100" value="' +
             Math.round((styleOf(fillShape).fillOpacity || 0) * 100) + '" data-op></label>' : '') +
-        '<label class="rp-pop-row">Custom<input type="color" value="' + (current || '#ffffff') + '" data-custom></label>');
+        '<label class="rp-pop-row">Custom<input type="color" data-btui="skip" value="' +
+            (current || '#ffffff') + '" data-custom></label>');
     p.querySelectorAll('[data-c]').forEach(b =>
         b.addEventListener('click', () => { cb(b.dataset.c); closePop(); }));
     const cu = p.querySelector('[data-custom]');
-    if (cu) cu.addEventListener('input', () => cb(cu.value));
+    if (cu) {
+        cu.addEventListener('input', () => cb(cu.value));
+        // Banked on change, not on input: every shade dragged through the
+        // wheel would otherwise burn one of the three slots.
+        cu.addEventListener('change', () => {
+            if (window.BTUI) window.BTUI.remember(cu.value);
+        });
+    }
     const op = p.querySelector('[data-op]');
     if (op) op.addEventListener('input', () => setStyle(fillShape, 'fillOpacity', +op.value / 100));
 }
