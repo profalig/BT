@@ -1256,3 +1256,25 @@ body.dock-collapsed .rp-tab-icon i { transform: rotate(180deg); }
     padding: 7px 9px; font: inherit; font-size: .85rem; margin: 4px 0 6px;
 }
 .rp-layout-name:focus { outline: none; border-color: var(--accent); }
+
+
+/* ================================  the "bring your own code" invitation == */
+.rp-code-card {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    margin-top: 16px; padding: 13px 14px; text-align: left;
+    background: var(--bg-0); color: var(--text-1);
+    border: 1px dashed var(--hair-2); border-radius: 8px;
+    font: inherit; cursor: pointer;
+    transition: border-color .16s, background .16s;
+}
+.rp-code-card:hover { border-color: var(--accent); background: rgba(247,166,0,.05); }
+.rp-code-ic {
+    width: 40px; height: 40px; flex: 0 0 auto; border-radius: 9px;
+    display: grid; place-items: center; background: var(--bg-2);
+}
+.rp-code-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.rp-code-txt b { font-size: .95rem; font-weight: 600; }
+.rp-code-txt em { font-style: normal; font-size: .82rem; color: var(--text-3); line-height: 1.45; }
+.rp-code-card > i { margin-left: auto; color: var(--text-3); font-size: .8rem; transition: transform .16s; }
+.rp-code-card.open > i { transform: rotate(180deg); }
+.rp-code-panel { margin-top: 10px; }

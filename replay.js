@@ -61,10 +61,76 @@ const MARKETS = {
             if (!res.ok) throw new Error(`Binance ${res.status}`);
             return await res.json();
         }
+    },
+    fx: {
+        label: 'Forex',
+        earliest: '1999-01-04',
+        // The honest shape of this feed, declared so the rest of the app can
+        // behave correctly rather than pretend: one price per business day,
+        // and that price is a CLOSE. There is no open, high or low, so this
+        // draws as a line and never as a candle, and the fill engine cannot
+        // step minutes inside a day.
+        daily: true,
+        closeOnly: true,
+        note: 'ECB daily reference rate — one close per business day, no intraday.',
+        symbols: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCHF', 'USDCAD',
+                  'NZDUSD', 'EURGBP', 'EURJPY', 'GBPJPY', 'EURCHF', 'AUDJPY',
+                  'USDSEK', 'USDNOK', 'USDPLN', 'USDCZK', 'USDHUF', 'USDTRY',
+                  'USDZAR', 'USDMXN', 'USDBRL', 'USDCNY', 'USDINR', 'USDKRW'],
+        async klines(symbol, interval, opts) {
+            const base = symbol.slice(0, 3), quote = symbol.slice(3, 6);
+            const all = await fxSeries(base, quote);
+            let rows = all;
+            if (opts.startTime) rows = rows.filter(k => k.t >= opts.startTime);
+            if (opts.endTime)   rows = rows.filter(k => k.t <= opts.endTime);
+            const lim = opts.limit || 1000;
+            // With no range at all the caller wants the PRESENT, the way the
+            // exchange endpoint behaves — returning the oldest thousand days
+            // opened every forex chart in 1999.
+            return opts.startTime ? rows.slice(0, lim) : rows.slice(-lim);
+        }
     }
-    // fx: needs 1m history we host ourselves — there is no free CORS-enabled
-    // forex feed, so this cannot follow the same shape.
 };
+
+/* Frankfurter republishes the European Central Bank's daily reference rates,
+   with CORS and no key, back to 1999. It is the only free forex history that
+   a browser can actually reach — every other candidate (Yahoo, Stooq, the
+   ECB's own XML) refuses cross-origin requests outright.
+
+   One fetch covers the whole history of a pair, so it is cached for the
+   session; a 27-year series is a few hundred kilobytes. */
+const FX_CACHE = {};
+const FX_BASE = 'https://api.frankfurter.dev/v1';
+
+async function fxSeries(base, quote) {
+    const key = base + quote;
+    if (FX_CACHE[key]) return FX_CACHE[key];
+    const start = MARKETS.fx.earliest;
+    const end = new Date().toISOString().slice(0, 10);
+    const res = await fetch(FX_BASE + '/' + start + '..' + end +
+                            '?base=' + base + '&symbols=' + quote);
+    if (!res.ok) throw new Error('Forex feed ' + res.status);
+    const j = await res.json();
+    const days = Object.keys(j.rates || {}).sort();
+    let prev = null;
+    const out = [];
+    for (const d of days) {
+        const v = j.rates[d][quote];
+        if (!isFinite(v)) continue;
+        const t = Date.parse(d + 'T00:00:00Z');
+        // A close-to-close bar. The open is yesterday's close and the range is
+        // the move between them — everything shown is a real observation, and
+        // nothing inside the day is invented.
+        const o = prev === null ? v : prev;
+        out.push({ t: t, o: o, h: Math.max(o, v), l: Math.min(o, v), c: v, v: 0 });
+        prev = v;
+    }
+    FX_CACHE[key] = out;
+    return out;
+}
+
+const srcOfMarket = () => MARKETS[S.market] || MARKETS.crypto;
+const isCloseOnly = () => !!srcOfMarket().closeOnly;
 
 /* ------------------------------------------------------- instruments ----
 
@@ -80,24 +146,44 @@ const MARKETS = {
 
    Anything we cannot actually price is not listed as though it were there.  */
 
-const FIATS = ['EUR', 'GBP', 'AUD', 'JPY', 'CHF', 'CAD', 'NZD', 'TRY', 'BRL',
-               'ZAR', 'MXN', 'PLN', 'RON', 'CZK', 'ARS', 'COP', 'UAH', 'NGN'];
-const STABLES = ['USDT', 'USDC', 'FDUSD', 'TUSD', 'DAI', 'USD', 'USD1', 'EURI', 'BUSD'];
-const METALS = { PAXG: 'Gold — PAX Gold (1 token = 1 fine troy oz)',
-                 XAUT: 'Gold — Tether Gold (1 token = 1 fine troy oz)' };
+/* Curated, not exhaustive. The exchange lists 487 dollar pairs and hundreds
+   more against yen, lira and real; a picker that shows all of them is a
+   worse picker. These are the books a trader would actually chart, and the
+   fiat-quoted duplicates of the same coin (LTCJPY, LTCTRY, LTCBRL, LTCEUR
+   for the one LTCUSDT everybody uses) are left out entirely. */
+const CRYPTO_MAJORS = [
+    'BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'LINK', 'DOT',
+    'TRX', 'LTC', 'BCH', 'ATOM', 'UNI', 'NEAR', 'APT', 'ARB', 'OP', 'FIL',
+    'ETC', 'ICP', 'INJ', 'SUI', 'SEI', 'TIA', 'IMX', 'AAVE', 'MKR', 'GRT',
+    'ALGO', 'VET', 'HBAR', 'STX', 'SAND', 'MANA', 'AXS', 'EOS', 'XLM', 'FTM',
+    'RUNE', 'CRV', 'LDO', 'SNX', 'COMP', 'ENS', 'DYDX', 'GMX', 'PEPE', 'SHIB',
+    'WIF', 'BONK', 'FLOKI', 'JUP', 'PYTH', 'TON', 'POL', 'RENDER', 'ZEC', 'XMR'
+];
+const METALS = { PAXG: 'Gold — PAX Gold (1 token = 1 fine troy ounce)',
+                 XAUT: 'Gold — Tether Gold (1 token = 1 fine troy ounce)' };
 
 const ASSET_NAMES = {
     BTC: 'Bitcoin', ETH: 'Ethereum', SOL: 'Solana', BNB: 'BNB', XRP: 'XRP',
     ADA: 'Cardano', DOGE: 'Dogecoin', LINK: 'Chainlink', AVAX: 'Avalanche',
-    LTC: 'Litecoin', DOT: 'Polkadot', MATIC: 'Polygon', TRX: 'TRON',
+    LTC: 'Litecoin', DOT: 'Polkadot', POL: 'Polygon', TRX: 'TRON',
     ATOM: 'Cosmos', UNI: 'Uniswap', NEAR: 'NEAR Protocol', ARB: 'Arbitrum',
     OP: 'Optimism', APT: 'Aptos', FIL: 'Filecoin', ETC: 'Ethereum Classic',
     BCH: 'Bitcoin Cash', SHIB: 'Shiba Inu', PEPE: 'Pepe', SUI: 'Sui',
-    INJ: 'Injective', TIA: 'Celestia', SEI: 'Sei', RNDR: 'Render',
-    EUR: 'Euro', GBP: 'Pound sterling', AUD: 'Australian dollar',
-    JPY: 'Japanese yen', TRY: 'Turkish lira', BRL: 'Brazilian real',
-    ZAR: 'South African rand', MXN: 'Mexican peso', ARS: 'Argentine peso',
-    COP: 'Colombian peso', USDT: 'Tether', USDC: 'USD Coin'
+    INJ: 'Injective', TIA: 'Celestia', SEI: 'Sei', RENDER: 'Render',
+    ICP: 'Internet Computer', IMX: 'Immutable', AAVE: 'Aave', MKR: 'Maker',
+    GRT: 'The Graph', ALGO: 'Algorand', VET: 'VeChain', HBAR: 'Hedera',
+    STX: 'Stacks', SAND: 'The Sandbox', MANA: 'Decentraland', AXS: 'Axie Infinity',
+    EOS: 'EOS', XLM: 'Stellar', FTM: 'Fantom', RUNE: 'THORChain', CRV: 'Curve',
+    LDO: 'Lido', SNX: 'Synthetix', COMP: 'Compound', ENS: 'Ethereum Name Service',
+    DYDX: 'dYdX', GMX: 'GMX', WIF: 'dogwifhat', BONK: 'Bonk', FLOKI: 'Floki',
+    JUP: 'Jupiter', PYTH: 'Pyth Network', TON: 'Toncoin', ZEC: 'Zcash', XMR: 'Monero',
+    USD: 'US dollar', EUR: 'Euro', GBP: 'Pound sterling', JPY: 'Japanese yen',
+    AUD: 'Australian dollar', CHF: 'Swiss franc', CAD: 'Canadian dollar',
+    NZD: 'New Zealand dollar', SEK: 'Swedish krona', NOK: 'Norwegian krone',
+    PLN: 'Polish zloty', CZK: 'Czech koruna', HUF: 'Hungarian forint',
+    TRY: 'Turkish lira', ZAR: 'South African rand', MXN: 'Mexican peso',
+    BRL: 'Brazilian real', CNY: 'Chinese yuan', INR: 'Indian rupee',
+    KRW: 'South Korean won'
 };
 
 let CATALOGUE = null;          // [{symbol, base, quote, cat, name, px, chg}]
@@ -155,36 +241,54 @@ function instrumentName(base, quote, cat) {
 
 async function loadCatalogue() {
     if (CATALOGUE) return CATALOGUE;
-    const [info, tick] = await Promise.all([
-        fetch(BINANCE + '/exchangeInfo').then(r => r.json()),
-        fetch(BINANCE + '/ticker/24hr').then(r => r.json()).catch(() => [])
-    ]);
-    const px = {};
-    (tick || []).forEach(t => { px[t.symbol] = { last: +t.lastPrice, chg: +t.priceChangePercent, vol: +t.quoteVolume }; });
 
-    CATALOGUE = info.symbols
-        .filter(x => x.status === 'TRADING' &&
-                     (x.quoteAsset === 'USDT' || METALS[x.baseAsset] || FIATS.includes(x.quoteAsset)))
-        .map(x => {
-            const cat = categorise(x.baseAsset, x.quoteAsset);
-            const t = px[x.symbol] || {};
-            return {
-                symbol: x.symbol, base: x.baseAsset, quote: x.quoteAsset, cat: cat,
-                name: instrumentName(x.baseAsset, x.quoteAsset, cat),
-                px: t.last, chg: t.chg, vol: t.vol || 0
-            };
-        })
-        // Busiest first: the instruments people actually trade come to the top
-        // without anyone maintaining a ranking by hand.
-        .sort((a, b) => {
-            const qa = QUOTE_RANK[a.quote] === undefined ? 9 : QUOTE_RANK[a.quote];
-            const qb = QUOTE_RANK[b.quote] === undefined ? 9 : QUOTE_RANK[b.quote];
-            return qa - qb || b.vol - a.vol;
+    // Forex needs no lookup — the pairs are fixed and the feed has them all.
+    const fx = MARKETS.fx.symbols.map(sym => ({
+        symbol: sym, src: 'fx', cat: 'fx',
+        base: sym.slice(0, 3), quote: sym.slice(3, 6),
+        name: (ASSET_NAMES[sym.slice(0, 3)] || sym.slice(0, 3)) + ' / ' +
+              (ASSET_NAMES[sym.slice(3, 6)] || sym.slice(3, 6)),
+        vol: MARKETS.fx.symbols.length - MARKETS.fx.symbols.indexOf(sym)
+    }));
+
+    let crypto = [], metal = [];
+    try {
+        const [info, tick] = await Promise.all([
+            fetch(BINANCE + '/exchangeInfo').then(r => r.json()),
+            fetch(BINANCE + '/ticker/24hr').then(r => r.json()).catch(() => [])
+        ]);
+        const px = {};
+        (tick || []).forEach(t => {
+            px[t.symbol] = { last: +t.lastPrice, chg: +t.priceChangePercent, vol: +t.quoteVolume };
         });
+        const live = new Set(info.symbols.filter(x => x.status === 'TRADING').map(x => x.symbol));
+
+        crypto = CRYPTO_MAJORS
+            .map(b => b + 'USDT')
+            .filter(sym => live.has(sym))
+            .map(sym => {
+                const b = sym.replace(/USDT$/, ''), t = px[sym] || {};
+                return { symbol: sym, src: 'crypto', cat: 'crypto', base: b, quote: 'USDT',
+                         name: ASSET_NAMES[b] || b, px: t.last, chg: t.chg, vol: t.vol || 0 };
+            })
+            .sort((a, b) => b.vol - a.vol);
+
+        metal = Object.keys(METALS)
+            .map(b => b + 'USDT')
+            .filter(sym => live.has(sym))
+            .map(sym => {
+                const b = sym.replace(/USDT$/, ''), t = px[sym] || {};
+                return { symbol: sym, src: 'crypto', cat: 'commodity', base: b, quote: 'USDT',
+                         name: METALS[b], px: t.last, chg: t.chg, vol: t.vol || 0 };
+            })
+            .sort((a, b) => b.vol - a.vol);
+    } catch (e) { /* forex still lists even if the exchange is unreachable */ }
+
+    CATALOGUE = crypto.concat(metal, fx);
     return CATALOGUE;
 }
 
-// ------------------------------------------------------------------- state
+// ------------------------------------------------------------------- state// ------------------------------------------------------------------- state
 
 const S = {
     mode: 'browse',
@@ -303,12 +407,22 @@ function seriesOptions() {
     };
 }
 
+function effectiveType() {
+    // Drawing a candle from a single daily close would mean inventing an
+    // open, a high and a low. The feed gets the chart type its data can
+    // actually support.
+    return isCloseOnly() ? 'line' : theme.type;
+}
+
+let seriesType = null;
+
 function makeSeries() {
-    if (theme.type === 'line')
+    seriesType = effectiveType();
+    if (effectiveType() === 'line')
         return chart.addLineSeries({ color: theme.up, lineWidth: 2 });
-    if (theme.type === 'area')
+    if (effectiveType() === 'area')
         return chart.addAreaSeries({ lineColor: theme.up, topColor: theme.up + '55', bottomColor: theme.up + '05' });
-    if (theme.type === 'bar')
+    if (effectiveType() === 'bar')
         return chart.addBarSeries({ upColor: theme.up, downColor: theme.down });
     return chart.addCandlestickSeries(seriesOptions());
 }
@@ -389,7 +503,8 @@ function paint() {
     }
     data.sort((a, b) => a.time - b.time);
 
-    const shaped = (theme.type === 'line' || theme.type === 'area')
+    const t = effectiveType();
+    const shaped = (t === 'line' || t === 'area')
         ? data.map(b => ({ time: b.time, value: b.close }))
         : data;
     try { series.setData(shaped); }
@@ -413,6 +528,12 @@ async function loadChart() {
     exitReplayState();
     syncTicker();
 
+    // A candlestick series cannot be fed {time,value}, and a line series
+    // cannot be fed OHLC — switching between a candle feed and a close-only
+    // one has to swap the series, not just the data.
+    if (seriesType !== effectiveType()) { rebuildSeries(); applyTheme(); }
+    chart.applyOptions({ timeScale: { timeVisible: !srcOfMarket().daily } });
+
     status('Loading ' + S.symbol + ' ' + TF_LABEL[S.tfMin] + '…');
     try {
         const ks = await src.klines(S.symbol, TF_LABEL[S.tfMin], { limit: 1000 });
@@ -423,6 +544,7 @@ async function loadChart() {
         chart.timeScale().fitContent();
         hideStatus();
         updateModeUI();
+        syncTicker();        // a non-streaming feed has no tick to refresh it
         renderAll();          // the ticket can only be priced once bars exist
         openStream();
         loadTicker();
@@ -467,6 +589,7 @@ function closeStream() {
 function openStream() {
     closeStream();
     if (S.mode !== 'browse') return;
+    if (S.market !== 'crypto') return;   // the daily forex feed has no stream
     const sym = S.symbol.toLowerCase();
     const streams = sym + '@kline_' + TF_LABEL[S.tfMin] + '/' + sym + '@ticker';
     let ws;
@@ -500,7 +623,8 @@ function openStream() {
         // update() rather than setData(): repainting the whole series on every
         // tick would fight the user's pan and zoom.
         try {
-            series.update((theme.type === 'line' || theme.type === 'area')
+            const et = effectiveType();
+            series.update((et === 'line' || et === 'area')
                 ? { time: bar.time, value: bar.close } : bar);
         } catch (e) { paint(); }
         lastPainted[lastPainted.length - 1] = bar;
@@ -518,7 +642,7 @@ function openStream() {
 }
 
 async function loadTicker() {
-    if (S.mode !== 'browse') return;
+    if (S.mode !== 'browse' || S.market !== 'crypto') return;
     try {
         const t = await MARKETS[S.market].ticker(S.symbol);
         S.tick = {
@@ -613,13 +737,21 @@ async function startReplay() {
     } finally { startingReplay = false; }
 }
 
+/* The fill engine steps the finest bar the feed publishes. On crypto that is
+   one minute, which is what makes a stop-and-target inside one candle
+   decidable. The daily forex feed has nothing finer than a day, so there
+   fills are resolved on the day's own close-to-close range — the best the
+   data supports, and the reason that feed is labelled as it is. */
+function fineInterval() { return srcOfMarket().daily ? '1d' : '1m'; }
+function fineStepMs()   { return srcOfMarket().daily ? 86400000 : MIN_MS; }
+
 async function ensure1m() {
     if (S.fetching1m || S.exhausted) return;
     if (S.bars1m.length - S.fillIdx > 1440) return;
     S.fetching1m = true;
     try {
-        const from = S.bars1m.length ? S.bars1m[S.bars1m.length - 1].t + MIN_MS : S.cursorMs;
-        const page = await MARKETS[S.market].klines(S.symbol, '1m', { startTime: from, limit: 1000 });
+        const from = S.bars1m.length ? S.bars1m[S.bars1m.length - 1].t + fineStepMs() : S.cursorMs;
+        const page = await MARKETS[S.market].klines(S.symbol, fineInterval(), { startTime: from, limit: 1000 });
         if (!page.length) S.exhausted = true;
         else {
             const last = S.bars1m.length ? S.bars1m[S.bars1m.length - 1].t : -1;
@@ -817,17 +949,39 @@ const IND = {
         }
     },
     vwap: {
-        label: 'VWAP (session)', pane: 'price', params: {},
-        calc: b => {
-            const out = []; let pv = 0, vv = 0, day = null;
+        label: 'VWAP', pane: 'price', multi: 7, src: true,
+        outputs: ['VWAP', 'Upper band 1', 'Lower band 1', 'Upper band 2',
+                  'Lower band 2', 'Upper band 3', 'Lower band 3'],
+        params: { anchor: 'session', source: 'hlc3',
+                  b1: true,  b1m: 1,
+                  b2: false, b2m: 2,
+                  b3: false, b3m: 3 },
+        /* Anchored VWAP with standard-deviation bands, the way TradingView
+           exposes it: the average resets on the anchor period, and each band
+           is a multiple of the volume-weighted deviation from it. Variance is
+           accumulated as E[x²]−E[x]² so the whole thing stays one pass. */
+        calc: (b, p) => {
+            const vw = [], out = [[], [], [], [], [], []];
+            let pv = 0, vv = 0, sq = 0, key = null;
             for (const x of b) {
-                const d = dayKey(x.time * 1000);
-                if (d !== day) { day = d; pv = 0; vv = 0; }
+                const k = anchorKey(x.time, p.anchor);
+                if (k !== key) { key = k; pv = 0; vv = 0; sq = 0; }
                 const v = x.volume || 1;
-                pv += (x.high + x.low + x.close) / 3 * v; vv += v;
-                out.push(vv ? pv / vv : null);
+                const tp = srcValue(x, p.source);
+                pv += tp * v; vv += v; sq += tp * tp * v;
+                const mean = vv ? pv / vv : null;
+                vw.push(mean);
+                if (mean === null) { out.forEach(a => a.push(null)); continue; }
+                const sd = Math.sqrt(Math.max(0, sq / vv - mean * mean));
+                const band = (on, mult) => on ? mean + sd * mult : null;
+                out[0].push(band(p.b1, +p.b1m));
+                out[1].push(band(p.b1, -p.b1m));
+                out[2].push(band(p.b2, +p.b2m));
+                out[3].push(band(p.b2, -p.b2m));
+                out[4].push(band(p.b3, +p.b3m));
+                out[5].push(band(p.b3, -p.b3m));
             }
-            return out;
+            return [vw].concat(out);
         }
     }
 };
@@ -835,6 +989,33 @@ const IND = {
 /* Which price an indicator is measured on. TradingView calls this the
    source, and it is the input traders change most after the period. */
 const SOURCES = ['close', 'open', 'high', 'low', 'hl2', 'hlc3', 'ohlc4'];
+const ANCHORS = ['session', 'week', 'month', 'quarter', 'year'];
+
+function srcValue(b, name) {
+    switch (name) {
+        case 'open':  return b.open;
+        case 'high':  return b.high;
+        case 'low':   return b.low;
+        case 'hl2':   return (b.high + b.low) / 2;
+        case 'hlc3':  return (b.high + b.low + b.close) / 3;
+        case 'ohlc4': return (b.open + b.high + b.low + b.close) / 4;
+        default:      return b.close;
+    }
+}
+
+// Which bucket a bar belongs to, for anchored studies.
+function anchorKey(timeSec, anchor) {
+    const d = new Date(timeSec * 1000);
+    const y = d.getUTCFullYear(), m = d.getUTCMonth();
+    if (anchor === 'year')    return y;
+    if (anchor === 'quarter') return y + '-' + Math.floor(m / 3);
+    if (anchor === 'month')   return y + '-' + m;
+    if (anchor === 'week') {
+        const t = Date.UTC(y, m, d.getUTCDate()) - (d.getUTCDay() * 86400000);
+        return t;
+    }
+    return y + '-' + m + '-' + d.getUTCDate();
+}
 function srcOf(bars, name) {
     switch (name) {
         case 'open':  return bars.map(b => b.open);
@@ -978,6 +1159,9 @@ function refreshIndicators(data) {
                 .map((b, i) => ({ time: b.time, value: vals[i] }))
                 .filter(x => x.value !== null && x.value !== undefined && isFinite(x.value)));
         });
+        // Keep the computed values so a double-click on the LINE can find
+        // which indicator it landed on, not only a click on the legend.
+        a.plot = sets.map(vals => data.map((b, i) => ({ t: b.time, v: vals[i] })));
         const primary = sets[0] || [];
         a.lastValue = null;
         for (let i = primary.length - 1; i >= 0; i--) {
@@ -1002,7 +1186,7 @@ function renderOHLC(bar) {
     box.innerHTML =
         '<span class="sym">' + S.symbol + '</span>' +
         '<span class="tf">' + (TF_LABEL[S.tfMin] || '') + '</span>' +
-        '<span class="tf">Binance</span>' +
+        '<span class="tf">' + (S.market === 'fx' ? 'ECB' : 'Binance') + '</span>' +
         '<i>O</i><span class="' + c + '">' + px(bar.open) + '</span>' +
         '<i>H</i><span class="' + c + '">' + px(bar.high) + '</span>' +
         '<i>L</i><span class="' + c + '">' + px(bar.low) + '</span>' +
@@ -1115,17 +1299,31 @@ function renderIndCfg() {
             if (def.params.slow !== undefined)   h += num('slow', 'Slow length', 2, 500);
             if (def.params.signal !== undefined) h += num('signal', 'Signal smoothing', 1, 100);
             if (def.params.mult !== undefined)   h += num('mult', 'Std dev multiplier', 0.1, 10, 0.1);
+            if (def.params.anchor !== undefined) {
+                h += row('Anchor period', '<select data-p="anchor">' + ANCHORS.map(o =>
+                    '<option value="' + o + '"' + (a.params.anchor === o ? ' selected' : '') +
+                    '>' + o[0].toUpperCase() + o.slice(1) + '</option>').join('') + '</select>');
+            }
             if (def.src) {
                 h += row('Source', '<select data-p="source">' + SOURCES.map(o =>
                     '<option value="' + o + '"' + (a.params.source === o ? ' selected' : '') +
                     '>' + o + '</option>').join('') + '</select>');
             }
+            [1, 2, 3].forEach(n => {
+                if (def.params['b' + n] === undefined) return;
+                h += '<div class="rp-set-row wide"><label class="chk">' +
+                     '<input type="checkbox" data-p="b' + n + '"' +
+                     (a.params['b' + n] ? ' checked' : '') + '> Band ' + n + '</label>' +
+                     '<input type="number" min="0.1" max="10" step="0.1" data-p="b' + n + 'm" value="' +
+                     a.params['b' + n + 'm'] + '"></div>';
+            });
             if (!h) h = '<p class="rp-hint">This indicator has no inputs to configure.</p>';
         }
         box.innerHTML = h;
         box.querySelectorAll('[data-p]').forEach(inp =>
             inp.addEventListener('input', () => {
-                const v = inp.type === 'number' ? +inp.value : inp.value;
+                const v = inp.type === 'checkbox' ? inp.checked
+                        : inp.type === 'number' ? +inp.value : inp.value;
                 a.params[inp.dataset.p] = v;
                 $('rp-icfg-title').textContent = indName(a);
                 refreshIndicators(lastPainted); saveIndicators(); renderIndicatorList();
@@ -1617,6 +1815,21 @@ function renderTicker() {
         return;
     }
     $('rp-tk-pair').textContent = S.symbol;
+    if (S.market !== 'crypto') {
+        const last = S.hist[S.hist.length - 1], prev = S.hist[S.hist.length - 2];
+        const d = last && prev ? last.close - prev.close : 0;
+        el.textContent = last ? px(last.close) : '—';
+        el.className = d >= 0 ? 'val-pos' : 'val-neg';
+        $('rp-tk-chg').textContent = last && prev
+            ? (d >= 0 ? '+' : '') + px(d) + '  (' + (d / prev.close * 100).toFixed(2) + '%)' : '—';
+        $('rp-tk-chg').className = 'rp-tk-chg ' + (d >= 0 ? 'val-pos' : 'val-neg');
+        $('rp-tk-chgabs').textContent = 'daily';
+        $('rp-tk-high').textContent = last ? px(last.high) : '—';
+        $('rp-tk-low').textContent = last ? px(last.low) : '—';
+        $('rp-tk-vol').textContent = '—';
+        $('rp-tk-turn').textContent = '—';
+        return;
+    }
     if (!t) return;
     el.textContent = px(t.last);
     el.className = t.changePct >= 0 ? 'val-pos' : 'val-neg';
@@ -1633,7 +1846,8 @@ function renderTicker() {
 function syncTicker() {
     const replay = S.mode === 'replay';
     $('rp-tk-clockcell').hidden = !replay;
-    $('rp-tk-venue').textContent = replay ? 'Replay · historical' : 'Binance · Spot';
+    const venue = S.market === 'fx' ? 'ECB daily reference' : 'Binance · Spot';
+    $('rp-tk-venue').textContent = replay ? 'Replay · historical' : venue;
     renderTicker();
     if (replay) $('rp-clock').textContent = S.working ? iso(S.working.time * 1000) : '—';
 }
@@ -2049,9 +2263,9 @@ const CATALOG = [
       desc: 'Weights recent bars more heavily.', tags: 'ema exponential moving average trend' },
     { type: 'vwma', name: 'Volume Weighted MA', short: 'VWMA',
       desc: 'Moving average weighted by traded volume.', tags: 'vwma volume weighted moving average' },
-    { type: 'vwap', name: 'VWAP (session)', short: 'VWAP',
-      desc: 'Volume-weighted average price, reset each UTC day.',
-      tags: 'vwap volume weighted average price session anchor' },
+    { type: 'vwap', name: 'VWAP with bands', short: 'VWAP',
+      desc: 'Anchored volume-weighted average with three deviation band pairs.',
+      tags: 'vwap volume weighted average price session anchor bands deviation' },
     { type: 'bb',   name: 'Bollinger Bands', short: 'BB',
       desc: 'Moving average with standard-deviation envelopes.',
       tags: 'bollinger bands volatility deviation envelope' },
@@ -2296,7 +2510,7 @@ function svgBars(data, opts) {
     const bw = (W - pad * 2) / data.length * 0.62;
     return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="pr-chart">' +
         '<line x1="' + pad + '" y1="' + zero.toFixed(1) + '" x2="' + (W - pad) +
-          '" y2="' + zero.toFixed(1) + '" stroke="#c9ced6" stroke-width="1"/>' +
+          '" y2="' + zero.toFixed(1) + '" stroke="rgba(255,255,255,.16)" stroke-width="1"/>' +
         data.map((d, i) => {
             const cx = pad + (i + 0.5) / data.length * (W - pad * 2);
             const y = H - pad - (d.v - lo) / span * (H - pad * 2);
@@ -2332,37 +2546,45 @@ function buildPrintReport() {
     '<title>BarTest Replay — ' + esc(m.symbol) + ' ' + esc(m.timeframe) + '</title>' +
     '<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">' +
     '<style>' +
-    '@page{size:A4;margin:14mm}' +
-    'body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:#14171c;margin:0;font-size:11px}' +
-    '.pr-head{display:flex;align-items:flex-start;gap:16px;border-bottom:2px solid #14171c;padding-bottom:12px}' +
+    '@page{size:A4;margin:12mm}' +
+    // Print the terminal's own palette rather than a white document — and
+    // force the backgrounds through, which browsers strip from printouts by
+    // default.
+    '*{-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    'body{font-family:"IBM Plex Sans",system-ui,sans-serif;color:#eaecef;margin:0;font-size:11px;' +
+      'background:#0b0e11}' +
+    '.pr-head{display:flex;align-items:flex-start;gap:16px;padding-bottom:12px;' +
+      'border-bottom:2px solid #f7a600}' +
     '.pr-mark{width:34px;height:34px;border-radius:9px;background:#f7a600;display:grid;place-items:center;' +
-      'color:#14171c;font-weight:700;font-size:15px;flex:0 0 auto}' +
-    '.pr-head h1{margin:0;font-size:19px;letter-spacing:-.3px}' +
-    '.pr-head p{margin:3px 0 0;color:#5d646e;font-size:11px}' +
-    '.pr-head .right{margin-left:auto;text-align:right;color:#5d646e;font-size:10px;line-height:1.6}' +
-    '.pr-hero{display:flex;align-items:baseline;gap:20px;margin:16px 0 14px;padding:14px 16px;' +
-      'background:#f5f6f8;border-radius:8px}' +
+      'color:#1a1200;font-weight:700;font-size:15px;flex:0 0 auto}' +
+    '.pr-head h1{margin:0;font-size:19px;letter-spacing:-.3px;color:#fff}' +
+    '.pr-head p{margin:3px 0 0;color:#929aa5;font-size:11px}' +
+    '.pr-head .right{margin-left:auto;text-align:right;color:#929aa5;font-size:10px;line-height:1.6}' +
+    '.pr-head .right b{color:#f7a600}' +
+    '.pr-hero{display:flex;align-items:baseline;gap:20px;margin:16px 0 14px;padding:15px 17px;' +
+      'background:#16181e;border:1px solid rgba(255,255,255,.08);border-radius:8px}' +
     '.pr-hero .v{font-size:34px;font-weight:700;line-height:1}' +
-    '.pr-hero .s{color:#5d646e;font-size:12px}' +
+    '.pr-hero .s{color:#929aa5;font-size:12px}' +
     '.pr-hero .r{margin-left:auto;text-align:right}' +
     '.pr-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}' +
-    '.pr-kpi{border:1px solid #dfe3e8;border-radius:7px;padding:9px 11px}' +
-    '.pr-kl{display:block;font-size:9px;letter-spacing:.9px;text-transform:uppercase;color:#7c838d;font-weight:600}' +
-    '.pr-kv{display:block;font-size:17px;font-weight:700;margin:3px 0 1px}' +
-    '.pr-ks{display:block;font-size:9px;color:#8b929b}' +
-    'h2{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#7c838d;' +
-      'margin:18px 0 7px;border-bottom:1px solid #dfe3e8;padding-bottom:5px}' +
-    '.pr-chart{width:100%;height:auto;display:block}' +
-    '.pr-ax{font-size:9px;fill:#8b929b}.pr-ax.mid{text-anchor:middle}' +
-    '.pr-empty{color:#8b929b;font-size:11px;margin:6px 0}' +
+    '.pr-kpi{background:#16181e;border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:9px 11px}' +
+    '.pr-kl{display:block;font-size:9px;letter-spacing:.9px;text-transform:uppercase;color:#61686f;font-weight:600}' +
+    '.pr-kv{display:block;font-size:17px;font-weight:700;margin:3px 0 1px;color:#eaecef}' +
+    '.pr-ks{display:block;font-size:9px;color:#61686f}' +
+    'h2{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#61686f;' +
+      'margin:18px 0 7px;border-bottom:1px solid rgba(255,255,255,.09);padding-bottom:5px}' +
+    '.pr-chart{width:100%;height:auto;display:block;background:#0e1116;border-radius:6px;' +
+      'border:1px solid rgba(255,255,255,.07)}' +
+    '.pr-ax{font-size:9px;fill:#61686f}.pr-ax.mid{text-anchor:middle}' +
+    '.pr-empty{color:#61686f;font-size:11px;margin:6px 0}' +
     'table{width:100%;border-collapse:collapse;font-size:10px}' +
-    'th{text-align:left;font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:#7c838d;' +
-      'border-bottom:1px solid #cfd4da;padding:5px 6px}' +
-    'td{padding:4px 6px;border-bottom:1px solid #eef0f3}' +
+    'th{text-align:left;font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:#61686f;' +
+      'border-bottom:1px solid rgba(255,255,255,.14);padding:5px 6px}' +
+    'td{padding:4px 6px;border-bottom:1px solid rgba(255,255,255,.05);color:#929aa5}' +
     'td.n{text-align:right;font-variant-numeric:tabular-nums}' +
-    '.pos{color:#0d8a56}.neg{color:#cc3238}' +
-    '.pr-foot{margin-top:18px;padding-top:10px;border-top:1px solid #dfe3e8;' +
-      'color:#8b929b;font-size:9px;line-height:1.6}' +
+    '.pos{color:#20b26c}.neg{color:#ef454a}' +
+    '.pr-foot{margin-top:18px;padding-top:10px;border-top:1px solid rgba(255,255,255,.09);' +
+      'color:#61686f;font-size:9px;line-height:1.6}' +
     '@media print{.pr-noprint{display:none}}' +
     '.pr-noprint{position:fixed;top:12px;right:12px;background:#f7a600;color:#14171c;border:none;' +
       'border-radius:6px;padding:9px 16px;font:inherit;font-weight:700;cursor:pointer;font-size:12px}' +
@@ -2559,21 +2781,14 @@ async function wipeSessions() {
     status('All saved sessions deleted.'); setTimeout(hideStatus, 2200);
 }
 
-function openExportMenu(anchor) {
-    document.querySelectorAll('.rp-pop').forEach(n => n.remove());
+/* Two verbs, two buttons. Saving a session and exporting its results are
+   different intentions and were sharing one menu, so neither was obvious. */
+function openSessionMenu(anchor) {
     const sessions = listSessions();
-    const pop = document.createElement('div');
-    pop.className = 'rp-pop rp-export-pop';
-    pop.innerHTML =
+    popMenu(anchor,
         '<div class="rp-menu">' +
-          '<button data-x="pdf"><i class="fa-regular fa-file-pdf"></i>' +
-            '<span>Performance report (PDF)</span></button>' +
-          '<button data-x="csv"><i class="fa-solid fa-table"></i>' +
-            '<span>Trade log (CSV)</span></button>' +
-          '<button data-x="report"><i class="fa-solid fa-code"></i>' +
-            '<span>Raw data (JSON)</span></button>' +
           '<button data-x="save"><i class="fa-solid fa-floppy-disk"></i>' +
-            '<span>Save session</span></button>' +
+            '<span>Save this session</span></button>' +
         '</div>' +
         (sessions.length
             ? '<h5>Saved sessions</h5><div class="rp-menu">' + sessions.map(x =>
@@ -2586,7 +2801,27 @@ function openExportMenu(anchor) {
               '<div class="rp-menu rp-pop-foot"><button data-x="wipe">' +
                 '<i class="fa-solid fa-broom"></i><span>Delete all saved sessions</span>' +
               '</button></div>'
-            : '');
+            : '<div class="rp-pop-note">Nothing saved yet. A session keeps your ' +
+              'trades, orders and balance so you can pick the run back up later.</div>'));
+}
+
+function openExportMenu(anchor) {
+    popMenu(anchor,
+        '<div class="rp-menu">' +
+          '<button data-x="pdf"><i class="fa-regular fa-file-pdf"></i>' +
+            '<span>Performance report (PDF)</span></button>' +
+          '<button data-x="csv"><i class="fa-solid fa-table"></i>' +
+            '<span>Trade log (CSV)</span></button>' +
+          '<button data-x="report"><i class="fa-solid fa-code"></i>' +
+            '<span>Raw data (JSON)</span></button>' +
+        '</div>');
+}
+
+function popMenu(anchor, html) {
+    document.querySelectorAll('.rp-pop').forEach(n => n.remove());
+    const pop = document.createElement('div');
+    pop.className = 'rp-pop rp-export-pop';
+    pop.innerHTML = html;
     document.body.appendChild(pop);
     const r = anchor.getBoundingClientRect();
     pop.style.left = Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8,
@@ -2647,7 +2882,7 @@ function saveLayout(name) {
     const all = listLayouts().filter(x => x.name !== name);
     all.unshift({
         id: Date.now(), name: name,
-        symbol: S.symbol, tfMin: S.tfMin,
+        symbol: S.symbol, tfMin: S.tfMin, market: S.market,
         theme: Object.assign({}, theme),
         drawings: window.BTTools ? BTTools.serialize() : [],
         indicators: activeInd.map(a => ({ type: a.type, params: a.params, code: a.code, styles: a.styles })),
@@ -2664,8 +2899,9 @@ async function applyLayout(id) {
     theme = Object.assign({}, THEME_DEFAULT, L.theme || {});
     syncThemeInputs(); saveTheme();
     $('rp-tf').value = String(L.tfMin);
-    const symChanged = L.symbol !== S.symbol;
+    S.market = L.market || 'crypto';
     S.symbol = L.symbol;
+    syncTimeframes();
     syncInstButton();
     $('rp-tk-icon').textContent = L.symbol.charAt(0);
 
@@ -2735,7 +2971,7 @@ function openLayoutMenu(anchor) {
 let instCat = 'fav';
 
 function catLabel(c) {
-    return c === 'metal' ? 'METALS' : c === 'fx' ? 'FOREX' : 'CRYPTO';
+    return c === 'commodity' ? 'GOLD' : c === 'fx' ? 'FOREX' : 'CRYPTO';
 }
 
 // A few pairs deserve their own display name in the header button.
@@ -2745,6 +2981,16 @@ function syncInstButton() {
     const row = CATALOGUE && CATALOGUE.find(x => x.symbol === S.symbol);
     $('rp-inst-name').textContent = S.symbol;
     $('rp-inst-cat').textContent = catLabel(row ? row.cat : 'crypto');
+}
+
+/* A daily-only feed has no 5-minute bar to offer, so the timeframes it cannot
+   serve are disabled rather than left to fail on selection. */
+function syncTimeframes() {
+    const daily = !!srcOfMarket().daily;
+    $('rp-tf').querySelectorAll('option').forEach(o => {
+        o.disabled = daily && o.value !== '1440';
+    });
+    if (daily && S.tfMin !== 1440) { S.tfMin = 1440; $('rp-tf').value = '1440'; }
 }
 
 async function openInstPicker() {
@@ -2765,39 +3011,38 @@ function renderInstList() {
     const q = $('rp-inst-search').value.trim().toLowerCase();
     if (!CATALOGUE) return;
 
-    if (instCat === 'other' && !q) {
+    if (instCat === 'other') {
         box.innerHTML =
             '<div class="rp-inst-note">' +
-            '<b>Stocks, indices and energy are not on this feed.</b><br>' +
-            'The chart is priced from Binance, which carries crypto, a handful of ' +
-            'currency crosses and tokenised gold — and nothing else. Rather than ' +
-            'list instruments that would not load, they are absent until there is ' +
-            'a feed behind them.' +
+            '<b>Equities, indices and energy are not on these feeds.</b><br>' +
+            'Prices here come from two places: Binance for crypto and gold, and ' +
+            'the European Central Bank\'s daily reference rates for currencies. ' +
+            'Neither carries shares, index futures or oil, so rather than list ' +
+            'symbols that would fail to load they are absent until there is a ' +
+            'feed behind them.' +
             '<ul>' +
-              '<li>Equities and indices (S&amp;P 500, NASDAQ, single stocks) need a ' +
+              '<li>Shares and indices (S&amp;P 500, NASDAQ, single names) need a ' +
                   'licensed market-data provider.</li>' +
-              '<li>Oil and other energy need the same.</li>' +
-              '<li>Forex majors beyond EUR/USD need 1-minute history we host ' +
-                  'ourselves — the same job as taking forex back to 2010.</li>' +
+              '<li>Oil, silver and the rest of the commodity complex need the same.</li>' +
+              '<li>Intraday forex needs 1-minute history we host ourselves — the ' +
+                  'daily series here is real, but it is one price per day.</li>' +
             '</ul>' +
-            'Gold is already available under <b>Metals</b>, and EUR/USD under ' +
-            '<b>Forex</b>, because those genuinely price here.' +
+            'Gold trades under <b>Commodities</b>, and 24 currency pairs back to ' +
+            '1999 under <b>Forex</b>, because those genuinely price here.' +
             '</div>';
         return;
     }
 
-    let rows = CATALOGUE;
+    // Search filters WITHIN the selected tab. Letting it search everything
+    // meant that once you had typed anything the tabs stopped responding —
+    // which is why the crypto tab felt like a room with no door.
+    let rows = instCat === 'fav'
+        ? CATALOGUE.filter(x => favourites.includes(x.symbol))
+        : CATALOGUE.filter(x => x.cat === instCat);
     if (q) {
         rows = rows.filter(x => x.symbol.toLowerCase().includes(q) ||
                                 (x.name || '').toLowerCase().includes(q));
-    } else if (instCat === 'fav') {
-        rows = rows.filter(x => favourites.includes(x.symbol));
-    } else {
-        rows = rows.filter(x => x.cat === instCat);
     }
-    // Within a search, put the dollar-quoted books first too.
-    if (q) rows = rows.filter(x => x.cat !== 'alt' || favourites.includes(x.symbol) || q.length > 2);
-    rows = rows.slice(0, 300);
 
     if (!rows.length) {
         box.innerHTML = '<div class="rp-inst-note">' +
@@ -2840,8 +3085,11 @@ async function pickInstrument(sym) {
         'The session — position, orders and trade log — is cleared. ' +
         'Export or save it first if you want to keep it.', 'Change instrument')) return;
     closeInstPicker();
+    const row = CATALOGUE.find(x => x.symbol === sym);
+    S.market = (row && row.src) || 'crypto';
     S.symbol = sym;
     resetAccount(true);
+    syncTimeframes();
     syncInstButton();
     $('rp-tk-icon').textContent = sym.charAt(0);
     loadChart();
@@ -2859,7 +3107,7 @@ let wheelDate = { d: 1, m: 0, y: 2024 };
 function daysIn(y, m) { return new Date(Date.UTC(y, m + 1, 0)).getUTCDate(); }
 
 function buildWheel() {
-    const earliest = new Date(MARKETS.crypto.earliest);
+    const earliest = new Date(srcOfMarket().earliest);
     const maxY = new Date().getUTCFullYear();
     const years = [];
     for (let y = earliest.getUTCFullYear(); y <= maxY; y++) years.push(y);
@@ -2929,7 +3177,7 @@ function readWheel(which) {
 
 function noteWheel() {
     const ms = Date.UTC(wheelDate.y, wheelDate.m, wheelDate.d);
-    const earliest = Date.parse(MARKETS.crypto.earliest);
+    const earliest = Date.parse(srcOfMarket().earliest);
     const latest = Date.now() - 86400000;
     const note = $('rp-wheel-note');
     if (ms < earliest) note.textContent = 'Before this market existed';
@@ -3064,8 +3312,8 @@ function applyTheme() {
                             : LightweightCharts.PriceScaleMode.Normal
         });
     } catch (e) {}
-    if (theme.type === 'candle') series.applyOptions(seriesOptions());
-    else if (theme.type === 'bar') series.applyOptions({ upColor: theme.up, downColor: theme.down });
+    if (effectiveType() === 'candle') series.applyOptions(seriesOptions());
+    else if (effectiveType() === 'bar') series.applyOptions({ upColor: theme.up, downColor: theme.down });
     else series.applyOptions({ color: theme.up, lineColor: theme.up });
 
     document.documentElement.style.setProperty('--pos', theme.up);
@@ -3109,6 +3357,10 @@ function bindThemeInputs() {
     }));
     $('set-type').addEventListener('change', e => {
         theme.type = e.target.value; saveTheme(); rebuildSeries(); applyTheme();
+        if (isCloseOnly() && theme.type !== 'line' && theme.type !== 'area') {
+            status('This feed publishes one close per day, so it draws as a line.');
+            setTimeout(hideStatus, 3200);
+        }
     });
     $('set-prec').addEventListener('change', e => {
         theme.precision = e.target.value; saveTheme(); paint(); renderAll();
@@ -3303,6 +3555,7 @@ function init() {
     wheelDate = { d: start.getUTCDate(), m: start.getUTCMonth(), y: start.getUTCFullYear() };
     $('rp-date-label').textContent = wheelLabel();
     syncInstButton();
+    syncTimeframes();
     loadCatalogue().then(syncInstButton).catch(() => {});
 
     $('rp-inst-open').addEventListener('click', openInstPicker);
@@ -3312,6 +3565,7 @@ function init() {
     document.querySelectorAll('#rp-inst-tabs button').forEach(b =>
         b.addEventListener('click', () => {
             instCat = b.dataset.cat;
+            $('rp-inst-search').value = '';      // a stale search hides the new tab
             document.querySelectorAll('#rp-inst-tabs button').forEach(x =>
                 x.classList.toggle('active', x === b));
             renderInstList();
@@ -3392,11 +3646,43 @@ function init() {
     // Double-clicking an axis is the library's own "reset the view" gesture,
     // so settings must stay out of the way there and only answer to a
     // double-click on the plot itself.
+    /* Which indicator, if any, is under the pointer. Compares in PIXELS so the
+       tolerance is the same whether the pane is showing a price of 4 or
+       80,000 — comparing in price terms made the RSI pane impossible to hit
+       and the price pane hit everything. */
+    function indicatorAt(e) {
+        const r = $('rp-chart-wrap').getBoundingClientRect();
+        const x = e.clientX - r.left, y = e.clientY - r.top;
+        const t = chart.timeScale().coordinateToTime(x);
+        if (t === null) return null;
+        let best = null, bd = 9;
+        for (const a of activeInd) {
+            if (a.hidden || !a.plot) continue;
+            a.plot.forEach((serie, li) => {
+                if (a.styles[li] && a.styles[li].visible === false) return;
+                let near = null, nd = Infinity;
+                for (const pt of serie) {
+                    const d = Math.abs(pt.t - t);
+                    if (d < nd && pt.v !== null && pt.v !== undefined && isFinite(pt.v)) { nd = d; near = pt; }
+                }
+                if (!near) return;
+                const yy = a.lines[li].priceToCoordinate
+                    ? a.lines[li].priceToCoordinate(near.v) : null;
+                if (yy === null) return;
+                const dist = Math.abs(yy - y);
+                if (dist < bd) { bd = dist; best = a; }
+            });
+        }
+        return best;
+    }
+
     $('rp-chart-wrap').addEventListener('dblclick', e => {
         if (e.target.closest('.rp-legend-wrap, .rp-transport, .rp-hud, .rp-cf, .rp-tb')) return;
         if (!$('rp-cutbar').hidden) return;      // mid replay set-up
         const where = overAxis(e);
         if (where.price || where.time) return;   // axis double-click: let it reset
+        const ind = indicatorAt(e);
+        if (ind) { openIndSettings(ind.id); return; }
         $('rp-set').hidden = false;
     });
 
@@ -3456,6 +3742,7 @@ function init() {
 
     // export / save
     $('rp-export').addEventListener('click', () => openExportMenu($('rp-export')));
+    $('rp-sessions').addEventListener('click', () => openSessionMenu($('rp-sessions')));
     $('rp-layout-open').addEventListener('click', () => openLayoutMenu($('rp-layout-open')));
 
     // indicator picker
@@ -3473,6 +3760,12 @@ function init() {
         if (!code) return;
         addIndicator('custom', {}, code);
         updateIndCount();
+    });
+    $('rp-code-card').addEventListener('click', () => {
+        const panel = $('rp-code-panel');
+        panel.hidden = !panel.hidden;
+        $('rp-code-card').classList.toggle('open', !panel.hidden);
+        if (!panel.hidden) setTimeout(() => $('rp-ind-code').focus(), 40);
     });
     $('rp-ind-code').value = TEMPLATES.sma;
     renderIndicatorList();

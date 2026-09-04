@@ -228,7 +228,10 @@
                 <button class="rp-tab" data-tab="cal">Calendar</button>
                 <button class="rp-tab" data-tab="jour">Journal</button>
                 <span class="rp-tabs-spacer"></span>
-                <button class="rp-tab-btn" id="rp-export" title="Export this session's results">
+                <button class="rp-tab-btn" id="rp-sessions" title="Save or reload a trading session">
+                    <i class="fa-regular fa-bookmark"></i><span>Save / load</span>
+                </button>
+                <button class="rp-tab-btn" id="rp-export" title="Export results as PDF, CSV or JSON">
                     <i class="fa-solid fa-file-export"></i><span>Export</span>
                 </button>
                 <button class="rp-tab-icon" id="rp-dock-toggle" title="Collapse / expand">
@@ -512,8 +515,8 @@
             <button class="active" data-cat="fav">Favourites</button>
             <button data-cat="crypto">Crypto</button>
             <button data-cat="fx">Forex</button>
-            <button data-cat="metal">Metals</button>
-            <button data-cat="other">Stocks, indices &amp; energy</button>
+            <button data-cat="commodity">Commodities</button>
+            <button data-cat="other">Stocks &amp; indices</button>
         </nav>
         <div class="rp-inst-body" id="rp-inst-list"></div>
     </div>
@@ -596,24 +599,41 @@
                 <h4>On the chart <b id="rp-active-count">0</b></h4>
                 <div id="rp-ind-list" class="rp-ind-list"><div class="rp-empty">None active.</div></div>
 
-                <h4 style="margin-top:16px">Your own script</h4>
-                <p class="rp-hint">
-                    A function body over <code>bars</code>, returning one value per bar.
-                    Pine Script runs only on TradingView&rsquo;s servers, so this is the
-                    equivalent that is genuinely yours &mdash; and it is the same place a
-                    system measured in the Backtest Machine gets replayed.
-                </p>
-                <select id="rp-ind-template" class="rp-template">
-                    <option value="">Start from a template&hellip;</option>
-                    <option value="sma">Simple moving average</option>
-                    <option value="cross">MA cross signal (1 / -1 / 0)</option>
-                    <option value="range">Rolling high-low midpoint</option>
-                    <option value="mom">Momentum (close vs N bars ago)</option>
-                </select>
-                <textarea id="rp-ind-code" spellcheck="false" rows="8"></textarea>
-                <button id="rp-ind-addcustom" class="rp-btn accent" style="width:100%;justify-content:center;margin-top:8px">
-                    <i class="fa-solid fa-plus"></i> Add script to chart
+                <button id="rp-code-card" class="rp-code-card">
+                    <span class="rp-code-ic">
+                        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                            <path d="M9 7L4 12l5 5M15 7l5 5-5 5" fill="none" stroke="#5aa9f0"
+                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M13 4l-2 16" stroke="#f7a600" stroke-width="2"
+                                  stroke-linecap="round"/>
+                        </svg>
+                    </span>
+                    <span class="rp-code-txt">
+                        <b>Add your own system code</b>
+                        <em>Paste the strategy you measured in the Backtest Machine
+                            and replay it here.</em>
+                    </span>
+                    <i class="fa-solid fa-chevron-down"></i>
                 </button>
+
+                <div id="rp-code-panel" class="rp-code-panel" hidden>
+                    <p class="rp-hint">
+                        A function body over <code>bars</code>, returning one value per bar.
+                        Pine Script only runs on TradingView&rsquo;s servers, so this is the
+                        equivalent that is genuinely yours.
+                    </p>
+                    <select id="rp-ind-template" class="rp-template">
+                        <option value="">Start from a template&hellip;</option>
+                        <option value="sma">Simple moving average</option>
+                        <option value="cross">MA cross signal (1 / -1 / 0)</option>
+                        <option value="range">Rolling high-low midpoint</option>
+                        <option value="mom">Momentum (close vs N bars ago)</option>
+                    </select>
+                    <textarea id="rp-ind-code" spellcheck="false" rows="9"></textarea>
+                    <button id="rp-ind-addcustom" class="rp-btn accent full" style="margin-top:8px">
+                        <i class="fa-solid fa-plus"></i> Add to chart
+                    </button>
+                </div>
             </div>
         </div>
     </div>
