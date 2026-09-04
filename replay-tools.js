@@ -1,9 +1,10 @@
 /* ==========================================================================
    BarTest — drawing tools
 
-   Pick a tool, drag to draw (one click for the single-point tools), click to
-   select, drag to move, drag a handle to reshape, double-click for full
-   settings, Delete to remove. Everything saves per symbol automatically.
+   A TradingView-shaped drawing layer: grouped tool rail with fly-out menus,
+   a floating style HUD on the selected shape (colour, fill, width, style,
+   extends, text, lock, clone, delete, settings), a full settings dialog on
+   double-click, magnet snapping, and per-tool style memory.
 
    Shapes are stored as timestamp + price, never pixels, which is what keeps
    them stuck to the same candles through pan, zoom, timeframe changes and
@@ -21,20 +22,168 @@ let tool = 'cursor';
 let shapes = [];
 let selected = null;
 let drag = null;
+let pending = null;          // multi-click shape under construction
 let seq = 0;
 let onChange = null;
+let bars = [];               // last painted data — magnet + future extrapolation
 
-const ACCENT = '#f0b25a';
-const SEL    = '#5aa9f0';
-const POS    = '#12a184';
-const NEG    = '#e2564e';
-const HIT    = 8;
-const FIB    = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+let magnet = false;
+let lockAll = false;
+let hideAll = false;
 
-// Tools that need only one point — a single click places them.
-const ONE_CLICK = { hline: true, vline: true };
+const SEL  = '#5aa9f0';
+const HIT  = 8;
+const FIB  = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+const FIBE = [0, 0.618, 1, 1.618, 2.618, 4.236];
 
-const DEFAULT_STYLE = { color: ACCENT, width: 1.4, dash: 'solid' };
+// ============================================================ tool catalogue
+
+/* kind drives geometry, hit-testing and drawing. Everything else is style. */
+const T = {
+    cursor:      { name: 'Cross',                 kind: 'nav',  pts: 0 },
+    dot:         { name: 'Dot',                   kind: 'nav',  pts: 0 },
+    eraser:      { name: 'Eraser',                kind: 'nav',  pts: 0 },
+
+    trend:       { name: 'Trend line',            kind: 'line', pts: 2, cap: 'line' },
+    ray:         { name: 'Ray',                   kind: 'line', pts: 2, cap: 'line',
+                   preset: { extendRight: true } },
+    extended:    { name: 'Extended line',         kind: 'line', pts: 2, cap: 'line',
+                   preset: { extendRight: true, extendLeft: true } },
+    arrow:       { name: 'Arrow',                 kind: 'line', pts: 2, cap: 'line',
+                   preset: { arrowRight: true } },
+    angle:       { name: 'Trend angle',           kind: 'line', pts: 2, cap: 'line',
+                   preset: { showAngle: true } },
+    hline:       { name: 'Horizontal line',       kind: 'hline', pts: 1, cap: 'line' },
+    hray:        { name: 'Horizontal ray',        kind: 'hray',  pts: 1, cap: 'line' },
+    vline:       { name: 'Vertical line',         kind: 'vline', pts: 1, cap: 'line' },
+    crossline:   { name: 'Cross line',            kind: 'cross', pts: 1, cap: 'line' },
+    channel:     { name: 'Parallel channel',      kind: 'channel', pts: 3, cap: 'area' },
+    pitchfork:   { name: 'Pitchfork',             kind: 'fork',    pts: 3, cap: 'area' },
+    gann:        { name: 'Gann fan',              kind: 'gann',    pts: 2, cap: 'levels' },
+
+    fib:         { name: 'Fib retracement',       kind: 'fib',     pts: 2, cap: 'levels' },
+    fibext:      { name: 'Fib extension',         kind: 'fibext',  pts: 3, cap: 'levels' },
+    fibfan:      { name: 'Fib fan',               kind: 'fibfan',  pts: 2, cap: 'levels' },
+    fibtime:     { name: 'Fib time zones',        kind: 'fibtime', pts: 2, cap: 'levels' },
+
+    rect:        { name: 'Rectangle',             kind: 'rect',    pts: 2, cap: 'area' },
+    orderblock:  { name: 'Order block',           kind: 'ob',      pts: 2, cap: 'area',
+                   preset: { line: '#5aa9f0', fill: '#5aa9f0', fillOpacity: 0.18, text: 'OB' } },
+    ellipse:     { name: 'Ellipse',               kind: 'ellipse', pts: 2, cap: 'area' },
+    triangle:    { name: 'Triangle',              kind: 'poly',    pts: 3, cap: 'area',
+                   preset: { closed: true } },
+    path:        { name: 'Path',                  kind: 'poly',    pts: 0, cap: 'line' },
+
+    text:        { name: 'Text',                  kind: 'text',    pts: 1, cap: 'text',
+                   preset: { text: 'Text' } },
+    callout:     { name: 'Callout',               kind: 'callout', pts: 2, cap: 'text',
+                   preset: { text: 'Note', fill: '#f7a600', fillOpacity: 0.16 } },
+    pricelabel:  { name: 'Price label',           kind: 'plabel',  pts: 1, cap: 'text' },
+    markerUp:    { name: 'Arrow up',              kind: 'marker',  pts: 1, cap: 'mark',
+                   preset: { line: '#20b26c', dir: 1 } },
+    markerDown:  { name: 'Arrow down',            kind: 'marker',  pts: 1, cap: 'mark',
+                   preset: { line: '#ef454a', dir: -1 } },
+    flag:        { name: 'Flag mark',             kind: 'flag',    pts: 1, cap: 'mark' },
+
+    // drag:true means "created by dragging, not click-by-click" even though
+    // the finished shape carries three points — entry, stop and target.
+    position:    { name: 'Long position',         kind: 'position', pts: 3, cap: 'trade',
+                   drag: true, preset: { dir: 1 } },
+    positionS:   { name: 'Short position',        kind: 'position', pts: 3, cap: 'trade',
+                   drag: true, preset: { dir: -1 } },
+    ruler:       { name: 'Measure',               kind: 'ruler',   pts: 2, cap: 'area' },
+    pricerange:  { name: 'Price range',           kind: 'prange',  pts: 2, cap: 'area' },
+    daterange:   { name: 'Date range',            kind: 'drange',  pts: 2, cap: 'area' },
+    dprange:     { name: 'Date and price range',  kind: 'dprange', pts: 2, cap: 'area' },
+
+    abcd:        { name: 'ABCD pattern',          kind: 'pattern', pts: 4, cap: 'line',
+                   labels: ['A', 'B', 'C', 'D'] },
+    xabcd:       { name: 'XABCD pattern',         kind: 'pattern', pts: 5, cap: 'line',
+                   labels: ['X', 'A', 'B', 'C', 'D'] },
+    hs:          { name: 'Head and shoulders',    kind: 'pattern', pts: 7, cap: 'line',
+                   labels: ['', 'LS', '', 'H', '', 'RS', ''] },
+    elliott:     { name: 'Elliott impulse',       kind: 'pattern', pts: 6, cap: 'line',
+                   labels: ['0', '1', '2', '3', '4', '5'] }
+};
+
+/* Colourful, purpose-built icons — the rail should read at a glance. */
+const ICO = {
+cursor:'<path d="M5 2.5v19l4.6-4.6h6.5z" fill="#f7a600"/>',
+dot:'<circle cx="12" cy="12" r="3.6" fill="#f7a600"/><circle cx="12" cy="12" r="8.5" fill="none" stroke="#5aa9f0" stroke-width="1.4" stroke-dasharray="2 3"/>',
+eraser:'<path d="M4 17l7-7 6 6-4 4H6z" fill="#ef454a" opacity=".75"/><path d="M11 10l4-4 6 6-4 4z" fill="#5aa9f0"/>',
+trend:'<path d="M3 20L21 5" stroke="#5aa9f0" stroke-width="2" stroke-linecap="round"/><circle cx="3" cy="20" r="2.4" fill="#f7a600"/><circle cx="21" cy="5" r="2.4" fill="#f7a600"/>',
+ray:'<path d="M4 19L21 6" stroke="#5aa9f0" stroke-width="2" stroke-linecap="round"/><circle cx="4" cy="19" r="2.6" fill="#f7a600"/><path d="M16.6 5.2l4.6.6-.7 4.5" fill="none" stroke="#20b26c" stroke-width="1.7" stroke-linecap="round"/>',
+extended:'<path d="M2 21L22 3" stroke="#5aa9f0" stroke-width="2" stroke-linecap="round"/><circle cx="8" cy="15" r="2.3" fill="#f7a600"/><circle cx="16" cy="8" r="2.3" fill="#f7a600"/>',
+arrow:'<path d="M3 20L17.5 6.5" stroke="#5aa9f0" stroke-width="2" stroke-linecap="round"/><path d="M21 3.5l-1.4 6.4-5-1.4z" fill="#f7a600"/>',
+angle:'<path d="M3 20h13" stroke="#61686f" stroke-width="1.6"/><path d="M3 20L20 6" stroke="#5aa9f0" stroke-width="2" stroke-linecap="round"/><path d="M10 20a8 8 0 00-1.9-5" fill="none" stroke="#f7a600" stroke-width="1.6"/>',
+hline:'<path d="M2 12h20" stroke="#5aa9f0" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="12" r="2.6" fill="#f7a600"/>',
+hray:'<path d="M6 12h16" stroke="#5aa9f0" stroke-width="2.2" stroke-linecap="round"/><circle cx="5" cy="12" r="2.8" fill="#f7a600"/>',
+vline:'<path d="M12 2v20" stroke="#5aa9f0" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="12" r="2.6" fill="#f7a600"/>',
+crossline:'<path d="M2 12h20M12 2v20" stroke="#5aa9f0" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="2.6" fill="#f7a600"/>',
+channel:'<path d="M3 17L20 6l0 5L3 22z" fill="#5aa9f0" opacity=".18"/><path d="M3 17L20 6M3 22L20 11" stroke="#5aa9f0" stroke-width="1.9" stroke-linecap="round"/>',
+pitchfork:'<path d="M3 12h18M6 4h16M6 20h16" stroke="#5aa9f0" stroke-width="1.7" stroke-linecap="round" fill="none"/><path d="M6 4v16" stroke="#f7a600" stroke-width="1.7" stroke-linecap="round"/><circle cx="3" cy="12" r="2.2" fill="#f7a600"/>',
+gann:'<path d="M3 21L21 3M3 21h19M3 21L12 3M3 21l19 9M3 21L18 3" stroke="#20b26c" stroke-width="1.3" fill="none" opacity=".85"/><path d="M3 21L21 3" stroke="#f7a600" stroke-width="1.9"/>',
+fib:'<path d="M2 5h20" stroke="#ef454a" stroke-width="1.8"/><path d="M2 10h20" stroke="#f7a600" stroke-width="1.8"/><path d="M2 14h20" stroke="#20b26c" stroke-width="1.8"/><path d="M2 19h20" stroke="#5aa9f0" stroke-width="1.8"/>',
+fibext:'<path d="M3 20L9 8l5 7 7-11" fill="none" stroke="#5aa9f0" stroke-width="1.8" stroke-linejoin="round"/><path d="M2 6h20" stroke="#f7a600" stroke-width="1.3" opacity=".85"/><path d="M2 16h20" stroke="#20b26c" stroke-width="1.3" opacity=".85"/>',
+fibfan:'<path d="M3 21L21 3M3 21h19M3 21L14 3M3 21l19 6" stroke="#5aa9f0" stroke-width="1.4" opacity=".85" fill="none"/><circle cx="3" cy="21" r="2.4" fill="#f7a600"/>',
+fibtime:'<path d="M4 3v18M8 3v18M14 3v18M22 3v18" stroke="#5aa9f0" stroke-width="1.6" opacity=".85"/><circle cx="4" cy="12" r="2.2" fill="#f7a600"/>',
+rect:'<rect x="3" y="6" width="18" height="12" rx="1.5" fill="#5aa9f0" opacity=".2"/><rect x="3" y="6" width="18" height="12" rx="1.5" fill="none" stroke="#5aa9f0" stroke-width="1.8"/>',
+orderblock:'<rect x="3" y="5" width="18" height="6" rx="1" fill="#20b26c" opacity=".3"/><rect x="3" y="13" width="18" height="6" rx="1" fill="#ef454a" opacity=".3"/><rect x="3" y="5" width="18" height="6" rx="1" fill="none" stroke="#20b26c" stroke-width="1.4"/><rect x="3" y="13" width="18" height="6" rx="1" fill="none" stroke="#ef454a" stroke-width="1.4"/>',
+ellipse:'<ellipse cx="12" cy="12" rx="9.5" ry="6.5" fill="#c58af0" opacity=".2"/><ellipse cx="12" cy="12" rx="9.5" ry="6.5" fill="none" stroke="#c58af0" stroke-width="1.8"/>',
+triangle:'<path d="M12 4l9 16H3z" fill="#20b26c" opacity=".2"/><path d="M12 4l9 16H3z" fill="none" stroke="#20b26c" stroke-width="1.8" stroke-linejoin="round"/>',
+path:'<path d="M3 19l4-8 5 5 4-9 5 6" fill="none" stroke="#5aa9f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="3" cy="19" r="2" fill="#f7a600"/><circle cx="21" cy="13" r="2" fill="#f7a600"/>',
+text:'<path d="M4 6h16M12 6v13" stroke="#f7a600" stroke-width="2.2" stroke-linecap="round"/>',
+callout:'<path d="M3 5h18v11H10l-4 4v-4H3z" fill="#f7a600" opacity=".2"/><path d="M3 5h18v11H10l-4 4v-4H3z" fill="none" stroke="#f7a600" stroke-width="1.7" stroke-linejoin="round"/>',
+pricelabel:'<path d="M3 8h13l5 4-5 4H3z" fill="#5aa9f0" opacity=".28"/><path d="M3 8h13l5 4-5 4H3z" fill="none" stroke="#5aa9f0" stroke-width="1.6" stroke-linejoin="round"/>',
+markerUp:'<path d="M12 3l7 9h-4v9h-6v-9H5z" fill="#20b26c"/>',
+markerDown:'<path d="M12 21l7-9h-4V3h-6v9H5z" fill="#ef454a"/>',
+flag:'<path d="M6 3v18" stroke="#61686f" stroke-width="2" stroke-linecap="round"/><path d="M6 4h12l-3 4 3 4H6z" fill="#f7a600"/>',
+position:'<rect x="3" y="4" width="18" height="7" fill="#20b26c" opacity=".32"/><rect x="3" y="13" width="18" height="6" fill="#ef454a" opacity=".32"/><path d="M3 11.9h18" stroke="#f7a600" stroke-width="1.8"/>',
+positionS:'<rect x="3" y="4" width="18" height="6" fill="#ef454a" opacity=".32"/><rect x="3" y="12" width="18" height="7" fill="#20b26c" opacity=".32"/><path d="M3 11.1h18" stroke="#f7a600" stroke-width="1.8"/>',
+ruler:'<path d="M3 15l12-12 6 6-12 12z" fill="#5aa9f0" opacity=".2"/><path d="M3 15l12-12 6 6-12 12z" fill="none" stroke="#5aa9f0" stroke-width="1.6"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2" stroke="#f7a600" stroke-width="1.5"/>',
+pricerange:'<path d="M12 3v18" stroke="#5aa9f0" stroke-width="1.8"/><path d="M12 3l-4 4M12 3l4 4M12 21l-4-4M12 21l4-4" fill="none" stroke="#f7a600" stroke-width="1.8" stroke-linecap="round"/>',
+daterange:'<path d="M3 12h18" stroke="#5aa9f0" stroke-width="1.8"/><path d="M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4" fill="none" stroke="#f7a600" stroke-width="1.8" stroke-linecap="round"/>',
+dprange:'<rect x="3" y="5" width="18" height="14" fill="#5aa9f0" opacity=".16"/><path d="M3 12h18M12 5v14" stroke="#5aa9f0" stroke-width="1.5"/><path d="M6.5 9L3.5 12l3 3M17.5 9l3 3-3 3" fill="none" stroke="#f7a600" stroke-width="1.5" stroke-linecap="round"/>',
+abcd:'<path d="M3 20l5-11 5 8 4-9 4 6" fill="none" stroke="#c58af0" stroke-width="1.8" stroke-linejoin="round"/><circle cx="8" cy="9" r="2" fill="#f7a600"/><circle cx="17" cy="8" r="2" fill="#f7a600"/>',
+xabcd:'<path d="M2 6l4 12 4-8 4 9 4-11 4 6" fill="none" stroke="#c58af0" stroke-width="1.7" stroke-linejoin="round"/>',
+hs:'<path d="M2 19l4-6 3 4 3-11 3 11 3-4 4 6" fill="none" stroke="#5aa9f0" stroke-width="1.7" stroke-linejoin="round"/><path d="M2 17h20" stroke="#f7a600" stroke-width="1.3" stroke-dasharray="3 3"/>',
+elliott:'<path d="M3 21l3-7 3 4 4-11 3 7 5-9" fill="none" stroke="#20b26c" stroke-width="1.8" stroke-linejoin="round"/>',
+magnet:'<path d="M6 4h4v9a2 2 0 004 0V4h4v9a6 6 0 01-12 0z" fill="#f7a600"/><path d="M6 4h4v3H6zM14 4h4v3h-4z" fill="#ef454a"/>',
+lock:'<rect x="5" y="10" width="14" height="10" rx="2" fill="#f7a600"/><path d="M8 10V7a4 4 0 018 0v3" fill="none" stroke="#5aa9f0" stroke-width="2"/>',
+eye:'<path d="M12 5c6 0 10 7 10 7s-4 7-10 7S2 12 2 12 6 5 12 5z" fill="none" stroke="#5aa9f0" stroke-width="1.8"/><circle cx="12" cy="12" r="3" fill="#f7a600"/>',
+trash:'<path d="M4 7h16" stroke="#ef454a" stroke-width="2" stroke-linecap="round"/><path d="M6.5 7h11l-1 13h-9z" fill="#ef454a" opacity=".3"/><path d="M6.5 7h11l-1 13h-9z" fill="none" stroke="#ef454a" stroke-width="1.5"/><path d="M9.5 4h5v3h-5z" fill="#ef454a"/>'
+};
+
+const GROUPS = [
+    { id: 'g-cursor', name: 'Cursors',                  tools: ['cursor', 'dot', 'eraser'] },
+    { id: 'g-lines',  name: 'Lines',                    tools: ['trend', 'ray', 'extended', 'arrow', 'angle', 'hline', 'hray', 'vline', 'crossline', 'channel', 'pitchfork'] },
+    { id: 'g-fib',    name: 'Fibonacci & Gann',         tools: ['fib', 'fibext', 'fibfan', 'fibtime', 'gann'] },
+    { id: 'g-shapes', name: 'Shapes & zones',           tools: ['rect', 'orderblock', 'ellipse', 'triangle', 'path'] },
+    { id: 'g-ann',    name: 'Annotation',               tools: ['text', 'callout', 'pricelabel', 'markerUp', 'markerDown', 'flag'] },
+    { id: 'g-meas',   name: 'Prediction & measurement', tools: ['position', 'positionS', 'ruler', 'pricerange', 'daterange', 'dprange'] },
+    { id: 'g-pat',    name: 'Patterns',                 tools: ['abcd', 'xabcd', 'hs', 'elliott'] }
+];
+
+const DEFAULT_STYLE = {
+    line: '#f7a600', width: 1.5, dash: 'solid',
+    fill: '#f7a600', fillOpacity: 0.14,
+    extendLeft: false, extendRight: false,
+    arrowLeft: false, arrowRight: false,
+    text: '', fontSize: 12, bold: false, italic: false, textColor: '#eaecef',
+    showLabels: true, showAngle: false, closed: false, dir: 1
+};
+
+const PALETTE = ['#f7a600', '#20b26c', '#ef454a', '#5aa9f0', '#c58af0', '#eaecef',
+                 '#f0e14a', '#00c2c2', '#ff7ac6', '#8c9099', '#ff9f43', '#4a7cf0'];
+
+// Per-tool style memory: your next rectangle looks like your last rectangle.
+let lastStyle = {};
+try { lastStyle = JSON.parse(localStorage.getItem('bt.replay.toolstyle') || '{}'); }
+catch (e) { lastStyle = {}; }
+function rememberStyle(s) {
+    lastStyle[s.tool] = Object.assign({}, s.style);
+    try { localStorage.setItem('bt.replay.toolstyle', JSON.stringify(lastStyle)); } catch (e) {}
+}
 
 // ---------------------------------------------------------------- lifecycle
 
@@ -46,14 +195,17 @@ function attach(_chart, _series, _host, opts) {
 
     new ResizeObserver(resize).observe(host);
     resize();
-    chart.timeScale().subscribeVisibleLogicalRangeChange(() => { render(); placeCfg(); });
+    chart.timeScale().subscribeVisibleLogicalRangeChange(() => { render(); place(); });
 
     host.addEventListener('mousedown', onDown, true);
     host.addEventListener('dblclick', onDblClick, true);
+    host.addEventListener('mousemove', onHover);
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     document.addEventListener('keydown', onKey);
-    buildCfgPanel();
+
+    buildRail();
+    buildHud();
     return api;
 }
 
@@ -65,29 +217,89 @@ function resize() {
     cvs.style.width = r.width + 'px';
     cvs.style.height = r.height + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    render(); placeCfg();
+    render(); place();
 }
 
-// ------------------------------------------------------------- coordinates
+// -------------------------------------------------------------- coordinates
 
-const X = t => chart.timeScale().timeToCoordinate(t);
-const Y = p => series.priceToCoordinate(p);
+/* timeToCoordinate returns null for any time outside the loaded series, which
+   is exactly where forecasts and rays want to go. Crypto trades 24/7 so the
+   time axis has no session gaps and a linear extrapolation off the visible
+   range is exact; it is only ever used as a fallback. */
+function calib() {
+    const ts = chart.timeScale();
+    const vr = ts.getVisibleRange();
+    if (!vr || vr.to === vr.from) return null;
+    const a = ts.timeToCoordinate(vr.from), b = ts.timeToCoordinate(vr.to);
+    if (a === null || b === null) return null;
+    return { t: vr.from, x: a, k: (b - a) / (vr.to - vr.from) };
+}
+
+function X(t) {
+    const x = chart.timeScale().timeToCoordinate(t);
+    if (x !== null) return x;
+    const c = calib();
+    return c ? c.x + (t - c.t) * c.k : null;
+}
+function Y(p) { return series.priceToCoordinate(p); }
+
+function xToTime(x) {
+    const t = chart.timeScale().coordinateToTime(x);
+    if (t !== null) return t;
+    const c = calib();
+    return c && c.k ? Math.round(c.t + (x - c.x) / c.k) : null;
+}
 
 function toChart(e) {
     const r = cvs.getBoundingClientRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
-    const price = series.coordinateToPrice(y);
-    const time = chart.timeScale().coordinateToTime(x);
+    let price = series.coordinateToPrice(y);
+    const time = xToTime(x);
     if (price === null || time === null) return null;
+    if (magnet) price = snap(time, price);
     return { time: time, price: price, x: x, y: y };
 }
+
+// Magnet: pull to the nearest OHLC of the bar under the cursor.
+function snap(time, price) {
+    if (!bars.length) return price;
+    let best = null, bd = Infinity;
+    for (const b of bars) {
+        const d = Math.abs(b.time - time);
+        if (d < bd) { bd = d; best = b; }
+    }
+    if (!best) return price;
+    let out = price, od = Infinity;
+    for (const v of [best.open, best.high, best.low, best.close]) {
+        const d = Math.abs(v - price);
+        if (d < od) { od = d; out = v; }
+    }
+    return out;
+}
+
 function pxOf(pt) {
     const x = X(pt.time), y = Y(pt.price);
     return (x === null || y === null) ? null : { x: x, y: y };
 }
 const styleOf = s => Object.assign({}, DEFAULT_STYLE, s.style || {});
+const spec = s => T[s.tool] || T.trend;
 
-// ------------------------------------------------------------- hit testing
+function rgba(hex, a) {
+    const h = String(hex || '#000').replace('#', '');
+    const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+    const v = parseInt(n, 16) || 0;
+    return 'rgba(' + ((v >> 16) & 255) + ',' + ((v >> 8) & 255) + ',' + (v & 255) + ',' + a + ')';
+}
+function dashOf(name) {
+    return name === 'dashed' ? [7, 5] : name === 'dotted' ? [2, 4] : [];
+}
+const dp = () => {
+    const p = bars.length ? bars[bars.length - 1].close : 100;
+    return p < 1 ? 6 : p < 20 ? 4 : 2;
+};
+const money = v => Number(v).toFixed(dp());
+
+// -------------------------------------------------------------- hit testing
 
 function distToSegment(px, py, x1, y1, x2, y2) {
     const dx = x2 - x1, dy = y2 - y1;
@@ -100,16 +312,32 @@ function distToSegment(px, py, x1, y1, x2, y2) {
 function hitTest(x, y) {
     for (let i = shapes.length - 1; i >= 0; i--) {
         const s = shapes[i];
+        if (s.hidden || hideAll) continue;
         const pts = s.pts.map(pxOf);
         if (pts.some(p => p === null)) continue;
+        const k = spec(s).kind;
+        const movable = !(s.locked || lockAll);
 
-        for (let h = 0; h < pts.length; h++) {
-            if (Math.hypot(x - pts[h].x, y - pts[h].y) <= HIT + 2) return { id: s.id, handle: h };
+        if (movable) {
+            for (let h = 0; h < pts.length; h++) {
+                if (Math.hypot(x - pts[h].x, y - pts[h].y) <= HIT + 2) return { id: s.id, handle: h };
+            }
         }
-        if (s.type === 'hline') {
-            if (Math.abs(y - pts[0].y) <= HIT) return { id: s.id, handle: -1 };
-        } else if (s.type === 'trend') {
-            if (distToSegment(x, y, pts[0].x, pts[0].y, pts[1].x, pts[1].y) <= HIT)
+        if (k === 'hline' || k === 'hray') {
+            if (Math.abs(y - pts[0].y) <= HIT && (k === 'hline' || x >= pts[0].x - HIT))
+                return { id: s.id, handle: -1 };
+        } else if (k === 'vline') {
+            if (Math.abs(x - pts[0].x) <= HIT) return { id: s.id, handle: -1 };
+        } else if (k === 'cross') {
+            if (Math.abs(x - pts[0].x) <= HIT || Math.abs(y - pts[0].y) <= HIT)
+                return { id: s.id, handle: -1 };
+        } else if (k === 'line' || k === 'poly' || k === 'pattern' || k === 'channel' || k === 'fork') {
+            for (let j = 0; j < pts.length - 1; j++) {
+                if (distToSegment(x, y, pts[j].x, pts[j].y, pts[j + 1].x, pts[j + 1].y) <= HIT)
+                    return { id: s.id, handle: -1 };
+            }
+        } else if (k === 'text' || k === 'plabel' || k === 'marker' || k === 'flag') {
+            if (Math.abs(x - pts[0].x) <= 48 && Math.abs(y - pts[0].y) <= 18)
                 return { id: s.id, handle: -1 };
         } else {
             const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
@@ -122,74 +350,120 @@ function hitTest(x, y) {
     return null;
 }
 
-// ------------------------------------------------------------------ events
+// ------------------------------------------------------------------- events
+
+function newShape(t, p) {
+    const sp = T[t];
+    const st = Object.assign({}, DEFAULT_STYLE, lastStyle[t] || {}, sp.preset || {});
+    return { id: ++seq, tool: t, pts: [p], style: st, locked: false, hidden: false };
+}
 
 function onDown(e) {
     if (e.button !== 0) return;
     const p = toChart(e);
     if (!p) return;
 
-    if (tool !== 'cursor') {
+    // A multi-click build in progress swallows clicks until it is complete.
+    if (pending) {
         e.preventDefault(); e.stopPropagation();
-        const s = { id: ++seq, type: tool, pts: [p], style: Object.assign({}, DEFAULT_STYLE) };
+        pending.pts[pending.pts.length - 1] = p;
+        const want = spec(pending).pts;
+        if (want && pending.pts.length >= want) { finishPending(); return; }
+        pending.pts.push({ time: p.time, price: p.price });
+        render();
+        return;
+    }
 
-        if (ONE_CLICK[tool]) { shapes.push(s); selected = s.id; commit(); setTool('cursor'); return; }
+    if (tool === 'eraser') {
+        const h = hitTest(p.x, p.y);
+        if (h) { e.preventDefault(); e.stopPropagation(); remove(h.id); }
+        return;
+    }
 
-        if (tool === 'position') {
-            // entry, stop, and a target that starts at 2R but is free to be
-            // dragged anywhere afterwards.
-            s.pts = [p, p, { time: p.time, price: p.price }];
-        } else {
-            s.pts = [p, p];
+    if (tool !== 'cursor' && tool !== 'dot') {
+        e.preventDefault(); e.stopPropagation();
+        const sp = T[tool];
+        const s = newShape(tool, p);
+
+        if (sp.pts === 1) {
+            shapes.push(s); selected = s.id; commit(); place();
+            if (sp.cap === 'text') openSettings(s.id, true);
+            setTool('cursor');
+            return;
         }
+        if (sp.pts === 2 || sp.drag) {
+            s.pts = [p, { time: p.time, price: p.price }];
+            if (sp.drag) s.pts.push({ time: p.time, price: p.price });
+            shapes.push(s);
+            selected = s.id;
+            drag = { mode: 'create', id: s.id, handle: 1 };
+            render();
+            return;
+        }
+        // three or more points, or a free path: click by click.
+        s.pts = [p, { time: p.time, price: p.price }];
+        pending = s;
         shapes.push(s);
         selected = s.id;
-        drag = { mode: 'create', id: s.id, handle: 1 };
         render();
         return;
     }
 
     const hit = hitTest(p.x, p.y);
-    if (!hit) { if (selected !== null) { selected = null; closeCfg(); render(); } return; }
+    if (!hit) { if (selected !== null) { selected = null; closeHud(); closeSettings(); render(); } return; }
 
     e.preventDefault(); e.stopPropagation();
     selected = hit.id;
     const s = shapes.find(x => x.id === hit.id);
-    drag = {
-        mode: hit.handle >= 0 ? 'handle' : 'move',
-        id: hit.id, handle: hit.handle,
-        from: p, orig: s.pts.map(q => ({ time: q.time, price: q.price }))
-    };
+    if (!(s.locked || lockAll)) {
+        drag = {
+            mode: hit.handle >= 0 ? 'handle' : 'move',
+            id: hit.id, handle: hit.handle,
+            from: p, orig: s.pts.map(q => ({ time: q.time, price: q.price }))
+        };
+    }
+    render(); place();
+}
+
+function onHover(e) {
+    if (!pending || drag) return;
+    const p = toChart(e);
+    if (!p) return;
+    pending.pts[pending.pts.length - 1] = { time: p.time, price: p.price };
     render();
 }
 
 function onMove(e) {
+    if (pending && !drag) { onHover(e); return; }
     if (!drag) return;
     const p = toChart(e);
     if (!p) return;
     const s = shapes.find(x => x.id === drag.id);
     if (!s) return;
+    const kind = spec(s).kind;
 
     if (drag.mode === 'create') {
-        s.pts[1] = { time: p.time, price: p.price };
-        if (s.type === 'position') {
-            const risk = s.pts[0].price - s.pts[1].price;
-            // 2R is only the starting target; it is freely draggable after.
-            s.pts[2] = { time: p.time, price: s.pts[0].price + risk * 2 };
+        if (kind === 'position') {
+            const dir = s.style.dir || 1;
+            const risk = Math.abs(s.pts[0].price - p.price);
+            s.pts[1] = { time: p.time, price: dir > 0 ? s.pts[0].price - risk : s.pts[0].price + risk };
+            s.pts[2] = { time: p.time, price: dir > 0 ? s.pts[0].price + risk * 2 : s.pts[0].price - risk * 2 };
+        } else {
+            s.pts[1] = { time: p.time, price: p.price };
         }
     } else if (drag.mode === 'handle') {
         // A position's three levels are horizontal: their time only sets how
         // wide the box is, so dragging one must change PRICE ALONE. Writing
         // the cursor's time as well made the whole box slide sideways while
         // you were only trying to move a level up or down.
-        s.pts[drag.handle] = (s.type === 'position')
+        s.pts[drag.handle] = (kind === 'position')
             ? { time: s.pts[drag.handle].time, price: p.price }
             : { time: p.time, price: p.price };
     } else {
-        const dt = p.time - drag.from.time, dp = p.price - drag.from.price;
-        s.pts = drag.orig.map(q => ({ time: q.time + dt, price: q.price + dp }));
+        const dt = p.time - drag.from.time, dpr = p.price - drag.from.price;
+        s.pts = drag.orig.map(q => ({ time: q.time + dt, price: q.price + dpr }));
     }
-    render(); placeCfg();
+    render(); place();
 }
 
 function onUp() {
@@ -198,231 +472,971 @@ function onUp() {
     const wasCreate = drag.mode === 'create';
     drag = null;
 
-    if (s && s.pts.length > 1 && wasCreate) {
+    if (s && wasCreate) {
         const a = pxOf(s.pts[0]), b = pxOf(s.pts[1]);
+        // A click without a drag means "place the first point, I will click
+        // again for the second" — the way every charting platform behaves.
         if (a && b && Math.hypot(b.x - a.x, b.y - a.y) < 4) {
-            shapes = shapes.filter(x => x.id !== s.id);
-            selected = null;
+            pending = s;
+            render();
+            return;
         }
+        setTool('cursor');
+        rememberStyle(s);
+        if (spec(s).cap === 'text') openSettings(s.id, true);
     }
-    if (wasCreate) setTool('cursor');
-    if (s && s.type === 'position') sendToOrderPanel(s);
-    commit();
+    if (s && spec(s).kind === 'position') sendToOrderPanel(s);
+    commit(); place();
+}
+
+function finishPending() {
+    const s = pending;
+    pending = null;
+    if (!s) return;
+    if (s.pts.length < 2) { shapes = shapes.filter(x => x.id !== s.id); selected = null; }
+    else rememberStyle(s);
+    setTool('cursor');
+    commit(); place();
 }
 
 function onDblClick(e) {
+    if (pending) {                     // a path ends on a double-click
+        e.preventDefault(); e.stopPropagation();
+        if (pending.pts.length > 2) pending.pts.pop();
+        finishPending();
+        return;
+    }
     const p = toChart(e);
     if (!p) return;
     const hit = hitTest(p.x, p.y);
-    if (!hit) return;                 // let the chart-settings handler have it
+    if (!hit) return;                  // let the chart-settings handler have it
     e.preventDefault(); e.stopPropagation();
     selected = hit.id;
     render();
-    openCfg(hit.id);
+    openSettings(hit.id);
 }
 
 function onKey(e) {
-    if (/input|select|textarea/i.test(e.target.tagName)) return;
-    if (e.key === 'Escape') { setTool('cursor'); selected = null; closeCfg(); render(); }
+    if (/input|select|textarea/i.test(e.target.tagName) || e.target.isContentEditable) return;
+    if (e.key === 'Escape') {
+        if (pending) { if (pending.pts.length > 2) pending.pts.pop(); finishPending(); return; }
+        setTool('cursor'); selected = null; closeHud(); closeSettings(); render(); return;
+    }
     if ((e.key === 'Delete' || e.key === 'Backspace') && selected !== null) {
-        e.preventDefault();
-        shapes = shapes.filter(s => s.id !== selected);
-        selected = null; closeCfg(); commit();
+        e.preventDefault(); remove(selected);
     }
 }
 
-function commit() { render(); placeCfg(); if (onChange) onChange(serialize()); }
-
-// The position tool doubles as the order ticket.
-function sendToOrderPanel(s) {
-    const entry = s.pts[0].price, stop = s.pts[1].price;
-    const target = s.pts[2] ? s.pts[2].price : null;
-    const risk = Math.abs(entry - stop);
-    if (!risk) return;
-    const dp = risk < 5 ? 4 : 2;
-    const stopEl = document.getElementById('rp-stop');
-    const tgtEl = document.getElementById('rp-target');
-    if (stopEl) { stopEl.value = risk.toFixed(dp); stopEl.dispatchEvent(new Event('input')); }
-    if (tgtEl && target !== null) tgtEl.value = Math.abs(target - entry).toFixed(dp);
+function remove(id) {
+    const s = shapes.find(x => x.id === id);
+    if (s && (s.locked || lockAll)) return;
+    shapes = shapes.filter(x => x.id !== id);
+    if (selected === id) selected = null;
+    closeHud(); closeSettings(); commit();
 }
 
-// -------------------------------------------------------------------- paint
+function commit() { render(); place(); if (onChange) onChange(serialize()); }
+
+// The position tool doubles as an order ticket.
+function sendToOrderPanel(s) {
+    if (!s.pts[1]) return;
+    const entry = s.pts[0].price, stop = s.pts[1].price;
+    const target = s.pts[2] ? s.pts[2].price : null;
+    if (!Math.abs(entry - stop)) return;
+    if (window.BTOrder && window.BTOrder.fromDrawing) {
+        window.BTOrder.fromDrawing({
+            side: (s.style.dir || 1) > 0 ? 'long' : 'short',
+            entry: entry, stop: stop, target: target
+        });
+    }
+}
+
+// ==================================================================== paint
 
 function render() {
     if (!ctx) return;
     ctx.clearRect(0, 0, cvs.clientWidth, cvs.clientHeight);
-    for (const s of shapes) drawShape(s, cvs.clientWidth);
+    if (hideAll) return;
+    for (const s of shapes) { if (!s.hidden) drawShape(s); }
 }
 
-function dashOf(name) {
-    return name === 'dashed' ? [7, 5] : name === 'dotted' ? [2, 4] : [];
-}
-
-function drawShape(s, w) {
+function drawShape(s) {
     const pts = s.pts.map(pxOf);
-    if (pts.some(p => p === null)) return;
+    if (!pts.length || pts.some(p => p === null)) return;
     const st = styleOf(s);
     const on = s.id === selected;
+    const w = cvs.clientWidth, h = cvs.clientHeight;
+    const kind = spec(s).kind;
+
     ctx.save();
-    ctx.lineWidth = on ? st.width + 0.8 : st.width;
-    ctx.strokeStyle = on ? SEL : st.color;
+    ctx.lineWidth = on ? +st.width + 0.8 : +st.width;
+    ctx.strokeStyle = on ? SEL : st.line;
     ctx.fillStyle = ctx.strokeStyle;
     ctx.setLineDash(dashOf(st.dash));
-    ctx.font = '10px "Share Tech Mono", monospace';
+    ctx.font = fontOf(st);
+    const stroke = ctx.strokeStyle;
 
-    if (s.type === 'hline') {
-        ctx.beginPath(); ctx.moveTo(0, pts[0].y); ctx.lineTo(w, pts[0].y); ctx.stroke();
-        tag(s.pts[0].price.toFixed(2), 6, pts[0].y - 5, ctx.strokeStyle);
-        if (on) handle(Math.max(20, pts[0].x || w / 2), pts[0].y);
-    }
-    else if (s.type === 'trend') {
-        ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); ctx.lineTo(pts[1].x, pts[1].y); ctx.stroke();
-        const d = s.pts[1].price - s.pts[0].price;
-        tag((d >= 0 ? '+' : '') + d.toFixed(2) + ' pts',
-            (pts[0].x + pts[1].x) / 2 + 6, (pts[0].y + pts[1].y) / 2 - 5, ctx.strokeStyle);
-        if (on) { handle(pts[0].x, pts[0].y); handle(pts[1].x, pts[1].y); }
-    }
-    else if (s.type === 'rect') {
-        const x = Math.min(pts[0].x, pts[1].x), y = Math.min(pts[0].y, pts[1].y);
-        const ww = Math.abs(pts[1].x - pts[0].x), hh = Math.abs(pts[1].y - pts[0].y);
-        ctx.globalAlpha = 0.12; ctx.setLineDash([]); ctx.fillRect(x, y, ww, hh);
-        ctx.globalAlpha = 1; ctx.setLineDash(dashOf(st.dash));
-        ctx.strokeRect(x, y, ww, hh);
-        const d = Math.abs(s.pts[1].price - s.pts[0].price);
-        tag(d.toFixed(2) + ' pts', x + 5, y - 4, ctx.strokeStyle);
-        if (on) { handle(pts[0].x, pts[0].y); handle(pts[1].x, pts[1].y); }
-    }
-    else if (s.type === 'fib') {
-        const hi = Math.max(s.pts[0].price, s.pts[1].price);
-        const lo = Math.min(s.pts[0].price, s.pts[1].price);
-        const l = Math.min(pts[0].x, pts[1].x), r = Math.max(pts[0].x, pts[1].x);
-        for (const f of FIB) {
-            const price = hi - (hi - lo) * f, y = Y(price);
-            if (y === null) continue;
-            ctx.globalAlpha = (f === 0 || f === 1) ? 0.95 : 0.55;
-            ctx.beginPath(); ctx.moveTo(l, y); ctx.lineTo(r, y); ctx.stroke();
-            ctx.globalAlpha = 1;
-            ctx.fillText((f * 100).toFixed(1) + '%  ' + price.toFixed(2), r + 6, y - 3);
-        }
-        if (on) { handle(pts[0].x, pts[0].y); handle(pts[1].x, pts[1].y); }
-    }
-    else if (s.type === 'position') {
-        const entry = s.pts[0].price, stop = s.pts[1].price;
-        const target = s.pts[2] ? s.pts[2].price : entry;
-        const yE = Y(entry), yS = Y(stop), yT = Y(target);
-        if (yE === null || yS === null || yT === null) { ctx.restore(); return; }
-        const l = Math.min(pts[0].x, pts[1].x);
-        const r = Math.max(pts[0].x, pts[1].x) + 96;
+    if (kind === 'line')       drawLine(s, pts, st);
+    else if (kind === 'hline') { seg(0, pts[0].y, w, pts[0].y); label(money(s.pts[0].price), 6, pts[0].y - 5, stroke); }
+    else if (kind === 'hray')  { seg(pts[0].x, pts[0].y, w, pts[0].y); label(money(s.pts[0].price), pts[0].x + 8, pts[0].y - 5, stroke); }
+    else if (kind === 'vline') { seg(pts[0].x, 0, pts[0].x, h); }
+    else if (kind === 'cross') { seg(0, pts[0].y, w, pts[0].y); seg(pts[0].x, 0, pts[0].x, h); }
+    else if (kind === 'channel') drawChannel(pts, st);
+    else if (kind === 'fork') drawFork(pts, st);
+    else if (kind === 'gann') drawGann(pts);
+    else if (kind === 'rect' || kind === 'ob') drawRect(s, pts, st, kind);
+    else if (kind === 'ellipse') drawEllipse(pts, st);
+    else if (kind === 'poly' || kind === 'pattern') drawPoly(s, pts, st, kind);
+    else if (kind === 'fib') drawFib(s, pts);
+    else if (kind === 'fibext') drawFibExt(s, pts, st);
+    else if (kind === 'fibfan') drawFibFan(pts);
+    else if (kind === 'fibtime') drawFibTime(pts, h);
+    else if (kind === 'text') text(st.text || 'Text', pts[0].x, pts[0].y, st);
+    else if (kind === 'callout') drawCallout(pts, st);
+    else if (kind === 'plabel') drawPriceLabel(s, pts, st);
+    else if (kind === 'marker') drawMarker(pts, st);
+    else if (kind === 'flag') drawFlag(pts, st);
+    else if (kind === 'position') drawPosition(s, pts, st, on);
+    else if (kind === 'ruler') drawRuler(s, pts);
+    else if (kind === 'prange') drawPRange(s, pts, st);
+    else if (kind === 'drange') drawDRange(s, pts, st);
+    else if (kind === 'dprange') drawDPRange(s, pts, st);
 
-        ctx.setLineDash([]);
-        ctx.globalAlpha = 0.14;
-        ctx.fillStyle = NEG; ctx.fillRect(l, Math.min(yE, yS), r - l, Math.abs(yS - yE));
-        ctx.fillStyle = POS; ctx.fillRect(l, Math.min(yE, yT), r - l, Math.abs(yT - yE));
-        ctx.globalAlpha = 1;
-
-        ctx.strokeStyle = on ? SEL : ACCENT;
-        ctx.beginPath(); ctx.moveTo(l, yE); ctx.lineTo(r, yE); ctx.stroke();
-
-        const risk = Math.abs(entry - stop), reward = Math.abs(target - entry);
-        const rr = risk ? reward / risk : 0;
-        tag('entry ' + entry.toFixed(2), l + 4, yE - 5, ACCENT);
-        tag('stop ' + stop.toFixed(2) + '   ' + risk.toFixed(2) + ' pts',
-            l + 4, yS + (yS > yE ? 13 : -5), NEG);
-        tag('target ' + target.toFixed(2) + '   ' + reward.toFixed(2) + ' pts   ' +
-            rr.toFixed(2) + 'R', l + 4, yT + (yT > yE ? 13 : -5), POS);
-
-        // All three levels are grabbable, always — the reward side is not
-        // locked to any ratio.
-        handle(pts[0].x, yE); handle(pts[1].x, yS); handle(pts[2] ? pts[2].x : pts[1].x, yT);
-    }
+    if (on && kind !== 'position') pts.forEach(p => handle(p.x, p.y));
+    if (on && (s.locked || lockAll)) lockPip(pts[0]);
     ctx.restore();
+}
+
+function fontOf(st) {
+    return (st.italic ? 'italic ' : '') + (st.bold ? '700 ' : '500 ') +
+           (st.fontSize || 12) + 'px "IBM Plex Sans", system-ui, sans-serif';
+}
+function seg(x1, y1, x2, y2) {
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+}
+
+function drawLine(s, pts, st) {
+    let a = { x: pts[0].x, y: pts[0].y }, b = { x: pts[1].x, y: pts[1].y };
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    if (len) {
+        const far = 4000;
+        if (st.extendRight) b = { x: b.x + dx / len * far, y: b.y + dy / len * far };
+        if (st.extendLeft)  a = { x: a.x - dx / len * far, y: a.y - dy / len * far };
+    }
+    seg(a.x, a.y, b.x, b.y);
+    if (st.arrowRight) arrowHead(pts[0], pts[1]);
+    if (st.arrowLeft)  arrowHead(pts[1], pts[0]);
+
+    if (st.showLabels) {
+        const d = s.pts[1].price - s.pts[0].price;
+        const pct = s.pts[0].price ? d / s.pts[0].price * 100 : 0;
+        let txt = (d >= 0 ? '+' : '') + money(d) + '  (' + pct.toFixed(2) + '%)';
+        if (st.showAngle) {
+            const ang = Math.atan2(-(pts[1].y - pts[0].y), pts[1].x - pts[0].x) * 180 / Math.PI;
+            txt = ang.toFixed(1) + '°   ' + txt;
+        }
+        label(txt, (pts[0].x + pts[1].x) / 2 + 6, (pts[0].y + pts[1].y) / 2 - 6, ctx.strokeStyle);
+    }
+}
+
+function arrowHead(from, to) {
+    const a = Math.atan2(to.y - from.y, to.x - from.x), L = 11;
+    ctx.save(); ctx.setLineDash([]); ctx.beginPath();
+    ctx.moveTo(to.x, to.y);
+    ctx.lineTo(to.x - L * Math.cos(a - 0.42), to.y - L * Math.sin(a - 0.42));
+    ctx.lineTo(to.x - L * Math.cos(a + 0.42), to.y - L * Math.sin(a + 0.42));
+    ctx.closePath(); ctx.fill(); ctx.restore();
+}
+
+function drawChannel(pts, st) {
+    if (pts.length < 3) { seg(pts[0].x, pts[0].y, pts[1].x, pts[1].y); return; }
+    const span = (pts[1].x - pts[0].x) || 1;
+    const onLine = pts[0].y + (pts[1].y - pts[0].y) * ((pts[2].x - pts[0].x) / span);
+    const off = pts[2].y - onLine;
+    ctx.save(); ctx.setLineDash([]);
+    ctx.fillStyle = rgba(st.fill, st.fillOpacity);
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y); ctx.lineTo(pts[1].x, pts[1].y);
+    ctx.lineTo(pts[1].x, pts[1].y + off); ctx.lineTo(pts[0].x, pts[0].y + off);
+    ctx.closePath(); ctx.fill(); ctx.restore();
+    seg(pts[0].x, pts[0].y, pts[1].x, pts[1].y);
+    seg(pts[0].x, pts[0].y + off, pts[1].x, pts[1].y + off);
+}
+
+/* Andrews pitchfork: a median line from the pivot through the midpoint of
+   the other two, with tines parallel to it through each of them. */
+function drawFork(pts, st) {
+    if (pts.length < 3) { seg(pts[0].x, pts[0].y, pts[1].x, pts[1].y); return; }
+    const mid = { x: (pts[1].x + pts[2].x) / 2, y: (pts[1].y + pts[2].y) / 2 };
+    let dx = mid.x - pts[0].x, dy = mid.y - pts[0].y;
+    const len = Math.hypot(dx, dy) || 1;
+    dx = dx / len * 3000; dy = dy / len * 3000;
+
+    ctx.save(); ctx.setLineDash([]);
+    ctx.fillStyle = rgba(st.fill, st.fillOpacity);
+    ctx.beginPath();
+    ctx.moveTo(pts[1].x, pts[1].y);
+    ctx.lineTo(pts[1].x + dx, pts[1].y + dy);
+    ctx.lineTo(pts[2].x + dx, pts[2].y + dy);
+    ctx.lineTo(pts[2].x, pts[2].y);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+
+    seg(pts[0].x, pts[0].y, pts[0].x + dx, pts[0].y + dy);   // median
+    seg(pts[1].x, pts[1].y, pts[1].x + dx, pts[1].y + dy);   // tines
+    seg(pts[2].x, pts[2].y, pts[2].x + dx, pts[2].y + dy);
+    ctx.save(); ctx.setLineDash([3, 3]);
+    seg(pts[1].x, pts[1].y, pts[2].x, pts[2].y);             // handle
+    ctx.restore();
+}
+
+/* Gann fan: the second point sets the 1x1, every other ray is a whole-number
+   multiple of that slope in time or in price. */
+function drawGann(pts) {
+    const dx = pts[1].x - pts[0].x, dy = pts[1].y - pts[0].y;
+    const R = [[1, 8], [1, 4], [1, 3], [1, 2], [1, 1], [2, 1], [3, 1], [4, 1], [8, 1]];
+    ctx.save();
+    R.forEach((r, i) => {
+        const t = r[0], p = r[1];
+        ctx.strokeStyle = (t === 1 && p === 1) ? '#f7a600' : levelColour(i);
+        ctx.lineWidth = (t === 1 && p === 1) ? 1.8 : 1.1;
+        seg(pts[0].x, pts[0].y, pts[0].x + dx * t * 5, pts[0].y + dy * p * 5);
+    });
+    ctx.restore();
+}
+
+function drawRect(s, pts, st, kind) {
+    const x = Math.min(pts[0].x, pts[1].x), y = Math.min(pts[0].y, pts[1].y);
+    const w = Math.abs(pts[1].x - pts[0].x), h = Math.abs(pts[1].y - pts[0].y);
+    ctx.save(); ctx.setLineDash([]);
+    ctx.fillStyle = rgba(st.fill, st.fillOpacity);
+    ctx.fillRect(x, y, w, h); ctx.restore();
+    ctx.strokeRect(x, y, w, h);
+    const d = Math.abs(s.pts[1].price - s.pts[0].price);
+    if (kind === 'ob') label((st.text || 'OB') + '  ' + money(d), x + 5, y - 5, ctx.strokeStyle);
+    else if (st.showLabels) label(money(d) + ' pts', x + 5, y - 5, ctx.strokeStyle);
+    if (st.text && kind !== 'ob') text(st.text, x + 6, y + (+st.fontSize || 12) + 5, st);
+}
+
+function drawEllipse(pts, st) {
+    const cx = (pts[0].x + pts[1].x) / 2, cy = (pts[0].y + pts[1].y) / 2;
+    const rx = Math.abs(pts[1].x - pts[0].x) / 2, ry = Math.abs(pts[1].y - pts[0].y) / 2;
+    ctx.save(); ctx.setLineDash([]); ctx.fillStyle = rgba(st.fill, st.fillOpacity);
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+}
+
+function drawPoly(s, pts, st, kind) {
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    if (st.closed) {
+        ctx.closePath();
+        ctx.save(); ctx.setLineDash([]); ctx.fillStyle = rgba(st.fill, st.fillOpacity);
+        ctx.fill(); ctx.restore();
+    }
+    ctx.stroke();
+    if (kind === 'pattern') {
+        const labels = spec(s).labels || [];
+        pts.forEach((p, i) => { if (labels[i]) label(labels[i], p.x - 6, p.y - 8, ctx.strokeStyle); });
+    }
+}
+
+function levelColour(i) {
+    const cols = ['#ef454a', '#ff9f43', '#f7a600', '#20b26c', '#00c2c2', '#5aa9f0', '#c58af0'];
+    return cols[i % cols.length];
+}
+
+function drawFib(s, pts) {
+    const a = s.pts[0].price, b = s.pts[1].price;
+    const l = Math.min(pts[0].x, pts[1].x), r = Math.max(pts[0].x, pts[1].x);
+    ctx.save();
+    FIB.forEach((f, i) => {
+        const price = b + (a - b) * f;
+        const y = Y(price);
+        if (y === null) return;
+        ctx.strokeStyle = levelColour(i);
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.globalAlpha = (f === 0 || f === 1) ? 1 : 0.8;
+        seg(l, y, r + 60, y);
+        ctx.globalAlpha = 1;
+        ctx.font = '11px "IBM Plex Mono", monospace';
+        ctx.fillText((f * 100).toFixed(1) + '%  ' + money(price), l + 4, y - 4);
+    });
+    ctx.restore();
+}
+
+function drawFibExt(s, pts, st) {
+    if (pts.length < 3) { drawPoly(s, pts, st, 'poly'); return; }
+    ctx.save(); ctx.setLineDash([2, 3]); ctx.globalAlpha = .6;
+    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+    ctx.lineTo(pts[1].x, pts[1].y); ctx.lineTo(pts[2].x, pts[2].y); ctx.stroke();
+    ctx.restore();
+    const base = s.pts[2].price, span = s.pts[1].price - s.pts[0].price;
+    const l = Math.min(pts[0].x, pts[1].x, pts[2].x), r = Math.max(pts[0].x, pts[1].x, pts[2].x);
+    ctx.save();
+    FIBE.forEach((f, i) => {
+        const price = base + span * f, y = Y(price);
+        if (y === null) return;
+        ctx.strokeStyle = levelColour(i); ctx.fillStyle = ctx.strokeStyle;
+        seg(l, y, r + 70, y);
+        ctx.font = '11px "IBM Plex Mono", monospace';
+        ctx.fillText((f * 100).toFixed(1) + '%  ' + money(price), l + 4, y - 4);
+    });
+    ctx.restore();
+}
+
+function drawFibFan(pts) {
+    const dx = pts[1].x - pts[0].x, dy = pts[1].y - pts[0].y;
+    ctx.save();
+    FIB.forEach((f, i) => {
+        ctx.strokeStyle = levelColour(i);
+        seg(pts[0].x, pts[0].y, pts[0].x + dx * 6, pts[0].y + dy * f * 6);
+    });
+    ctx.restore();
+}
+
+function drawFibTime(pts, h) {
+    const dx = pts[1].x - pts[0].x;
+    const F = [0, 1, 2, 3, 5, 8, 13, 21];
+    ctx.save();
+    F.forEach((f, i) => {
+        ctx.strokeStyle = levelColour(i);
+        ctx.fillStyle = ctx.strokeStyle;
+        const x = pts[0].x + dx * f;
+        seg(x, 0, x, h);
+        ctx.font = '11px "IBM Plex Mono", monospace';
+        ctx.fillText(String(f), x + 3, 14);
+    });
+    ctx.restore();
+}
+
+function drawCallout(pts, st) {
+    const x = Math.min(pts[0].x, pts[1].x), y = Math.min(pts[0].y, pts[1].y);
+    const w = Math.max(64, Math.abs(pts[1].x - pts[0].x));
+    const h = Math.max(28, Math.abs(pts[1].y - pts[0].y));
+    ctx.save(); ctx.setLineDash([]);
+    ctx.fillStyle = rgba(st.fill, st.fillOpacity);
+    rr(x, y, w, h, 5); ctx.fill();
+    ctx.restore();
+    rr(x, y, w, h, 5); ctx.stroke();
+    seg(pts[0].x, pts[0].y, x + 12, y + h);
+    text(st.text || 'Note', x + 8, y + (+st.fontSize || 12) + 6, st);
+}
+function rr(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+}
+
+function drawPriceLabel(s, pts, st) {
+    const t = (st.text ? st.text + '  ' : '') + money(s.pts[0].price);
+    ctx.save();
+    ctx.font = fontOf(st);
+    const w = ctx.measureText(t).width + 16;
+    ctx.setLineDash([]);
+    ctx.fillStyle = st.line;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    ctx.lineTo(pts[0].x + 9, pts[0].y - 11);
+    ctx.lineTo(pts[0].x + 9 + w, pts[0].y - 11);
+    ctx.lineTo(pts[0].x + 9 + w, pts[0].y + 11);
+    ctx.lineTo(pts[0].x + 9, pts[0].y + 11);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#0b0e11';
+    ctx.fillText(t, pts[0].x + 17, pts[0].y + 4);
+    ctx.restore();
+}
+
+function drawMarker(pts, st) {
+    const d = st.dir || 1, x = pts[0].x, y = pts[0].y;
+    ctx.save(); ctx.setLineDash([]); ctx.fillStyle = st.line;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - 7, y - 12 * d);
+    ctx.lineTo(x - 3, y - 12 * d);
+    ctx.lineTo(x - 3, y - 24 * d);
+    ctx.lineTo(x + 3, y - 24 * d);
+    ctx.lineTo(x + 3, y - 12 * d);
+    ctx.lineTo(x + 7, y - 12 * d);
+    ctx.closePath(); ctx.fill();
+    if (st.text) text(st.text, x + 10, y - 14 * d, st);
+    ctx.restore();
+}
+
+function drawFlag(pts, st) {
+    const x = pts[0].x, y = pts[0].y;
+    ctx.save(); ctx.setLineDash([]);
+    ctx.strokeStyle = st.line; ctx.lineWidth = 2;
+    seg(x, y, x, y - 26);
+    ctx.fillStyle = st.line;
+    ctx.beginPath();
+    ctx.moveTo(x, y - 26); ctx.lineTo(x + 20, y - 22); ctx.lineTo(x, y - 15);
+    ctx.closePath(); ctx.fill();
+    if (st.text) text(st.text, x + 24, y - 18, st);
+    ctx.restore();
+}
+
+function drawPosition(s, pts, st, on) {
+    const entry = s.pts[0].price, stop = s.pts[1].price;
+    const target = s.pts[2] ? s.pts[2].price : entry;
+    const yE = Y(entry), yS = Y(stop), yT = Y(target);
+    if (yE === null || yS === null || yT === null) return;
+    const l = Math.min(pts[0].x, pts[1].x);
+    const r = Math.max(pts[0].x, pts[1].x, pts[2] ? pts[2].x : 0) + 8;
+
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.fillStyle = rgba('#ef454a', 0.16);
+    ctx.fillRect(l, Math.min(yE, yS), r - l, Math.abs(yS - yE));
+    ctx.fillStyle = rgba('#20b26c', 0.16);
+    ctx.fillRect(l, Math.min(yE, yT), r - l, Math.abs(yT - yE));
+    ctx.strokeStyle = 'rgba(255,255,255,.14)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(l, Math.min(yE, yS), r - l, Math.abs(yS - yE));
+    ctx.strokeRect(l, Math.min(yE, yT), r - l, Math.abs(yT - yE));
+
+    ctx.strokeStyle = on ? SEL : (st.line || '#f7a600');
+    ctx.lineWidth = 1.6;
+    seg(l, yE, r, yE);
+
+    const risk = Math.abs(entry - stop), reward = Math.abs(target - entry);
+    const rr2 = risk ? reward / risk : 0;
+    const side = (st.dir || 1) > 0 ? 'LONG' : 'SHORT';
+    label(side + '  entry ' + money(entry), l + 4, yE - 6, st.line || '#f7a600');
+    label('stop ' + money(stop) + '   -' + money(risk), l + 4, yS + (yS > yE ? 14 : -6), '#ef454a');
+    label('target ' + money(target) + '   +' + money(reward) + '   ' + rr2.toFixed(2) + 'R',
+          l + 4, yT + (yT > yE ? 14 : -6), '#20b26c');
+
+    // All three levels are grabbable, always — the reward side is not locked
+    // to any ratio.
+    handle(pts[0].x, yE); handle(pts[1].x, yS); handle(pts[2] ? pts[2].x : pts[1].x, yT);
+    ctx.restore();
+}
+
+function barsBetween(t1, t2) {
+    if (bars.length < 2) return 0;
+    const step = bars[1].time - bars[0].time || 1;
+    return Math.round(Math.abs(t2 - t1) / step);
+}
+function durationText(t1, t2) {
+    const secs = Math.abs(t2 - t1);
+    const d = Math.floor(secs / 86400), h = Math.floor(secs % 86400 / 3600), m = Math.floor(secs % 3600 / 60);
+    return (d ? d + 'd ' : '') + (h ? h + 'h ' : '') + (d ? '' : m + 'm');
+}
+
+function statBox(x, y, linesArr, colour) {
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.font = '11px "IBM Plex Mono", monospace';
+    let w = 0;
+    linesArr.forEach(t => { w = Math.max(w, ctx.measureText(t).width); });
+    w += 14;
+    const h = linesArr.length * 15 + 8;
+    ctx.fillStyle = 'rgba(11,14,17,.92)';
+    ctx.strokeStyle = colour;
+    ctx.lineWidth = 1;
+    rr(x, y, w, h, 4); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = colour;
+    linesArr.forEach((t, i) => ctx.fillText(t, x + 7, y + 16 + i * 15));
+    ctx.restore();
+}
+
+function drawRuler(s, pts) {
+    const d = s.pts[1].price - s.pts[0].price;
+    const pct = s.pts[0].price ? d / s.pts[0].price * 100 : 0;
+    const col = d >= 0 ? '#20b26c' : '#ef454a';
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.fillStyle = rgba(col, 0.14);
+    ctx.fillRect(Math.min(pts[0].x, pts[1].x), Math.min(pts[0].y, pts[1].y),
+                 Math.abs(pts[1].x - pts[0].x), Math.abs(pts[1].y - pts[0].y));
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1.4;
+    seg(pts[0].x, pts[0].y, pts[1].x, pts[1].y);
+    arrowHead(pts[0], pts[1]);
+    ctx.restore();
+    statBox(pts[1].x + 8, pts[1].y - 26, [
+        (d >= 0 ? '+' : '') + money(d) + '  (' + pct.toFixed(2) + '%)',
+        barsBetween(s.pts[0].time, s.pts[1].time) + ' bars   ' + durationText(s.pts[0].time, s.pts[1].time)
+    ], col);
+}
+
+function drawPRange(s, pts, st) {
+    const d = s.pts[1].price - s.pts[0].price;
+    const pct = s.pts[0].price ? d / s.pts[0].price * 100 : 0;
+    const x = pts[0].x;
+    ctx.save(); ctx.setLineDash([]);
+    ctx.fillStyle = rgba(st.fill, st.fillOpacity);
+    ctx.fillRect(x - 30, Math.min(pts[0].y, pts[1].y), 60, Math.abs(pts[1].y - pts[0].y));
+    ctx.strokeStyle = st.line;
+    seg(x, pts[0].y, x, pts[1].y);
+    seg(x - 30, pts[0].y, x + 30, pts[0].y);
+    seg(x - 30, pts[1].y, x + 30, pts[1].y);
+    ctx.restore();
+    statBox(x + 36, (pts[0].y + pts[1].y) / 2 - 14,
+        [(d >= 0 ? '+' : '') + money(d), pct.toFixed(2) + '%'], st.line);
+}
+
+function drawDRange(s, pts, st) {
+    const y = pts[0].y;
+    ctx.save(); ctx.setLineDash([]);
+    ctx.fillStyle = rgba(st.fill, st.fillOpacity);
+    ctx.fillRect(Math.min(pts[0].x, pts[1].x), y - 22, Math.abs(pts[1].x - pts[0].x), 44);
+    ctx.strokeStyle = st.line;
+    seg(pts[0].x, y, pts[1].x, y);
+    seg(pts[0].x, y - 22, pts[0].x, y + 22);
+    seg(pts[1].x, y - 22, pts[1].x, y + 22);
+    ctx.restore();
+    statBox((pts[0].x + pts[1].x) / 2 - 40, y + 26,
+        [barsBetween(s.pts[0].time, s.pts[1].time) + ' bars',
+         durationText(s.pts[0].time, s.pts[1].time)], st.line);
+}
+
+function drawDPRange(s, pts, st) {
+    const d = s.pts[1].price - s.pts[0].price;
+    const pct = s.pts[0].price ? d / s.pts[0].price * 100 : 0;
+    const x = Math.min(pts[0].x, pts[1].x), y = Math.min(pts[0].y, pts[1].y);
+    const w = Math.abs(pts[1].x - pts[0].x), h = Math.abs(pts[1].y - pts[0].y);
+    ctx.save(); ctx.setLineDash([]);
+    ctx.fillStyle = rgba(st.fill, st.fillOpacity);
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = st.line; ctx.strokeRect(x, y, w, h);
+    seg(x, pts[0].y, x + w, pts[0].y);
+    ctx.restore();
+    statBox(x + w + 8, y, [
+        (d >= 0 ? '+' : '') + money(d) + '  (' + pct.toFixed(2) + '%)',
+        barsBetween(s.pts[0].time, s.pts[1].time) + ' bars   ' + durationText(s.pts[0].time, s.pts[1].time)
+    ], st.line);
 }
 
 function handle(x, y) {
     ctx.save();
     ctx.setLineDash([]);
-    ctx.fillStyle = '#08080a'; ctx.strokeStyle = SEL; ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.arc(x, y, 3.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#0b0e11'; ctx.strokeStyle = SEL; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     ctx.restore();
 }
-
-function tag(text, x, y, color) {
+function lockPip(p) {
+    ctx.save(); ctx.setLineDash([]); ctx.fillStyle = '#f7a600';
+    ctx.beginPath(); ctx.arc(p.x, p.y - 15, 3, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+}
+function label(t, x, y, colour) {
     ctx.save();
     ctx.setLineDash([]);
-    ctx.font = '10px "Share Tech Mono", monospace';
-    const w = ctx.measureText(text).width + 8;
-    ctx.fillStyle = 'rgba(8,8,10,0.86)';
-    ctx.fillRect(x, y - 10, w, 13);
-    ctx.fillStyle = color;
-    ctx.fillText(text, x + 4, y);
+    ctx.font = '11px "IBM Plex Mono", monospace';
+    const w = ctx.measureText(t).width + 9;
+    ctx.fillStyle = 'rgba(11,14,17,.86)';
+    ctx.fillRect(x, y - 11, w, 15);
+    ctx.fillStyle = colour;
+    ctx.fillText(t, x + 4, y);
+    ctx.restore();
+}
+function text(t, x, y, st) {
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.font = fontOf(st);
+    ctx.fillStyle = st.textColor || '#eaecef';
+    String(t).split('\n').forEach((line, i) =>
+        ctx.fillText(line, x, y + i * ((+st.fontSize || 12) + 4)));
     ctx.restore();
 }
 
-// ------------------------------------------------------- settings panel
+// ================================================================= tool rail
+
+function icon(name) {
+    return '<svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">' +
+           (ICO[name] || '') + '</svg>';
+}
+
+let railEl = null, openFly = null;
+let groupPick = {};
+try { groupPick = JSON.parse(localStorage.getItem('bt.replay.grouppick') || '{}'); }
+catch (e) { groupPick = {}; }
+
+function buildRail() {
+    railEl = document.getElementById('rp-rail');
+    if (!railEl) return;
+    railEl.innerHTML = GROUPS.map(g => {
+        const cur = T[groupPick[g.id]] ? groupPick[g.id] : g.tools[0];
+        return '<div class="rp-tgroup" data-group="' + g.id + '">' +
+                 '<button class="rp-rail-btn" data-pick="' + cur + '" title="' + T[cur].name +
+                 '">' + icon(cur) + (g.tools.length > 1 ? '<i class="rp-caret"></i>' : '') +
+                 '</button></div>';
+    }).join('') +
+    '<span class="rp-rail-sep"></span>' +
+    '<button class="rp-rail-btn util" data-util="magnet" title="Magnet - snap to OHLC">' + icon('magnet') + '</button>' +
+    '<button class="rp-rail-btn util" data-util="lock" title="Lock all drawings">' + icon('lock') + '</button>' +
+    '<button class="rp-rail-btn util" data-util="hide" title="Hide all drawings">' + icon('eye') + '</button>' +
+    '<button class="rp-rail-btn util danger" data-util="clear" title="Remove all drawings">' + icon('trash') + '</button>';
+
+    railEl.querySelectorAll('.rp-tgroup').forEach(el => {
+        const g = GROUPS.find(x => x.id === el.dataset.group);
+        const btn = el.querySelector('button');
+        btn.addEventListener('click', e => {
+            // A click in the caret corner opens the menu; anywhere else picks
+            // the tool that is already showing — the TradingView behaviour.
+            const r = btn.getBoundingClientRect();
+            if (g.tools.length > 1 && e.clientX > r.right - 12 && e.clientY > r.bottom - 12) {
+                if (openFly === el) closeFly(); else flyout(g, el);
+            } else {
+                closeFly();
+                setTool(btn.dataset.pick);
+            }
+        });
+        btn.addEventListener('contextmenu', e => { e.preventDefault(); flyout(g, el); });
+        let hoverT = null;
+        btn.addEventListener('mouseenter', () => {
+            if (g.tools.length < 2) return;
+            hoverT = setTimeout(() => flyout(g, el), 500);
+        });
+        btn.addEventListener('mouseleave', () => clearTimeout(hoverT));
+    });
+
+    railEl.querySelectorAll('[data-util]').forEach(b =>
+        b.addEventListener('click', () => {
+            const u = b.dataset.util;
+            if (u === 'magnet') { magnet = !magnet; b.classList.toggle('on', magnet); }
+            if (u === 'lock')   { lockAll = !lockAll; b.classList.toggle('on', lockAll); closeHud(); render(); }
+            if (u === 'hide')   { hideAll = !hideAll; b.classList.toggle('on', hideAll); closeHud(); render(); }
+            if (u === 'clear')  { if (shapes.length && confirm('Remove all ' + shapes.length + ' drawings?')) api.clear(); }
+        }));
+
+    document.addEventListener('mousedown', e => {
+        if (openFly && !e.target.closest('.rp-flyout, .rp-tgroup')) closeFly();
+    });
+}
+
+function flyout(g, el) {
+    closeFly();
+    const box = document.createElement('div');
+    box.className = 'rp-flyout';
+    box.innerHTML = '<h5>' + g.name + '</h5>' + g.tools.map(t =>
+        '<button data-tool="' + t + '"' + (tool === t ? ' class="on"' : '') + '>' +
+          icon(t) + '<span>' + T[t].name + '</span></button>').join('');
+    document.body.appendChild(box);
+    const r = el.getBoundingClientRect();
+    box.style.left = (r.right + 6) + 'px';
+    box.style.top = Math.max(8, Math.min(window.innerHeight - box.offsetHeight - 8, r.top - 4)) + 'px';
+    box.querySelectorAll('button').forEach(b =>
+        b.addEventListener('click', () => {
+            const t = b.dataset.tool;
+            groupPick[g.id] = t;
+            try { localStorage.setItem('bt.replay.grouppick', JSON.stringify(groupPick)); } catch (e) {}
+            const head = el.querySelector('button');
+            head.dataset.pick = t;
+            head.innerHTML = icon(t) + '<i class="rp-caret"></i>';
+            head.title = T[t].name;
+            setTool(t);
+            closeFly();
+        }));
+    openFly = el;
+}
+function closeFly() {
+    document.querySelectorAll('.rp-flyout').forEach(n => n.remove());
+    openFly = null;
+}
+
+// ============================================== floating style HUD (TV-like)
+
+let hudEl = null, hudId = null;
+
+function buildHud() {
+    hudEl = document.createElement('div');
+    hudEl.id = 'rp-tb';
+    hudEl.className = 'rp-tb';
+    hudEl.hidden = true;
+    host.appendChild(hudEl);
+}
+
+function dashIcon(d) {
+    const p = d === 'dashed' ? '4 3' : d === 'dotted' ? '1.5 3' : '0';
+    return '<svg width="20" height="8" viewBox="0 0 20 8"><path d="M1 4h18" stroke="currentColor" ' +
+           'stroke-width="2" stroke-dasharray="' + p + '" stroke-linecap="round"/></svg>';
+}
+
+function hudFor(s) {
+    const st = styleOf(s);
+    const cap = spec(s).cap;
+    const kind = spec(s).kind;
+    let h = '';
+    const sw = (key, val, title) =>
+        '<button class="rp-tb-sw" data-sw="' + key + '" title="' + title + '">' +
+        '<i style="background:' + val + '"></i></button>';
+
+    if (cap !== 'trade') h += sw('line', st.line, 'Line colour');
+    if (cap === 'area' || cap === 'text' || st.closed) h += sw('fill', rgba(st.fill, Math.max(st.fillOpacity, .4)), 'Fill');
+    if (cap === 'text') h += sw('textColor', st.textColor, 'Text colour');
+
+    if (cap !== 'trade' && cap !== 'mark') {
+        h += '<button class="rp-tb-b" data-menu="width" title="Line width"><b>' + st.width + '</b></button>';
+        h += '<button class="rp-tb-b" data-menu="dash" title="Line style">' + dashIcon(st.dash) + '</button>';
+    }
+    if (kind === 'line') {
+        h += '<button class="rp-tb-b' + (st.extendLeft ? ' on' : '') + '" data-t="extendLeft" title="Extend left">&#8676;</button>';
+        h += '<button class="rp-tb-b' + (st.extendRight ? ' on' : '') + '" data-t="extendRight" title="Extend right">&#8677;</button>';
+        h += '<button class="rp-tb-b' + (st.arrowRight ? ' on' : '') + '" data-t="arrowRight" title="Arrow head">&#8594;</button>';
+    }
+    if (cap === 'text') {
+        h += '<button class="rp-tb-b" data-menu="font" title="Font size"><b>' + st.fontSize + '</b></button>';
+        h += '<button class="rp-tb-b' + (st.bold ? ' on' : '') + '" data-t="bold" title="Bold"><b>B</b></button>';
+        h += '<button class="rp-tb-b' + (st.italic ? ' on' : '') + '" data-t="italic" title="Italic"><i>I</i></button>';
+    }
+    if (cap === 'trade') {
+        h += '<button class="rp-tb-b" data-act="flip" title="Flip long / short">&#8645;</button>';
+        h += '<button class="rp-tb-b accent" data-act="ticket" title="Send to order ticket">Trade</button>';
+    }
+    h += '<span class="rp-tb-sep"></span>';
+    h += '<button class="rp-tb-b' + (s.locked ? ' on' : '') + '" data-act="lock" title="Lock">' +
+         '<svg width="13" height="13" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2" fill="currentColor"/>' +
+         '<path d="M8 10V7a4 4 0 018 0v3" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>';
+    h += '<button class="rp-tb-b" data-act="clone" title="Clone">&#10697;</button>';
+    h += '<button class="rp-tb-b" data-act="cfg" title="Settings">&#9881;</button>';
+    h += '<button class="rp-tb-b danger" data-act="del" title="Delete">&times;</button>';
+    return h;
+}
+
+function openHud(id) {
+    const s = shapes.find(x => x.id === id);
+    if (!s || !hudEl) return;
+    hudId = id;
+    hudEl.innerHTML = hudFor(s);
+    hudEl.hidden = false;
+    placeHud(s);
+
+    hudEl.querySelectorAll('[data-sw]').forEach(b =>
+        b.addEventListener('click', () => {
+            const key = b.dataset.sw;
+            palette(b, styleOf(s)[key], v => {
+                setStyle(s, key, v);
+                b.querySelector('i').style.background = key === 'fill' ? rgba(v, .5) : v;
+            }, key === 'fill' ? s : null);
+        }));
+
+    hudEl.querySelectorAll('[data-t]').forEach(b =>
+        b.addEventListener('click', () => {
+            setStyle(s, b.dataset.t, !styleOf(s)[b.dataset.t]);
+            b.classList.toggle('on');
+        }));
+
+    hudEl.querySelectorAll('[data-menu]').forEach(b =>
+        b.addEventListener('click', () => {
+            const m = b.dataset.menu;
+            if (m === 'width') menu(b, [1, 1.5, 2, 3, 4].map(v => ({ label: v + ' px', value: v })),
+                v => { setStyle(s, 'width', v); b.innerHTML = '<b>' + v + '</b>'; });
+            if (m === 'dash') menu(b, ['solid', 'dashed', 'dotted'].map(v => ({ label: v, value: v, html: dashIcon(v) })),
+                v => { setStyle(s, 'dash', v); b.innerHTML = dashIcon(v); });
+            if (m === 'font') menu(b, [10, 12, 14, 18, 24, 32].map(v => ({ label: v + ' px', value: v })),
+                v => { setStyle(s, 'fontSize', v); b.innerHTML = '<b>' + v + '</b>'; });
+        }));
+
+    hudEl.querySelectorAll('[data-act]').forEach(b =>
+        b.addEventListener('click', () => {
+            const a = b.dataset.act;
+            if (a === 'lock')  { s.locked = !s.locked; commit(); openHud(s.id); }
+            if (a === 'clone') {
+                const step = bars.length > 1 ? (bars[1].time - bars[0].time) * 6 : 3600;
+                shapes.push({
+                    id: ++seq, tool: s.tool,
+                    pts: s.pts.map(p => ({ time: p.time + step, price: p.price })),
+                    style: Object.assign({}, s.style), locked: false, hidden: false
+                });
+                selected = shapes[shapes.length - 1].id;
+                commit(); openHud(selected);
+            }
+            if (a === 'cfg')    openSettings(s.id);
+            if (a === 'del')    remove(s.id);
+            if (a === 'flip')   { flipPosition(s); commit(); }
+            if (a === 'ticket') sendToOrderPanel(s);
+        }));
+}
+
+function flipPosition(s) {
+    const dir = (s.style.dir || 1) > 0 ? -1 : 1;
+    s.style.dir = dir;
+    const entry = s.pts[0].price;
+    const risk = Math.abs(entry - s.pts[1].price);
+    const rew  = Math.abs((s.pts[2] ? s.pts[2].price : entry) - entry);
+    s.pts[1].price = dir > 0 ? entry - risk : entry + risk;
+    if (s.pts[2]) s.pts[2].price = dir > 0 ? entry + rew : entry - rew;
+}
+
+function setStyle(s, key, value) {
+    s.style = Object.assign(styleOf(s), { [key]: value });
+    rememberStyle(s);
+    commit();
+}
+
+function placeHud(s) {
+    if (!hudEl || hudEl.hidden) return;
+    const pts = s.pts.map(pxOf);
+    if (pts.some(p => p === null)) { hudEl.hidden = true; return; }
+    const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+    const cx = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2;
+    const top = Math.min.apply(null, ys);
+    const w = hudEl.offsetWidth || 320, h = hudEl.offsetHeight || 32;
+    hudEl.style.left = Math.max(6, Math.min(cvs.clientWidth - w - 6, cx - w / 2)) + 'px';
+    hudEl.style.top  = Math.max(6, Math.min(cvs.clientHeight - h - 6, top - h - 12)) + 'px';
+}
+function closeHud() { if (hudEl) hudEl.hidden = true; hudId = null; closePop(); }
+
+function place() {
+    placeSettings();
+    if (selected === null) { closeHud(); return; }
+    const s = shapes.find(x => x.id === selected);
+    if (!s) { closeHud(); return; }
+    // Rebuild when the selection moved to a different shape — a rectangle's
+    // toolbar is not a trend line's, and only repositioning it leaves the
+    // wrong buttons under the cursor.
+    if (hudEl.hidden || hudId !== s.id) openHud(s.id); else placeHud(s);
+}
+
+// ----------------------------------------------------------- small popovers
+
+let popEl = null;
+function closePop() { if (popEl) { popEl.remove(); popEl = null; } }
+
+function popAt(anchor, html) {
+    closePop();
+    popEl = document.createElement('div');
+    popEl.className = 'rp-pop';
+    popEl.innerHTML = html;
+    document.body.appendChild(popEl);
+    const r = anchor.getBoundingClientRect();
+    popEl.style.left = Math.max(8, Math.min(window.innerWidth - popEl.offsetWidth - 8, r.left - 10)) + 'px';
+    popEl.style.top  = (r.bottom + 6) + 'px';
+    const el = popEl;
+    setTimeout(() => document.addEventListener('mousedown', outside), 0);
+    function outside(e) {
+        if (el && !el.contains(e.target)) {
+            document.removeEventListener('mousedown', outside);
+            if (popEl === el) closePop();
+        }
+    }
+    return popEl;
+}
+
+function palette(anchor, current, cb, fillShape) {
+    const p = popAt(anchor,
+        '<div class="rp-pal">' + PALETTE.map(c =>
+            '<button data-c="' + c + '" style="background:' + c + '"' +
+            (c === current ? ' class="on"' : '') + '></button>').join('') + '</div>' +
+        (fillShape ? '<label class="rp-pop-row">Opacity<input type="range" min="0" max="100" value="' +
+            Math.round((styleOf(fillShape).fillOpacity || 0) * 100) + '" data-op></label>' : '') +
+        '<label class="rp-pop-row">Custom<input type="color" value="' + (current || '#ffffff') + '" data-custom></label>');
+    p.querySelectorAll('[data-c]').forEach(b =>
+        b.addEventListener('click', () => { cb(b.dataset.c); closePop(); }));
+    const cu = p.querySelector('[data-custom]');
+    if (cu) cu.addEventListener('input', () => cb(cu.value));
+    const op = p.querySelector('[data-op]');
+    if (op) op.addEventListener('input', () => setStyle(fillShape, 'fillOpacity', +op.value / 100));
+}
+
+function menu(anchor, items, cb) {
+    const p = popAt(anchor, '<div class="rp-menu">' + items.map(i =>
+        '<button data-v="' + i.value + '">' + (i.html || '') +
+        '<span>' + i.label + '</span></button>').join('') + '</div>');
+    p.querySelectorAll('[data-v]').forEach(b =>
+        b.addEventListener('click', () => {
+            const raw = b.dataset.v;
+            cb(isNaN(+raw) ? raw : +raw);
+            closePop();
+        }));
+}
+
+// ========================================================== settings dialog
 
 let cfgEl = null, cfgId = null;
 
-function buildCfgPanel() {
-    cfgEl = document.createElement('div');
-    cfgEl.id = 'rp-draw-cfg';
-    cfgEl.className = 'rp-draw-cfg';
-    cfgEl.hidden = true;
-    host.appendChild(cfgEl);
+function row(lab, html) {
+    return '<label class="rp-cf-row"><span>' + lab + '</span>' + html + '</label>';
 }
 
-const NAMES = { hline: 'Horizontal line', trend: 'Trend line', rect: 'Rectangle',
-                fib: 'Fibonacci', position: 'Position' };
-
-function openCfg(id) {
+function openSettings(id, focusText) {
     const s = shapes.find(x => x.id === id);
     if (!s) return;
+    closeSettings();
     cfgId = id;
     const st = styleOf(s);
+    const cap = spec(s).cap;
+    const kind = spec(s).kind;
     let body = '';
 
-    if (s.type === 'position') {
+    if (cap === 'text' || cap === 'mark' || kind === 'ob') {
+        body += row('Text', '<textarea data-s="text" rows="2">' +
+            String(st.text || '').replace(/</g, '&lt;') + '</textarea>');
+        body += row('Font size', '<input type="number" min="8" max="60" data-s="fontSize" value="' + st.fontSize + '">');
+        body += row('Text colour', '<input type="color" data-s="textColor" value="' + st.textColor + '">');
+        body += row('Bold', '<input type="checkbox" data-s="bold"' + (st.bold ? ' checked' : '') + '>');
+    }
+    if (cap !== 'trade') {
+        body += row('Line colour', '<input type="color" data-s="line" value="' + st.line + '">');
+        body += row('Line width', '<input type="number" min="1" max="8" step="0.5" data-s="width" value="' + st.width + '">');
+        body += row('Line style', '<select data-s="dash">' + ['solid', 'dashed', 'dotted'].map(o =>
+            '<option value="' + o + '"' + (st.dash === o ? ' selected' : '') + '>' +
+            o[0].toUpperCase() + o.slice(1) + '</option>').join('') + '</select>');
+    }
+    if (cap === 'area' || cap === 'text' || st.closed) {
+        body += row('Fill', '<input type="color" data-s="fill" value="' + st.fill + '">');
+        body += row('Fill opacity', '<input type="range" min="0" max="100" data-s="fillOpacity" data-pct value="' +
+            Math.round(st.fillOpacity * 100) + '">');
+    }
+    if (kind === 'line') {
+        body += row('Extend left', '<input type="checkbox" data-s="extendLeft"' + (st.extendLeft ? ' checked' : '') + '>');
+        body += row('Extend right', '<input type="checkbox" data-s="extendRight"' + (st.extendRight ? ' checked' : '') + '>');
+        body += row('Arrow head', '<input type="checkbox" data-s="arrowRight"' + (st.arrowRight ? ' checked' : '') + '>');
+        body += row('Show angle', '<input type="checkbox" data-s="showAngle"' + (st.showAngle ? ' checked' : '') + '>');
+    }
+    if (cap === 'line' || cap === 'area') {
+        body += row('Show stats', '<input type="checkbox" data-s="showLabels"' + (st.showLabels ? ' checked' : '') + '>');
+    }
+    if (kind === 'position') {
         const entry = s.pts[0].price, stop = s.pts[1].price;
         const target = s.pts[2] ? s.pts[2].price : entry;
-        const risk = Math.abs(entry - stop), reward = Math.abs(target - entry);
-        body =
-          '<label>Entry<input type="number" step="any" data-p="0" value="' + entry.toFixed(2) + '"></label>' +
-          '<label>Stop<input type="number" step="any" data-p="1" value="' + stop.toFixed(2) + '"></label>' +
-          '<label>Target<input type="number" step="any" data-p="2" value="' + target.toFixed(2) + '"></label>' +
-          '<div class="rp-cfg-read">' +
-            '<span>Risk <b>' + risk.toFixed(2) + '</b> pts</span>' +
-            '<span>Reward <b>' + reward.toFixed(2) + '</b> pts</span>' +
-            '<span>R:R <b>' + (risk ? (reward / risk).toFixed(2) : '—') + '</b></span>' +
-          '</div>' +
-          '<button class="rp-btn" data-act="send" style="width:100%;justify-content:center">Send to order panel</button>';
-    } else {
-        body =
-          '<label>Colour<input type="color" data-s="color" value="' + st.color + '"></label>' +
-          '<label>Width<input type="number" min="1" max="6" step="0.5" data-s="width" value="' + st.width + '"></label>' +
-          '<label>Style<select data-s="dash">' +
-            ['solid', 'dashed', 'dotted'].map(o =>
-              '<option value="' + o + '"' + (st.dash === o ? ' selected' : '') + '>' +
-              o[0].toUpperCase() + o.slice(1) + '</option>').join('') +
-          '</select></label>';
+        body +=
+          row('Direction', '<select data-dir><option value="1"' + ((st.dir || 1) > 0 ? ' selected' : '') +
+            '>Long</option><option value="-1"' + ((st.dir || 1) < 0 ? ' selected' : '') + '>Short</option></select>') +
+          row('Entry',  '<input type="number" step="any" data-p="0" value="' + money(entry) + '">') +
+          row('Stop',   '<input type="number" step="any" data-p="1" value="' + money(stop) + '">') +
+          row('Target', '<input type="number" step="any" data-p="2" value="' + money(target) + '">') +
+          '<div class="rp-cf-read"></div>' +
+          '<button class="rp-btn accent full" data-act="send">Send to order ticket</button>';
     }
+    body += row('Locked', '<input type="checkbox" data-lock' + (s.locked ? ' checked' : '') + '>');
 
+    cfgEl = document.createElement('div');
+    cfgEl.className = 'rp-cf';
     cfgEl.innerHTML =
-        '<header><span>' + (NAMES[s.type] || s.type) + '</span>' +
+        '<header><span>' + spec(s).name + '</span>' +
         '<button data-act="close" aria-label="Close">&times;</button></header>' +
-        '<div class="rp-cfg-body">' + body +
-        '<button class="rp-btn danger" data-act="del" style="width:100%;justify-content:center">Delete</button>' +
-        '</div>';
-    cfgEl.hidden = false;
-    placeCfg();
+        '<div class="rp-cf-body">' + body +
+        '<div class="rp-cf-foot">' +
+          '<button class="rp-btn danger" data-act="del">Delete</button>' +
+          '<button class="rp-btn" data-act="done">Done</button>' +
+        '</div></div>';
+    host.appendChild(cfgEl);
+    placeSettings();
+    readout(s);
 
     cfgEl.querySelectorAll('[data-s]').forEach(inp =>
         inp.addEventListener('input', () => {
             const sh = shapes.find(x => x.id === cfgId);
             if (!sh) return;
-            sh.style = Object.assign(styleOf(sh), {
-                [inp.dataset.s]: inp.type === 'number' ? +inp.value : inp.value
-            });
-            commit();
+            let v;
+            if (inp.type === 'checkbox') v = inp.checked;
+            else if (inp.hasAttribute('data-pct')) v = +inp.value / 100;
+            else if (inp.type === 'number') v = +inp.value;
+            else v = inp.value;
+            sh.style = Object.assign(styleOf(sh), { [inp.dataset.s]: v });
+            rememberStyle(sh);
+            render();
+            if (onChange) onChange(serialize());
         }));
+
     cfgEl.querySelectorAll('[data-p]').forEach(inp =>
         inp.addEventListener('input', () => {
             const sh = shapes.find(x => x.id === cfgId);
@@ -432,78 +1446,118 @@ function openCfg(id) {
             const i = +inp.dataset.p;
             if (!sh.pts[i]) sh.pts[i] = { time: sh.pts[0].time, price: v };
             else sh.pts[i] = { time: sh.pts[i].time, price: v };
-            render();
-            openCfgReadout(sh);
+            render(); readout(sh);
+            if (onChange) onChange(serialize());
         }));
-    cfgEl.querySelector('[data-act="close"]').addEventListener('click', closeCfg);
-    const del = cfgEl.querySelector('[data-act="del"]');
-    if (del) del.addEventListener('click', () => {
-        shapes = shapes.filter(x => x.id !== cfgId);
-        selected = null; closeCfg(); commit();
+
+    const dirSel = cfgEl.querySelector('[data-dir]');
+    if (dirSel) dirSel.addEventListener('change', () => {
+        const sh = shapes.find(x => x.id === cfgId);
+        if (sh && (sh.style.dir || 1) !== +dirSel.value) { flipPosition(sh); commit(); openSettings(cfgId); }
     });
+    const lk = cfgEl.querySelector('[data-lock]');
+    if (lk) lk.addEventListener('change', () => {
+        const sh = shapes.find(x => x.id === cfgId);
+        if (sh) { sh.locked = lk.checked; commit(); openHud(sh.id); }
+    });
+    cfgEl.querySelector('[data-act="close"]').addEventListener('click', closeSettings);
+    cfgEl.querySelector('[data-act="done"]').addEventListener('click', closeSettings);
+    cfgEl.querySelector('[data-act="del"]').addEventListener('click', () => remove(cfgId));
     const send = cfgEl.querySelector('[data-act="send"]');
     if (send) send.addEventListener('click', () => {
         const sh = shapes.find(x => x.id === cfgId);
         if (sh) sendToOrderPanel(sh);
     });
+    if (focusText) {
+        const ta = cfgEl.querySelector('[data-s="text"]');
+        if (ta) { ta.focus(); ta.select(); }
+    }
 }
 
 // Refresh only the numeric readout while typing, so focus is not stolen.
-function openCfgReadout(s) {
-    const box = cfgEl.querySelector('.rp-cfg-read');
-    if (!box || s.type !== 'position') return;
+function readout(s) {
+    if (!cfgEl) return;
+    const box = cfgEl.querySelector('.rp-cf-read');
+    if (!box || spec(s).kind !== 'position') return;
     const entry = s.pts[0].price, stop = s.pts[1].price;
     const target = s.pts[2] ? s.pts[2].price : entry;
     const risk = Math.abs(entry - stop), reward = Math.abs(target - entry);
+    const pct = entry ? risk / entry * 100 : 0;
     box.innerHTML =
-        '<span>Risk <b>' + risk.toFixed(2) + '</b> pts</span>' +
-        '<span>Reward <b>' + reward.toFixed(2) + '</b> pts</span>' +
-        '<span>R:R <b>' + (risk ? (reward / risk).toFixed(2) : '—') + '</b></span>';
+        '<span>Risk <b>' + money(risk) + '</b> (' + pct.toFixed(2) + '%)</span>' +
+        '<span>Reward <b>' + money(reward) + '</b></span>' +
+        '<span>R:R <b>' + (risk ? (reward / risk).toFixed(2) : '-') + '</b></span>' +
+        '<span>Bars <b>' + barsBetween(s.pts[0].time, (s.pts[2] || s.pts[1]).time) + '</b></span>';
 }
 
-function placeCfg() {
-    if (!cfgEl || cfgEl.hidden || cfgId === null) return;
+function placeSettings() {
+    if (!cfgEl || cfgId === null) return;
     const s = shapes.find(x => x.id === cfgId);
-    if (!s) { closeCfg(); return; }
+    if (!s) { closeSettings(); return; }
     const p = pxOf(s.pts[0]);
     if (!p) return;
-    const w = cfgEl.offsetWidth || 190, h = cfgEl.offsetHeight || 150;
-    const x = Math.max(6, Math.min(cvs.clientWidth - w - 6, p.x + 14));
-    const y = Math.max(6, Math.min(cvs.clientHeight - h - 6, p.y + 14));
-    cfgEl.style.left = x + 'px';
-    cfgEl.style.top = y + 'px';
+    const w = cfgEl.offsetWidth || 236, h = cfgEl.offsetHeight || 280;
+    cfgEl.style.left = Math.max(6, Math.min(cvs.clientWidth - w - 6, p.x + 18)) + 'px';
+    cfgEl.style.top  = Math.max(6, Math.min(Math.max(6, cvs.clientHeight - h - 6), p.y + 8)) + 'px';
 }
-function closeCfg() { if (cfgEl) { cfgEl.hidden = true; cfgId = null; } }
+function closeSettings() { if (cfgEl) { cfgEl.remove(); cfgEl = null; cfgId = null; } }
 
-// ------------------------------------------------------------- persistence
+// -------------------------------------------------------------- persistence
 
 function serialize() {
-    return shapes.map(s => ({ type: s.type, pts: s.pts, style: s.style }));
+    return shapes.map(s => ({
+        tool: s.tool, pts: s.pts, style: s.style,
+        locked: !!s.locked, hidden: !!s.hidden
+    }));
 }
 function load(list) {
     shapes = (list || []).map(s => ({
-        id: ++seq, type: s.type, pts: s.pts,
-        style: Object.assign({}, DEFAULT_STYLE, s.style || {})
-    }));
-    selected = null; closeCfg(); render();
+        id: ++seq,
+        // v1 saved `type`; the tool ids are a superset, so old layouts open.
+        tool: T[s.tool] ? s.tool : (T[s.type] ? s.type : 'trend'),
+        pts: s.pts || [],
+        style: Object.assign({}, DEFAULT_STYLE, migrate(s.style)),
+        locked: !!s.locked, hidden: !!s.hidden
+    })).filter(s => s.pts.length);
+    selected = null; closeHud(); closeSettings(); render();
+}
+function migrate(st) {
+    if (!st) return {};
+    const out = Object.assign({}, st);
+    if (out.color && !out.line) out.line = out.color;      // v1 key name
+    return out;
 }
 
 // --------------------------------------------------------------------- api
 
 function setTool(t) {
+    if (pending) { shapes = shapes.filter(x => x.id !== pending.id); pending = null; }
     tool = t;
-    cvs.style.cursor = t === 'cursor' ? 'default' : 'crosshair';
-    host.style.cursor = t === 'cursor' ? '' : 'crosshair';
-    document.querySelectorAll('.rp-rail-btn[data-tool]').forEach(b =>
-        b.classList.toggle('active', b.dataset.tool === t));
+    const nav = t === 'cursor' || t === 'dot';
+    if (cvs) cvs.style.cursor = nav ? 'default' : 'crosshair';
+    if (host) host.style.cursor = nav ? '' : 'crosshair';
+    if (railEl) railEl.querySelectorAll('.rp-rail-btn[data-pick]').forEach(b =>
+        b.classList.toggle('active', b.dataset.pick === t));
+    const nameEl = document.getElementById('rp-tool-name');
+    if (nameEl) {
+        const sp = T[t];
+        const clicks = sp && sp.pts > 2 && !sp.drag
+            ? '  —  click ' + sp.pts + ' points, Esc to cancel' : '';
+        nameEl.textContent = (nav || !sp) ? '' : sp.name + clicks;
+    }
     render();
 }
 
 const api = {
-    attach: attach, setTool: setTool,
-    clear: function () { shapes = []; selected = null; closeCfg(); commit(); },
+    attach: attach,
+    setTool: setTool,
+    tools: T,
+    clear: function () { shapes = []; selected = null; closeHud(); closeSettings(); commit(); },
     count: function () { return shapes.length; },
-    serialize: serialize, load: load, render: render
+    setBars: function (d) { bars = d || []; },
+    serialize: serialize,
+    load: load,
+    render: render
 };
 return api;
 

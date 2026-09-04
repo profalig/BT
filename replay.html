@@ -8,10 +8,12 @@
 
     <link rel="stylesheet" href="replay.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
+<!-- =====================================================  top bar  ==== -->
 <header id="rp-top">
     <a href="/" class="rp-back" title="Back to BarTest">
         <i class="fa-solid fa-chevron-left"></i>
@@ -38,15 +40,17 @@
                 <option value="15" selected>15m</option>
                 <option value="60">1h</option>
                 <option value="240">4h</option>
+                <option value="1440">1D</option>
             </select>
         </label>
+
         <button id="rp-ind-open" class="rp-tool-btn" title="Indicators">
             <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true">
                 <path d="M2 14.5 L6 9 L9.5 12 L14 4.5" fill="none"
                       stroke="#5aa9f0" stroke-width="2"
                       stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="6" cy="9" r="1.9" fill="#f0b25a"/>
-                <circle cx="14" cy="4.5" r="1.9" fill="#12a184"/>
+                <circle cx="6" cy="9" r="1.9" fill="#f7a600"/>
+                <circle cx="14" cy="4.5" r="1.9" fill="#20b26c"/>
                 <path d="M17.5 16.5 L17.5 8" stroke="#c58af0" stroke-width="2"
                       stroke-linecap="round"/>
             </svg>
@@ -56,11 +60,11 @@
 
         <button id="rp-replay-open" class="rp-tool-btn" title="Replay">
             <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true">
-                <path d="M10 3 A7 7 0 1 1 3.6 7.2" fill="none" stroke="#f0b25a"
+                <path d="M10 3 A7 7 0 1 1 3.6 7.2" fill="none" stroke="#f7a600"
                       stroke-width="2" stroke-linecap="round"/>
-                <path d="M3 3.2 L3.6 7.6 L8 7" fill="none" stroke="#f0b25a"
+                <path d="M3 3.2 L3.6 7.6 L8 7" fill="none" stroke="#f7a600"
                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M8.6 7.4 L13.4 10 L8.6 12.6 Z" fill="#12a184"/>
+                <path d="M8.6 7.4 L13.4 10 L8.6 12.6 Z" fill="#20b26c"/>
             </svg>
             <span>Replay</span>
         </button>
@@ -76,149 +80,300 @@
 
         <span class="rp-mode" id="rp-mode">BROWSE</span>
         <span class="rp-live" id="rp-live" hidden>
-            <span class="rp-live-dot"></span>LIVE <b id="rp-livePrice">—</b>
+            <span class="rp-live-dot"></span>LIVE <b id="rp-livePrice">&mdash;</b>
         </span>
     </div>
 
     <div class="rp-account">
         <div class="rp-acct-item"><span>Balance</span><b id="rp-balance">&mdash;</b></div>
         <div class="rp-acct-item"><span>Equity</span><b id="rp-equity">&mdash;</b></div>
-        <div class="rp-acct-item"><span>Open P&amp;L</span><b id="rp-openpl">&mdash;</b></div>
+        <div class="rp-acct-item"><span>Unrealised</span><b id="rp-openpl">&mdash;</b></div>
+        <button id="rp-reset-acct" class="rp-mini-btn" title="Reset the simulated account">Reset</button>
     </div>
-
 </header>
 
 <main id="rp-main">
-    <nav id="rp-rail" aria-label="Drawing tools">
-        <button class="rp-rail-btn active" data-tool="cursor" title="Cursor  (Esc)">
-            <i class="fa-solid fa-arrow-pointer"></i>
-        </button>
-        <button class="rp-rail-btn" data-tool="hline" title="Horizontal line">
-            <i class="fa-solid fa-minus"></i>
-        </button>
-        <button class="rp-rail-btn" data-tool="trend" title="Trend line">
-            <i class="fa-solid fa-slash"></i>
-        </button>
-        <button class="rp-rail-btn" data-tool="rect" title="Rectangle / zone">
-            <i class="fa-regular fa-square"></i>
-        </button>
-        <button class="rp-rail-btn" data-tool="fib" title="Fibonacci retracement">
-            <i class="fa-solid fa-bars-staggered"></i>
-        </button>
-        <button class="rp-rail-btn" data-tool="position" title="Position tool — drag entry to stop">
-            <i class="fa-solid fa-up-down"></i>
-        </button>
-        <span class="rp-rail-sep"></span>
-        <button class="rp-rail-btn danger" id="rp-clear-draw" title="Clear all drawings">
-            <i class="fa-solid fa-trash-can"></i>
-        </button>
-    </nav>
 
-    <section id="rp-chart-wrap">
-        <canvas id="rp-draw"></canvas>
-        <div id="rp-legend" class="rp-legend"></div>
-        <div id="rp-chart"></div>
+    <!-- tool rail is built by replay-tools.js -->
+    <nav id="rp-rail" aria-label="Drawing tools"></nav>
 
-        <div id="rp-status" class="rp-status">
-            <i class="fa-solid fa-circle-info"></i>
-            <span id="rp-status-text">Choose a symbol and start date, then load a session.</span>
+    <section id="rp-center">
+
+        <!-- =============================================  ticker strip  == -->
+        <div id="rp-ticker" class="rp-ticker">
+            <div class="rp-tk-sym">
+                <span class="rp-tk-coin" id="rp-tk-icon">B</span>
+                <span class="rp-tk-names">
+                    <b id="rp-tk-pair">BTCUSDT</b>
+                    <em id="rp-tk-venue">Binance &middot; Spot</em>
+                </span>
+            </div>
+            <div class="rp-tk-last">
+                <b id="rp-tk-price">&mdash;</b>
+                <span id="rp-tk-chg" class="rp-tk-chg">&mdash;</span>
+            </div>
+            <div class="rp-tk-stats">
+                <div><span>24H Change</span><b id="rp-tk-chgabs">&mdash;</b></div>
+                <div><span>24H High</span><b id="rp-tk-high">&mdash;</b></div>
+                <div><span>24H Low</span><b id="rp-tk-low">&mdash;</b></div>
+                <div><span>24H Volume</span><b id="rp-tk-vol">&mdash;</b></div>
+                <div><span>24H Turnover</span><b id="rp-tk-turn">&mdash;</b></div>
+                <div class="rp-tk-replay" id="rp-tk-clockcell" hidden>
+                    <span>Replay clock</span><b id="rp-tk-clock">&mdash;</b>
+                </div>
+            </div>
         </div>
 
-        <div id="rp-hud" class="rp-hud" hidden>
-            <div id="rp-cutbar" class="rp-cutbar" hidden>
-                <i class="fa-solid fa-scissors"></i>
-                <span class="rp-hud-text"><b>Double-click a candle</b> to replay from there &mdash; or</span>
-                <input type="date" id="rp-date">
-                <button id="rp-jump" class="rp-btn">Use date</button>
-                <span class="rp-cut-label" id="rp-cut-label">no point chosen</span>
-                <button id="rp-start-replay" class="rp-btn primary" disabled>
-                    <i class="fa-solid fa-play"></i> Start replay
+        <!-- ===================================================  chart  == -->
+        <div id="rp-chart-wrap">
+            <canvas id="rp-draw"></canvas>
+
+            <div id="rp-legend-wrap" class="rp-legend-wrap">
+                <div id="rp-ohlc" class="rp-ohlc"></div>
+                <div id="rp-legend" class="rp-legend"></div>
+            </div>
+
+            <div id="rp-chart"></div>
+
+            <span id="rp-tool-name" class="rp-tool-chip"></span>
+
+            <div id="rp-status" class="rp-status">
+                <i class="fa-solid fa-circle-info"></i>
+                <span id="rp-status-text">Loading market data&hellip;</span>
+            </div>
+
+            <div id="rp-hud" class="rp-hud" hidden>
+                <div id="rp-cutbar" class="rp-cutbar" hidden>
+                    <i class="fa-solid fa-scissors"></i>
+                    <span class="rp-hud-text"><b>Double-click a candle</b> to replay from there &mdash; or</span>
+                    <input type="date" id="rp-date">
+                    <button id="rp-jump" class="rp-btn">Use date</button>
+                    <span class="rp-cut-label" id="rp-cut-label">no point chosen</span>
+                    <button id="rp-start-replay" class="rp-btn accent" disabled>
+                        <i class="fa-solid fa-play"></i> Start replay
+                    </button>
+                </div>
+                <button id="rp-exit-replay" class="rp-btn" hidden>
+                    <i class="fa-solid fa-arrow-left"></i> Back to full chart
                 </button>
             </div>
-            <button id="rp-exit-replay" class="rp-btn" hidden>
-                <i class="fa-solid fa-arrow-left"></i> Back to full chart
-            </button>
+
+            <div id="rp-transport" class="rp-transport" hidden>
+                <button id="rp-playpause" class="rp-btn" title="Play / pause  (Space)">
+                    <i class="fa-solid fa-play"></i>
+                </button>
+                <button id="rp-back" class="rp-btn" title="Back one bar  (&larr;)">
+                    <i class="fa-solid fa-backward-step"></i>
+                </button>
+                <button id="rp-step" class="rp-btn" title="Forward one bar  (&rarr;)">
+                    <i class="fa-solid fa-forward-step"></i>
+                </button>
+                <label class="rp-speed">
+                    <span>Speed</span>
+                    <input type="range" id="rp-speed" min="1" max="20" value="6">
+                    <b id="rp-speed-val">6&times;</b>
+                </label>
+                <span class="rp-clock" id="rp-clock">&mdash;</span>
+            </div>
         </div>
 
-        <div id="rp-transport" class="rp-transport" hidden>
-            <button id="rp-playpause" class="rp-btn" title="Play / pause  (Space)">
-                <i class="fa-solid fa-play"></i>
-            </button>
-            <button id="rp-back" class="rp-btn" title="Back one bar  (←)">
-                <i class="fa-solid fa-backward-step"></i>
-            </button>
-            <button id="rp-step" class="rp-btn" title="Forward one bar  (→)">
-                <i class="fa-solid fa-forward-step"></i>
-            </button>
-            <label class="rp-speed">
-                <span>Speed</span>
-                <input type="range" id="rp-speed" min="1" max="20" value="6">
-                <b id="rp-speed-val">6&times;</b>
-            </label>
-            <span class="rp-clock" id="rp-clock">—</span>
-        </div>
+        <!-- ==============================================  bottom dock  == -->
+        <div id="rp-dock-grip" class="rp-dock-grip" title="Drag to resize"></div>
+        <section id="rp-dock" class="rp-dock">
+            <nav class="rp-tabs" id="rp-tabs">
+                <button class="rp-tab active" data-tab="pos">Positions <b id="tabn-pos" hidden>0</b></button>
+                <button class="rp-tab" data-tab="ord">Open orders <b id="tabn-ord" hidden>0</b></button>
+                <button class="rp-tab" data-tab="hist">Trade history <b id="tabn-hist" hidden>0</b></button>
+                <button class="rp-tab" data-tab="perf">Performance</button>
+                <button class="rp-tab" data-tab="cal">Calendar</button>
+                <button class="rp-tab" data-tab="jour">Journal</button>
+                <span class="rp-tabs-spacer"></span>
+                <button class="rp-tab-icon" id="rp-dock-toggle" title="Collapse / expand">
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+            </nav>
+
+            <div class="rp-dock-body">
+                <div class="rp-pane active" data-pane="pos">
+                    <div class="rp-table-wrap">
+                        <table class="rp-table">
+                            <thead><tr>
+                                <th>Symbol</th><th>Side</th><th class="num">Qty</th>
+                                <th class="num">Entry</th><th class="num">Mark</th>
+                                <th class="num">Liq.</th><th class="num">Stop</th>
+                                <th class="num">Target</th><th class="num">Unrealised</th>
+                                <th class="num">ROI</th><th></th>
+                            </tr></thead>
+                            <tbody id="rp-pos-body">
+                                <tr><td colspan="11" class="rp-empty">Flat &mdash; no open position.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="rp-pane" data-pane="ord">
+                    <div class="rp-table-wrap">
+                        <table class="rp-table">
+                            <thead><tr>
+                                <th>Type</th><th>Side</th><th class="num">Trigger</th>
+                                <th class="num">Qty</th><th class="num">Stop</th>
+                                <th class="num">Target</th><th>Placed</th><th></th>
+                            </tr></thead>
+                            <tbody id="rp-ord-body">
+                                <tr><td colspan="8" class="rp-empty">No working orders.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="rp-pane" data-pane="hist">
+                    <div class="rp-table-wrap">
+                        <table class="rp-table">
+                            <thead><tr>
+                                <th>#</th><th>Opened</th><th>Closed</th><th>Side</th>
+                                <th class="num">Qty</th><th class="num">Entry</th>
+                                <th class="num">Exit</th><th>Exit by</th>
+                                <th class="num">R</th><th class="num">P&amp;L</th><th>Note</th>
+                            </tr></thead>
+                            <tbody id="rp-hist-body">
+                                <tr><td colspan="11" class="rp-empty">No trades yet.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="rp-pane" data-pane="perf">
+                    <div class="rp-perf">
+                        <div class="rp-metrics" id="rp-metrics"></div>
+                        <div class="rp-curve">
+                            <h4>Equity curve</h4>
+                            <canvas id="rp-equity-curve"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rp-pane" data-pane="cal">
+                    <div class="rp-cal-head">
+                        <button class="rp-mini-btn" id="rp-cal-prev"><i class="fa-solid fa-chevron-left"></i></button>
+                        <b id="rp-cal-title">&mdash;</b>
+                        <button class="rp-mini-btn" id="rp-cal-next"><i class="fa-solid fa-chevron-right"></i></button>
+                        <span class="rp-cal-sum" id="rp-cal-sum"></span>
+                    </div>
+                    <div class="rp-cal" id="rp-cal"></div>
+                </div>
+
+                <div class="rp-pane" data-pane="jour">
+                    <div class="rp-journal">
+                        <div class="rp-jr-list">
+                            <h4>Trade notes</h4>
+                            <div id="rp-jr-trades" class="rp-jr-trades">
+                                <div class="rp-empty">Trades appear here as you take them &mdash; click one to annotate it.</div>
+                            </div>
+                        </div>
+                        <div class="rp-jr-edit">
+                            <h4>Session journal <span id="rp-jr-saved" class="rp-saved"></span></h4>
+                            <textarea id="rp-jr-text" spellcheck="true"
+                                placeholder="What was the setup? What did you see before the entry? What would you do differently?"></textarea>
+                            <div class="rp-jr-tags" id="rp-jr-tags"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </section>
 
-    <aside id="rp-side">
-        <div class="rp-card" draggable="true">
-            <h3><i class="fa-solid fa-grip-vertical rp-grip"></i>Order</h3>
-            <div class="rp-row">
-                <label class="rp-field wide">
-                    <span>Risk %</span>
-                    <input type="number" id="rp-risk" value="1" min="0.1" max="20" step="0.1">
+    <!-- ==================================================  order panel  == -->
+    <aside id="rp-trade">
+        <div class="rp-tr-top">
+            <select id="rp-margin" class="rp-sel" title="Margin mode">
+                <option value="cross">Cross</option>
+                <option value="isolated">Isolated</option>
+            </select>
+            <select id="rp-lev" class="rp-sel" title="Leverage">
+                <option value="1">1.00x</option>
+                <option value="2">2.00x</option>
+                <option value="3">3.00x</option>
+                <option value="5">5.00x</option>
+                <option value="10" selected>10.00x</option>
+                <option value="20">20.00x</option>
+                <option value="50">50.00x</option>
+                <option value="100">100.00x</option>
+            </select>
+        </div>
+
+        <nav class="rp-tr-tabs" id="rp-otype">
+            <button class="active" data-otype="market">Market</button>
+            <button data-otype="limit">Limit</button>
+            <button data-otype="stop">Stop</button>
+        </nav>
+
+        <div class="rp-tr-body">
+            <div class="rp-inp" id="rp-price-row" hidden>
+                <span class="rp-inp-lab">Price</span>
+                <input type="number" id="rp-price" step="any" placeholder="0.00">
+                <button class="rp-inp-tag" id="rp-price-last" title="Use last traded price">Last</button>
+            </div>
+
+            <div class="rp-seg" id="rp-sizemode">
+                <button class="active" data-size="risk">Risk %</button>
+                <button data-size="qty">Quantity</button>
+            </div>
+
+            <div class="rp-inp" id="rp-risk-row">
+                <span class="rp-inp-lab">Risk</span>
+                <input type="number" id="rp-risk" value="1" min="0.05" max="50" step="0.05">
+                <span class="rp-inp-unit">%</span>
+            </div>
+
+            <div class="rp-inp" id="rp-qty-row">
+                <span class="rp-inp-lab">Quantity</span>
+                <input type="number" id="rp-qty" step="any" placeholder="0.000">
+                <span class="rp-inp-unit" id="rp-qty-unit">BTC</span>
+            </div>
+
+            <div class="rp-slider">
+                <input type="range" id="rp-pct" min="0" max="100" value="0" step="1">
+                <div class="rp-slider-ticks"><span>0</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+            </div>
+
+            <div class="rp-inp2">
+                <label class="rp-inp">
+                    <span class="rp-inp-lab">Stop</span>
+                    <input type="number" id="rp-stop" step="any" placeholder="price">
                 </label>
-                <label class="rp-field wide">
-                    <span>Stop (pts)</span>
-                    <input type="number" id="rp-stop" value="0" min="0" step="1">
-                </label>
-                <label class="rp-field wide">
-                    <span>Target (pts)</span>
-                    <input type="number" id="rp-target" value="0" min="0" step="1">
+                <label class="rp-inp">
+                    <span class="rp-inp-lab">Target</span>
+                    <input type="number" id="rp-target" step="any" placeholder="price">
                 </label>
             </div>
-            <p class="rp-hint" id="rp-sizing">Set a stop to size the position.</p>
-            <div class="rp-row rp-actions">
-                <button id="rp-buy" class="rp-btn buy" disabled>
-                    <i class="fa-solid fa-arrow-trend-up"></i> Buy
+            <div class="rp-seg small" id="rp-slmode">
+                <button class="active" data-sl="price">By price</button>
+                <button data-sl="pts">By points</button>
+            </div>
+
+            <dl class="rp-tr-read">
+                <dt>Order value</dt><dd id="rp-rd-value">&mdash;</dd>
+                <dt>Margin (cost)</dt><dd id="rp-rd-cost">&mdash;</dd>
+                <dt>Risk on stop</dt><dd id="rp-rd-risk">&mdash;</dd>
+                <dt>Reward / R:R</dt><dd id="rp-rd-rr">&mdash;</dd>
+                <dt>Est. liquidation</dt><dd id="rp-rd-liq">&mdash;</dd>
+            </dl>
+
+            <div class="rp-tr-actions">
+                <button id="rp-buy" class="rp-big buy" disabled>
+                    <b>Buy / Long</b><span id="rp-buy-sub">market</span>
                 </button>
-                <button id="rp-sell" class="rp-btn sell" disabled>
-                    <i class="fa-solid fa-arrow-trend-down"></i> Sell
+                <button id="rp-sell" class="rp-big sell" disabled>
+                    <b>Sell / Short</b><span id="rp-sell-sub">market</span>
                 </button>
             </div>
             <button id="rp-close" class="rp-btn ghost" disabled>Close position at market</button>
-        </div>
-
-        <div class="rp-card" draggable="true">
-            <h3><i class="fa-solid fa-grip-vertical rp-grip"></i>Position</h3>
-            <div id="rp-position" class="rp-empty">Flat — no open position.</div>
-        </div>
-
-        <div class="rp-card" draggable="true">
-            <h3><i class="fa-solid fa-grip-vertical rp-grip"></i>Session stats</h3>
-            <div class="rp-stats" id="rp-stats">
-                <div><span>Trades</span><b id="st-trades">0</b></div>
-                <div><span>Win rate</span><b id="st-win">—</b></div>
-                <div><span>Net P&amp;L</span><b id="st-net">—</b></div>
-                <div><span>Profit factor</span><b id="st-pf">—</b></div>
-                <div><span>Max drawdown</span><b id="st-dd">—</b></div>
-                <div><span>Avg R</span><b id="st-r">—</b></div>
-            </div>
-        </div>
-
-        <div class="rp-card" draggable="true">
-            <h3><i class="fa-solid fa-grip-vertical rp-grip"></i>Trade log</h3>
-            <div class="rp-log-wrap">
-                <table class="rp-log">
-                    <thead>
-                        <tr><th>#</th><th>Side</th><th>Entry</th><th>Exit</th><th>R</th><th>P&amp;L</th></tr>
-                    </thead>
-                    <tbody id="rp-log"><tr><td colspan="6" class="rp-empty">No trades yet.</td></tr></tbody>
-                </table>
-            </div>
+            <p class="rp-hint" id="rp-sizing">Start a replay to trade. Drawing a position tool fills this ticket in.</p>
         </div>
     </aside>
 </main>
 
+<!-- ==================================================  chart settings  == -->
 <div id="rp-set" class="rp-modal" hidden>
     <div class="rp-modal-card narrow" role="dialog" aria-label="Chart settings">
         <header class="rp-modal-head">
@@ -226,10 +381,19 @@
             <button id="rp-set-close" class="rp-modal-x" aria-label="Close">&times;</button>
         </header>
         <div class="rp-set-body">
-            <h4>Candles</h4>
+            <h4>Series</h4>
             <div class="rp-set-row">
-                <label>Up</label><input type="color" id="set-up" value="#12a184">
-                <label>Down</label><input type="color" id="set-down" value="#e2564e">
+                <label>Type</label>
+                <select id="set-type">
+                    <option value="candle">Candles</option>
+                    <option value="bar">Bars</option>
+                    <option value="line">Line</option>
+                    <option value="area">Area</option>
+                </select>
+            </div>
+            <div class="rp-set-row">
+                <label>Up</label><input type="color" id="set-up" value="#20b26c">
+                <label>Down</label><input type="color" id="set-down" value="#ef454a">
             </div>
             <div class="rp-set-row">
                 <label class="chk"><input type="checkbox" id="set-borders" checked> Borders</label>
@@ -239,18 +403,41 @@
 
             <h4>Background &amp; grid</h4>
             <div class="rp-set-row">
-                <label>Background</label><input type="color" id="set-bg" value="#08080a">
-                <label>Text</label><input type="color" id="set-text" value="#a8abb3">
+                <label>Background</label><input type="color" id="set-bg" value="#0e1116">
+                <label>Text</label><input type="color" id="set-text" value="#929aa5">
             </div>
             <div class="rp-set-row">
-                <label class="chk"><input type="checkbox" id="set-grid" checked> Show grid</label>
-                <label>Grid colour</label><input type="color" id="set-gridc" value="#1b1b20">
+                <label class="chk"><input type="checkbox" id="set-gridv" checked> Vertical grid</label>
+                <label class="chk"><input type="checkbox" id="set-gridh" checked> Horizontal grid</label>
+            </div>
+            <div class="rp-set-row">
+                <label>Grid colour</label><input type="color" id="set-gridc" value="#1c2028">
+                <label>Watermark</label><input type="checkbox" id="set-mark" checked>
             </div>
 
-            <h4>Crosshair</h4>
+            <h4>Scales &amp; crosshair</h4>
             <div class="rp-set-row">
-                <label class="chk"><input type="checkbox" id="set-cross" checked> Show crosshair</label>
+                <label class="chk"><input type="checkbox" id="set-cross" checked> Crosshair</label>
                 <label class="chk"><input type="checkbox" id="set-magnet"> Magnet to price</label>
+                <label class="chk"><input type="checkbox" id="set-log"> Logarithmic</label>
+            </div>
+            <div class="rp-set-row">
+                <label>Price precision</label>
+                <select id="set-prec">
+                    <option value="auto" selected>Auto</option>
+                    <option value="0">0</option><option value="1">1</option>
+                    <option value="2">2</option><option value="4">4</option>
+                    <option value="6">6</option>
+                </select>
+                <label class="chk"><input type="checkbox" id="set-seconds"> Show seconds</label>
+            </div>
+
+            <h4>Trading</h4>
+            <div class="rp-set-row">
+                <label>Starting balance</label>
+                <input type="number" id="set-balance" value="10000" min="100" step="100">
+                <label>Fee (bps)</label>
+                <input type="number" id="set-fee" value="5" min="0" max="100" step="0.5">
             </div>
 
             <div class="rp-set-actions">
@@ -260,6 +447,7 @@
     </div>
 </div>
 
+<!-- ==================================================  indicators  ==== -->
 <div id="rp-modal" class="rp-modal" hidden>
     <div class="rp-modal-card" role="dialog" aria-label="Indicators">
         <header class="rp-modal-head">
@@ -297,7 +485,7 @@
                     <option value="mom">Momentum (close vs N bars ago)</option>
                 </select>
                 <textarea id="rp-ind-code" spellcheck="false" rows="8"></textarea>
-                <button id="rp-ind-addcustom" class="rp-btn primary" style="width:100%;justify-content:center;margin-top:8px">
+                <button id="rp-ind-addcustom" class="rp-btn accent" style="width:100%;justify-content:center;margin-top:8px">
                     <i class="fa-solid fa-plus"></i> Add script to chart
                 </button>
             </div>
