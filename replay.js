@@ -180,7 +180,7 @@ function buildChart() {
     el.innerHTML = '';
     chart = LightweightCharts.createChart(el, {
         layout: { background: { color: theme.bg }, textColor: theme.text,
-                  fontFamily: 'IBM Plex Sans, system-ui, sans-serif', fontSize: 11 },
+                  fontFamily: 'IBM Plex Sans, system-ui, sans-serif', fontSize: 12 },
         grid: { vertLines: { color: theme.gridColor }, horzLines: { color: theme.gridColor } },
         rightPriceScale: { borderColor: 'rgba(255,255,255,0.09)' },
         timeScale: { borderColor: 'rgba(255,255,255,0.09)', timeVisible: true, secondsVisible: false },
@@ -287,6 +287,7 @@ async function loadChart() {
         hideStatus();
         $('rp-hud').hidden = false;
         updateModeUI();
+        renderAll();          // the ticket can only be priced once bars exist
         openStream();
         loadTicker();
         restoreLayout();
@@ -368,6 +369,12 @@ function openStream() {
         } catch (e) { paint(); }
         lastPainted[lastPainted.length - 1] = bar;
         $('rp-livePrice').textContent = px(bar.close);
+        // Stops, targets and resting orders have to be checked on the live
+        // feed too. One tick is one traded price, so the bar handed to the
+        // fill engine is that price and nothing else — no invented range.
+        if (S.position || S.orders.length) {
+            applyFills({ o: bar.close, h: bar.close, l: bar.close, c: bar.close });
+        }
         updateEquity();
     };
     ws.onclose = () => { $('rp-live').hidden = true; S.ws = null; };
@@ -962,6 +969,14 @@ function currentPrice() {
     return S.hist.length ? S.hist[S.hist.length - 1].close : null;
 }
 
+// Which bar a fill belongs to, in whichever mode we are in. Trading is not
+// replay-only: the live chart is a perfectly good place to take a trade, it
+// simply cannot be stepped backwards afterwards.
+function nowBarTime() {
+    if (S.mode === 'replay') return S.working ? S.working.time : null;
+    return S.hist.length ? S.hist[S.hist.length - 1].time : null;
+}
+
 let otype = 'market';
 let sizeMode = 'risk';
 let slMode = 'price';
@@ -1044,11 +1059,10 @@ function updateTicket() {
     $('rp-buy-sub').textContent  = otype === 'market' ? 'market' : px(entry);
     $('rp-sell-sub').textContent = otype === 'market' ? 'market' : px(entry);
 
-    $('rp-sizing').textContent = S.mode !== 'replay'
-        ? 'Start a replay to trade. Drawing a position tool fills this ticket in.'
-        : (qty ? 'Size ' + fmt(qty, 6) + ' ' + baseAsset() + ' at ' + S.lev + 'x — ' +
-                 money(margin) + ' margin.'
-               : 'Set a stop, a quantity or drag the size slider.');
+    $('rp-sizing').textContent = qty
+        ? 'Size ' + fmt(qty, 6) + ' ' + baseAsset() + ' at ' + S.lev + 'x — ' +
+          money(margin) + ' margin' + (S.mode === 'replay' ? '.' : ', trading live.')
+        : 'Set a stop, a quantity or drag the size slider.';
     syncOrderButtons();
 }
 
@@ -1066,7 +1080,6 @@ function liqPrice(side, entry) {
 }
 
 function placeOrder(side) {
-    if (S.mode !== 'replay') { status('Start a replay before trading.', 'error'); return; }
     const entry = ticketPrice();
     if (entry === null) return;
     const qty = ticketQty(side, entry);
@@ -1081,7 +1094,7 @@ function placeOrder(side) {
         id: ++S.orderSeq, type: otype, side, price: entry, qty,
         sl: lv.sl, tp: lv.tp,
         below: entry < mark,          // which way price must travel to fill
-        placedAt: S.working ? S.working.time : null
+        placedAt: nowBarTime()
     });
     drawPositionLines();
     renderOrders(); renderAll();
@@ -1099,7 +1112,7 @@ function openPosition(side, price, qty, sl, tp) {
         liq: liqPrice(side, price),
         riskAmt: sl ? Math.abs(price - sl) * qty : 0,
         feePaid: fee,
-        openedAt: S.working ? S.working.time : null
+        openedAt: nowBarTime()
     };
     drawPositionLines();
     renderAll();
@@ -1117,7 +1130,7 @@ function closePosition(price, reason) {
         side: p.side, qty: p.qty, entry: p.entry, exit: price,
         pnl, fees: p.feePaid + fee,
         r: p.riskAmt ? pnl / p.riskAmt : 0, reason,
-        openedAt: p.openedAt, closedAt: S.working ? S.working.time : null,
+        openedAt: p.openedAt, closedAt: nowBarTime(),
         note: '', tags: []
     });
     S.position = null;
@@ -1165,8 +1178,50 @@ function resetAccount(full) {
     if (full) { renderAll(); updateEquity(); }
 }
 
-// The position drawing tool doubles as an order ticket.
+/* The position drawing tool speaks to the ticket two ways. fromDrawing loads
+   the levels into the panel so you can adjust them; submit sends the drawn
+   setup as a real order. A setup drawn away from the current price rests as a
+   working order at ITS OWN entry and fills when price gets there — it is not
+   silently snapped onto the last candle, which would be a different trade
+   from the one you drew. */
 window.BTOrder = {
+    submit(d) {
+        const mark = currentPrice();
+        if (mark === null) { status('No price on the chart yet.', 'error'); return; }
+        if (S.position) { status('Close the open position first.', 'error'); return; }
+        const risk = Math.abs(d.entry - d.stop);
+        if (!risk) { status('Give the position a stop before trading it.', 'error'); return; }
+
+        let qty;
+        if (sizeMode === 'qty') {
+            qty = parseFloat($('rp-qty').value);
+        } else {
+            const riskPct = Math.max(0.01, parseFloat($('rp-risk').value) || 1);
+            qty = (S.balance * (riskPct / 100)) / risk;
+        }
+        qty = Math.min(qty || 0, maxQty(d.entry));
+        if (!qty) { status('Sizing came out at zero — check the risk or quantity.', 'error'); return; }
+
+        // Within half a basis point of the mark there is nothing to wait for.
+        if (Math.abs(d.entry - mark) / mark < 0.00005) {
+            openPosition(d.side, mark, qty, d.stop, d.target);
+            status('Filled ' + d.side + ' ' + fmt(qty, 6) + ' ' + baseAsset() + ' at market.');
+        } else {
+            const below = d.entry < mark;
+            S.orders.push({
+                id: ++S.orderSeq,
+                type: (d.side === 'long') === below ? 'limit' : 'stop',
+                side: d.side, price: d.entry, qty, sl: d.stop, tp: d.target,
+                below: below, placedAt: nowBarTime()
+            });
+            drawPositionLines(); renderAll();
+            status('Working ' + d.side + ' order at ' + px(d.entry) +
+                   ' — it fills when price trades there.');
+        }
+        setTimeout(hideStatus, 3200);
+        showTab(S.position ? 'pos' : 'ord');
+    },
+
     fromDrawing(d) {
         slMode = 'price';
         segSet('rp-slmode', 'sl', 'price');
@@ -1187,7 +1242,7 @@ window.BTOrder = {
 function renderAll() {
     renderPositions(); renderOrders(); renderHistory();
     renderMetrics(); renderCurve(); renderCalendar(); renderJournalList();
-    syncOrderButtons(); updateTicket(); updateTabCounts();
+    updateTicket(); updateTabCounts();
 }
 
 function drawPositionLines() {
@@ -1213,7 +1268,13 @@ function clearPositionLines() {
     lines = [];
 }
 
+let inEquity = false;
 function updateEquity() {
+    if (inEquity) return;
+    inEquity = true;
+    try { equityPass(); } finally { inEquity = false; }
+}
+function equityPass() {
     const op = openPL(), eq = S.balance + op;
     $('rp-balance').textContent = money(S.balance);
     $('rp-equity').textContent  = money(eq);
@@ -1226,6 +1287,7 @@ function updateEquity() {
         S.maxDDAbs = Math.max(S.maxDDAbs, S.peakEquity - eq);
     }
     if (S.position) renderPositions();
+    updateTicket();
 }
 
 function renderTicker() {
@@ -1593,6 +1655,11 @@ function restoreJournal() {
     renderTagBar();
 }
 
+function showTab(name) {
+    const tab = document.querySelector('.rp-tab[data-tab="' + name + '"]');
+    if (tab) tab.click();
+}
+
 function updateTabCounts() {
     const set = (id, n) => { const b = $(id); b.textContent = n; b.hidden = !n; };
     set('tabn-pos', S.position ? 1 : 0);
@@ -1601,7 +1668,7 @@ function updateTabCounts() {
 }
 
 function syncOrderButtons() {
-    const live = S.mode === 'replay' && !!S.working;
+    const live = currentPrice() !== null;
     $('rp-buy').disabled   = !live || !!S.position;
     $('rp-sell').disabled  = !live || !!S.position;
     $('rp-close').disabled = !S.position;

@@ -222,32 +222,54 @@ function resize() {
 
 // -------------------------------------------------------------- coordinates
 
-/* timeToCoordinate returns null for any time outside the loaded series, which
-   is exactly where forecasts and rays want to go. Crypto trades 24/7 so the
-   time axis has no session gaps and a linear extrapolation off the visible
-   range is exact; it is only ever used as a fallback. */
-function calib() {
-    const ts = chart.timeScale();
-    const vr = ts.getVisibleRange();
-    if (!vr || vr.to === vr.from) return null;
-    const a = ts.timeToCoordinate(vr.from), b = ts.timeToCoordinate(vr.to);
-    if (a === null || b === null) return null;
-    return { t: vr.from, x: a, k: (b - a) / (vr.to - vr.from) };
+/* Screen mapping goes through the LOGICAL BAR INDEX, never through time
+   directly. Lightweight Charts lays bars out evenly by index, so a pixel is a
+   linear function of the index but NOT of the timestamp — mapping a stored
+   time straight to a coordinate is only right at one zoom level and drifts at
+   every other, which is what made drawings crawl across the candles as you
+   zoomed. Index also carries on cleanly past the last bar, which is where
+   rays, forecasts and position boxes live and where timeToCoordinate simply
+   returns null. */
+function barStep() {
+    const n = bars.length;
+    return n > 1 ? (bars[n - 1].time - bars[0].time) / (n - 1) : 60;
+}
+function timeToIndex(t) {
+    const n = bars.length;
+    if (!n) return null;
+    const step = barStep() || 1;
+    if (t <= bars[0].time)     return (t - bars[0].time) / step;
+    if (t >= bars[n - 1].time) return (n - 1) + (t - bars[n - 1].time) / step;
+    let lo = 0, hi = n - 1;
+    while (hi - lo > 1) {
+        const m = (lo + hi) >> 1;
+        if (bars[m].time <= t) lo = m; else hi = m;
+    }
+    const span = bars[hi].time - bars[lo].time || 1;
+    return lo + (t - bars[lo].time) / span;
+}
+function indexToTime(i) {
+    const n = bars.length;
+    if (!n) return null;
+    const step = barStep() || 1;
+    if (i <= 0)     return Math.round(bars[0].time + i * step);
+    if (i >= n - 1) return Math.round(bars[n - 1].time + (i - (n - 1)) * step);
+    const lo = Math.floor(i), hi = Math.min(n - 1, lo + 1);
+    return Math.round(bars[lo].time + (i - lo) * (bars[hi].time - bars[lo].time));
 }
 
 function X(t) {
-    const x = chart.timeScale().timeToCoordinate(t);
-    if (x !== null) return x;
-    const c = calib();
-    return c ? c.x + (t - c.t) * c.k : null;
+    const i = timeToIndex(t);
+    if (i === null) return null;
+    const x = chart.timeScale().logicalToCoordinate(i);
+    return (x === null || !isFinite(x)) ? null : x;
 }
 function Y(p) { return series.priceToCoordinate(p); }
 
 function xToTime(x) {
-    const t = chart.timeScale().coordinateToTime(x);
-    if (t !== null) return t;
-    const c = calib();
-    return c && c.k ? Math.round(c.t + (x - c.x) / c.k) : null;
+    if (!bars.length) return null;
+    const i = chart.timeScale().coordinateToLogical(x);
+    return (i === null || !isFinite(i)) ? null : indexToTime(i);
 }
 
 function toChart(e) {
@@ -352,6 +374,17 @@ function hitTest(x, y) {
 
 // ------------------------------------------------------------------- events
 
+/* The toolbar, the settings dialog and the pop-overs are children of the same
+   host we hit-test on, and we listen in the CAPTURE phase — so without this
+   every mousedown on one of their buttons reached the chart first, missed
+   every shape, deselected, and tore the panel down before the click could
+   land. Nothing in the drawing UI is a chart gesture; skip all of it. */
+const UI_SEL = '.rp-tb, .rp-cf, .rp-pop, .rp-flyout, .rp-legend-wrap, ' +
+               '.rp-transport, .rp-hud, .rp-tool-chip';
+function fromUI(e) {
+    return !!(e.target && e.target.closest && e.target.closest(UI_SEL));
+}
+
 function newShape(t, p) {
     const sp = T[t];
     const st = Object.assign({}, DEFAULT_STYLE, lastStyle[t] || {}, sp.preset || {});
@@ -359,7 +392,7 @@ function newShape(t, p) {
 }
 
 function onDown(e) {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || fromUI(e)) return;
     const p = toChart(e);
     if (!p) return;
 
@@ -426,7 +459,7 @@ function onDown(e) {
 }
 
 function onHover(e) {
-    if (!pending || drag) return;
+    if (!pending || drag || fromUI(e)) return;
     const p = toChart(e);
     if (!p) return;
     pending.pts[pending.pts.length - 1] = { time: p.time, price: p.price };
@@ -445,7 +478,10 @@ function onMove(e) {
     if (drag.mode === 'create') {
         if (kind === 'position') {
             const dir = s.style.dir || 1;
-            const risk = Math.abs(s.pts[0].price - p.price);
+            // A drag straight sideways would otherwise put the stop on the
+            // entry and leave the box with no risk side.
+            const risk = Math.abs(s.pts[0].price - p.price)
+                      || Math.abs(s.pts[0].price) * 0.005 || 1;
             s.pts[1] = { time: p.time, price: dir > 0 ? s.pts[0].price - risk : s.pts[0].price + risk };
             s.pts[2] = { time: p.time, price: dir > 0 ? s.pts[0].price + risk * 2 : s.pts[0].price - risk * 2 };
         } else {
@@ -474,12 +510,19 @@ function onUp() {
 
     if (s && wasCreate) {
         const a = pxOf(s.pts[0]), b = pxOf(s.pts[1]);
-        // A click without a drag means "place the first point, I will click
-        // again for the second" — the way every charting platform behaves.
         if (a && b && Math.hypot(b.x - a.x, b.y - a.y) < 4) {
-            pending = s;
-            render();
-            return;
+            // A position dropped with a single click gets a default box, the
+            // way TradingView does it. Sending it down the click-by-click
+            // path instead left the stop sitting exactly on the entry — a
+            // box with a target and no stop side at all.
+            if (spec(s).drag) seedDefault(s);
+            else {
+                // Every other tool: "place the first point, I will click
+                // again for the second", as every charting platform behaves.
+                pending = s;
+                render();
+                return;
+            }
         }
         setTool('cursor');
         rememberStyle(s);
@@ -487,6 +530,18 @@ function onUp() {
     }
     if (s && spec(s).kind === 'position') sendToOrderPanel(s);
     commit(); place();
+}
+
+/* A position needs three usable levels the moment it exists: half a percent
+   of risk, twice that in reward, twenty bars wide. Every level is draggable
+   afterwards — nothing here is locked to a ratio. */
+function seedDefault(s) {
+    const dir = s.style.dir || 1;
+    const entry = s.pts[0].price;
+    const risk = Math.abs(entry) * 0.005 || 1;
+    const t2 = s.pts[0].time + (barStep() || 3600) * 20;
+    s.pts[1] = { time: t2, price: dir > 0 ? entry - risk : entry + risk };
+    s.pts[2] = { time: t2, price: dir > 0 ? entry + risk * 2 : entry - risk * 2 };
 }
 
 function finishPending() {
@@ -500,6 +555,7 @@ function finishPending() {
 }
 
 function onDblClick(e) {
+    if (fromUI(e)) return;
     if (pending) {                     // a path ends on a double-click
         e.preventDefault(); e.stopPropagation();
         if (pending.pts.length > 2) pending.pts.pop();
@@ -537,18 +593,25 @@ function remove(id) {
 
 function commit() { render(); place(); if (onChange) onChange(serialize()); }
 
-// The position tool doubles as an order ticket.
-function sendToOrderPanel(s) {
-    if (!s.pts[1]) return;
+/* The position tool doubles as an order ticket: drawing one loads the panel,
+   and the toolbar's Trade button sends it. Two verbs, one shape. */
+function drawnOrder(s) {
+    if (!s.pts[1]) return null;
     const entry = s.pts[0].price, stop = s.pts[1].price;
-    const target = s.pts[2] ? s.pts[2].price : null;
-    if (!Math.abs(entry - stop)) return;
-    if (window.BTOrder && window.BTOrder.fromDrawing) {
-        window.BTOrder.fromDrawing({
-            side: (s.style.dir || 1) > 0 ? 'long' : 'short',
-            entry: entry, stop: stop, target: target
-        });
-    }
+    if (!Math.abs(entry - stop)) return null;
+    return {
+        side: (s.style.dir || 1) > 0 ? 'long' : 'short',
+        entry: entry, stop: stop,
+        target: s.pts[2] ? s.pts[2].price : null
+    };
+}
+function sendToOrderPanel(s) {
+    const o = drawnOrder(s);
+    if (o && window.BTOrder && window.BTOrder.fromDrawing) window.BTOrder.fromDrawing(o);
+}
+function submitDrawing(s) {
+    const o = drawnOrder(s);
+    if (o && window.BTOrder && window.BTOrder.submit) window.BTOrder.submit(o);
 }
 
 // ==================================================================== paint
@@ -761,7 +824,7 @@ function drawFib(s, pts) {
         ctx.globalAlpha = (f === 0 || f === 1) ? 1 : 0.8;
         seg(l, y, r + 60, y);
         ctx.globalAlpha = 1;
-        ctx.font = '11px "IBM Plex Mono", monospace';
+        ctx.font = '12px "IBM Plex Mono", monospace';
         ctx.fillText((f * 100).toFixed(1) + '%  ' + money(price), l + 4, y - 4);
     });
     ctx.restore();
@@ -781,7 +844,7 @@ function drawFibExt(s, pts, st) {
         if (y === null) return;
         ctx.strokeStyle = levelColour(i); ctx.fillStyle = ctx.strokeStyle;
         seg(l, y, r + 70, y);
-        ctx.font = '11px "IBM Plex Mono", monospace';
+        ctx.font = '12px "IBM Plex Mono", monospace';
         ctx.fillText((f * 100).toFixed(1) + '%  ' + money(price), l + 4, y - 4);
     });
     ctx.restore();
@@ -806,7 +869,7 @@ function drawFibTime(pts, h) {
         ctx.fillStyle = ctx.strokeStyle;
         const x = pts[0].x + dx * f;
         seg(x, 0, x, h);
-        ctx.font = '11px "IBM Plex Mono", monospace';
+        ctx.font = '12px "IBM Plex Mono", monospace';
         ctx.fillText(String(f), x + 3, 14);
     });
     ctx.restore();
@@ -933,7 +996,7 @@ function durationText(t1, t2) {
 function statBox(x, y, linesArr, colour) {
     ctx.save();
     ctx.setLineDash([]);
-    ctx.font = '11px "IBM Plex Mono", monospace';
+    ctx.font = '12px "IBM Plex Mono", monospace';
     let w = 0;
     linesArr.forEach(t => { w = Math.max(w, ctx.measureText(t).width); });
     w += 14;
@@ -1018,7 +1081,7 @@ function handle(x, y) {
     ctx.save();
     ctx.setLineDash([]);
     ctx.fillStyle = '#0b0e11'; ctx.strokeStyle = SEL; ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     ctx.restore();
 }
 function lockPip(p) {
@@ -1028,7 +1091,7 @@ function lockPip(p) {
 function label(t, x, y, colour) {
     ctx.save();
     ctx.setLineDash([]);
-    ctx.font = '11px "IBM Plex Mono", monospace';
+    ctx.font = '12px "IBM Plex Mono", monospace';
     const w = ctx.measureText(t).width + 9;
     ctx.fillStyle = 'rgba(11,14,17,.86)';
     ctx.fillRect(x, y - 11, w, 15);
@@ -1251,7 +1314,7 @@ function openHud(id) {
             if (a === 'cfg')    openSettings(s.id);
             if (a === 'del')    remove(s.id);
             if (a === 'flip')   { flipPosition(s); commit(); }
-            if (a === 'ticket') sendToOrderPanel(s);
+            if (a === 'ticket') submitDrawing(s);
         }));
 }
 
@@ -1404,7 +1467,8 @@ function openSettings(id, focusText) {
           row('Stop',   '<input type="number" step="any" data-p="1" value="' + money(stop) + '">') +
           row('Target', '<input type="number" step="any" data-p="2" value="' + money(target) + '">') +
           '<div class="rp-cf-read"></div>' +
-          '<button class="rp-btn accent full" data-act="send">Send to order ticket</button>';
+          '<button class="rp-btn accent full" data-act="trade">Trade this setup</button>' +
+          '<button class="rp-btn full" data-act="send">Load into the ticket</button>';
     }
     body += row('Locked', '<input type="checkbox" data-lock' + (s.locked ? ' checked' : '') + '>');
 
@@ -1467,6 +1531,11 @@ function openSettings(id, focusText) {
     if (send) send.addEventListener('click', () => {
         const sh = shapes.find(x => x.id === cfgId);
         if (sh) sendToOrderPanel(sh);
+    });
+    const trade = cfgEl.querySelector('[data-act="trade"]');
+    if (trade) trade.addEventListener('click', () => {
+        const sh = shapes.find(x => x.id === cfgId);
+        if (sh) submitDrawing(sh);
     });
     if (focusText) {
         const ta = cfgEl.querySelector('[data-s="text"]');
