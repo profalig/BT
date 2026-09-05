@@ -291,10 +291,16 @@ function initialsOf(name, email) {
     return src.slice(0, 2).toUpperCase();
 }
 
-/* Returns SVG markup, ready to drop into innerHTML. `seed` should be the
-   stable user id so the avatar never changes when someone edits their name. */
-function avatar(seed, name, email, size) {
+/* Returns markup ready to drop into innerHTML. `seed` should be the stable
+   user id so the avatar never changes when someone edits their name. Pass
+   `img` to show a picture they uploaded instead of their initials. */
+function avatar(seed, name, email, size, img) {
     const px = size || 34;
+    if (img) {
+        return '<img class="bt-avatar" src="' + String(img).replace(/"/g, '&quot;') +
+               '" width="' + px + '" height="' + px + '" alt="" ' +
+               'style="width:' + px + 'px;height:' + px + 'px;object-fit:cover">';
+    }
     const pair = AV_COLOURS[hashOf(seed || email || 'x') % AV_COLOURS.length];
     const id = 'av' + hashOf(String(seed) + px);
     const txt = initialsOf(name, email);
@@ -311,8 +317,38 @@ function avatar(seed, name, email, size) {
     '</svg>';
 }
 
+/* An avatar is displayed at 52px at most, so there is no reason to keep a
+   4000px photograph. Centre-crop to a square, draw it at 160px and hand back
+   a JPEG data URI — around 8KB, small enough to live in one text column and
+   arrive with the profile row instead of costing another request. */
+function squashImage(file, px) {
+    px = px || 160;
+    return new Promise((resolve, reject) => {
+        if (!file || !/^image\//.test(file.type)) return reject(new Error('That is not an image.'));
+        if (file.size > 12 * 1024 * 1024) return reject(new Error('That image is over 12MB.'));
+        const url = URL.createObjectURL(file);
+        const im = new Image();
+        im.onload = () => {
+            try {
+                const side = Math.min(im.width, im.height);
+                const sx = (im.width - side) / 2, sy = (im.height - side) / 2;
+                const c = document.createElement('canvas');
+                c.width = c.height = px;
+                const ctx = c.getContext('2d');
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(im, sx, sy, side, side, 0, 0, px, px);
+                resolve(c.toDataURL('image/jpeg', 0.82));
+            } catch (e) { reject(e); }
+            finally { URL.revokeObjectURL(url); }
+        };
+        im.onerror = () => { URL.revokeObjectURL(url); reject(new Error('That image could not be read.')); };
+        im.src = url;
+    });
+}
+
 return {
     avatar: avatar,
+    squashImage: squashImage,
     initials: initialsOf,
     presets: () => PRESETS.slice(),
     recent:  () => recent.slice(),

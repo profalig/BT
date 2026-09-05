@@ -858,6 +858,32 @@
             </div>
         </div>
     </div>
+    <!-- ================================================== MY REPORTS ==== -->
+    <!-- Its own room. The reports were living inside the account panel, in a
+         narrow centred card that had to scroll, which is no way to look
+         through your own work. -->
+    <div id="reports-library" class="rl-overlay" hidden>
+        <div class="rl-card">
+            <button type="button" class="rl-close" id="rl-close">&times;</button>
+
+            <header class="rl-head">
+                <div class="rl-title">
+                    <span class="rl-kicker">// SEC-01 &middot; BACKTEST MACHINE</span>
+                    <h2>MY REPORTS</h2>
+                </div>
+                <div class="rl-counts" id="rl-counts"></div>
+            </header>
+
+            <nav class="rl-filters" id="rl-filters">
+                <button type="button" class="rl-filter active" data-filter="all">ALL</button>
+                <button type="button" class="rl-filter" data-filter="done">COMPLETED</button>
+                <button type="button" class="rl-filter" data-filter="queue">IN QUEUE</button>
+            </nav>
+
+            <div class="rl-grid" id="rl-grid"></div>
+        </div>
+    </div>
+
 	    	<!-- SYSTEM DATABANK MODAL -->
     <div id="databank-modal" class="hud-modal hidden">
       <div class="hud-modal-content">

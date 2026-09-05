@@ -873,7 +873,7 @@ async function fillConsoleRail() {
 
 document.addEventListener('DOMContentLoaded', () => {
     const rep = document.getElementById('console-reports-btn');
-    if (rep) rep.addEventListener('click', openUserReportsModal);
+    if (rep) rep.addEventListener('click', openReportsLibrary);
     const pl = document.getElementById('console-plans-btn');
     if (pl) pl.addEventListener('click', openSubscriptionModal);
 });
@@ -1099,6 +1099,114 @@ async function fetchOrCreateUserProfile(user) {
     }
 }
 
+/* Editing your own profile writes to two different places, because the two
+   fields belong in two different places.
+
+   The NAME goes to auth metadata, which a signed-in user is allowed to write
+   without any table policy at all.
+
+   The PICTURE cannot go there: user_metadata is carried inside the JWT, so an
+   image in it would be attached to every single request the browser makes.
+   It goes to a column instead, and that column needs a narrow permission —
+   column-level, so the same policy cannot be used to hand yourself credits
+   or a plan:
+
+     alter table public.user_profiles add column avatar_url text;
+
+     create policy "Users can edit their own picture"
+       on public.user_profiles for update to authenticated
+       using (auth.uid() = id) with check (auth.uid() = id);
+
+     revoke update on public.user_profiles from authenticated, anon;
+     grant  update (avatar_url) on public.user_profiles to authenticated;
+
+   The revoke matters as much as the grant: without it the policy would allow
+   an update to ANY column, credits and plan included. */
+function wireProfileEditor(session, access) {
+    const box  = document.getElementById('prof-editor');
+    if (!box) return;
+    const msg  = document.getElementById('prof-msg');
+    const name = document.getElementById('prof-name-input');
+    const file = document.getElementById('prof-file');
+    let picked = undefined;                  // undefined = untouched, null = remove
+
+    const open = () => { box.hidden = false; setTimeout(() => name && name.focus(), 30); };
+    document.getElementById('prof-edit-btn')?.addEventListener('click', open);
+    document.getElementById('prof-av-btn')?.addEventListener('click', open);
+    document.getElementById('prof-cancel-btn')?.addEventListener('click', () => { box.hidden = true; });
+    document.getElementById('prof-pick-btn')?.addEventListener('click', () => file && file.click());
+
+    document.getElementById('prof-clear-btn')?.addEventListener('click', () => {
+        picked = null;
+        setPreview(null);
+        say('Picture will be removed when you save.');
+    });
+
+    function say(text, bad) {
+        if (!msg) return;
+        msg.textContent = text || '';
+        msg.classList.toggle('bad', !!bad);
+    }
+    function setPreview(url) {
+        const holder = document.getElementById('prof-av-btn');
+        if (!holder || !window.BTUI) return;
+        const pen = holder.querySelector('.prof-av-pen');
+        holder.innerHTML = BTUI.avatar(session.user.id,
+            (name && name.value) || session.user.user_metadata?.display_name,
+            session.user.email, 52, url);
+        if (pen) holder.appendChild(pen);
+    }
+
+    file?.addEventListener('change', async () => {
+        const f = file.files && file.files[0];
+        if (!f) return;
+        say('Preparing…');
+        try {
+            picked = await BTUI.squashImage(f, 160);
+            setPreview(picked);
+            say('Looks good. Press Save to keep it.');
+        } catch (e) {
+            picked = undefined;
+            say(e.message || 'That image could not be used.', true);
+        }
+        file.value = '';
+    });
+
+    document.getElementById('prof-save-btn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('prof-save-btn');
+        btn.disabled = true;
+        say('Saving…');
+        const problems = [];
+        try {
+            const wanted = (name.value || '').trim().slice(0, 32);
+            const current = session.user.user_metadata?.display_name || '';
+            if (wanted !== current) {
+                const { error } = await supabaseClient.auth.updateUser({
+                    data: { display_name: wanted || null }
+                });
+                if (error) problems.push('name: ' + error.message);
+            }
+            if (picked !== undefined) {
+                const { error } = await supabaseClient.from('user_profiles')
+                    .update({ avatar_url: picked }).eq('id', session.user.id);
+                if (error) problems.push('picture: ' + error.message);
+            }
+        } catch (e) {
+            problems.push(e.message || String(e));
+        }
+        btn.disabled = false;
+
+        if (problems.length) {
+            // Almost always the column or the grant is missing; say which.
+            say(problems.join(' · '), true);
+            return;
+        }
+        say('Saved.');
+        if (window.BTAccess) BTAccess.forget();
+        setTimeout(() => { closeTacticalThen(openUserReportsModal); }, 500);
+    });
+}
+
 /* The profile lives inside the tactical modal, so anything it opens has to
    get that out of the way first or it lands behind it. */
 function closeTacticalThen(fn) {
@@ -1154,7 +1262,8 @@ async function openUserReportsModal() {
            paying for. */
         const access = window.BTAccess ? await BTAccess.get(true) : null;
         const av = window.BTUI
-            ? BTUI.avatar(activeUserId, session.user.user_metadata?.display_name, userEmail, 52)
+            ? BTUI.avatar(activeUserId, session.user.user_metadata?.display_name, userEmail, 52,
+                          access && access.avatarUrl)
             : '<i class="fa-solid fa-id-badge"></i>';
 
         const planName = (access && access.planLabel) || 'Free account';
@@ -1177,9 +1286,14 @@ async function openUserReportsModal() {
             <div class="prof-card">
                 <div class="prof-head">
                     <div class="prof-id">
-                        <span class="prof-av">${av}</span>
+                        <button type="button" class="prof-av" id="prof-av-btn"
+                                title="Change your picture">${av}<span class="prof-av-pen">
+                            <i class="fa-solid fa-camera"></i></span></button>
                         <span class="prof-idtext">
-                            <span class="prof-name">${callsign}</span>
+                            <span class="prof-name">${callsign}
+                                <button type="button" class="prof-edit" id="prof-edit-btn"
+                                        title="Edit your name"><i class="fa-solid fa-pen"></i></button>
+                            </span>
                             <span class="prof-plan" style="color:${planTone}; border-color:${planTone}44; background:${planTone}14;">
                                 ${(access && access.plan) ? '<i class="fa-solid fa-gem"></i>' : '<i class="fa-solid fa-user"></i>'} ${planName}
                             </span>
@@ -1191,6 +1305,28 @@ async function openUserReportsModal() {
                 </div>
 
                 <div class="prof-detail">${detail.join('')}</div>
+
+                <div class="prof-editor" id="prof-editor" hidden>
+                    <label class="prof-field">
+                        <span>DISPLAY NAME</span>
+                        <input type="text" id="prof-name-input" maxlength="32" spellcheck="false"
+                               value="${(session.user.user_metadata?.display_name || '').replace(/"/g, '&quot;')}"
+                               placeholder="${userEmail.split('@')[0]}">
+                    </label>
+                    <div class="prof-editor-row">
+                        <button type="button" class="prof-btn" id="prof-pick-btn">
+                            <i class="fa-solid fa-image"></i> CHOOSE A PICTURE</button>
+                        <button type="button" class="prof-btn danger" id="prof-clear-btn"
+                                ${access && access.avatarUrl ? '' : 'hidden'}>
+                            <i class="fa-solid fa-xmark"></i> REMOVE</button>
+                    </div>
+                    <input type="file" id="prof-file" accept="image/*" hidden>
+                    <div class="prof-editor-row end">
+                        <span class="prof-msg" id="prof-msg"></span>
+                        <button type="button" class="prof-btn ghost" id="prof-cancel-btn">CANCEL</button>
+                        <button type="button" class="prof-btn save" id="prof-save-btn">SAVE</button>
+                    </div>
+                </div>
 
                 <div class="prof-stats">
                     <div class="prof-stat accent">
@@ -1216,79 +1352,168 @@ async function openUserReportsModal() {
             </div>
         `;
 
-        if (totalSubmissions === 0) {
-            const emptyContent = profileHeaderHtml + `
-                <div style="padding: 20px; text-align: center; color: #aaa; border: 1px dashed rgba(255,255,255,0.15); border-radius: 6px;">
-                    No backtest transmissions recorded for this account.<br>
-                    Initialize a backtest in <b>SEC-01: Backtest Machine</b> to generate your first intelligence report.
-                </div>
-            `;
-            showTacticalModal('AGENT PROFILE // COMMAND CENTER', emptyContent, true);
-            return;
-        }
+        const profileHtml = profileHeaderHtml + `
+            <div class="prof-actions">
+                <button type="button" class="prof-btn wide" onclick="closeTacticalThen(openReportsLibrary)">
+                    <i class="fa-solid fa-folder-open"></i> MY REPORTS (${totalSubmissions})
+                </button>
+            </div>`;
 
-        const reportRowsHtml = historyList.map(sub => {
-            const dateStr = sub.created_at ? new Date(sub.created_at).toLocaleDateString() : 'RECENT';
-            const reportUrl = (sub.report_url || sub.pdf_url || sub.report_link || sub.file_url || sub.url || '').trim();
-            const rawStatus = String(sub.status || '').toLowerCase().trim();
+        showTacticalModal('AGENT PROFILE // COMMAND CENTER', profileHtml, true);
+        wireProfileEditor(session, access);
 
-            let statusBadge;
-            let downloadBtn;
-
-            // Completed runs get the interactive dashboard as the primary
-            // action; the PDF sits beside it as the download artifact.
-            const viewBtn = `<button class="rpt-open-btn" data-sub-idx="${historyList.indexOf(sub)}" style="background:#f0b25a; color:#17120a; border:none; padding:7px 14px; border-radius:4px; font-family:'Share Tech Mono',monospace; font-size:0.78rem; font-weight:700; letter-spacing:1px; cursor:pointer;"><i class="fa-solid fa-chart-line"></i> VIEW REPORT</button>`;
-
-            if (reportUrl) {
-                statusBadge = `<span class="prof-status" style="color:#ffb066; font-weight:bold;">[ COMPLETED ]</span>`;
-                downloadBtn = `<div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">${viewBtn}<a href="${reportUrl}" target="_blank" download style="color:#d2d5db; text-decoration:underline; font-weight:bold;"><i class="fa-solid fa-file-pdf"></i> DOWNLOAD PDF</a></div>`;
-            } else if (['completed', 'complete', 'done', 'success'].includes(rawStatus)) {
-                statusBadge = `<span class="prof-status" style="color:#ffb066; font-weight:bold;">[ COMPLETED ]</span>`;
-                downloadBtn = `<div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">${viewBtn}<span style="color:#ffd700;"><i class="fa-solid fa-triangle-exclamation"></i> PDF link pending</span></div>`;
-            } else if (['failed', 'error', 'rejected'].includes(rawStatus)) {
-                statusBadge = `<span class="prof-status" style="color:#ff0055; font-weight:bold;">[ FAILED ]</span>`;
-                downloadBtn = `<span style="color:#ff0055;"><i class="fa-solid fa-circle-xmark"></i> Execution Error</span>`;
-            } else {
-                statusBadge = `<span class="prof-status" style="color:#ffd700; font-weight:bold;">[ PROCESSING ]</span>`;
-                downloadBtn = `<span style="color:#888;"><i class="fa-solid fa-spinner fa-spin"></i> Analyzing Tick Data...</span>`;
-            }
-
-            return `
-                <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(228,230,234,0.2); margin-bottom: 10px; padding: 12px 14px; border-radius: 6px; text-align: left;">
-                    <div class="prof-row-top" style="display: flex; justify-content: space-between; align-items: center;">
-                        <strong style="color: #e4e6ea; font-size: 1.05em; letter-spacing: 0.5px;">${sub.system_name || 'UNTITLED SYSTEM'}</strong>
-                        ${statusBadge}
-                    </div>
-                    <div style="font-size: 0.8em; color: #aaa; margin: 4px 0;">SUBMITTED: ${dateStr}</div>
-                    <div style="margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; font-size: 0.9em;">${downloadBtn}</div>
-                </div>
-            `;
-        }).join('');
-
-        const finalModalHtml = `
-            ${profileHeaderHtml}
-            <div style="max-height: 320px; overflow-y: auto; padding-right: 4px;">
-                ${reportRowsHtml}
-            </div>
-        `;
-
-        showTacticalModal('AGENT PROFILE // COMMAND CENTER', finalModalHtml, true);
-
-        // Wire the VIEW REPORT buttons to the dashboard. Bound after the modal
-        // renders, since showTacticalModal injects this HTML.
-        document.querySelectorAll('.rpt-open-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const sub = historyList[Number(btn.dataset.subIdx)];
-                if (!sub) return;
-                document.getElementById('tactical-modal-overlay')?.classList.remove('active');
-                window.__rptLast = sub;
-                openReportDashboard(sub);
-            });
-        });
     } catch (err) {
         showTacticalModal('FETCH ERROR', err.message, false);
     }
 }
+
+/* =====================================================================
+   MY REPORTS
+
+   Its own room rather than a scrolling strip inside the account panel.
+   One case file per submitted system: what you sent, what came back, and
+   the two things you actually want to do with it. Reached from the agent
+   badge, from the profile, and from the submission console's own rail —
+   because the moment you most want your last report is while you are
+   writing the next one.
+   ===================================================================== */
+let rlSubs = [], rlFilter = 'all';
+
+function rlStateOf(sub) {
+    const url = (sub.report_url || sub.pdf_url || sub.report_link || sub.file_url || sub.url || '').trim();
+    const raw = String(sub.status || '').toLowerCase().trim();
+    if (url || ['completed', 'complete', 'done', 'success'].includes(raw))
+        return { key: 'done', label: 'COMPLETED', tone: '#ffb066', url: url };
+    if (['failed', 'error', 'rejected'].includes(raw))
+        return { key: 'failed', label: 'FAILED', tone: '#ff5f7a', url: '' };
+    return { key: 'queue', label: 'IN QUEUE', tone: '#ffd700', url: '' };
+}
+
+async function openReportsLibrary() {
+    const box = document.getElementById('reports-library');
+    if (!box) return;
+    if (!supabaseClient) {
+        showTacticalModal('SYSTEM ERROR', 'Supabase client is not initialized.', false);
+        return;
+    }
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session || !session.user) {
+        showTacticalModal('ACCESS DENIED', 'Please authenticate to view your reports.', false);
+        return;
+    }
+
+    box.hidden = false;
+    document.getElementById('rl-grid').innerHTML =
+        '<div class="rl-empty"><i class="fa-solid fa-spinner fa-spin"></i>Reading your archive…</div>';
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('submissions').select('*')
+            .eq('user_id', session.user.id)
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        rlSubs = data || [];
+    } catch (err) {
+        document.getElementById('rl-grid').innerHTML =
+            `<div class="rl-empty"><i class="fa-solid fa-triangle-exclamation"></i>${err.message}</div>`;
+        return;
+    }
+    renderReportsLibrary();
+}
+
+function renderReportsLibrary() {
+    const grid = document.getElementById('rl-grid');
+    const counts = document.getElementById('rl-counts');
+    if (!grid) return;
+
+    const states = rlSubs.map(rlStateOf);
+    const done = states.filter(x => x.key === 'done').length;
+    const queue = states.filter(x => x.key === 'queue').length;
+
+    if (counts) counts.innerHTML =
+        `<div class="rl-count"><b>${rlSubs.length}</b><span>SUBMITTED</span></div>
+         <div class="rl-count"><b style="color:#ffb066">${done}</b><span>COMPLETED</span></div>
+         <div class="rl-count"><b style="color:#ffd700">${queue}</b><span>IN QUEUE</span></div>`;
+
+    const shown = rlSubs
+        .map((sub, i) => ({ sub, st: states[i], no: rlSubs.length - i }))
+        .filter(r => rlFilter === 'all' || r.st.key === rlFilter);
+
+    if (!shown.length) {
+        grid.innerHTML = rlSubs.length
+            ? `<div class="rl-empty"><i class="fa-solid fa-folder-open"></i>
+                 Nothing in this view yet.</div>`
+            : `<div class="rl-empty"><i class="fa-solid fa-folder-open"></i>
+                 No systems submitted yet.<br>
+                 Send one through the <b>Backtest Machine</b> and its report lands here.</div>`;
+        return;
+    }
+
+    grid.innerHTML = shown.map(({ sub, st, no }) => {
+        const date = sub.created_at
+            ? new Date(sub.created_at).toLocaleDateString(undefined,
+                { year: 'numeric', month: 'short', day: 'numeric' })
+            : 'RECENT';
+        let foot;
+        if (st.key === 'done') {
+            foot = `<button type="button" class="rl-btn" data-open="${rlSubs.indexOf(sub)}">
+                        <i class="fa-solid fa-chart-line"></i> VIEW REPORT</button>` +
+                   (st.url
+                     ? `<a class="rl-link" href="${st.url}" target="_blank" rel="noopener" download>
+                          <i class="fa-solid fa-file-pdf"></i> PDF</a>`
+                     : `<span class="rl-wait" style="color:#ffd700">
+                          <i class="fa-solid fa-triangle-exclamation"></i> PDF pending</span>`);
+        } else if (st.key === 'failed') {
+            foot = `<span class="rl-wait" style="color:#ff5f7a">
+                      <i class="fa-solid fa-circle-xmark"></i> Could not be completed</span>`;
+        } else {
+            foot = `<span class="rl-wait" style="color:rgba(255,255,255,.45)">
+                      <i class="fa-solid fa-spinner fa-spin"></i> With the engineering desk</span>`;
+        }
+        return `
+            <article class="rl-case" style="--case-tone:${st.tone}">
+                <span class="rl-case-no">${String(no).padStart(2, '0')}</span>
+                <div class="rl-case-head">
+                    <span class="rl-case-name">${(sub.system_name || 'Untitled system')
+                        .replace(/[<>]/g, '')}</span>
+                    <span class="rl-chip" style="color:${st.tone}">${st.label}</span>
+                </div>
+                <div class="rl-case-date">SUBMITTED ${date.toUpperCase()}</div>
+                <div class="rl-case-foot">${foot}</div>
+            </article>`;
+    }).join('');
+
+    grid.querySelectorAll('[data-open]').forEach(b =>
+        b.addEventListener('click', () => {
+            const sub = rlSubs[Number(b.dataset.open)];
+            if (!sub) return;
+            document.getElementById('reports-library').hidden = true;
+            window.__rptLast = sub;
+            openReportDashboard(sub);
+        }));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('rl-close')?.addEventListener('click', () => {
+        document.getElementById('reports-library').hidden = true;
+    });
+    document.getElementById('reports-library')?.addEventListener('click', e => {
+        if (e.target.id === 'reports-library') e.target.hidden = true;
+    });
+    document.getElementById('rl-filters')?.addEventListener('click', e => {
+        const b = e.target.closest('.rl-filter');
+        if (!b) return;
+        rlFilter = b.dataset.filter;
+        document.querySelectorAll('.rl-filter').forEach(x =>
+            x.classList.toggle('active', x === b));
+        renderReportsLibrary();
+    });
+});
+document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const box = document.getElementById('reports-library');
+    if (box && !box.hidden) box.hidden = true;
+});
 
 // MOBILE HUD TOUCH EXPANSION ENGINE
 document.addEventListener('click', (e) => {

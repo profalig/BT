@@ -65,9 +65,16 @@ function entitle(profile, session, degraded) {
         ? profile.plan_status.trim().toLowerCase() : '';
     if (plan && st && st !== 'active' && st !== 'trialing') plan = null;
     const credits = profile ? (+profile.credits || 0) : 0;
+    const meta = (session && session.user && session.user.user_metadata) || {};
     return {
         signedIn:  !!(session && session.user),
         email:     session && session.user ? session.user.email : null,
+        userId:    session && session.user ? session.user.id : null,
+        // The name lives in auth metadata, where the user is allowed to write
+        // it without any table policy. The picture cannot: it is far too big
+        // to sit in a JWT, so it lives in a column of its own.
+        displayName: meta.display_name || null,
+        avatarUrl: (profile && profile.avatar_url) || null,
         plan:      plan ? plan.key : null,
         planLabel: plan ? plan.label : null,
         credits:   credits,
