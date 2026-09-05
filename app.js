@@ -827,7 +827,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-/* The console's own rail: how many credits are left, whose account this is,
+/* Credits are no longer a currency. You cannot buy them: the three tiers are
+   subscriptions, and a subscription that includes the Backtest Machine runs
+   as many backtests as you like. What is left of credits is the free run
+   every new account is given to try the thing once — plus whatever balance
+   people who bought the old packs still hold, which is honoured.
+
+   Every surface that mentions backtests reads this one description, so the
+   HUD, the console rail and the report log can never disagree. */
+function backtestState(a) {
+    if (!a || !a.signedIn)
+        return { unlimited: false, signedIn: false, value: '—', label: 'BACKTEST RUNS', short: 'BACKTESTS: --' };
+    if (a.plan && a.backtest)
+        return { unlimited: true, signedIn: true, value: '∞', label: 'UNLIMITED BACKTESTS',
+                 short: 'BACKTESTS: &#8734;' };
+    return { unlimited: false, signedIn: true, value: String(a.credits),
+             label: a.credits === 1 ? 'FREE BACKTEST LEFT' : 'FREE BACKTESTS LEFT',
+             short: 'FREE RUNS: ' + a.credits };
+}
+
+/* The console's own rail: how many runs are left, whose account this is,
    and a way to your reports without closing the console to find them. */
 async function fillConsoleRail() {
     const n   = document.getElementById('console-credits');
@@ -838,14 +857,17 @@ async function fillConsoleRail() {
     if (!window.BTAccess) { who.textContent = ''; return; }
     try {
         const a = await BTAccess.get(true);
-        const unlimited = a.signedIn && a.plan && a.backtest;
-        n.classList.toggle('is-unlimited', !!unlimited);
-        n.textContent = !a.signedIn ? '—' : unlimited ? '∞' : String(a.credits);
-        const label = document.querySelector('.rail-credit-l');
-        if (label) label.textContent = unlimited ? 'UNLIMITED BACKTESTS' : 'BACKTEST CREDITS';
+        const st = backtestState(a);
+        n.classList.toggle('is-unlimited', st.unlimited);
+        n.textContent = st.value;
+        const label = document.getElementById('console-credits-label');
+        if (label) label.textContent = st.label;
         who.textContent = a.signedIn
             ? (a.planLabel ? a.email + ' · ' + a.planLabel : a.email)
             : 'not signed in';
+        // Nothing to upgrade to when it is already unlimited.
+        const up = document.getElementById('console-plans-btn');
+        if (up) up.hidden = st.unlimited;
     } catch (e) { who.textContent = ''; }
 }
 
@@ -1097,6 +1119,7 @@ async function openUserReportsModal() {
     try {
         const userProfile = await fetchOrCreateUserProfile(session.user);
         const availableCredits = userProfile ? userProfile.credits : 0;
+        const btState = backtestState(window.BTAccess ? await BTAccess.get() : null);
 
         const { data: submissions, error } = await supabaseClient
             .from('submissions')
@@ -1133,8 +1156,8 @@ async function openUserReportsModal() {
 
                 <div class="prof-stats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center;">
                     <div style="background: rgba(255, 215, 0, 0.1); padding: 8px; border-radius: 4px; border: 1px solid rgba(255, 215, 0, 0.3);">
-                        <div class="prof-stat-label" style="font-size: 0.7em; color: #ffd700;">CREDITS</div>
-                        <div style="font-size: 1.2em; font-weight: bold; color: #ffd700;">${availableCredits}</div>
+                        <div class="prof-stat-label" style="font-size: 0.7em; color: #ffd700;">${btState.unlimited ? 'BACKTESTS' : 'FREE RUNS'}</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #ffd700;">${btState.value}</div>
                     </div>
                     <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
                         <div class="prof-stat-label" style="font-size: 0.7em; color: #888;">TOTAL RUNS</div>
@@ -1474,7 +1497,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateCreditBadgeUI(credits) {
         const badgeEl = document.getElementById('nav-credits-label');
         if (badgeEl) {
-            badgeEl.innerHTML = `CREDITS: ${credits}`;
+            badgeEl.innerHTML = `FREE RUNS: ${credits}`;
         }
     }
 
@@ -1652,7 +1675,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <i class="fa-solid fa-coins"></i>
                                 </div>
                                 <div class="hud-label-box">
-                                    <span id="nav-credits-label">CREDITS: ${userCredits}</span>
+                                    <span id="nav-credits-label">FREE RUNS: ${userCredits}</span>
                                 </div>
                             </div>
                             <div class="hud-slot subs" id="my-sub-btn">
@@ -1673,6 +1696,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         </div>
                     `;
+
+                    // Filled once access is known; a raw credit count would be
+                    // wrong for anyone on a plan that includes the machine.
+                    if (window.BTAccess) BTAccess.get().then(a => {
+                        const el = document.getElementById('nav-credits-label');
+                        if (el) el.innerHTML = backtestState(a).short;
+                    });
 
                     document.getElementById('nav-agent-btn')?.addEventListener('click', openUserReportsModal);
                     document.getElementById('nav-credits-btn')?.addEventListener('click', openSubscriptionModal);

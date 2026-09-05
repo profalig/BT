@@ -364,7 +364,7 @@
                     <i class="fa-solid fa-coins"></i>
                 </div>
                 <div class="hud-label-box">
-                    <span id="nav-credits-label">CREDITS: --</span>
+                    <span id="nav-credits-label">BACKTESTS: --</span>
                 </div>
             </div>
 
@@ -441,13 +441,13 @@
                         <textarea id="system-rules" placeholder="Define your logic. Include entry/exit criteria, timeframes, asset classes, and risk management parameters..." rows="7" required></textarea>
                         <span class="ig-hint">The more exact the rules, the less we have to assume.</span>
                     </div>
-                    <button type="submit" id="submit-btn" class="submit-system-btn">INITIATE DEEP BACKTEST (1 CREDIT) <i class="fa-solid fa-bolt"></i></button>
+                    <button type="submit" id="submit-btn" class="submit-system-btn">INITIATE DEEP BACKTEST <i class="fa-solid fa-bolt"></i></button>
                 </form>
 
                 <aside class="console-rail">
                     <div class="rail-card rail-credits">
                         <div class="rail-credit-n" id="console-credits">&mdash;</div>
-                        <div class="rail-credit-l">BACKTEST CREDITS</div>
+                        <div class="rail-credit-l" id="console-credits-label">BACKTEST RUNS</div>
                         <div class="rail-credit-who" id="console-who">not signed in</div>
                     </div>
 
@@ -455,7 +455,7 @@
                         <i class="fa-solid fa-folder-open"></i> MY REPORTS
                     </button>
                     <button type="button" id="console-plans-btn" class="rail-btn">
-                        <i class="fa-solid fa-plus"></i> GET MORE CREDITS
+                        <i class="fa-solid fa-infinity"></i> GET UNLIMITED BACKTESTS
                     </button>
 
                     <div class="rail-card">
@@ -703,7 +703,7 @@
 
             <!-- Submit Button -->
             <button id="verify-payment-btn" onclick="submitTransactionForVerification()" style="width: 100%; padding: 12px; background: #00ff66; color: #000; border: none; font-weight: bold; font-family: 'Share Tech Mono', monospace; font-size: 0.95rem; cursor: pointer; border-radius: 4px;">
-                VERIFY PAYMENT & UNLOCK CREDITS <i class="fa-solid fa-bolt"></i>
+                VERIFY PAYMENT &amp; UNLOCK ACCESS <i class="fa-solid fa-bolt"></i>
             </button>
         </div>
     </div>
