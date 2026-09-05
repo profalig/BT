@@ -880,14 +880,26 @@ function applyBillingCycle(cycle) {
         const amt = card.dataset[yearly ? 'yearAmt' : 'monthAmt'];
         const id  = card.dataset[yearly ? 'yearId'  : 'monthId'];
 
+        /* The headline is always a MONTHLY figure. Showing $590 where $59 was
+           makes the annual plan look like a price rise instead of a saving —
+           the number people are comparing is what it costs them a month, so
+           that is the number that gets the big type. The real charge is right
+           underneath it and on the button, which is where it belongs. */
+        const monthAmt = +card.dataset.monthAmt;
+        const perMonth = yearly ? (+amt / 12) : +amt;
+        const saving   = yearly ? (monthAmt * 12 - +amt) : 0;
+
+        const priceEl = card.querySelector('.tier-price');
         const amtEl = card.querySelector('.tier-price .amt');
         const perEl = card.querySelector('.tier-price .per');
         const bill  = card.querySelector('.tier-billed');
-        if (amtEl) amtEl.textContent = amt;
-        if (perEl) perEl.textContent = yearly ? ' / yr' : ' / mo';
+        if (priceEl) priceEl.classList.toggle('is-equiv', yearly);
+        if (amtEl) amtEl.textContent = yearly
+            ? (Math.round(perMonth * 100) / 100).toFixed(2) : amt;
+        if (perEl) perEl.textContent = ' / mo';
         if (bill) {
-            bill.textContent = yearly
-                ? '$' + (Math.round(+amt / 12 * 100) / 100).toFixed(2) + ' a month, billed yearly'
+            bill.innerHTML = yearly
+                ? '$' + amt + ' billed yearly &middot; <b>save $' + saving + '</b>'
                 : 'billed monthly';
         }
 
@@ -895,7 +907,7 @@ function applyBillingCycle(cycle) {
         if (btn) {
             btn.setAttribute('data-price-id', id);
             const label = btn.querySelector('.btn-amt');
-            if (label) label.textContent = '$' + amt;
+            if (label) label.textContent = '$' + amt + (yearly ? '/yr' : '/mo');
         }
     });
 }
@@ -1651,14 +1663,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <span>SUBSCRIPTIONS</span>
                                 </div>
                             </div>
-                            <div class="hud-slot reports" id="my-reports-btn">
-                                <div class="hud-icon-box">
-                                    <i class="fa-solid fa-folder-open"></i>
-                                </div>
-                                <div class="hud-label-box">
-                                    <span>MY REPORTS</span>
-                                </div>
-                            </div>
                             <div class="hud-slot logout" id="signout-btn">
                                 <div class="hud-icon-box">
                                     <i class="fa-solid fa-power-off"></i>
@@ -1673,7 +1677,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('nav-agent-btn')?.addEventListener('click', openUserReportsModal);
                     document.getElementById('nav-credits-btn')?.addEventListener('click', openSubscriptionModal);
                     document.getElementById('my-sub-btn')?.addEventListener('click', openSubscriptionModal);
-                    document.getElementById('my-reports-btn')?.addEventListener('click', openUserReportsModal);
 
                     document.getElementById('signout-btn')?.addEventListener('click', async () => {
                         await supabaseClient.auth.signOut();

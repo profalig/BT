@@ -3242,3 +3242,13 @@ body.in-space .billing-toggle .bt-opt.active {
     .tier-card.featured:hover { transform: translateY(-4px); }
     .billing-toggle .bt-opt { padding: 7px 14px; font-size: 0.66rem; letter-spacing: 1.2px; }
 }
+
+
+/* A monthly-equivalent figure carries cents, so it needs a little less size
+   to occupy the same width as a round monthly price. */
+.tier-price.is-equiv .amt { font-size: 2.45rem; }
+.tier-billed b { color: #20b26c; font-weight: 700; }
+
+/* The tier button says an exact amount and must never wrap it onto a second
+   line — a price broken across two rows reads as two prices. */
+.tier-actions .tier-btn { white-space: nowrap; }
