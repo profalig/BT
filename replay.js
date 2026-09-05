@@ -151,13 +151,19 @@ const isCloseOnly = () => !!srcOfMarket().closeOnly;
    worse picker. These are the books a trader would actually chart, and the
    fiat-quoted duplicates of the same coin (LTCJPY, LTCTRY, LTCBRL, LTCEUR
    for the one LTCUSDT everybody uses) are left out entirely. */
+/* Checked against Binance's live symbol list. Five names that used to be here
+   no longer trade against USDT there — MKR and FTM were renamed (SKY and S),
+   EOS became A, and TON and XMR were delisted — so they were silently dropped
+   at load and simply never appeared. Their successors are in, along with the
+   large names that had been missed. */
 const CRYPTO_MAJORS = [
     'BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'LINK', 'DOT',
     'TRX', 'LTC', 'BCH', 'ATOM', 'UNI', 'NEAR', 'APT', 'ARB', 'OP', 'FIL',
-    'ETC', 'ICP', 'INJ', 'SUI', 'SEI', 'TIA', 'IMX', 'AAVE', 'MKR', 'GRT',
-    'ALGO', 'VET', 'HBAR', 'STX', 'SAND', 'MANA', 'AXS', 'EOS', 'XLM', 'FTM',
+    'ETC', 'ICP', 'INJ', 'SUI', 'SEI', 'TIA', 'IMX', 'AAVE', 'GRT', 'TAO',
+    'ALGO', 'VET', 'HBAR', 'STX', 'SAND', 'MANA', 'AXS', 'XLM', 'ENA', 'ONDO',
     'RUNE', 'CRV', 'LDO', 'SNX', 'COMP', 'ENS', 'DYDX', 'GMX', 'PEPE', 'SHIB',
-    'WIF', 'BONK', 'FLOKI', 'JUP', 'PYTH', 'TON', 'POL', 'RENDER', 'ZEC', 'XMR'
+    'WIF', 'BONK', 'FLOKI', 'JUP', 'PYTH', 'POL', 'RENDER', 'ZEC', 'WLD', 'FET',
+    'S', 'SKY', 'CAKE', 'TRUMP'
 ];
 const METALS = { PAXG: 'Gold — PAX Gold (1 token = 1 fine troy ounce)',
                  XAUT: 'Gold — Tether Gold (1 token = 1 fine troy ounce)' };
@@ -171,6 +177,9 @@ const ASSET_NAMES = {
     BCH: 'Bitcoin Cash', SHIB: 'Shiba Inu', PEPE: 'Pepe', SUI: 'Sui',
     INJ: 'Injective', TIA: 'Celestia', SEI: 'Sei', RENDER: 'Render',
     ICP: 'Internet Computer', IMX: 'Immutable', AAVE: 'Aave', MKR: 'Maker',
+    TAO: 'Bittensor', ENA: 'Ethena', ONDO: 'Ondo', WLD: 'Worldcoin',
+    FET: 'Artificial Superintelligence', S: 'Sonic', SKY: 'Sky (was Maker)',
+    CAKE: 'PancakeSwap', TRUMP: 'Official Trump',
     GRT: 'The Graph', ALGO: 'Algorand', VET: 'VeChain', HBAR: 'Hedera',
     STX: 'Stacks', SAND: 'The Sandbox', MANA: 'Decentraland', AXS: 'Axie Infinity',
     EOS: 'EOS', XLM: 'Stellar', FTM: 'Fantom', RUNE: 'THORChain', CRV: 'Curve',

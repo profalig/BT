@@ -495,47 +495,11 @@ body {
     box-shadow: 0 0 12px rgba(255, 215, 0, 0.15);
 }
 
-/* HUD Dock Bar & Slots */
-.hud-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.hud-slot {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(8, 20, 38, 0.6);
-    border: 1px solid rgba(210, 213, 219, 0.25);
-    color: #a3c7e6;
-    padding: 6px 12px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.8rem;
-    letter-spacing: 1px;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-}
-
-.hud-slot:hover {
-    background: rgba(210, 213, 219, 0.15);
-    color: #d2d5db;
-    border-color: rgba(210, 213, 219, 0.6);
-    box-shadow: 0 0 15px rgba(210, 213, 219, 0.3);
-}
-
-.hud-slot.credits { color: #ffd700; border-color: rgba(255, 215, 0, 0.35); }
-.hud-slot.logout { color: #ff4d88; border-color: rgba(255, 0, 85, 0.3); }
-.hud-slot.logout:hover { background: #ff0055; color: #fff; }
-
-.status-dot {
-    width: 6px;
-    height: 6px;
-    background-color: #ffb066;
-    border-radius: 50%;
-    box-shadow: 0 0 8px #ffb066;
-}
+/* HUD Dock Bar & Slots — the whole dock is styled in the inline <style> at
+   the top of index.html, where it sits with the theme switch it depends on.
+   The rules that used to live here gave every slot its own colour AND beat
+   the dock's own rules on specificity (.hud-slot.credits over .hud-slot), so
+   the yellow coins and pink logout survived every attempt to unify them. */
 
 /* ==========================================
    PREMIUM WAVE BACKGROUND

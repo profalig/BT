@@ -1347,9 +1347,6 @@ async function openUserReportsModal() {
                     </div>
                 </div>
             </div>
-            <div style="font-size: 0.8em; color: #888; text-align: left; margin-bottom: 10px; letter-spacing: 1px;">
-                // TRANSMISSION HISTORY LOG (${totalSubmissions} ARCHIVED)
-            </div>
         `;
 
         const profileHtml = profileHeaderHtml + `
@@ -1927,7 +1924,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="hud-slot agent" id="nav-agent-btn">
                                 <div class="hud-icon-box">
                                     <span class="status-dot"></span>
-                                    ${window.BTUI ? BTUI.avatar(session.user.id, displayName, session.user.email, 22)
+                                    ${window.BTUI ? BTUI.avatar(session.user.id, displayName,
+                                        session.user.email, 24, profile && profile.avatar_url)
                                                   : '<i class="fa-solid fa-user-shield"></i>'}
                                 </div>
                                 <div class="hud-label-box">
