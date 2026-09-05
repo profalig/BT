@@ -504,10 +504,16 @@ async function loadCatalogue() {
         });
     } catch (e) { /* nothing built yet — the rest of the app is unaffected */ }
 
-    const hostedSyms = new Set(hosted.map(h => h.symbol));
-    const fxLeft = fx.filter(r => !hostedSyms.has(r.symbol));
+    /* Only instruments we actually hold minute history for are listed. The
+       ECB daily series is still wired up and still loads — a saved layout
+       pointing at one keeps working — but a pair offering a single price a
+       day should not sit in the same list as one offering candles, looking
+       identical until you pick it. Downloading a pair is what puts it here.
 
-    CATALOGUE = crypto.concat(metal, hosted, fxLeft);
+       `fx` is deliberately unused: MARKETS.fx remains for those saved
+       layouts, and the moment tools/btdata.py builds a pair it appears
+       through `hosted` instead. */
+    CATALOGUE = crypto.concat(metal, hosted);
     return CATALOGUE;
 }
 
@@ -3641,8 +3647,7 @@ function renderInstList() {
                    '" title="' + (fav ? 'Remove from favourites' : 'Add to favourites') + '">' +
                    '<i class="fa-' + (fav ? 'solid' : 'regular') + ' fa-star"></i></button>' +
                  '<span class="rp-inst-id"><b>' + x.symbol +
-                   (x.res ? '<i class="rp-inst-res' + (x.res === '1m' ? ' fine' : '') + '">' +
-                            x.res + '</i>' : '') +
+                   (x.res === '1m' ? '<i class="rp-inst-res fine">1m</i>' : '') +
                    '</b><span>' + x.name + '</span></span>' +
                  '<span class="rp-inst-px">' + (isFinite(x.px)
                      ? fmt(x.px, x.px < 1 ? 5 : x.px < 10 ? 5 : x.px < 1000 ? 3 : 2) : '—') + '</span>' +
