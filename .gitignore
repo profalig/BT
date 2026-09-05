@@ -38,6 +38,8 @@ _source/
 # seek-latency test encodes
 _q/
 
-# Built market history — large, regenerable with tools/btdata.py, and hosted
-# outside the repo. See the header of that script.
-/data/
+# Built market history from tools/btdata.py. TRACKED ON PURPOSE: the replay
+# terminal fetches these files from this same origin, so they have to ship
+# with the deploy. They were ignored here at first, back when the plan was an
+# external bucket, and that alone is why the data never reached the site.
+# If it ever outgrows the repo it moves to a bucket and this comes back.

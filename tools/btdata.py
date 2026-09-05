@@ -180,6 +180,12 @@ def fetch(path, tries=4):
                 if e.code == 404:
                     return None
                 last = f"HTTP {e.code}"
+                # 503 and 429 mean "not now", not "never". The server is being
+                # asked for too much at once, and hammering it harder is the
+                # one response guaranteed not to work — so back off properly
+                # rather than burning the retries in four seconds.
+                if e.code in (429, 503, 502, 504):
+                    time.sleep(min(30, 4 * (attempt + 1) ** 2))
             except Exception as e:
                 last = type(e).__name__
         time.sleep(1.2 * (attempt + 1))
@@ -255,7 +261,24 @@ def month_days(year, month):
         d += dt.timedelta(days=1)
 
 
-def write_month(out_dir, symbol, year, month, bars):
+def month_is_complete(path):
+    """Whether a month already on disk was built without losing a day.
+
+    A day can fail — the feed answers 503 when it is being asked for too much
+    at once. The first version wrote the month anyway and then skipped it on
+    every later run because the file existed, so the hole became permanent and
+    silent. Now the gap is recorded inside the file and the month is rebuilt
+    next time, which makes re-running the command the repair procedure.
+    """
+    try:
+        with gzip.open(path, "rb") as f:
+            doc = json.loads(f.read().decode("utf-8"))
+        return not doc.get("gaps")
+    except Exception:
+        return False        # unreadable is not complete
+
+
+def write_month(out_dir, symbol, year, month, bars, gaps=()):
     """One month, as parallel integer arrays.
 
     Columns rather than rows, and every price as an integer at the feed's own
@@ -292,6 +315,9 @@ def write_month(out_dir, symbol, year, month, bars):
         "t0": t0,
         "enc": "d1",              # the reader refuses anything it cannot decode
         "n": len(bars),
+        # Days the feed would not give up. Their presence makes this month
+        # incomplete, and the next run rebuilds it instead of skipping it.
+        "gaps": [str(d) for d in gaps],
         "t": tt, "o": oo, "h": hh, "l": ll, "c": cc, "v": vv,
     }
     folder = os.path.join(out_dir, symbol)
@@ -315,10 +341,14 @@ def update_manifest(out_dir):
         if not months:
             continue
         name, scale, _start, kind = SYMBOLS[symbol]
+        holed = [ym for ym in months
+                 if not month_is_complete(os.path.join(folder, ym + ".json.gz"))]
         man["symbols"][symbol] = {
             "name": name, "kind": kind, "scale": scale,
             "from": months[0], "to": months[-1], "months": months,
         }
+        if holed:
+            man["symbols"][symbol]["incomplete"] = holed
     with open(os.path.join(out_dir, "manifest.json"), "w", encoding="utf-8") as f:
         json.dump(man, f, indent=1)
     return man
@@ -396,8 +426,10 @@ def main():
     ap.add_argument("--verify", nargs="+", metavar=("SYMBOL", "DATE"),
                     help="cross-check candles against ticks, e.g. --verify EURUSD 2024-01-02")
     ap.add_argument("--force", action="store_true", help="rebuild months already on disk")
-    ap.add_argument("--jobs", type=int, default=8,
-                    help="days to download at once (default 8; the feed is fine with it)")
+    ap.add_argument("--jobs", type=int, default=4,
+                    help="days to download at once (default 4). The feed answers "
+                         "503 when pushed: 16 at once produced a wall of them, and "
+                         "two builders running together produced far more.")
     a = ap.parse_args()
 
     if a.list:
@@ -445,7 +477,7 @@ def main():
         print(f"\n=== {symbol} — {name} ===")
         while (y, m) <= (to_y, to_m):
             path = os.path.join(a.out, symbol, f"{y:04d}-{m:02d}.json.gz")
-            if os.path.exists(path) and not a.force:
+            if os.path.exists(path) and not a.force and month_is_complete(path):
                 print(f"  {y}-{m:02d}  already built")
             else:
                 # Days are fetched in parallel. Each one is a small file and
@@ -454,7 +486,7 @@ def main():
                 # working — the difference between about thirty hours for ten
                 # years and about four.
                 days = [d for d in month_days(y, m) if d <= today]
-                results, missing = {}, 0
+                results, failed = {}, []
                 with cf.ThreadPoolExecutor(max_workers=a.jobs) as pool:
                     futures = {pool.submit(day_bars, symbol, d, scale): d for d in days}
                     for fut in cf.as_completed(futures):
@@ -462,22 +494,24 @@ def main():
                         try:
                             results[d] = fut.result()
                         except RuntimeError as e:
-                            missing += 1
+                            failed.append(d)
                             print(f"    ! {d}: {e}")
+                missing = len(failed)
                 # Back into order: as_completed hands them back in whatever
                 # sequence they finished, and a chart of shuffled days is not
                 # a chart.
                 bars = []
                 for d in days:
                     bars.extend(results.get(d, []))
-                res = write_month(a.out, symbol, y, m, bars)
+                res = write_month(a.out, symbol, y, m, bars, sorted(failed))
                 if res:
                     _p, raw_n, gz_n = res
                     grand_files += 1
                     grand_bytes += gz_n
                     print(f"  {y}-{m:02d}  {len(bars):>6} bars  "
                           f"{raw_n // 1024:>4}KB -> {gz_n // 1024:>3}KB gzipped"
-                          + (f"  ({missing} days failed)" if missing else ""))
+                          + (f"  ({missing} day(s) missing — run again to repair)"
+                             if missing else ""))
                 else:
                     print(f"  {y}-{m:02d}  nothing (market shut all month, or no history)")
             m += 1
