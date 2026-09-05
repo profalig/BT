@@ -1099,6 +1099,14 @@ async function fetchOrCreateUserProfile(user) {
     }
 }
 
+/* The profile lives inside the tactical modal, so anything it opens has to
+   get that out of the way first or it lands behind it. */
+function closeTacticalThen(fn) {
+    const ov = document.getElementById('tactical-modal-overlay');
+    if (ov) ov.classList.remove('active');
+    setTimeout(fn, 220);
+}
+
 // AGENT PROFILE & REPORTS MODAL
 async function openUserReportsModal() {
     if (!supabaseClient) {
@@ -1139,37 +1147,67 @@ async function openUserReportsModal() {
         }).length;
         const pendingCount = totalSubmissions - completedCount;
 
+        /* The profile panel answers the three questions someone opens it for:
+           who am I signed in as, what am I on, and how much of it is left.
+           Before this it showed a credit count and an email and nothing else —
+           you could not tell from your own account page which plan you were
+           paying for. */
+        const access = window.BTAccess ? await BTAccess.get(true) : null;
+        const av = window.BTUI
+            ? BTUI.avatar(activeUserId, session.user.user_metadata?.display_name, userEmail, 52)
+            : '<i class="fa-solid fa-id-badge"></i>';
+
+        const planName = (access && access.planLabel) || 'Free account';
+        const planTone = (access && access.plan) ? '#ffd700' : '#8c9099';
+        const since = userProfile && userProfile.created_at
+            ? new Date(userProfile.created_at).toLocaleDateString(undefined,
+                { year: 'numeric', month: 'short' })
+            : null;
+        const renews = userProfile && userProfile.plan_expires_at
+            ? new Date(userProfile.plan_expires_at).toLocaleDateString(undefined,
+                { year: 'numeric', month: 'short', day: 'numeric' })
+            : null;
+
+        const detail = [];
+        if (since)  detail.push(`<span><i class="fa-solid fa-calendar-day"></i> Member since ${since}</span>`);
+        if (renews) detail.push(`<span><i class="fa-solid fa-rotate"></i> Renews ${renews}</span>`);
+        detail.push(`<span><i class="fa-solid fa-envelope"></i> ${userEmail}</span>`);
+
         const profileHeaderHtml = `
-            <div style="background: rgba(210, 213, 219, 0.05); border: 1px solid rgba(210, 213, 219, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-                <div class="prof-head" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 10px; margin-bottom: 12px;">
-                    <div>
-                        <div style="font-size: 0.75em; color: #888; letter-spacing: 1px;">// CLEARANCE LEVEL: AGENT</div>
-                        <div style="font-size: 1.3em; font-weight: bold; color: #e4e6ea; letter-spacing: 1px;">
-                            <i class="fa-solid fa-id-badge"></i> ${callsign}
-                        </div>
+            <div class="prof-card">
+                <div class="prof-head">
+                    <div class="prof-id">
+                        <span class="prof-av">${av}</span>
+                        <span class="prof-idtext">
+                            <span class="prof-name">${callsign}</span>
+                            <span class="prof-plan" style="color:${planTone}; border-color:${planTone}44; background:${planTone}14;">
+                                ${(access && access.plan) ? '<i class="fa-solid fa-gem"></i>' : '<i class="fa-solid fa-user"></i>'} ${planName}
+                            </span>
+                        </span>
                     </div>
-                    <div class="prof-contact" style="text-align: right; font-size: 0.85em; color: #aaa;">
-                        <div class="prof-email"><i class="fa-solid fa-envelope"></i> ${userEmail}</div>
-                        <div style="color: #ffb066; margin-top: 2px;">● COMM-LINK ACTIVE</div>
-                    </div>
+                    <button type="button" class="prof-manage" onclick="closeTacticalThen(openSubscriptionModal)">
+                        ${(access && access.plan) ? 'CHANGE PLAN' : 'SEE THE PLANS'} <i class="fa-solid fa-chevron-right"></i>
+                    </button>
                 </div>
 
-                <div class="prof-stats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center;">
-                    <div style="background: rgba(255, 215, 0, 0.1); padding: 8px; border-radius: 4px; border: 1px solid rgba(255, 215, 0, 0.3);">
-                        <div class="prof-stat-label" style="font-size: 0.7em; color: #ffd700;">${btState.unlimited ? 'BACKTESTS' : 'FREE RUNS'}</div>
-                        <div style="font-size: 1.2em; font-weight: bold; color: #ffd700;">${btState.value}</div>
+                <div class="prof-detail">${detail.join('')}</div>
+
+                <div class="prof-stats">
+                    <div class="prof-stat accent">
+                        <div class="prof-stat-label">${btState.unlimited ? 'BACKTESTS' : 'FREE RUNS'}</div>
+                        <div class="prof-stat-value">${btState.value}</div>
                     </div>
-                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
-                        <div class="prof-stat-label" style="font-size: 0.7em; color: #888;">TOTAL RUNS</div>
-                        <div style="font-size: 1.2em; font-weight: bold; color: #ffffff;">${totalSubmissions}</div>
+                    <div class="prof-stat">
+                        <div class="prof-stat-label">TOTAL RUNS</div>
+                        <div class="prof-stat-value">${totalSubmissions}</div>
                     </div>
-                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(255, 176, 102, 0.15);">
-                        <div class="prof-stat-label" style="font-size: 0.7em; color: #888;">COMPLETED</div>
-                        <div style="font-size: 1.2em; font-weight: bold; color: #ffb066;">${completedCount}</div>
+                    <div class="prof-stat">
+                        <div class="prof-stat-label">COMPLETED</div>
+                        <div class="prof-stat-value" style="color:#ffb066;">${completedCount}</div>
                     </div>
-                    <div style="background: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 4px; border: 1px solid rgba(210, 213, 219, 0.15);">
-                        <div class="prof-stat-label" style="font-size: 0.7em; color: #888;">IN QUEUE</div>
-                        <div style="font-size: 1.2em; font-weight: bold; color: #d2d5db;">${pendingCount}</div>
+                    <div class="prof-stat">
+                        <div class="prof-stat-label">IN QUEUE</div>
+                        <div class="prof-stat-value" style="color:#d2d5db;">${pendingCount}</div>
                     </div>
                 </div>
             </div>
@@ -1664,7 +1702,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="hud-slot agent" id="nav-agent-btn">
                                 <div class="hud-icon-box">
                                     <span class="status-dot"></span>
-                                    <i class="fa-solid fa-user-shield"></i>
+                                    ${window.BTUI ? BTUI.avatar(session.user.id, displayName, session.user.email, 22)
+                                                  : '<i class="fa-solid fa-user-shield"></i>'}
                                 </div>
                                 <div class="hud-label-box">
                                     <span id="nav-user-label">AGENT: ${displayName.toUpperCase()}</span>

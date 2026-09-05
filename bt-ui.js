@@ -261,7 +261,59 @@ if (document.readyState === 'loading')
     document.addEventListener('DOMContentLoaded', observe);
 else observe();
 
+// =================================================================== avatar
+
+/* Every account gets a picture from the moment it exists, without anyone
+   uploading anything: the colours are derived from the user's own id, so the
+   same person is always the same avatar on every device, and two different
+   people are almost never the same one. Drawn as an inline SVG — no request,
+   no storage bucket, nothing to go missing.
+
+   Uploaded photos can come later and slot into the same place; this is the
+   default that means nobody ever sees an empty grey circle. */
+const AV_COLOURS = [
+    ['#f7a600', '#ff7a18'], ['#20b26c', '#0e8f7f'], ['#5aa9f0', '#3d6ef0'],
+    ['#c58af0', '#8b5cf0'], ['#00c2c2', '#0891b2'], ['#ff7ac6', '#e0468f'],
+    ['#ff9f43', '#f2622e'], ['#8c9099', '#5b6472']
+];
+
+function hashOf(str) {
+    let h = 0;
+    for (let i = 0; i < String(str).length; i++)
+        h = (h * 31 + String(str).charCodeAt(i)) | 0;
+    return Math.abs(h);
+}
+
+function initialsOf(name, email) {
+    const src = String(name || '').trim() || String(email || '').split('@')[0] || '?';
+    const words = src.replace(/[._-]+/g, ' ').split(/\s+/).filter(Boolean);
+    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+    return src.slice(0, 2).toUpperCase();
+}
+
+/* Returns SVG markup, ready to drop into innerHTML. `seed` should be the
+   stable user id so the avatar never changes when someone edits their name. */
+function avatar(seed, name, email, size) {
+    const px = size || 34;
+    const pair = AV_COLOURS[hashOf(seed || email || 'x') % AV_COLOURS.length];
+    const id = 'av' + hashOf(String(seed) + px);
+    const txt = initialsOf(name, email);
+    return '<svg class="bt-avatar" width="' + px + '" height="' + px + '" viewBox="0 0 40 40" ' +
+        'role="img" aria-label="' + txt + '">' +
+        '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="1" y2="1">' +
+          '<stop offset="0" stop-color="' + pair[0] + '"/>' +
+          '<stop offset="1" stop-color="' + pair[1] + '"/></linearGradient></defs>' +
+        '<circle cx="20" cy="20" r="19" fill="url(#' + id + ')"/>' +
+        '<circle cx="20" cy="20" r="19" fill="none" stroke="rgba(255,255,255,.28)"/>' +
+        '<text x="20" y="20" text-anchor="middle" dominant-baseline="central" ' +
+          'font-family="Inter, system-ui, sans-serif" font-size="15.5" font-weight="700" ' +
+          'fill="#fff" fill-opacity=".95" letter-spacing=".4">' + txt + '</text>' +
+    '</svg>';
+}
+
 return {
+    avatar: avatar,
+    initials: initialsOf,
     presets: () => PRESETS.slice(),
     recent:  () => recent.slice(),
     swatches: swatches,

@@ -3252,3 +3252,82 @@ body.in-space .billing-toggle .bt-opt.active {
 /* The tier button says an exact amount and must never wrap it onto a second
    line — a price broken across two rows reads as two prices. */
 .tier-actions .tier-btn { white-space: nowrap; }
+
+
+/* =====================================================================
+   ACCOUNT PANEL — who you are, what you are on, what is left of it
+   ===================================================================== */
+.bt-avatar { display: block; border-radius: 50%; flex: 0 0 auto; }
+
+.prof-card {
+    background: rgba(210, 213, 219, 0.04);
+    border: 1px solid rgba(210, 213, 219, 0.18);
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 20px;
+}
+.prof-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    padding-bottom: 14px; margin-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.prof-id { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.prof-av { flex: 0 0 auto; line-height: 0; }
+.prof-idtext { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.prof-name {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.15rem; font-weight: 700; letter-spacing: 1px; color: #e4e6ea;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.prof-plan {
+    display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
+    padding: 3px 10px; border-radius: 20px;
+    border: 1px solid transparent;
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.4px;
+}
+.prof-manage {
+    flex: 0 0 auto;
+    background: none; border: 1px solid rgba(255, 176, 102, 0.35);
+    color: #ffb066; border-radius: 5px; cursor: pointer;
+    padding: 8px 13px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.68rem; letter-spacing: 1.4px;
+    transition: all 0.25s ease;
+}
+.prof-manage:hover { background: rgba(255, 176, 102, 0.12); color: #fff; }
+
+.prof-detail {
+    display: flex; flex-wrap: wrap; gap: 6px 20px;
+    margin-bottom: 14px;
+    font-size: 0.78rem; color: rgba(255, 255, 255, 0.45);
+}
+.prof-detail span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.prof-detail i { color: rgba(255, 176, 102, 0.6); }
+
+.prof-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.prof-stat {
+    padding: 9px 10px; border-radius: 6px; text-align: center;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.prof-stat.accent {
+    background: rgba(255, 215, 0, 0.09);
+    border-color: rgba(255, 215, 0, 0.28);
+}
+.prof-stat-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem; letter-spacing: 1.2px;
+    color: rgba(255, 255, 255, 0.4); margin-bottom: 3px;
+}
+.prof-stat.accent .prof-stat-label { color: #ffd700; }
+.prof-stat-value { font-size: 1.25rem; font-weight: 700; color: #fff; line-height: 1.1; }
+.prof-stat.accent .prof-stat-value { color: #ffd700; }
+
+/* The HUD badge holds a 22px avatar where an icon used to sit. */
+.hud-slot.agent .hud-icon-box .bt-avatar { margin: 0 auto; }
+
+@media (max-width: 700px), (orientation: portrait) {
+    .prof-head { flex-direction: column; align-items: flex-start; }
+    .prof-manage { width: 100%; }
+    .prof-stats { grid-template-columns: repeat(2, 1fr); }
+}
