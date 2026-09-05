@@ -3,7 +3,13 @@
 <head>
     <base href="/">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- viewport-fit=cover so the page reaches under a notch and a home
+         indicator; the safe-area insets below put the content back inside.
+         user-scalable=no because this is an application: a double-tap that
+         zooms the whole interface while you are trying to place a trade is
+         not a feature. The chart has its own pinch zoom. -->
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>BarTest — Replay Terminal</title>
 
     <link rel="stylesheet" href="replay.css">
@@ -157,7 +163,7 @@
 <main id="rp-main">
 
     <!-- tool rail is built by replay-tools.js -->
-    <nav id="rp-rail" aria-label="Drawing tools"></nav>
+    <nav id="rp-rail" aria-label="Drawing tools" data-sheet-title="Drawing tools"></nav>
 
     <section id="rp-center">
 
@@ -262,7 +268,7 @@
 
         <!-- ==============================================  bottom dock  == -->
         <div id="rp-dock-grip" class="rp-dock-grip" title="Drag to resize"></div>
-        <section id="rp-dock" class="rp-dock">
+        <section id="rp-dock" class="rp-dock" data-sheet-title="Positions &amp; results">
             <nav class="rp-tabs" id="rp-tabs">
                 <button class="rp-tab active" data-tab="pos">Positions <b id="tabn-pos" hidden>0</b></button>
                 <button class="rp-tab" data-tab="ord">Open orders <b id="tabn-ord" hidden>0</b></button>
@@ -375,7 +381,7 @@
     </section>
 
     <!-- ==================================================  order panel  == -->
-    <aside id="rp-trade">
+    <aside id="rp-trade" data-sheet-title="Order ticket">
         <div class="rp-tr-top">
             <select id="rp-margin" class="rp-sel" title="Margin mode">
                 <option value="cross">Cross</option>
@@ -467,6 +473,58 @@
         </div>
     </aside>
 </main>
+
+<!-- =========================================  phone navigation  ==========
+     A phone cannot show a tool rail, a chart, a right-hand order ticket and
+     a results dock at once, so on a narrow screen each of those becomes a
+     sheet that slides up over the chart and this is how you reach them.
+
+     Nothing here is a second copy of the interface. The sheets ARE the
+     desktop panels, moved by CSS rather than rebuilt, and the buttons under
+     "More" forward their click to the real control in the top bar — so the
+     wiring, the state and the plan gate are all the ones already there. -->
+
+<div id="rp-scrim" class="rp-scrim" hidden></div>
+
+<nav id="rp-tabbar" class="rp-tabbar" aria-label="Sections">
+    <button type="button" data-sheet="" class="active">
+        <i class="fa-solid fa-chart-simple"></i><span>Chart</span>
+    </button>
+    <button type="button" data-sheet="draw">
+        <i class="fa-solid fa-pen-ruler"></i><span>Draw</span>
+    </button>
+    <button type="button" data-sheet="trade">
+        <i class="fa-solid fa-right-left"></i><span>Trade</span>
+    </button>
+    <button type="button" data-sheet="book">
+        <i class="fa-solid fa-table-list"></i><span>Book</span>
+        <b id="rp-tab-n" hidden>0</b>
+    </button>
+    <button type="button" data-sheet="more">
+        <i class="fa-solid fa-ellipsis"></i><span>More</span>
+    </button>
+</nav>
+
+<div id="rp-more" class="rp-sheet" data-sheet-title="More" hidden>
+    <div class="rp-more-grid">
+        <button type="button" data-proxy="rp-ind-open">
+            <i class="fa-solid fa-chart-line"></i><span>Indicators</span></button>
+        <button type="button" data-proxy="rp-replay-open">
+            <i class="fa-solid fa-clock-rotate-left"></i><span>Replay</span></button>
+        <button type="button" data-proxy="rp-layout-open">
+            <i class="fa-regular fa-floppy-disk"></i><span>Layouts</span></button>
+        <button type="button" data-proxy="rp-sessions">
+            <i class="fa-regular fa-bookmark"></i><span>Save / load</span></button>
+        <button type="button" data-proxy="rp-export">
+            <i class="fa-solid fa-file-export"></i><span>Export</span></button>
+        <button type="button" data-proxy="rp-reset-acct">
+            <i class="fa-solid fa-rotate-left"></i><span>Reset account</span></button>
+        <button type="button" data-proxy="rp-help-open">
+            <i class="fa-regular fa-circle-question"></i><span>Guide</span></button>
+        <button type="button" data-proxy="rp-settings-open">
+            <i class="fa-solid fa-sliders"></i><span>Settings</span></button>
+    </div>
+</div>
 
 <!-- ==================================================  chart settings  == -->
 <div id="rp-set" class="rp-modal" hidden>

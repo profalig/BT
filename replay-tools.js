@@ -236,6 +236,7 @@ function attach(_chart, _series, _host, opts) {
     host.addEventListener('mousemove', onHover);
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+    bridgeTouch();
     window.addEventListener('mousemove', onCfgMove);
     window.addEventListener('mouseup', onCfgUp);
     document.addEventListener('keydown', onKey);
@@ -244,6 +245,105 @@ function attach(_chart, _series, _host, opts) {
     buildHud();
     requestAnimationFrame(watchPriceScale);
     return api;
+}
+
+/* ------------------------------------------------------------  touch  ---
+
+   This engine speaks mouse, and a phone speaks touch. A browser does
+   synthesise mouse events from a touch — but only after the finger has
+   lifted, and never during a drag, so without a bridge every tool here works
+   as far as putting one point down and no further.
+
+   The question that matters is who the touch belongs to. A chart is panned
+   and pinched with a finger and that must keep working, so the rule is the
+   same one a trader already has in their head: with a cursor in hand the
+   chart takes the touch, unless the finger landed on a drawing — in which
+   case they are plainly reaching for the drawing. With a tool armed, or a
+   multi-click shape half built, the touch is ours outright. Two fingers are
+   always the chart's, because two fingers mean zoom. */
+
+function touchIsOurs(e) {
+    if (!e.touches || e.touches.length !== 1) return false;
+    if (fromUI(e)) return false;
+    if (pending) return true;               // a shape half built
+    if (tool === 'eraser') return true;
+    if (!NAV[tool]) return true;            // a drawing tool in hand
+    const p = toChart(e.touches[0]);
+    return !!(p && hitTest(p.x, p.y));      // reaching for an existing shape
+}
+
+function relay(target, type, touch) {
+    target.dispatchEvent(new MouseEvent(type, {
+        bubbles: true, cancelable: true, view: window,
+        clientX: touch.clientX, clientY: touch.clientY,
+        button: 0, buttons: type === 'mouseup' ? 0 : 1
+    }));
+}
+
+function bridgeTouch() {
+    let holding = false;
+
+    /* Capture, and stopped there. The chart library has its own touch
+       handlers on the canvas inside this element, and by the time a bubbling
+       listener could preventDefault the pan has already begun — the line
+       would be drawn on a chart sliding out from under it. Taking the event
+       on the way down means the chart never sees the ones that are ours. */
+    host.addEventListener('touchstart', e => {
+        if (!touchIsOurs(e)) return;
+        holding = true;
+        e.preventDefault();
+        e.stopPropagation();
+        relay(e.target, 'mousedown', e.touches[0]);
+    }, { passive: false, capture: true });
+
+    host.addEventListener('touchmove', e => {
+        if (!holding) return;
+        e.preventDefault();
+        e.stopPropagation();
+        relay(window, 'mousemove', e.touches[0]);
+    }, { passive: false, capture: true });
+
+    const lift = e => {
+        if (!holding) return;
+        holding = false;
+        e.stopPropagation();
+        const p = e.changedTouches && e.changedTouches[0];
+        if (p) relay(window, 'mouseup', p);
+    };
+    host.addEventListener('touchend', lift, true);
+    host.addEventListener('touchcancel', lift, true);
+
+    /* Tapping a drawing has to select it, and a tap that never moved sends
+       mousedown and mouseup at the same point — which the engine reads as a
+       click, exactly as a mouse would. Nothing more is needed for that.
+       What IS needed is the long press: a phone has no right button, so
+       holding a drawing opens the same menu right-clicking it does. */
+    let pressT = null, pressAt = null;
+    host.addEventListener('touchstart', e => {
+        if (!e.touches || e.touches.length !== 1) return;
+        const p = e.touches[0];
+        pressAt = { x: p.clientX, y: p.clientY };
+        clearTimeout(pressT);
+        pressT = setTimeout(() => {
+            pressT = null;
+            const c = toChart(pressAt);
+            if (!c || !hitTest(c.x, c.y)) return;
+            relay(e.target, 'contextmenu', pressAt);
+        }, 520);
+    }, { passive: true });
+
+    const dropPress = () => { clearTimeout(pressT); pressT = null; };
+    host.addEventListener('touchmove', e => {
+        if (!pressT || !pressAt) return;
+        const p = e.touches && e.touches[0];
+        // A finger that wandered was a drag. A finger that trembled was not:
+        // nobody holds a phone still to the pixel, and cancelling on the
+        // first stray one would mean the press never fires.
+        if (p && (Math.abs(p.clientX - pressAt.x) > 9 ||
+                  Math.abs(p.clientY - pressAt.y) > 9)) dropPress();
+    }, { passive: true });
+    host.addEventListener('touchend', dropPress, { passive: true });
+    host.addEventListener('touchcancel', dropPress, { passive: true });
 }
 
 function resize() {
@@ -1446,8 +1546,18 @@ function buildRail() {
         btn.addEventListener('click', e => {
             // A click in the caret corner opens the menu; anywhere else picks
             // the tool that is already showing — the TradingView behaviour.
+            //
+            // Except that on a phone the rail is a sheet and the button is a
+            // whole row rather than a forty-pixel square, so the corner
+            // becomes the right-hand end of the row. A twelve-pixel target is
+            // not something a finger can hit, and measuring the button rather
+            // than the viewport keeps this a fact about the layout.
             const r = btn.getBoundingClientRect();
-            if (g.tools.length > 1 && e.clientX > r.right - 12 && e.clientY > r.bottom - 12) {
+            const wide = r.width > 90;
+            const onCaret = wide
+                ? e.clientX > r.right - 54
+                : (e.clientX > r.right - 12 && e.clientY > r.bottom - 12);
+            if (g.tools.length > 1 && onCaret) {
                 if (openFly === el) closeFly(); else flyout(g, el);
             } else {
                 closeFly();
@@ -1506,8 +1616,15 @@ function flyout(g, el) {
             '" data-fav="' + t + '" title="Pin to the right-click menu">&#9733;</button>' +
         '</div>').join('');
     document.body.appendChild(box);
+    /* Beside the rail where there is room beside the rail, and over it where
+       there is not — on a phone the rail is the full width of the screen, so
+       the old placement put the menu just past the right edge. */
     const r = el.getBoundingClientRect();
-    box.style.left = (r.right + 6) + 'px';
+    let left = r.right + 6;
+    if (left + box.offsetWidth > window.innerWidth - 8) {
+        left = Math.max(8, window.innerWidth - box.offsetWidth - 8);
+    }
+    box.style.left = left + 'px';
     box.style.top = Math.max(8, Math.min(window.innerHeight - box.offsetHeight - 8, r.top - 4)) + 'px';
     box.querySelectorAll('[data-fav]').forEach(b =>
         b.addEventListener('click', e => {

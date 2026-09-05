@@ -989,7 +989,10 @@ body.dock-collapsed .rp-tab-icon i { transform: rotate(180deg); }
 @media (max-width: 1080px) {
     .rp-tk-stats > div:nth-child(n+3):not(.rp-tk-replay) { display: none; }
 }
-@media (max-width: 900px) {
+/* Tablets only. A phone — narrow, or short because it is on its side — gets
+   a different layout entirely, at the foot of this file, and the two must
+   not both apply. */
+@media (max-width: 900px) and (min-width: 761px) and (min-height: 501px) {
     html, body { overflow: auto; }
     body { display: block; }
     #rp-main { grid-template-columns: 1fr; }
@@ -1600,3 +1603,415 @@ body.rp-locked .rp-locked-ctl::after {
 .rp-val b { font-weight: 600; }
 .rp-val i { font-style: normal; color: var(--text-3); font-size: .68rem; }
 .rp-pane-head .rp-leg-btns { margin-left: 2px; }
+
+
+/* ==========================================================================
+   THE PHONE
+
+   Not a narrower desktop. A desktop chart has a tool rail down the left, an
+   order ticket down the right and a results dock along the bottom, and on a
+   375-pixel screen there is room for exactly one of those and the chart.
+
+   So the chart keeps the screen and everything else becomes a sheet that
+   slides up over it, reached from a bar along the bottom where a thumb
+   already is. The sheets are the SAME panels — moved by CSS, not rebuilt —
+   so every control keeps the wiring, the state and the plan gate it has on
+   a desktop, and there is no second interface to keep in step with the
+   first.
+   ========================================================================== */
+
+@media (max-width: 760px), (max-height: 500px) and (max-width: 1024px) {
+
+    /* An application, not a document: the page itself never scrolls, and
+       each panel scrolls inside its own bounds. dvh rather than vh because
+       a phone browser's address bar changes the height of vh as you scroll
+       and the chart would resize under your finger. */
+    html, body {
+        overflow: hidden;
+        height: 100dvh;
+        font-size: 15px;          /* a phone is held closer, but read worse */
+    }
+    body { display: flex; flex-direction: column; }
+
+    /* ------------------------------------------------------------  chrome */
+
+    #rp-top {
+        gap: 9px;
+        padding: 8px 10px;
+        padding-top: calc(8px + env(safe-area-inset-top));
+        flex-wrap: nowrap;
+    }
+    /* Everything that was already earning its place by being wide goes. */
+    #rp-top .rp-vr,
+    .rp-brandbox,
+    #rp-top .rp-tool-btn,
+    #rp-live { display: none; }
+
+    .rp-back { width: 38px; height: 38px; flex: 0 0 auto; }
+
+    .rp-controls { flex: 1 1 auto; min-width: 0; gap: 8px; flex-wrap: nowrap; }
+    .rp-inst-btn { flex: 1 1 auto; min-width: 0; height: 38px; }
+    .rp-inst-btn b { overflow: hidden; text-overflow: ellipsis; }
+    .rp-field { flex: 0 0 auto; }
+    .rp-field select { min-width: 0; width: 72px; height: 38px; }
+
+    .rp-mode { display: none; }
+    body.is-replay .rp-mode {
+        display: inline-block; flex: 0 0 auto;
+        font-size: .56rem; padding: 3px 6px;
+    }
+
+    /* -----------------------------------------------------------  ticker  */
+
+    /* Two short rows rather than one long one: what the market is doing, and
+       what the account is doing. Both are read constantly while trading and
+       neither survives being pushed off the side of a phone. */
+    .rp-ticker {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 2px 10px;
+        padding: 7px 11px;
+    }
+    .rp-tk-sym { min-width: 0; }
+    .rp-tk-names b { font-size: .93rem; }
+    .rp-tk-names em { font-size: .64rem; }
+    .rp-tk-last { justify-self: end; text-align: right; }
+    .rp-tk-last b { font-size: 1.12rem; }
+    .rp-tk-stats { display: none; }
+
+    .rp-account {
+        grid-column: 1 / -1;
+        margin: 2px 0 0; padding: 6px 0 0;
+        border-left: none; border-top: 1px solid var(--hairline);
+        display: flex; align-items: center; gap: 0;
+    }
+    .rp-acct-item { flex: 1 1 0; min-width: 0; gap: 1px; }
+    .rp-acct-item span { font-size: .58rem; }
+    .rp-acct-item b { font-size: .84rem; }
+    #rp-reset-acct { display: none; }      /* it lives under More instead */
+
+    /* The replay clock is the one statistic a replay session actually reads,
+       so it comes back the moment there is a replay to read it for. */
+    .rp-tk-replay { display: flex !important; }
+    body.is-replay .rp-tk-stats {
+        display: flex; grid-column: 1 / -1; gap: 14px;
+        margin-top: 2px; padding-top: 6px; border-top: 1px solid var(--hairline);
+    }
+    body.is-replay .rp-tk-stats > div:not(.rp-tk-replay) { display: none; }
+
+    /* ------------------------------------------------------------  chart  */
+
+    #rp-main { grid-template-columns: 1fr; }
+    #rp-center { grid-template-rows: auto minmax(120px, 1fr) auto 0 0; }
+
+    /* Room for the bar along the bottom, so the last candle is never under
+       a thumb and the chart's own time axis stays readable. */
+    #rp-main { padding-bottom: calc(58px + env(safe-area-inset-bottom)); }
+
+    #rp-dock-grip { display: none; }
+
+    /* The overlays inside the chart have to clear the bar too, and be able
+       to wrap rather than run off the side. */
+    .rp-hud { max-width: calc(100% - 18px); flex-wrap: wrap; justify-content: center;
+              border-radius: 14px; padding: 7px 11px; top: 8px; }
+    .rp-hud-text { font-size: .8rem; }
+    .rp-cut-label { min-width: 0; }
+    .rp-transport { bottom: 10px; gap: 8px; padding: 6px 11px; flex-wrap: wrap;
+                    max-width: calc(100% - 18px); justify-content: center; }
+    .rp-speed input { width: 66px; }
+    .rp-clock { padding-left: 8px; }
+    .rp-status { max-width: calc(100% - 20px); }
+
+    /* The style bar that appears over a selected drawing is a row of
+       thirty-pixel squares, which is a mouse target rather than a thumb one. */
+    /* Wrapping, because a row of thumb-sized targets is wider than a phone
+       and the placement code can only slide it left, not fold it. */
+    .rp-tb {
+        gap: 3px; padding: 5px 6px;
+        flex-wrap: wrap; justify-content: center;
+        max-width: calc(100vw - 12px);
+    }
+    .rp-tb-sep { display: none; }
+    .rp-tb-b, .rp-tb-sw { min-width: 40px; height: 40px; }
+    .rp-tb-sw i { width: 19px; height: 19px; }
+    .rp-pop { padding: 10px; }
+    .rp-pop button { min-height: 38px; }
+
+    /* A long press on the chart opens a drawing's menu — the phone's
+       stand-in for a right click — so the browser's own text-selection
+       callout must not fire on top of it. */
+    #rp-chart-wrap {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none; user-select: none;
+    }
+
+    /* The legend is a corner of the chart, and on a phone the corner is
+       small. Values still change under the finger; the block just stops
+       taking a third of the screen to do it. */
+    .rp-legend-wrap { max-width: 74%; }
+    .rp-ohlc { font-size: .68rem; }
+    .rp-legend { font-size: .72rem; }
+
+    /* -----------------------------------------------------------  sheets  */
+
+    #rp-rail, #rp-trade, #rp-dock, .rp-sheet {
+        position: fixed;
+        left: 0; right: 0;
+        bottom: calc(58px + env(safe-area-inset-bottom));
+        z-index: 60;
+        max-height: min(78dvh, 620px);
+        display: flex; flex-direction: column;
+        background: var(--bg-1);
+        border: 1px solid var(--hairline);
+        border-bottom: none;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -18px 50px rgba(0,0,0,.6);
+        transform: translateY(calc(100% + 60px));
+        /* visibility is transitioned as well as transform, so a closing sheet
+           stays on screen for the whole slide rather than vanishing on the
+           first frame of it. It is what keeps the sheet from eating taps
+           meant for the chart once it is away. */
+        transition: transform .26s cubic-bezier(.32,.72,0,1), visibility .26s;
+        overflow: hidden;
+        /* Kept in the layer even when closed, so opening one does not have
+           to build it: a sheet that reflows on the way up judders. */
+        visibility: hidden;
+    }
+    #rp-rail.rp-open, #rp-trade.rp-open, #rp-dock.rp-open, .rp-sheet.rp-open {
+        transform: none;
+        visibility: visible;
+    }
+    /* [hidden] is global and absolute here; the sheets manage themselves. */
+    #rp-more[hidden] { display: flex !important; }
+
+    /* One header for all of them, from the panel's own title attribute —
+       so there is no header markup to keep in step with the panel. The pill
+       above the words is the handle every phone sheet has. */
+    #rp-rail::before, #rp-trade::before, #rp-dock::before, .rp-sheet::before {
+        content: attr(data-sheet-title);
+        flex: 0 0 auto;
+        padding: 17px 16px 11px;
+        font-size: .69rem; font-weight: 700; letter-spacing: 1.4px;
+        text-transform: uppercase; color: var(--text-3);
+        border-bottom: 1px solid var(--hairline);
+        background:
+            linear-gradient(var(--hair-2), var(--hair-2)) center 7px / 40px 4px no-repeat;
+    }
+
+    #rp-trade, #rp-dock { overflow-y: hidden; }
+    /* Buy and Sell stay on the glass. Scrolling a sheet to find the button
+       you opened it to press is the sort of thing that loses a fill. */
+    #rp-trade .rp-tr-actions {
+        position: sticky; bottom: 0; z-index: 2;
+        padding: 9px 0 4px; margin-bottom: -4px;
+        background: var(--bg-1);
+        box-shadow: 0 -12px 16px -10px rgba(0,0,0,.85);
+    }
+    #rp-trade .rp-tr-body,
+    #rp-dock .rp-dock-body { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    #rp-dock { height: min(78dvh, 620px); }
+    body.dock-collapsed .rp-dock { height: min(78dvh, 620px); }
+
+    /* The drawing tools become a list with names on it. A column of
+       forty-pixel icons is a memory test on a desktop and unusable on a
+       phone; the button already carries the tool's name in its title, so
+       the label costs nothing to keep true. */
+    #rp-rail {
+        flex-direction: column; align-items: stretch;
+        border-right: none;
+        padding: 0 0 10px;
+        overflow-y: auto; -webkit-overflow-scrolling: touch;
+    }
+    #rp-rail .rp-tgroup { width: 100%; flex: 0 0 auto; }
+    #rp-rail .rp-rail-btn {
+        width: 100%; height: 54px;
+        display: flex; align-items: center; gap: 15px;
+        padding: 0 16px;
+        border-radius: 0; border-left: none; border-right: none;
+    }
+    #rp-rail .rp-rail-btn::after {
+        content: attr(title);
+        min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        font-size: .92rem; font-weight: 500; color: var(--text-1);
+    }
+    #rp-rail .rp-rail-btn.util::after { color: var(--text-2); }
+    #rp-rail .rp-rail-btn.danger::after { color: var(--neg); }
+    #rp-rail .rp-rail-btn.active::after,
+    #rp-rail .rp-rail-btn.on::after { color: var(--accent); }
+    /* The caret sits at the end of the row it belongs to, and the tap zone
+       around it is the width of a thumb — see the rail in replay-tools.js. */
+    #rp-rail .rp-caret {
+        right: 22px; bottom: 50%; transform: translateY(50%) rotate(-45deg);
+        border-left-width: 5px; border-bottom-width: 5px;
+    }
+    .rp-rail-sep { width: 100%; margin: 6px 0; }
+
+    /* A menu of variants over a full-width rail, not a 246px card. */
+    .rp-flyout { min-width: min(320px, calc(100vw - 16px)); }
+    .rp-flyout button { padding: 11px 9px; font-size: .95rem; }
+
+    /* --------------------------------------------------------  more sheet */
+
+    .rp-more-grid {
+        display: grid; grid-template-columns: repeat(2, 1fr);
+        gap: 1px; background: var(--hairline);
+        overflow-y: auto;
+    }
+    .rp-more-grid button {
+        display: flex; align-items: center; gap: 12px;
+        padding: 17px 15px;
+        background: var(--bg-1); color: var(--text-1);
+        border: none; font: inherit; font-size: .9rem; text-align: left;
+        cursor: pointer;
+    }
+    .rp-more-grid button:active { background: var(--bg-3); }
+    .rp-more-grid button i { color: var(--accent); width: 20px; text-align: center; }
+    .rp-more-grid button span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ---------------------------------------------------------  the scrim */
+
+    .rp-scrim {
+        position: fixed; inset: 0; z-index: 55;
+        background: rgba(0,0,0,.5);
+        opacity: 0; transition: opacity .26s;
+    }
+    .rp-scrim.rp-open { opacity: 1; }
+    .rp-scrim[hidden] { display: block !important; pointer-events: none; }
+    .rp-scrim.rp-open { pointer-events: auto; }
+
+    /* --------------------------------------------------------  bottom bar */
+
+    .rp-tabbar {
+        position: fixed; z-index: 70;
+        left: 0; right: 0; bottom: 0;
+        display: grid; grid-template-columns: repeat(5, 1fr);
+        background: var(--bg-1);
+        border-top: 1px solid var(--hairline);
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+    .rp-tabbar button {
+        position: relative;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 3px; height: 57px;
+        background: none; border: none; color: var(--text-3);
+        font: inherit; font-size: .64rem; font-weight: 600; letter-spacing: .3px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .rp-tabbar button i { font-size: 1.06rem; }
+    .rp-tabbar button.active { color: var(--accent); }
+    .rp-tabbar button.active::before {
+        content: ''; position: absolute; top: 0; left: 22%; right: 22%; height: 2px;
+        background: var(--accent); border-radius: 0 0 2px 2px;
+    }
+    .rp-tabbar button b {
+        position: absolute; top: 7px; right: calc(50% - 22px);
+        min-width: 16px; padding: 0 4px; height: 16px; line-height: 16px;
+        background: var(--accent); color: #17130a;
+        border-radius: 9px; font-size: .6rem; font-weight: 800;
+    }
+
+    /* --------------------------------------------------------  overlays  */
+
+    /* A dialog on a phone is the screen. Anything less means a card with a
+       scrollbar inside a scrollbar. */
+    .rp-modal { padding: 0; align-items: stretch; }
+    /* Every dialog that scopes its own width by id has to be named here, or
+       it keeps the 680-pixel card it was given for a desktop and floats in
+       the middle of a phone screen with gutters down the sides. */
+    .rp-modal-card,
+    .rp-modal-card.narrow,
+    #rp-icfg .rp-modal-card,
+    #rp-inst .rp-modal-card,
+    #rp-help .rp-modal-card {
+        width: 100%; max-width: none;
+        height: 100dvh; max-height: none;
+        border: none; border-radius: 0;
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+    /* A dialog that fills the screen needs a close target a thumb can hit
+       without aiming; the desktop's 1.6rem glyph is not one. */
+    .rp-modal-x { font-size: 2rem; padding: 4px 10px; min-width: 44px; }
+    .rp-modal-head { padding: 12px 8px 12px 16px; }
+
+    /* The short ones — a date to pick, a question to answer — do not fill
+       the screen. They rise from the bottom where the thumb is, over the
+       chart they are asking about, which is also the answer to "what am I
+       about to do this to". */
+    .rp-modal-card.tiny {
+        width: 100%; max-width: none;
+        height: auto; max-height: 88dvh;
+        align-self: end;
+        border: none; border-top: 1px solid var(--hair-2);
+        border-radius: 16px 16px 0 0;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+    .rp-modal-body { grid-template-columns: 1fr; }
+    .rp-perf, .rp-journal { grid-template-columns: 1fr; }
+    .rp-help-body { grid-template-columns: 1fr; }
+    .rp-help-nav {
+        flex-direction: row; overflow-x: auto; flex: 0 0 auto;
+        border-right: none; border-bottom: 1px solid var(--hairline);
+        -webkit-overflow-scrolling: touch;
+    }
+    /* A strip that scrolls sideways: its items must stay on one line, or the
+       selected one grows to three and shoves the rest off the end. */
+    .rp-help-nav button { white-space: nowrap; flex: 0 0 auto; }
+    .rp-help-nav h6 { white-space: nowrap; flex: 0 0 auto; align-self: center; margin: 0 4px; }
+    .rp-help-body { grid-template-rows: auto minmax(0, 1fr); }
+
+    /* Anything that needs a keyboard is noise on a phone: the typed
+       timeframe overlay itself, and the shortcut cards in the guide. */
+    .rp-tfbox { display: none !important; }
+    .rp-help-keys { display: none; }
+
+    /* ---------------------------------------------------------  banners  */
+
+    .rp-preview { padding: 7px 11px; gap: 8px; font-size: .8rem; flex-wrap: wrap; }
+    .rp-preview-fill { display: none; }
+    .rp-preview-text { flex: 1 1 100%; order: 3; }
+
+    /* ------------------------------------------------------  fat targets  */
+
+    /* iOS zooms a page in when a field with type-size under 16px takes
+       focus, and never zooms back out. Every input here is at least 16. */
+    input, select, textarea, .rp-btn, .rp-mini-btn { font-size: 16px; }
+    .rp-btn, .rp-inp input, .rp-sel, #rp-tf { min-height: 40px; }
+    .rp-tab, .rp-tab-btn { min-height: 42px; }
+    .rp-table th, .rp-table td { padding: 9px 8px; }
+}
+
+/* On its side a phone has 375 pixels of height for everything, and a chart
+   squeezed into what is left over after four bars of chrome is not worth
+   turning the phone for. So everything that is a convenience rather than the
+   chart gives up its row: the labels under the tab icons, the account line,
+   the sentence in the preview banner — the badge and the button say enough —
+   and the venue under the symbol. */
+@media (max-width: 1024px) and (max-height: 500px) {
+    .rp-account { display: none; }
+    .rp-tabbar button { height: 46px; }
+    .rp-tabbar button span { display: none; }
+    #rp-main { padding-bottom: calc(47px + env(safe-area-inset-bottom)); }
+    #rp-rail, #rp-trade, #rp-dock, .rp-sheet {
+        bottom: calc(47px + env(safe-area-inset-bottom));
+        max-height: 84dvh;
+    }
+    #rp-dock, body.dock-collapsed .rp-dock { height: 84dvh; }
+
+    #rp-top { padding: 5px 10px; padding-top: calc(5px + env(safe-area-inset-top)); }
+    .rp-back { width: 34px; height: 34px; }
+    .rp-inst-btn, .rp-field select { height: 34px; }
+
+    .rp-preview { padding: 4px 10px; }
+    .rp-preview-text { display: none; }
+
+    .rp-ticker { padding: 4px 11px; }
+    .rp-tk-names em { display: none; }
+    .rp-tk-coin { width: 21px; height: 21px; font-size: .68rem; }
+    .rp-tk-last b { font-size: 1rem; }
+}
+
+/* The bar and the sheets exist only on a phone. */
+.rp-tabbar { display: none; }
+@media (max-width: 760px), (max-height: 500px) and (max-width: 1024px) { .rp-tabbar { display: grid; } }

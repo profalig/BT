@@ -1499,7 +1499,8 @@ const PANE_H_KEY = 'bt.replay.paneH';
 function paneHeight() {
     let h = 0;
     try { h = +localStorage.getItem(PANE_H_KEY) || 0; } catch (e) {}
-    return Math.min(340, Math.max(80, h || 170));
+    const preset = isPhone() ? 118 : 170;
+    return Math.min(340, Math.max(80, h || preset));
 }
 
 function paneChartOptions() {
@@ -1595,7 +1596,9 @@ function dropPane(id) {
 function paneRoom() {
     const wrap = $('rp-chart-wrap'), box = $('rp-panes');
     const avail = (wrap ? wrap.clientHeight : 0) + (box ? box.clientHeight : 0);
-    return Math.round(Math.max(200, avail) * 0.45);
+    // A phone screen is mostly chart or it is not worth having.
+    const share = isPhone() ? 0.34 : 0.45;
+    return Math.round(Math.max(160, avail) * share);
 }
 
 function layoutPanes() {
@@ -2744,7 +2747,7 @@ window.BTOrder = {
 function renderAll() {
     renderPositions(); renderOrders(); renderHistory();
     renderMetrics(); renderCurve(); renderCalendar(); renderJournalList();
-    updateTicket(); updateTabCounts();
+    updateTicket(); updateTabCounts(); syncTabBadge();
 }
 
 function drawPositionLines() {
@@ -4075,6 +4078,26 @@ const GUIDE = [
               'not because they were forgotten.'
     },
     {
+        id: 'phone', icon: 'market', group: 'Start here', title: 'On a phone',
+        short: 'On a phone',
+        lede: 'The same terminal, with the panels that live around the chart on a ' +
+              'desktop tucked underneath it instead.',
+        steps: [
+            ['The bar at the bottom', '<b>Chart</b> puts everything away. <b>Draw</b>, ' +
+                                      '<b>Trade</b> and <b>Book</b> raise a panel over the ' +
+                                      'chart; tapping the one you are in puts it back.'],
+            ['More', 'Indicators, replay, layouts, sessions, export, the guide and settings.'],
+            ['Moving the chart', 'Drag to pan, pinch to zoom, as anywhere else. With a ' +
+                                 'drawing tool in hand your finger draws instead.'],
+            ['Drawings', 'Tap one to select it, drag it to move it, and hold it to open its ' +
+                         'menu — the phone standing in for a right click.'],
+            ['Starting a replay', 'Open <b>Replay</b> under More, then tap the candle to ' +
+                                  'start from, or roll the date wheel.']
+        ],
+        note: 'Everything you save here is saved in this browser on this phone. Layouts and ' +
+              'sessions do not follow you to a desktop yet.'
+    },
+    {
         id: 'trade', icon: 'trade', group: 'Trading', title: 'Place a trade',
         lede: 'The right-hand panel is a full order ticket. It works live and in replay.',
         steps: [
@@ -4184,10 +4207,14 @@ const GUIDE = [
 
 let guideAt = 'replay';
 
+/* The phone section is only shown on a phone. A page of thumb gestures is
+   not the second thing somebody reading this on a desktop should be given. */
+const guideList = () => GUIDE.filter(g => g.id !== 'phone' || isPhone());
+
 function renderGuide() {
     const nav = $('rp-help-nav');
     let last = null;
-    nav.innerHTML = GUIDE.map(g => {
+    nav.innerHTML = guideList().map(g => {
         const head = g.group !== last ? '<h6>' + g.group + '</h6>' : '';
         last = g.group;
         return head + '<button data-g="' + g.id + '"' + (g.id === guideAt ? ' class="active"' : '') + '>' +
@@ -4197,7 +4224,8 @@ function renderGuide() {
     nav.querySelectorAll('[data-g]').forEach(b =>
         b.addEventListener('click', () => { guideAt = b.dataset.g; renderGuide(); }));
 
-    const g = GUIDE.find(x => x.id === guideAt) || GUIDE[0];
+    const list = guideList();
+    const g = list.find(x => x.id === guideAt) || list[0];
     $('rp-help-doc').innerHTML =
         '<span class="rp-help-kicker">' + g.group + '</span>' +
         '<h3>' + g.title + '</h3><p class="lede">' + g.lede + '</p>' +
@@ -4225,6 +4253,9 @@ function syncInstButton() {
     const row = CATALOGUE && CATALOGUE.find(x => x.symbol === S.symbol);
     $('rp-inst-name').textContent = S.symbol;
     $('rp-inst-cat').textContent = catLabel(row ? row.cat : 'crypto');
+    // The catalogue arriving is the moment the label becomes trustworthy, so
+    // it is also the moment worth writing down for the next reload.
+    if (row) rememberPlace();
 }
 
 /* A daily-only feed has no 5-minute bar to offer, so the timeframes it cannot
@@ -4466,8 +4497,22 @@ const PLACE_KEY = 'bt.replay.place';
 
 function rememberPlace() {
     try {
+        /* The category is stored with the rest of it because the catalogue
+           that knows it is fetched over the network, and until that lands the
+           button would otherwise say CRYPTO over EURUSD. What we showed last
+           time is the right answer to show while we find out.
+
+           Read from the catalogue, never from the button — the button is
+           where the wrong answer is showing while we wait. If the catalogue
+           has not arrived either, whatever was stored for this same
+           instrument stands, rather than being overwritten with the guess. */
+        const row = CATALOGUE && CATALOGUE.find(x => x.symbol === S.symbol);
+        let prev = null;
+        try { prev = JSON.parse(localStorage.getItem(PLACE_KEY) || 'null'); } catch (er) {}
+        const cat = row ? catLabel(row.cat)
+                  : (prev && prev.symbol === S.symbol ? prev.cat : '');
         localStorage.setItem(PLACE_KEY, JSON.stringify(
-            { market: S.market, symbol: S.symbol, tf: S.tfMin }));
+            { market: S.market, symbol: S.symbol, tf: S.tfMin, cat: cat }));
     } catch (e) {}
 }
 
@@ -4484,7 +4529,8 @@ function restorePlace() {
     }
     syncTimeframes();
     $('rp-inst-name').textContent = S.symbol;
-    // The category beside it comes from the catalogue, which is still loading.
+    if (p.cat) $('rp-inst-cat').textContent = p.cat;
+    // And corrected from the catalogue itself the moment it arrives.
     loadCatalogue().then(syncInstButton).catch(() => {});
 }
 
@@ -5269,6 +5315,7 @@ function init() {
     });
 
     watchPaneScales();
+    wirePhone();
 
     window.addEventListener('resize', () => { renderCurve(); });
 
@@ -5284,6 +5331,129 @@ function init() {
     applyAccess();        // resolves later; the terminal is usable meanwhile
 }
 
+
+// ================================================================ the phone
+
+/* On a narrow screen the tool rail, the order ticket and the results dock
+   become sheets that slide up over the chart, and a bar along the bottom is
+   how you reach them. Everything below is only about WHICH panel is showing;
+   the panels themselves are the desktop ones, restyled by the phone section
+   of the stylesheet, so nothing here duplicates an interface or has to be
+   kept in step with one.
+
+   Which is also why "More" forwards a click to the real button in the top
+   bar rather than calling the function behind it: the click passes through
+   the same plan gate, with the same element as its target, and a locked
+   control says so on a phone for exactly the reason it does on a desktop. */
+
+/* What counts as a phone, in one place, because the stylesheet and the
+   script have to agree on it exactly — a layout that thinks it is a phone
+   while the script thinks it is a desktop leaves sheets nobody can reach.
+
+   Short counts as well as narrow: a phone on its side is 812 by 375, and a
+   layout with a rail down one edge and a dock along the bottom has nothing
+   left in the middle. The width bound keeps a short desktop window out of
+   it. */
+const NARROW_Q = '(max-width: 760px), (max-height: 500px) and (max-width: 1024px)';
+const PHONE = window.matchMedia(NARROW_Q);
+const isPhone = () => PHONE.matches;
+const SHEETS = { draw: 'rp-rail', trade: 'rp-trade', book: 'rp-dock', more: 'rp-more' };
+let openSheetName = '';
+
+function sheetEl(name) { return name && SHEETS[name] ? $(SHEETS[name]) : null; }
+
+function showSheet(name) {
+    if (!SHEETS[name]) name = '';
+    // Tapping the section you are already in puts the chart back, which is
+    // what the same tap does everywhere else on a phone.
+    if (name === openSheetName) name = '';
+    openSheetName = name;
+
+    Object.keys(SHEETS).forEach(k => {
+        const el = sheetEl(k);
+        if (el) el.classList.toggle('rp-open', k === name);
+    });
+    const scrim = $('rp-scrim');
+    if (scrim) scrim.classList.toggle('rp-open', !!name);
+
+    document.querySelectorAll('#rp-tabbar button').forEach(b =>
+        b.classList.toggle('active', (b.dataset.sheet || '') === name));
+
+    /* The dock collapses itself on a desktop and remembers that it did. In a
+       sheet there is nothing to collapse into, so the class comes off while
+       the sheet is up. */
+    if (name === 'book') document.body.classList.remove('dock-collapsed');
+}
+
+function wirePhone() {
+    const bar = $('rp-tabbar');
+    if (!bar) return;
+
+    bar.addEventListener('click', e => {
+        const b = e.target.closest('button');
+        if (!b) return;
+        showSheet(b.dataset.sheet || '');
+    });
+
+    const scrim = $('rp-scrim');
+    if (scrim) scrim.addEventListener('click', () => showSheet(''));
+
+    // Forward to the real control, so the gate and the wiring are the ones
+    // the desktop already has.
+    const more = $('rp-more');
+    if (more) more.addEventListener('click', e => {
+        const b = e.target.closest('[data-proxy]');
+        if (!b) return;
+        const target = $(b.dataset.proxy);
+        showSheet('');
+        if (target) target.click();
+    });
+
+    /* Choosing an instrument, a timeframe or a tool is the end of what you
+       opened the sheet for. Leaving it up would hide the thing you changed. */
+    ['rp-inst-open', 'rp-tf'].forEach(id => {
+        const el = $(id);
+        if (el) el.addEventListener('change', () => showSheet(''));
+    });
+    /* Picking a tool is the end of what the sheet was opened for — but only
+       picking one. Opening a group's menu, or toggling magnet or lock, are
+       things you do and then keep going, so those leave the sheet up. */
+    const rail = $('rp-rail');
+    if (rail) rail.addEventListener('click', e => {
+        if (!e.target.closest('.rp-rail-btn[data-pick]')) return;
+        setTimeout(() => {
+            if (!document.querySelector('.rp-flyout')) showSheet('');
+        }, 110);
+    });
+
+    /* Nobody double-clicks a phone. The cut point is already set by a single
+       tap — the chart's click handler does it whenever the replay bar is
+       open — so on a phone the instruction should say so. */
+    const phrase = () => {
+        const el = document.querySelector('.rp-hud-text');
+        if (!el) return;
+        el.innerHTML = PHONE.matches
+            ? '<b>Tap a candle</b> to replay from there &mdash; or'
+            : '<b>Double-click a candle</b> to replay from there &mdash; or';
+    };
+    phrase();
+
+    // A phone that turns, or a window that widens past the breakpoint, must
+    // not leave a sheet stranded half over the chart.
+    const onWidth = () => { phrase(); if (!PHONE.matches) showSheet(''); };
+    if (PHONE.addEventListener) PHONE.addEventListener('change', onWidth);
+    else if (PHONE.addListener) PHONE.addListener(onWidth);
+}
+
+/* How many rows are waiting in the dock, on the bar itself — a working order
+   or an open position is not something to find out by opening a sheet. */
+function syncTabBadge() {
+    const b = $('rp-tab-n');
+    if (!b) return;
+    const n = (S.position ? 1 : 0) + S.orders.length;
+    b.textContent = n;
+    b.hidden = !n;
+}
 
 // ============================================================ access gate
 
@@ -5361,7 +5531,11 @@ async function applyAccess() {
     if (bar) {
         bar.hidden = false;
         const text = $('rp-preview-text');
-        if (text) text.textContent = a.signedIn
+        const narrow = isPhone();
+        if (text) text.textContent = narrow
+            ? (a.signedIn ? 'Look around freely. Trading and saving need the Replay plan.'
+                          : 'Look around freely. Trading and saving need an account.')
+            : a.signedIn
             ? 'Look around freely — every tab and every panel is open. Replaying, ' +
               'trading, saving and exporting need the BarTest Replay plan.'
             : 'You are not signed in. Look around freely; replaying, trading, saving ' +
