@@ -205,10 +205,26 @@ def day_bars(symbol, day, scale):
     out = []
     for i in range(len(data) // REC):
         sec, o, c, l, h, v = struct.unpack(">5If", data[i * REC:(i + 1) * REC])
-        # A minute the market did not trade is written as zeros. Keeping those
-        # would draw a candle at price 0 and destroy every chart it touched.
+
+        # A minute with no price at all: would draw a candle at zero and
+        # destroy every chart it touched.
         if not o or not h or not l or not c:
             continue
+
+        # A minute the market was SHUT. The feed does not leave those out —
+        # it pads them with the last traded price repeated, at zero volume.
+        # January 2024 for EURUSD is 44,640 rows, which is every minute of the
+        # month including both days of every weekend: 12,966 of them invented.
+        # On a chart that is a flat line across every weekend; in a replay it
+        # is two thousand minutes of nothing to step through, against which
+        # stops and limits would still be tested.
+        #
+        # The test has to be BOTH conditions. Zero volume alone drops one real
+        # bar in that month (it moved, but rounded to no volume); flatness
+        # alone drops 379 genuinely quiet minutes that really did trade.
+        if v == 0 and o == h == l == c:
+            continue
+
         out.append([midnight + sec, o / scale, h / scale, l / scale, c / scale,
                     round(v, 2)])
     return out
