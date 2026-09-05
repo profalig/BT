@@ -47,6 +47,7 @@ one thing a replay tool must never do.
 """
 
 import argparse
+import concurrent.futures as cf
 import datetime as dt
 import gzip
 import json
@@ -265,18 +266,33 @@ def write_month(out_dir, symbol, year, month, bars):
         return None
     scale = SYMBOLS[symbol][1]
     t0 = bars[0][0]
+
+    # Every number is a difference from the one before it, or from the close of
+    # its own bar. A minute of EURUSD moves a handful of points, so what gets
+    # written is mostly single digits, and single digits compress. Measured on
+    # January 2024: 290KB as absolute integers, 145KB like this. Volume is kept
+    # because VWAP and the volume-weighted averages are useless without it.
+    tt, oo, hh, ll, cc, vv = [], [], [], [], [], []
+    prev_t = prev_c = None
+    for b in bars:
+        m = (b[0] - t0) // 60
+        o, h, l, c = (round(x * scale) for x in (b[1], b[2], b[3], b[4]))
+        tt.append(m - prev_t if prev_t is not None else m)
+        cc.append(c - prev_c if prev_c is not None else c)
+        oo.append(o - c)
+        hh.append(h - c)
+        ll.append(l - c)
+        vv.append(round(b[5]))
+        prev_t, prev_c = m, c
+
     doc = {
         "symbol": symbol,
         "interval": 60,
         "scale": scale,
         "t0": t0,
-        # minutes since t0 — small numbers, and monotonic
-        "t": [(b[0] - t0) // 60 for b in bars],
-        "o": [round(b[1] * scale) for b in bars],
-        "h": [round(b[2] * scale) for b in bars],
-        "l": [round(b[3] * scale) for b in bars],
-        "c": [round(b[4] * scale) for b in bars],
-        "v": [round(b[5]) for b in bars],
+        "enc": "d1",              # the reader refuses anything it cannot decode
+        "n": len(bars),
+        "t": tt, "o": oo, "h": hh, "l": ll, "c": cc, "v": vv,
     }
     folder = os.path.join(out_dir, symbol)
     os.makedirs(folder, exist_ok=True)
@@ -380,6 +396,8 @@ def main():
     ap.add_argument("--verify", nargs="+", metavar=("SYMBOL", "DATE"),
                     help="cross-check candles against ticks, e.g. --verify EURUSD 2024-01-02")
     ap.add_argument("--force", action="store_true", help="rebuild months already on disk")
+    ap.add_argument("--jobs", type=int, default=8,
+                    help="days to download at once (default 8; the feed is fine with it)")
     a = ap.parse_args()
 
     if a.list:
@@ -430,17 +448,28 @@ def main():
             if os.path.exists(path) and not a.force:
                 print(f"  {y}-{m:02d}  already built")
             else:
-                bars, missing = [], 0
-                for d in month_days(y, m):
-                    if d > today:
-                        break
-                    try:
-                        got = day_bars(symbol, d, scale)
-                    except RuntimeError as e:
-                        missing += 1
-                        print(f"    ! {d}: {e}")
-                        continue
-                    bars.extend(got)
+                # Days are fetched in parallel. Each one is a small file and
+                # nearly all of the time goes on round trips, so serial
+                # downloading spends a month of history waiting rather than
+                # working — the difference between about thirty hours for ten
+                # years and about four.
+                days = [d for d in month_days(y, m) if d <= today]
+                results, missing = {}, 0
+                with cf.ThreadPoolExecutor(max_workers=a.jobs) as pool:
+                    futures = {pool.submit(day_bars, symbol, d, scale): d for d in days}
+                    for fut in cf.as_completed(futures):
+                        d = futures[fut]
+                        try:
+                            results[d] = fut.result()
+                        except RuntimeError as e:
+                            missing += 1
+                            print(f"    ! {d}: {e}")
+                # Back into order: as_completed hands them back in whatever
+                # sequence they finished, and a chart of shuffled days is not
+                # a chart.
+                bars = []
+                for d in days:
+                    bars.extend(results.get(d, []))
                 res = write_month(a.out, symbol, y, m, bars)
                 if res:
                     _p, raw_n, gz_n = res

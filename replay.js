@@ -62,6 +62,26 @@ const MARKETS = {
             return await res.json();
         }
     },
+    /* Our own 1-minute history, built by tools/btdata.py and served as static
+       files from this same origin.
+
+       This exists because no free feed will talk to a browser. Dukascopy —
+       the accurate one, actual bank ticks — sends no CORS headers at all.
+       The ones that do let a page in need an API key, which in a web page is
+       public, and rate-limit per key, so every visitor would share one small
+       allowance. Fetching it once and hosting it removes all three problems
+       and is faster besides: these are static files on a CDN.
+
+       Real open/high/low/close, so unlike the ECB daily feed this draws
+       candles and offers every timeframe. */
+    hosted: {
+        label: 'Forex & more',
+        earliest: '2003-05-05',        // the oldest the builder can reach
+        venue: 'Dukascopy',
+        async klines(symbol, interval, opts) {
+            return hostedKlines(symbol, interval, opts || {});
+        }
+    },
     fx: {
         label: 'Forex',
         earliest: '1999-01-04',
@@ -129,7 +149,165 @@ async function fxSeries(base, quote) {
     return out;
 }
 
+/* ------------------------------------------------ hosted history files ----
+
+   One file per symbol per month, written by tools/btdata.py. Every number in
+   them is a difference from the one before it, which is what keeps a month of
+   1-minute bars down to about 145KB — small enough that loading a couple of
+   months to draw a chart costs less than a photograph. */
+
+const HOSTED_BASE = 'data';
+let hostedManifest = null, hostedManifestErr = null;
+const HOSTED_MONTHS = {};        // "EURUSD/2024-01" -> [bars] | null
+
+async function hostedIndex() {
+    if (hostedManifest) return hostedManifest;
+    if (hostedManifestErr) throw hostedManifestErr;
+    try {
+        const r = await fetch(HOSTED_BASE + '/manifest.json');
+        if (!r.ok) throw new Error('manifest ' + r.status);
+        hostedManifest = await r.json();
+        return hostedManifest;
+    } catch (e) {
+        hostedManifestErr = e;
+        throw e;
+    }
+}
+
+async function hostedMonth(symbol, ym) {
+    const key = symbol + '/' + ym;
+    if (key in HOSTED_MONTHS) return HOSTED_MONTHS[key];
+    let bars = null;
+    try {
+        const r = await fetch(HOSTED_BASE + '/' + symbol + '/' + ym + '.json.gz');
+        // A 404 means that month was never built. Not an error worth throwing:
+        // history simply starts where it starts.
+        if (r.ok) {
+            const d = await readGzJson(r);
+            if (d && d.enc === 'd1') bars = decodeHosted(d);
+        }
+    } catch (e) { bars = null; }
+    HOSTED_MONTHS[key] = bars;
+    return bars;
+}
+
+/* Whether a .json.gz arrives compressed depends entirely on the host. A server
+   that labels it `Content-Encoding: gzip` has the browser unwrap it before we
+   see it; one that labels it `Content-Type: application/gzip` — which is what
+   a plain static server does, and what the dev server here does — hands over
+   the raw bytes and JSON.parse chokes on them.
+
+   Rather than depend on how somebody's CDN is configured, look at the first
+   two bytes. 1f 8b is gzip, and nothing else can be: valid JSON starts with a
+   brace. So the same files work on the dev server, on Vercel, and on any
+   bucket, with nothing to configure and nothing to get wrong. */
+async function readGzJson(res) {
+    const buf = await res.arrayBuffer();
+    const head = new Uint8Array(buf, 0, Math.min(2, buf.byteLength));
+    if (head.length < 2 || head[0] !== 0x1f || head[1] !== 0x8b) {
+        return JSON.parse(new TextDecoder().decode(buf));   // already unwrapped
+    }
+    if (typeof DecompressionStream !== 'function') {
+        throw new Error('This browser cannot unpack the history files.');
+    }
+    const stream = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));
+    return JSON.parse(await new Response(stream).text());
+}
+
+/* Undo the delta encoding. Prices come back as numbers at the file's own
+   precision, never re-rounded, so what is drawn is exactly what was measured. */
+function decodeHosted(d) {
+    const n = d.n || d.t.length, sc = d.scale, t0 = d.t0;
+    const out = new Array(n);
+    let m = 0, c = 0;
+    for (let i = 0; i < n; i++) {
+        m += d.t[i];
+        c += d.c[i];
+        out[i] = {
+            t: (t0 + m * 60) * 1000,
+            o: (c + d.o[i]) / sc,
+            h: (c + d.h[i]) / sc,
+            l: (c + d.l[i]) / sc,
+            c: c / sc,
+            v: d.v ? d.v[i] : 0
+        };
+    }
+    return out;
+}
+
+const TF_MIN_OF = { '1m': 1, '5m': 5, '15m': 15, '1h': 60, '4h': 240, '1d': 1440 };
+
+function ymOf(ms) {
+    const d = new Date(ms);
+    return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0');
+}
+
+async function hostedKlines(symbol, interval, opts) {
+    const man = await hostedIndex();
+    const info = man.symbols && man.symbols[symbol];
+    if (!info) throw new Error(symbol + ' has not been built yet');
+
+    const months = info.months || [];
+    const limit = opts.limit || 1000;
+    const tf = TF_MIN_OF[interval] || 1;
+
+    // Which months to read. With no range the caller wants the most recent
+    // data, so walk backwards until there is enough to satisfy the limit.
+    let wanted;
+    if (opts.startTime) {
+        const from = ymOf(opts.startTime);
+        const to = opts.endTime ? ymOf(opts.endTime) : months[months.length - 1];
+        wanted = months.filter(m => m >= from && m <= to);
+        // A month of 1-minute bars is about 31,000, so one is nearly always
+        // enough for anything but a long daily request.
+        if (!wanted.length) wanted = months.slice(-1);
+        wanted = wanted.slice(0, Math.max(1, Math.ceil(limit * tf / 20000)));
+    } else {
+        const need = Math.max(1, Math.ceil(limit * tf / 20000));
+        wanted = months.slice(-need);
+    }
+
+    let mins = [];
+    for (const ym of wanted) {
+        const got = await hostedMonth(symbol, ym);
+        if (got) mins = mins.concat(got);
+    }
+    if (!mins.length) return [];
+
+    const bars = tf === 1 ? mins : aggregateBars(mins, tf);
+    let rows = bars;
+    if (opts.startTime) rows = rows.filter(b => b.t >= opts.startTime);
+    if (opts.endTime)   rows = rows.filter(b => b.t <= opts.endTime);
+    return opts.startTime ? rows.slice(0, limit) : rows.slice(-limit);
+}
+
+/* Minutes into any larger timeframe. Buckets are aligned to the epoch so the
+   same candle is produced no matter which slice of history it was built from —
+   a bar that shifts when you scroll is worse than no bar. */
+function aggregateBars(mins, tfMin) {
+    const step = tfMin * MIN_MS;
+    const out = [];
+    let cur = null, bucket = -1;
+    for (const b of mins) {
+        const k = Math.floor(b.t / step) * step;
+        if (k !== bucket) {
+            if (cur) out.push(cur);
+            bucket = k;
+            cur = { t: k, o: b.o, h: b.h, l: b.l, c: b.c, v: b.v };
+        } else {
+            if (b.h > cur.h) cur.h = b.h;
+            if (b.l < cur.l) cur.l = b.l;
+            cur.c = b.c;
+            cur.v += b.v;
+        }
+    }
+    if (cur) out.push(cur);
+    return out;
+}
+
 const srcOfMarket = () => MARKETS[S.market] || MARKETS.crypto;
+const venueName = () => S.market === 'fx' ? 'ECB'
+                      : S.market === 'hosted' ? 'Dukascopy' : 'Binance';
 const isCloseOnly = () => !!srcOfMarket().closeOnly;
 
 /* ------------------------------------------------------- instruments ----
@@ -299,7 +477,31 @@ async function loadCatalogue() {
             .sort((a, b) => b.vol - a.vol);
     } catch (e) { /* forex still lists even if the exchange is unreachable */ }
 
-    CATALOGUE = crypto.concat(metal, fx);
+    /* Anything we host ourselves goes in ahead of the daily forex feed. Where
+       both carry a pair, the hosted one wins: real candles at every timeframe
+       beat one close a day, and having the same symbol behave differently
+       depending on which list it was picked from would be indefensible. */
+    let hosted = [];
+    try {
+        const man = await hostedIndex();
+        const KIND_CAT = { fx: 'fx', metal: 'commodity', energy: 'commodity',
+                           index: 'other', stock: 'other' };
+        hosted = Object.keys(man.symbols || {}).map(sym => {
+            const it = man.symbols[sym];
+            return {
+                symbol: sym, src: 'hosted', cat: KIND_CAT[it.kind] || 'other',
+                kind: it.kind,
+                base: sym.slice(0, 3), quote: sym.slice(3, 6),
+                name: it.name, from: it.from, to: it.to,
+                vol: it.kind === 'fx' ? 1e6 : 1e5      // list currencies first
+            };
+        });
+    } catch (e) { /* nothing built yet — the rest of the app is unaffected */ }
+
+    const hostedSyms = new Set(hosted.map(h => h.symbol));
+    const fxLeft = fx.filter(r => !hostedSyms.has(r.symbol));
+
+    CATALOGUE = crypto.concat(metal, hosted, fxLeft);
     return CATALOGUE;
 }
 
@@ -1305,7 +1507,7 @@ function renderOHLC(bar) {
     box.innerHTML =
         '<span class="sym">' + S.symbol + '</span>' +
         '<span class="tf">' + (TF_LABEL[S.tfMin] || '') + '</span>' +
-        '<span class="tf">' + (S.market === 'fx' ? 'ECB' : 'Binance') + '</span>' +
+        '<span class="tf">' + venueName() + '</span>' +
         '<i>O</i><span class="' + c + '">' + px(bar.open) + '</span>' +
         '<i>H</i><span class="' + c + '">' + px(bar.high) + '</span>' +
         '<i>L</i><span class="' + c + '">' + px(bar.low) + '</span>' +
@@ -1992,7 +2194,9 @@ function renderTicker() {
 function syncTicker() {
     const replay = S.mode === 'replay';
     $('rp-tk-clockcell').hidden = !replay;
-    const venue = S.market === 'fx' ? 'ECB daily reference' : 'Binance · Spot';
+    const venue = S.market === 'fx' ? 'ECB daily reference'
+                : S.market === 'hosted' ? 'Dukascopy · 1-minute'
+                : 'Binance · Spot';
     $('rp-tk-venue').textContent = replay ? 'Replay · historical' : venue;
     renderTicker();
     if (replay) $('rp-clock').textContent = S.working ? iso(S.working.time * 1000) : '—';
@@ -3344,24 +3548,22 @@ function renderInstList() {
     const q = $('rp-inst-search').value.trim().toLowerCase();
     if (!CATALOGUE) return;
 
-    if (instCat === 'other') {
+    // Shares and indices appear here as they are built. Until at least one
+    // exists, say why rather than show an empty list.
+    if (instCat === 'other' && !CATALOGUE.some(x => x.cat === 'other')) {
         box.innerHTML =
             '<div class="rp-inst-note">' +
-            '<b>Equities, indices and energy are not on these feeds.</b><br>' +
-            'Prices here come from two places: Binance for crypto and gold, and ' +
-            'the European Central Bank\'s daily reference rates for currencies. ' +
-            'Neither carries shares, index futures or oil, so rather than list ' +
-            'symbols that would fail to load they are absent until there is a ' +
-            'feed behind them.' +
+            '<b>Shares and indices are being built.</b><br>' +
+            'They come from the same 1-minute history behind the forex pairs, ' +
+            'and each one has to be downloaded and hosted before it can appear. ' +
+            'Nothing is listed here that would fail to load.' +
             '<ul>' +
-              '<li>Shares and indices (S&amp;P 500, NASDAQ, single names) need a ' +
-                  'licensed market-data provider.</li>' +
-              '<li>Oil, silver and the rest of the commodity complex need the same.</li>' +
-              '<li>Intraday forex needs 1-minute history we host ourselves — the ' +
-                  'daily series here is real, but it is one price per day.</li>' +
+              '<li>The S&amp;P 500, Nasdaq 100, Dow, DAX, FTSE, CAC and Stoxx 50 ' +
+                  'reach back to 2012&ndash;2013 at one-minute resolution.</li>' +
+              '<li>Crude oil, natural gas and copper reach back to 2011.</li>' +
+              '<li>Around 680 US shares reach back to 2017.</li>' +
             '</ul>' +
-            'Gold trades under <b>Commodities</b>, and 24 currency pairs back to ' +
-            '1999 under <b>Forex</b>, because those genuinely price here.' +
+            'Currencies are under <b>Forex</b> and gold under <b>Commodities</b>.' +
             '</div>';
         return;
     }
