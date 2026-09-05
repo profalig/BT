@@ -171,6 +171,39 @@ def period_end_of(sub_obj, get):
     return get("current_period_end")
 
 
+def invoice_period_end(inv, get):
+    """The furthest period end on a paid invoice.
+
+    Read off the invoice LINES rather than the invoice, because the field that
+    names the subscription has moved around between API versions while the
+    line periods have not. Proration lines can carry shorter periods, so take
+    the latest one.
+    """
+    lines = get("lines") or {}
+    data = lines.get("data") if hasattr(lines, "get") else getattr(lines, "data", None)
+    best = None
+    for ln in (data or []):
+        period = ln.get("period") if hasattr(ln, "get") else getattr(ln, "period", None)
+        if not period:
+            continue
+        end = period.get("end") if hasattr(period, "get") else getattr(period, "end", None)
+        try:
+            end = int(end)
+        except (TypeError, ValueError):
+            continue
+        if best is None or end > best:
+            best = end
+    return best
+
+
+def iso_from_stamp(stamp):
+    """A unix timestamp as an ISO string, or None if it is not one."""
+    try:
+        return datetime.datetime.utcfromtimestamp(int(stamp)).isoformat() + "Z"
+    except (TypeError, ValueError, OSError, OverflowError):
+        return None
+
+
 def backtest_plan_of(user_id):
     """The user's plan, if it includes the Backtest Machine.
 
@@ -264,7 +297,14 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                     metadata={
                         "credits": str(credits_to_add),
                         "plan": plan_key
-                    }
+                    },
+                    # Session metadata does not reach the subscription, so
+                    # renewals and cancellations would arrive knowing nothing
+                    # about which plan they concern. Stamp it on both.
+                    subscription_data=(
+                        {"metadata": {"plan": plan_key, "bt_user": str(user_id or "")}}
+                        if checkout_mode == "subscription" else None
+                    )
                 )
 
                 self.send_response(200)
@@ -436,6 +476,34 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                             print(f"🚪 SUBSCRIPTION CLOSED: {uid} ({status})")
                         except Exception as e:
                             print(f"❌ Could not close subscription for {uid}: {e}")
+
+            # --------------------------------------------------------------
+            # A RENEWAL MUST PUSH THE EXPIRY FORWARD.
+            #
+            # plan_expires_at in the past revokes access on its own -- that is
+            # the backstop for a cancellation webhook that never arrives. The
+            # cost of that safety net is that a date left stale locks out
+            # somebody who is still paying, which is the worse failure of the
+            # two. customer.subscription.updated already extends it; this
+            # covers the same ground from the invoice, so a renewal has to be
+            # missed twice before anyone is wrongly shut out.
+            # --------------------------------------------------------------
+            elif event["type"] in ("invoice.paid", "invoice.payment_succeeded"):
+                inv = event["data"]["object"]
+                get = (lambda k, d=None: inv.get(k, d)) if hasattr(inv, "get") \
+                    else (lambda k, d=None: getattr(inv, k, d))
+                uid = plan_for_stripe_customer(get("customer"))
+                expires = iso_from_stamp(invoice_period_end(inv, get))
+                if uid and expires:
+                    try:
+                        supabase.table("user_profiles").update(
+                            {"plan_status": "active", "plan_expires_at": expires}
+                        ).eq("id", uid).execute()
+                        print(f"💰 RENEWED: {uid} paid, access runs to {expires}")
+                    except Exception as e:
+                        print(f"❌ Could not extend {uid} after payment: {e}")
+                elif not uid:
+                    print(f"⚠️ Paid invoice for unknown customer {get('customer')}.")
 
             self.send_response(200)
             self._set_cors_headers()
