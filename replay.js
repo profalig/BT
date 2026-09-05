@@ -251,21 +251,37 @@ async function hostedKlines(symbol, interval, opts) {
     const limit = opts.limit || 1000;
     const tf = TF_MIN_OF[interval] || 1;
 
-    // Which months to read. With no range the caller wants the most recent
-    // data, so walk backwards until there is enough to satisfy the limit.
+    /* How many month files this request needs. Forex trades about 21,600
+       minutes a week-month, so that many bars divided by the timeframe is
+       what one file yields. Capped, because a daily request would otherwise
+       ask for six years of files in one go; panning fetches the rest as it
+       is needed, and each file is only ever read once. */
+    const need = Math.min(24, Math.max(1, Math.ceil(limit * tf / 21600)));
+
+    /* Three different questions get asked here, and only two were answered.
+       Panning left calls this with endTime ALONE — "give me what came before
+       this" — and that fell through to the branch that returns the most
+       recent months, which then filtered down to nothing. That is why the
+       chart stopped dead a few months back however far you dragged it. */
     let wanted;
     if (opts.startTime) {
         const from = ymOf(opts.startTime);
-        const to = opts.endTime ? ymOf(opts.endTime) : months[months.length - 1];
-        wanted = months.filter(m => m >= from && m <= to);
-        // A month of 1-minute bars is about 31,000, so one is nearly always
-        // enough for anything but a long daily request.
-        if (!wanted.length) wanted = months.slice(-1);
-        wanted = wanted.slice(0, Math.max(1, Math.ceil(limit * tf / 20000)));
+        let i = months.findIndex(m => m >= from);
+        if (i < 0) i = Math.max(0, months.length - need);
+        wanted = months.slice(i, i + need);
+        if (opts.endTime) {
+            const to = ymOf(opts.endTime);
+            wanted = wanted.filter(m => m <= to);
+        }
+    } else if (opts.endTime) {
+        const to = ymOf(opts.endTime);
+        let end = months.findIndex(m => m > to);
+        if (end < 0) end = months.length;
+        wanted = months.slice(Math.max(0, end - need), end);
     } else {
-        const need = Math.max(1, Math.ceil(limit * tf / 20000));
         wanted = months.slice(-need);
     }
+    if (!wanted.length) return [];
 
     let mins = [];
     for (const ym of wanted) {
@@ -499,6 +515,7 @@ async function loadCatalogue() {
                 // one request rather than two dozen.
                 px: l.c, chg: l.chgPct,
                 res: '1m',
+                digits: Math.round(Math.log10(it.scale || 100000)),
                 vol: it.kind === 'fx' ? 1e6 : 1e5      // list currencies first
             };
         });
@@ -576,6 +593,12 @@ const dayKey = ms => new Date(ms).toISOString().slice(0, 10);
 // unreadable at two decimals.
 function pdp() {
     if (theme.precision !== 'auto') return +theme.precision;
+    /* Where we host the history we know exactly how the feed quotes it — the
+       scale is the tick size — so there is nothing to infer. EURUSD is five
+       decimals at 1.16 and USDJPY is three at 156, which no rule based on the
+       size of the number can tell apart. */
+    const row = CATALOGUE && CATALOGUE.find(x => x.symbol === S.symbol);
+    if (row && row.digits) return row.digits;
     const p = currentPrice() || (S.hist.length ? S.hist[S.hist.length - 1].close : 100);
     return p < 1 ? 6 : p < 20 ? 4 : 2;
 }
@@ -623,8 +646,18 @@ const hideStatus = () => { $('rp-status').hidden = true; };
 let chart, series, lines = [], orderLines = [];
 let lastPainted = [];
 
+/* How many decimals this instrument is quoted in. The tick size the axis uses
+   comes from here, so getting it wrong does not merely round the numbers — it
+   decides where gridlines can be drawn at all. Left at the default of 0.01,
+   a forex chart spanning sixty pips had room for one label. */
+function priceFormat() {
+    const d = pdp();
+    return { type: 'price', precision: d, minMove: Math.pow(10, -d) };
+}
+
 function seriesOptions() {
     return {
+        priceFormat: priceFormat(),
         upColor: theme.hollow ? theme.bg : theme.up,
         downColor: theme.down,
         borderVisible: theme.borders,
@@ -772,6 +805,10 @@ async function loadChart() {
         if (!ks.length) { status('No data returned for that symbol.', 'error'); return; }
         S.hist = ks.map(toBar);
         S.oldestMs = ks[0].t;
+        /* Before the first paint, not after: the axis decides where it can put
+           gridlines from the tick size, and a chart drawn at the wrong one
+           then corrected visibly jumps. */
+        try { series.applyOptions({ priceFormat: priceFormat() }); } catch (e) {}
         paint();
         chart.timeScale().fitContent();
         hideStatus();
@@ -3901,6 +3938,9 @@ function applyTheme() {
                             : LightweightCharts.PriceScaleMode.Normal
         });
     } catch (e) {}
+    // Every branch needs the tick size, so it goes on first and the branch
+    // that follows only deals with colour.
+    try { series.applyOptions({ priceFormat: priceFormat() }); } catch (e) {}
     if (effectiveType() === 'candle') series.applyOptions(seriesOptions());
     else if (effectiveType() === 'bar') series.applyOptions({ upColor: theme.up, downColor: theme.down });
     else series.applyOptions({ color: theme.up, lineColor: theme.up });
