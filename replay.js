@@ -36,7 +36,12 @@
 
 const BINANCE = 'https://api.binance.com/api/v3';
 const MIN_MS  = 60000;
-const TF_LABEL = { 1: '1m', 5: '5m', 15: '15m', 60: '1h', 240: '4h', 1440: '1d' };
+/* Every one of these divides a day exactly, which is what lets a bar be built
+   from epoch-aligned buckets and come out the same however much history
+   happens to be loaded. A weekly bar would not — the epoch begins on a
+   Thursday — so there isn't one. */
+const TF_LABEL = { 1: '1m', 5: '5m', 15: '15m', 30: '30m', 60: '1h',
+                   120: '2h', 240: '4h', 720: '12h', 1440: '1d' };
 
 const MARKETS = {
     crypto: {
@@ -235,7 +240,8 @@ function decodeHosted(d) {
     return out;
 }
 
-const TF_MIN_OF = { '1m': 1, '5m': 5, '15m': 15, '1h': 60, '4h': 240, '1d': 1440 };
+const TF_MIN_OF = { '1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60,
+                    '2h': 120, '4h': 240, '12h': 720, '1d': 1440 };
 
 function ymOf(ms) {
     const d = new Date(ms);
@@ -3331,13 +3337,17 @@ function saveLayout(name) {
         at: new Date().toISOString()
     });
     if (!writeLayouts(all)) return;
+    loadedLayout = name;
     status('Layout "' + name + '" saved.');
     setTimeout(hideStatus, 2400);
 }
 
+let loadedLayout = null;      // so Ctrl+S can save back over it
+
 async function applyLayout(id) {
     const L = listLayouts().find(x => x.id === id);
     if (!L) return;
+    loadedLayout = L.name;
     theme = Object.assign({}, THEME_DEFAULT, L.theme || {});
     syncThemeInputs(); saveTheme();
     $('rp-tf').value = String(L.tfMin);
@@ -3453,7 +3463,8 @@ const GUIDE = [
             ['Move through it', 'Step one bar at a time, or press play and set bars per second.'],
             ['Come back', '<b>Back to full chart</b> returns to live prices. Your trade log survives.']
         ],
-        keys: [['&rarr;', 'Next bar'], ['&larr;', 'Back a bar'], ['Space', 'Play / pause']],
+        keys: [['&rarr;', 'Next bar'], ['&larr;', 'Back a bar'], ['Space', 'Play / pause'],
+               ['5', 'Type a number for the timeframe']],
         note: 'Stepping back rewinds your account too — trades taken after that bar un-happen. ' +
               'Future bars are never in the chart at all, so they cannot be peeked at.'
     },
@@ -3556,8 +3567,10 @@ const GUIDE = [
         id: 'save', icon: 'save', group: 'Results', title: 'Layouts and sessions',
         short: 'Layouts & sessions',
         lede: 'Two different things worth keeping: how the chart looks, and what you did on it.',
+        keys: [['Ctrl+S', 'Save the chart to its layout']],
         steps: [
-            ['Layouts', 'Instrument, timeframe, theme, indicators and drawings, saved under a name.'],
+            ['Layouts', 'Instrument, timeframe, theme, indicators and drawings, saved under a name. ' +
+                        '<kbd>Ctrl</kbd>+<kbd>S</kbd> saves straight back over the one you opened.'],
             ['Sessions', '<b>Save / load</b> at the bottom right keeps your trades, working orders ' +
                          'and balance.'],
             ['Clear up', 'Reload or delete either from its own menu — one at a time, or all at once.']
@@ -4472,6 +4485,104 @@ function init() {
         calMonth = new Date(Date.UTC(calMonth.getUTCFullYear(), calMonth.getUTCMonth() + 1, 1));
         renderCalendar();
     });
+
+    /* ---------------------------------------------- Ctrl+S saves a layout
+
+       The browser's own Save dialogue is worse than useless on a web
+       application — it offers to write the HTML to disk — so the key is taken
+       over. Saving back over the layout you opened is the behaviour of every
+       editor; the first save of an unnamed chart has to ask for a name. */
+    document.addEventListener('keydown', e => {
+        if (!(e.key === 's' || e.key === 'S') || !(e.ctrlKey || e.metaKey)) return;
+        e.preventDefault();
+        if (loadedLayout) { saveLayout(loadedLayout); return; }
+        const name = 'Chart ' + new Date().toLocaleDateString(undefined,
+            { day: 'numeric', month: 'short' }) + ' ' +
+            new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        saveLayout(name);
+    }, true);
+
+    /* ------------------------------------- type a number to change timeframe
+
+       Start typing digits over the chart and a box appears, exactly as it does
+       on the platforms people already use. 5 becomes 5m, 30 becomes 30m, 4h
+       and 1d work spelled out, and a number nothing can be built from says so
+       rather than silently doing nothing. */
+    let tfBuf = '', tfTimer = null;
+
+    function tfParse(txt) {
+        const m = /^(\d+)\s*([mhdw])?$/i.exec(txt.trim());
+        if (!m) return null;
+        const n = parseInt(m[1], 10);
+        if (!n) return null;
+        const unit = (m[2] || '').toLowerCase();
+        const mins = unit === 'h' ? n * 60 : unit === 'd' ? n * 1440
+                   : unit === 'w' ? n * 10080 : n;
+        return TF_LABEL[mins] ? mins : null;
+    }
+
+    function tfShow() {
+        const box = $('rp-tfbox');
+        if (!tfBuf) { box.hidden = true; return; }
+        box.hidden = false;
+        $('rp-tfbox-in').textContent = tfBuf;
+        const mins = tfParse(tfBuf);
+        const opts = Array.from($('rp-tf').options).map(o => +o.value);
+        $('rp-tfbox-hint').innerHTML = mins
+            ? (opts.indexOf(mins) >= 0
+                ? '<b>' + TF_LABEL[mins] + '</b> &nbsp;press Enter'
+                : '<i>' + TF_LABEL[mins] + ' is not available for this instrument</i>')
+            : '<i>no timeframe for that</i>';
+    }
+
+    function tfClose() {
+        tfBuf = '';
+        clearTimeout(tfTimer);
+        $('rp-tfbox').hidden = true;
+    }
+
+    function tfCommit() {
+        const mins = tfParse(tfBuf);
+        const sel = $('rp-tf');
+        const ok = mins && Array.from(sel.options).some(o => +o.value === mins);
+        tfClose();
+        if (!ok) return;
+        sel.value = String(mins);
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    document.addEventListener('keydown', e => {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        // Never while something is being typed into, and never over a dialog.
+        if (/input|select|textarea/i.test(e.target.tagName) || e.target.isContentEditable) return;
+        if (document.querySelector('.rp-modal:not([hidden]), .rp-pop')) return;
+
+        /* Not every input method reports e.key the same way — a numeric
+           keypad, an IME, and some automation all send Enter with a different
+           key string or none at all — so the physical code and the legacy
+           keyCode are checked too. */
+        const isEnter = e.key === 'Enter' || e.code === 'Enter' ||
+                        e.code === 'NumpadEnter' || e.keyCode === 13;
+        const isEsc   = e.key === 'Escape' || e.code === 'Escape' || e.keyCode === 27;
+        if (tfBuf && isEnter) { e.preventDefault(); tfCommit(); return; }
+        if (tfBuf && isEsc)   { e.preventDefault(); tfClose(); return; }
+        if (tfBuf && e.key === 'Backspace') {
+            e.preventDefault(); tfBuf = tfBuf.slice(0, -1); tfShow(); return;
+        }
+        const ch = e.key;
+        const isDigit = ch >= '0' && ch <= '9';
+        const isUnit = tfBuf && /^[mhdwMHDW]$/.test(ch);
+        if (!isDigit && !isUnit) return;
+        e.preventDefault();
+        tfBuf += ch;
+        tfShow();
+        clearTimeout(tfTimer);
+        // Long enough that pausing to think does not lose what you typed.
+        // A click anywhere closes it too, which is the usual way out.
+        tfTimer = setTimeout(tfClose, 9000);
+    }, true);
+
+    document.addEventListener('mousedown', () => { if (tfBuf) tfClose(); }, true);
 
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape' && !$('rp-ask').hidden)  { answer(false); return; }

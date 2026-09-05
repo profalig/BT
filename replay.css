@@ -1506,3 +1506,33 @@ body.rp-locked .rp-locked-ctl::after {
     background: rgba(32,178,108,.16); color: var(--pos);
     border-color: rgba(32,178,108,.42);
 }
+
+
+/* =============================================  typed timeframe  ==== */
+.rp-tfbox {
+    position: fixed; z-index: 4000;
+    left: 50%; top: 22%; transform: translateX(-50%);
+    display: flex; align-items: baseline; gap: 12px;
+    padding: 14px 22px;
+    background: var(--bg-1);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.7), 0 0 0 1px rgba(247,166,0,.15);
+    font-family: 'IBM Plex Mono', monospace;
+    pointer-events: none;
+}
+.rp-tfbox[hidden] { display: none; }
+.rp-tfbox-in {
+    font-size: 1.9rem; font-weight: 700; color: var(--text-1);
+    letter-spacing: 1px; min-width: 1.4ch;
+}
+.rp-tfbox-in::after {
+    content: ''; display: inline-block;
+    width: 2px; height: 1.5rem; margin-left: 3px;
+    background: var(--accent); vertical-align: -3px;
+    animation: rp-caret 1s steps(1) infinite;
+}
+@keyframes rp-caret { 50% { opacity: 0; } }
+.rp-tfbox-hint { font-size: .82rem; color: var(--text-3); }
+.rp-tfbox-hint b { color: var(--pos); font-weight: 600; }
+.rp-tfbox-hint i { color: var(--neg); font-style: normal; }

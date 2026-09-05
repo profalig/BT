@@ -57,8 +57,11 @@
                 <option value="1">1m</option>
                 <option value="5">5m</option>
                 <option value="15" selected>15m</option>
+                <option value="30">30m</option>
                 <option value="60">1h</option>
+                <option value="120">2h</option>
                 <option value="240">4h</option>
+                <option value="720">12h</option>
                 <option value="1440">1D</option>
             </select>
         </label>
@@ -144,6 +147,13 @@
     </button>
     <span class="rp-preview-fill"></span>
 </div>
+<!-- Type a number anywhere on the chart and this appears, the way it does
+     on every charting platform. Enter applies it, Escape forgets it. -->
+<div id="rp-tfbox" class="rp-tfbox" hidden>
+    <span class="rp-tfbox-in" id="rp-tfbox-in"></span>
+    <span class="rp-tfbox-hint" id="rp-tfbox-hint"></span>
+</div>
+
 <main id="rp-main">
 
     <!-- tool rail is built by replay-tools.js -->
