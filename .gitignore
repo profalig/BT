@@ -37,3 +37,7 @@ _source/
 
 # seek-latency test encodes
 _q/
+
+# Built market history — large, regenerable with tools/btdata.py, and hosted
+# outside the repo. See the header of that script.
+/data/
