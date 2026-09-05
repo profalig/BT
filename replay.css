@@ -216,7 +216,10 @@ body { display: flex; flex-direction: column; }
 }
 #rp-center {
     display: grid;
-    grid-template-rows: auto minmax(120px, 1fr) 5px auto;
+    /* ticker · chart · indicator windows · grip · dock. The windows row is
+       `auto` and empty until an oscillator is added, so a chart with no
+       studies on it is exactly as tall as it was before. */
+    grid-template-rows: auto minmax(120px, 1fr) auto 5px auto;
     min-width: 0; min-height: 0;
 }
 #rp-chart-wrap { position: relative; min-width: 0; min-height: 0; }
@@ -991,7 +994,7 @@ body.dock-collapsed .rp-tab-icon i { transform: rotate(180deg); }
     body { display: block; }
     #rp-main { grid-template-columns: 1fr; }
     #rp-rail { flex-direction: row; border-right: none; border-bottom: 1px solid var(--hairline); }
-    #rp-center { grid-template-rows: auto 56vh 5px auto; }
+    #rp-center { grid-template-rows: auto 56vh auto 5px auto; }
     #rp-trade { border-left: none; border-top: 1px solid var(--hairline); }
     .rp-account { margin-left: auto; border-left: none; padding-left: 0; }
     .rp-perf, .rp-journal { grid-template-columns: 1fr; }
@@ -1536,3 +1539,64 @@ body.rp-locked .rp-locked-ctl::after {
 .rp-tfbox-hint { font-size: .82rem; color: var(--text-3); }
 .rp-tfbox-hint b { color: var(--pos); font-weight: 600; }
 .rp-tfbox-hint i { color: var(--neg); font-style: normal; }
+
+
+/* ==================================  indicator windows  ================ */
+
+/* An oscillator does not belong on top of the candles: RSI between 0 and 100
+   drawn against a price scale is either a flat line at the bottom or a band
+   across the middle of the chart, and either way it is in the way. Each one
+   gets a window under the chart with its own price axis, its own 0-100, and
+   the time axis shared with the chart above it. */
+.rp-panes {
+    display: flex; flex-direction: column;
+    min-height: 0; overflow: hidden;
+    background: var(--bg-0);
+}
+.rp-panes[hidden] { display: none; }
+
+.rp-panes-grip {
+    flex: 0 0 5px;
+    background: var(--bg-1); border-top: 1px solid var(--hairline);
+    cursor: row-resize;
+}
+.rp-panes-grip:hover { background: var(--accent); }
+
+.rp-pane-ind {
+    position: relative; flex: 1 1 0; min-height: 0;
+    border-top: 1px solid var(--hairline);
+}
+.rp-pane-ind:first-of-type { border-top: none; }
+.rp-pane-chart { position: absolute; inset: 0; }
+
+/* The header sits over its own window, in the same place the chart legend
+   sits over the chart — which is where the values change as the pointer
+   moves, and where the eye and the cross are. */
+.rp-pane-head {
+    position: absolute; left: 8px; top: 5px; z-index: 4;
+    display: flex; align-items: center; gap: 7px;
+    padding: 2px 7px 2px 5px;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, .34);
+    font-size: .74rem; line-height: 1.5;
+    pointer-events: auto; cursor: pointer;
+    border: 1px solid transparent;
+}
+.rp-pane-head:hover { background: rgba(0, 0, 0, .5); }
+.rp-pane-ind.sel .rp-pane-head { border-color: var(--accent); }
+.rp-pane-head.off { opacity: .45; }
+.rp-pane-name { color: var(--text-1); font-weight: 600; letter-spacing: .02em; }
+.rp-pane-head .rp-leg-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto;
+}
+
+/* The readout. Values are monospaced so they do not jitter left and right as
+   the pointer moves across the chart. */
+.rp-val {
+    display: inline-flex; align-items: baseline; gap: 6px;
+    font-family: 'IBM Plex Mono', monospace; font-size: .74rem;
+    color: var(--text-2);
+}
+.rp-val b { font-weight: 600; }
+.rp-val i { font-style: normal; color: var(--text-3); font-size: .68rem; }
+.rp-pane-head .rp-leg-btns { margin-left: 2px; }

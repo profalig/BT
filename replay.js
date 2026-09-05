@@ -163,13 +163,24 @@ async function fxSeries(base, quote) {
 
 const HOSTED_BASE = 'data';
 let hostedManifest = null, hostedManifestErr = null;
-const HOSTED_MONTHS = {};        // "EURUSD/2024-01" -> [bars] | null
+
+/* Both caches hold the PROMISE, not the result. Two things ask for the same
+   month all the time — the first paint and the pan-left that follows it, or
+   two timeframes in quick succession — and caching only the settled value
+   let both of them start their own download, because nothing was in the
+   cache until the first one finished. */
+const HOSTED_MONTHS = {};        // "EURUSD/2024-01"    -> Promise<[bars]|null>
+const HOSTED_AGG    = {};        // "EURUSD/2024-01/60" -> Promise<[bars]|null>
 
 async function hostedIndex() {
     if (hostedManifest) return hostedManifest;
     if (hostedManifestErr) throw hostedManifestErr;
     try {
-        const r = await fetch(HOSTED_BASE + '/manifest.json');
+        /* The month files are cached hard — they are immutable once built —
+           and the manifest is the one file that is not, so it revalidates
+           every load. Asking for that here rather than in a host config keeps
+           it true on Vercel, on the dev server and on any bucket. */
+        const r = await fetch(HOSTED_BASE + '/manifest.json', { cache: 'no-cache' });
         if (!r.ok) throw new Error('manifest ' + r.status);
         hostedManifest = await r.json();
         return hostedManifest;
@@ -179,21 +190,37 @@ async function hostedIndex() {
     }
 }
 
-async function hostedMonth(symbol, ym) {
+function hostedMonth(symbol, ym) {
     const key = symbol + '/' + ym;
     if (key in HOSTED_MONTHS) return HOSTED_MONTHS[key];
-    let bars = null;
-    try {
-        const r = await fetch(HOSTED_BASE + '/' + symbol + '/' + ym + '.json.gz');
-        // A 404 means that month was never built. Not an error worth throwing:
-        // history simply starts where it starts.
-        if (r.ok) {
+    HOSTED_MONTHS[key] = (async () => {
+        try {
+            const r = await fetch(HOSTED_BASE + '/' + symbol + '/' + ym + '.json.gz');
+            // A 404 means that month was never built. Not an error worth
+            // throwing: history simply starts where it starts.
+            if (!r.ok) return null;
             const d = await readGzJson(r);
-            if (d && d.enc === 'd1') bars = decodeHosted(d);
-        }
-    } catch (e) { bars = null; }
-    HOSTED_MONTHS[key] = bars;
-    return bars;
+            return (d && d.enc === 'd1') ? decodeHosted(d) : null;
+        } catch (e) { return null; }
+    })();
+    return HOSTED_MONTHS[key];
+}
+
+/* A month at the timeframe being drawn, aggregated once and kept.
+
+   Aggregating each month on its own gives the same candles as aggregating the
+   whole span at once, because every timeframe on offer divides a day exactly
+   and a month file starts at midnight on the first — so no bucket can ever
+   straddle the join. That is what makes this cache safe, and it is why
+   flipping between 5m and 1d on history already downloaded is now instant
+   rather than a rebuild of every bar. */
+function hostedMonthAt(symbol, ym, tf) {
+    if (tf === 1) return hostedMonth(symbol, ym);
+    const key = symbol + '/' + ym + '/' + tf;
+    if (key in HOSTED_AGG) return HOSTED_AGG[key];
+    HOSTED_AGG[key] = hostedMonth(symbol, ym)
+        .then(mins => mins ? aggregateBars(mins, tf) : null);
+    return HOSTED_AGG[key];
 }
 
 /* Whether a .json.gz arrives compressed depends entirely on the host. A server
@@ -264,43 +291,87 @@ async function hostedKlines(symbol, interval, opts) {
        is needed, and each file is only ever read once. */
     const need = Math.min(30, Math.max(1, Math.ceil(limit * tf / 21600)));
 
+    /* All at once, not one after another. A daily request needs thirty month
+       files, and asking for them in a loop meant thirty round trips end to
+       end — several seconds of nothing happening, which is exactly what made
+       switching to 1d feel slow. They are independent, so they go together
+       and the wait is the slowest one rather than the sum of all of them. */
+    async function read(from, to) {
+        const wanted = months.slice(from, to);
+        if (!wanted.length) return [];
+        const parts = await Promise.all(wanted.map(ym => hostedMonthAt(symbol, ym, tf)));
+        let bars = [];
+        for (const p of parts) if (p && p.length) bars = bars.concat(p);
+        return bars;
+    }
+
+    const cut = rows => {
+        let r = rows;
+        if (opts.startTime) r = r.filter(b => b.t >= opts.startTime);
+        if (opts.endTime)   r = r.filter(b => b.t <= opts.endTime);
+        return r;
+    };
+
     /* Three different questions get asked here, and only two were answered.
        Panning left calls this with endTime ALONE — "give me what came before
        this" — and that fell through to the branch that returns the most
        recent months, which then filtered down to nothing. That is why the
        chart stopped dead a few months back however far you dragged it. */
-    let wanted;
     if (opts.startTime) {
         const from = ymOf(opts.startTime);
         let i = months.findIndex(m => m >= from);
         if (i < 0) i = Math.max(0, months.length - need);
-        wanted = months.slice(i, i + need);
+        let last = i + need;
         if (opts.endTime) {
             const to = ymOf(opts.endTime);
-            wanted = wanted.filter(m => m <= to);
+            while (last > i && months[last - 1] > to) last--;
         }
-    } else if (opts.endTime) {
+        return cut(await read(i, last)).slice(0, limit);
+    }
+
+    if (opts.endTime) {
         const to = ymOf(opts.endTime);
         let end = months.findIndex(m => m > to);
         if (end < 0) end = months.length;
-        wanted = months.slice(Math.max(0, end - need), end);
-    } else {
-        wanted = months.slice(-need);
-    }
-    if (!wanted.length) return [];
 
-    let mins = [];
-    for (const ym of wanted) {
-        const got = await hostedMonth(symbol, ym);
-        if (got) mins = mins.concat(got);
-    }
-    if (!mins.length) return [];
+        /* Keep walking back until something is actually found, rather than
+           reading one window and calling it the end of history.
 
-    const bars = tf === 1 ? mins : aggregateBars(mins, tf);
-    let rows = bars;
-    if (opts.startTime) rows = rows.filter(b => b.t >= opts.startTime);
-    if (opts.endTime)   rows = rows.filter(b => b.t <= opts.endTime);
-    return opts.startTime ? rows.slice(0, limit) : rows.slice(-limit);
+           The forex week opens at 21:00 UTC on a Sunday, so a month that
+           begins on a Saturday holds nothing at all until its third day.
+           Panning back to the first bar of such a month asked for "everything
+           in this month before 2 August 21:00", got an empty answer, and
+           concluded there was no more history — with eleven years of it
+           sitting on disk underneath. Same for a public holiday that swallows
+           the turn of a month, and same for any gap we have yet to build. */
+        for (let guard = 0; guard < 40 && end > 0; guard++) {
+            const start = Math.max(0, end - need);
+            const rows = cut(await read(start, end));
+            if (rows.length) return rows.slice(-limit);
+            end = start;
+        }
+        return [];
+    }
+
+    return cut(await read(Math.max(0, months.length - need), months.length)).slice(-limit);
+}
+
+/* Pull the months just before what is on screen into the cache while nobody
+   is waiting. Panning left is a gesture people repeat, and the first drag
+   used to stall on a download; now it usually has the bars already. Failures
+   are silent on purpose — this is an optimisation, not a load. */
+function hostedWarm(symbol, tf, beforeMs, count) {
+    if (!beforeMs) return;
+    hostedIndex().then(man => {
+        const info = man.symbols && man.symbols[symbol];
+        if (!info) return;
+        const months = info.months || [];
+        const to = ymOf(beforeMs);
+        let end = months.findIndex(m => m >= to);
+        if (end < 0) end = months.length;
+        months.slice(Math.max(0, end - count), end)
+              .forEach(ym => { hostedMonthAt(symbol, ym, tf); });
+    }).catch(() => {});
 }
 
 /* Minutes into any larger timeframe. Buckets are aligned to the epoch so the
@@ -722,6 +793,7 @@ function buildChart() {
     // Stream older history in as the user pans left, so the chart behaves
     // like a real one rather than ending at an arbitrary wall.
     chart.timeScale().subscribeVisibleLogicalRangeChange(r => {
+        pushRange(chart);
         if (r && r.from < 12) loadOlder();
     });
 
@@ -739,8 +811,10 @@ function buildChart() {
         // has no height, so every indicator row below it jumped up the moment
         // the pointer left a candle and dropped back when it returned.
         const last = lastPainted[lastPainted.length - 1] || null;
-        if (!param || !param.time) { renderOHLC(last); return; }
-        renderOHLC(lastPainted.find(b => b.time === param.time) || last);
+        const t = param && param.time;
+        renderOHLC(t ? (barAt(t) || last) : last);
+        paintIndValues(t);
+        pushCrosshair(chart, param);
     });
 }
 
@@ -782,6 +856,8 @@ function paint() {
     catch (e) { console.error('[replay] setData rejected', e, data.slice(0, 3), data.slice(-3)); }
 
     lastPainted = data;
+    timeIdx = new Map();
+    for (let i = 0; i < data.length; i++) timeIdx.set(data[i].time, i);
     if (window.BTTools) BTTools.setBars(data);
     refreshIndicators(data);
     renderOHLC(data[data.length - 1] || null);
@@ -825,6 +901,8 @@ async function loadChart() {
         loadTicker();
         restoreLayout();
         restoreJournal();
+        rememberPlace();
+        if (S.market === 'hosted') hostedWarm(S.symbol, S.tfMin, S.oldestMs, 6);
     } catch (e) {
         status('Could not load market data: ' + e.message +
                '. Binance may be unreachable from your network.', 'error');
@@ -850,6 +928,8 @@ async function loadOlder() {
         S.hist = older.map(toBar).concat(S.hist);
         S.oldestMs = older[0].t;
         paint();
+        // Keep a page in hand, so the next drag left does not stall either.
+        if (S.market === 'hosted') hostedWarm(S.symbol, S.tfMin, S.oldestMs, 6);
     } catch (e) { /* leave the chart as-is; panning simply stops extending */ }
     finally { S.loadingOlder = false; }
 }
@@ -1167,7 +1247,14 @@ const IND = {
     },
     rsi: {
         label: 'RSI', pane: 'lower', multi: 3,
-        outputs: ['RSI', 'Overbought', 'Oversold'],
+        outputs: ['RSI', 'Overbought zone', 'Oversold zone'],
+        /* One curve and two shaded zones. The thresholds are drawn as levels
+           on the axis rather than as two more lines, so the numbers people
+           actually read — 70 and 30 — are labelled on the scale itself. */
+        kinds: ['line', 'fillOver', 'fillUnder'],
+        colors: [null, '#20b26c', '#ef454a'],
+        range: [0, 100], prec: 2,
+        levels: p => [+p.upper, +p.lower],
         params: { period: 14, upper: 70, lower: 30 }, src: true,
         calc: (b, p) => {
             const c = srcOf(b, p.source), out = new Array(c.length).fill(null);
@@ -1187,15 +1274,15 @@ const IND = {
                     out[i] = l === 0 ? 100 : 100 - 100 / (1 + g / l);
                 }
             }
-            // Constant bands, so the thresholds move with the setting instead
-            // of living in someone's head.
-            const band = v => out.map(x => x === null ? null : v);
-            return [out, band(+p.upper), band(+p.lower)];
+            // The same curve three times: the line, and the two zones that
+            // shade the part of it past each threshold.
+            return [out, out, out];
         }
     },
     macd: {
         label: 'MACD', pane: 'lower', params: { period: 12, slow: 26, signal: 9 }, multi: 3,
         outputs: ['MACD', 'Signal', 'Histogram'], kinds: ['line', 'line', 'histogram'],
+        levels: () => [0],          // the crossing that the study is read for
         src: true,
         calc: (b, p) => {
             const c = srcOf(b, p.source);
@@ -1221,7 +1308,11 @@ const IND = {
     },
     stoch: {
         label: 'Stochastic', pane: 'lower', multi: 4,
-        outputs: ['%K', '%D', 'Overbought', 'Oversold'],
+        outputs: ['%K', '%D', 'Overbought zone', 'Oversold zone'],
+        kinds: ['line', 'line', 'fillOver', 'fillUnder'],
+        colors: [null, null, '#20b26c', '#ef454a'],
+        range: [0, 100], prec: 2,
+        levels: p => [+p.upper, +p.lower],
         params: { period: 14, smoothK: 1, signal: 3, upper: 80, lower: 20 },
         calc: (b, p) => {
             const raw = new Array(b.length).fill(null);
@@ -1239,8 +1330,7 @@ const IND = {
                 : raw;
             const d = movingAvg(kS.map(v => v === null ? 0 : v), p.signal)
                         .map((v, i) => kS[i] === null ? null : v);
-            const band = v => kS.map(x => x === null ? null : v);
-            return [kS, d, band(+p.upper), band(+p.lower)];
+            return [kS, d, kS, kS];
         }
     },
     vwap: {
@@ -1389,6 +1479,362 @@ const IND_COLORS = ['#f7a600', '#5aa9f0', '#c58af0', '#20b26c', '#ef454a', '#00c
 let indSeq = 0;
 const activeInd = [];
 
+/* =====================================================  indicator windows
+
+   An oscillator has no business being drawn against the price scale. RSI runs
+   0 to 100 and a currency pair runs 1.15 to 1.17, so squeezing both onto one
+   axis means either the study is a flat line along the bottom or it is a band
+   straight through the candles. Every platform solves this the same way and
+   so does this one: a study whose `pane` is 'lower' gets a window of its own
+   under the chart, with its own price axis, and the time axis is shared.
+
+   Version 4 of Lightweight Charts has no panes of its own — they arrived in
+   5 — so each window is a second chart, kept in step with the first through
+   its logical range and its crosshair. */
+
+const panes = new Map();            // indicator id -> { el, host, chart, ro }
+let rangeSyncing = false, crossSyncing = false;
+
+const PANE_H_KEY = 'bt.replay.paneH';
+function paneHeight() {
+    let h = 0;
+    try { h = +localStorage.getItem(PANE_H_KEY) || 0; } catch (e) {}
+    return Math.min(340, Math.max(80, h || 170));
+}
+
+function paneChartOptions() {
+    return {
+        layout: { background: { color: theme.bg }, textColor: theme.text,
+                  fontFamily: 'IBM Plex Sans, system-ui, sans-serif', fontSize: 11 },
+        grid: { vertLines: { visible: theme.gridV, color: theme.gridColor },
+                horzLines: { visible: theme.gridH, color: theme.gridColor } },
+        rightPriceScale: { borderColor: 'rgba(255,255,255,0.09)',
+                           scaleMargins: { top: 0.14, bottom: 0.10 } },
+        timeScale: { borderColor: 'rgba(255,255,255,0.09)', timeVisible: true,
+                     secondsVisible: theme.seconds, visible: false },
+        crosshair: {
+            mode: LightweightCharts.CrosshairMode.Normal,
+            vertLine: { visible: theme.crosshair, labelVisible: theme.crosshair },
+            horzLine: { visible: theme.crosshair, labelVisible: theme.crosshair }
+        },
+        watermark: { visible: false },
+        handleScale: { axisPressedMouseMove: { time: true, price: false } }
+    };
+}
+
+function ensurePane(item) {
+    if (panes.has(item.id)) return panes.get(item.id);
+    const box = $('rp-panes');
+
+    if (!box.querySelector('.rp-panes-grip')) {
+        const g = document.createElement('div');
+        g.className = 'rp-panes-grip';
+        g.title = 'Drag to resize the indicator windows';
+        box.appendChild(g);
+        wirePaneGrip(g);
+    }
+
+    const el = document.createElement('div');
+    el.className = 'rp-pane-ind';
+    el.dataset.pane = String(item.id);
+    el.innerHTML = '<div class="rp-pane-chart"></div><div class="rp-pane-head"></div>';
+    box.appendChild(el);
+
+    const host = el.querySelector('.rp-pane-chart');
+    const c = LightweightCharts.createChart(host, paneChartOptions());
+
+    // Same guard as the main chart: a 0x0 applyOptions puts the library into
+    // a state it throws from on every frame afterwards.
+    const ro = new ResizeObserver(() => {
+        const w = host.clientWidth, h = host.clientHeight;
+        if (w > 0 && h > 0) c.applyOptions({ width: w, height: h });
+    });
+    ro.observe(host);
+
+    // Clicking a window selects the study it belongs to, and double-clicking
+    // opens its settings — the same gestures as on the chart above.
+    el.addEventListener('click', e => {
+        if (e.target.closest('button')) return;
+        selectIndicator(item.id);
+    });
+    el.addEventListener('dblclick', e => {
+        if (e.target.closest('button')) return;
+        openIndSettings(item.id);
+    });
+
+    c.timeScale().subscribeVisibleLogicalRangeChange(() => pushRange(c));
+    c.subscribeCrosshairMove(param => {
+        pushCrosshair(c, param);
+        paintIndValues(param && param.time);
+    });
+
+    const rec = { el: el, host: host, chart: c, ro: ro, id: item.id };
+    panes.set(item.id, rec);
+    return rec;
+}
+
+function dropPane(id) {
+    const p = panes.get(id);
+    if (!p) return;
+    try { p.ro.disconnect(); } catch (e) {}
+    try { p.chart.remove(); } catch (e) {}
+    try { p.el.remove(); } catch (e) {}
+    panes.delete(id);
+    if (!panes.size) {
+        const g = $('rp-panes').querySelector('.rp-panes-grip');
+        if (g) g.remove();
+    }
+}
+
+/* Which window carries the time axis. Only the bottom one does, exactly as a
+   single chart has one axis at its foot — anything else puts a row of dates
+   through the middle of the studies. */
+/* What the windows may take: a share of the height the chart and the windows
+   divide between them, measured rather than assumed, so it is right on a
+   laptop and on a monitor. */
+function paneRoom() {
+    const wrap = $('rp-chart-wrap'), box = $('rp-panes');
+    const avail = (wrap ? wrap.clientHeight : 0) + (box ? box.clientHeight : 0);
+    return Math.round(Math.max(200, avail) * 0.45);
+}
+
+function layoutPanes() {
+    const box = $('rp-panes');
+    const n = panes.size;
+    box.hidden = !n;
+    /* Three oscillators at their full height would leave the candles a strip
+       an inch tall. Whatever else happens, the chart keeps its share of what
+       the two of them have between them. */
+    box.style.height = n ? Math.min(5 + n * paneHeight(), paneRoom()) + 'px' : '';
+    try { chart.applyOptions({ timeScale: { visible: !n } }); } catch (e) {}
+    let i = 0;
+    panes.forEach(p => {
+        const last = ++i === n;
+        try { p.chart.applyOptions({ timeScale: { visible: last } }); } catch (e) {}
+    });
+    paneScaleW = 0;      // re-measure: the chart just changed height
+    requestAnimationFrame(() => { alignPaneScales(); pushRange(chart); });
+}
+
+/* The plot areas have to start at the same x, or every window is offset from
+   the chart above it by the difference between "79,796.00" and "59.95" — a
+   good half inch, and enough that a crosshair line does not join up.
+
+   The windows follow the chart rather than the other way round: the chart
+   keeps whatever width its own prices need, and each axis below is given
+   that as a minimum. Following the widest of all of them instead would mean
+   an axis that could only ever grow, so a wide instrument would leave the
+   scale stretched after switching to a narrow one.
+
+   There is no event for this — the width changes whenever the prices on
+   screen gain or lose a digit — so it is watched a frame at a time and only
+   written when it actually moves. */
+let paneScaleW = 0;
+function alignPaneScales() {
+    if (!panes.size) { paneScaleW = 0; return; }
+    let w = 0;
+    try { w = chart.priceScale('right').width() || 0; } catch (e) { return; }
+    if (!w || w === paneScaleW) return;
+    paneScaleW = w;
+    panes.forEach(p => {
+        try { p.chart.priceScale('right').applyOptions({ minimumWidth: w }); } catch (e) {}
+    });
+}
+
+function watchPaneScales() {
+    requestAnimationFrame(watchPaneScales);
+    alignPaneScales();
+}
+
+/* Setting a range that is already set is skipped, not merely guarded against
+   by a flag. Whether the library reports a range change synchronously or on
+   the next frame is its business, and a flag only closes the synchronous
+   door; two charts each answering the other forever is the kind of bug that
+   shows up as a warm laptop, not as an error. */
+const sameRange = (a, b) => !!a && !!b &&
+    Math.abs(a.from - b.from) < 1e-6 && Math.abs(a.to - b.to) < 1e-6;
+
+function setRange(c, r) {
+    try {
+        if (sameRange(c.timeScale().getVisibleLogicalRange(), r)) return;
+        c.timeScale().setVisibleLogicalRange(r);
+    } catch (e) {}
+}
+
+function pushRange(from) {
+    if (rangeSyncing || !panes.size) return;
+    rangeSyncing = true;
+    try {
+        const r = from.timeScale().getVisibleLogicalRange();
+        if (r) {
+            if (from !== chart) setRange(chart, r);
+            panes.forEach(p => { if (p.chart !== from) setRange(p.chart, r); });
+        }
+    } catch (e) {}
+    rangeSyncing = false;
+}
+
+function pushCrosshair(from, param) {
+    if (crossSyncing) return;
+    crossSyncing = true;
+    try {
+        const t = param && param.time;
+        if (!t) {
+            if (from !== chart) { try { chart.clearCrosshairPosition(); } catch (e) {} }
+            panes.forEach(p => {
+                if (p.chart !== from) { try { p.chart.clearCrosshairPosition(); } catch (e) {} }
+            });
+        } else {
+            if (from !== chart) {
+                const b = barAt(t);
+                if (b) { try { chart.setCrosshairPosition(b.close, t, series); } catch (e) {} }
+            }
+            panes.forEach(p => {
+                if (p.chart === from) return;
+                const a = activeInd.find(x => x.id === p.id);
+                if (!a || !a.lines.length) return;
+                const v = indValueAt(a, 0, timeIdx.get(t));
+                const def = IND[a.type];
+                const fallback = def && def.range ? (def.range[0] + def.range[1]) / 2 : 0;
+                try {
+                    p.chart.setCrosshairPosition(v === null ? fallback : v, t, a.lines[0]);
+                } catch (e) {}
+            });
+        }
+    } catch (e) {}
+    crossSyncing = false;
+}
+
+/* Dragging the divider resizes every window together. Kept between sensible
+   bounds so it can never be dragged to nothing or over the chart entirely. */
+function wirePaneGrip(g) {
+    g.addEventListener('mousedown', e => {
+        e.preventDefault();
+        const startY = e.clientY, startH = paneHeight();
+        const move = ev => {
+            const h = Math.min(340, Math.max(80,
+                startH - (ev.clientY - startY) / Math.max(1, panes.size)));
+            try { localStorage.setItem(PANE_H_KEY, String(Math.round(h))); } catch (er) {}
+            $('rp-panes').style.height =
+                Math.min(5 + panes.size * h, paneRoom()) + 'px';
+        };
+        const up = () => {
+            window.removeEventListener('mousemove', move);
+            window.removeEventListener('mouseup', up);
+        };
+        window.addEventListener('mousemove', move);
+        window.addEventListener('mouseup', up);
+    });
+}
+
+// -------------------------------------------------- values under the cursor
+
+/* Bar index by timestamp, rebuilt on every paint. Reading an indicator off the
+   chart means answering "what was this worth at that candle" hundreds of times
+   a second while the pointer moves, and a scan of a hundred thousand bars for
+   each of those is not an answer. */
+let timeIdx = new Map();
+const barAt = t => {
+    const i = timeIdx.get(t);
+    return i === undefined ? null : lastPainted[i];
+};
+
+function lastFinite(arr) {
+    for (let i = arr.length - 1; i >= 0; i--) {
+        if (arr[i] !== null && arr[i] !== undefined && isFinite(arr[i])) return arr[i];
+    }
+    return null;
+}
+
+function indValueAt(a, li, idx) {
+    const set = a.vals && a.vals[li];
+    if (!set) return null;
+    const v = (idx === undefined || idx === null) ? lastFinite(set) : set[idx];
+    return (v === null || v === undefined || !isFinite(v)) ? null : v;
+}
+
+/* The numbers beside the study name. Only the plots worth reading — a shaded
+   zone is the curve over again, and printing it three times helps nobody —
+   and each in its own plot colour, so a Bollinger band's three numbers are
+   attributable at a glance. */
+function indValueText(a, idx) {
+    const def = IND[a.type];
+    const prec = (def && def.prec !== undefined) ? def.prec : pdp();
+    const names = (def && def.outputs) || [];
+    const rows = [];
+    for (let i = 0; i < a.lines.length; i++) {
+        if (isFill((a.kinds || [])[i])) continue;
+        const v = indValueAt(a, i, idx);
+        if (v === null) continue;
+        rows.push({ i: i, v: v });
+    }
+    // A plot name only earns its space when there is more than one number to
+    // tell apart. "RSI 14  RSI 59.95" says RSI twice and helps nobody.
+    const named = rows.length > 1;
+    return rows.map(r => {
+        const st = a.styles[r.i] || {};
+        return (named && names[r.i] ? '<i>' + names[r.i] + '</i>' : '') +
+               '<b style="color:' + st.color + '">' + fmt(r.v, prec) + '</b>';
+    }).join(' ');
+}
+
+function paintIndValues(t) {
+    const idx = (t === undefined || t === null) ? null : timeIdx.get(t);
+    for (const a of activeInd) {
+        const html = a.hidden ? '' : indValueText(a, idx);
+        document.querySelectorAll('[data-indval="' + a.id + '"]')
+            .forEach(el => { el.innerHTML = html; });
+    }
+}
+
+function renderPaneHead(a) {
+    const p = panes.get(a.id);
+    if (!p) return;
+    const head = p.el.querySelector('.rp-pane-head');
+    const col = (a.styles[0] && a.styles[0].color) || a.params.color;
+    head.className = 'rp-pane-head' + (a.hidden ? ' off' : '');
+    p.el.classList.toggle('sel', a.id === selInd);
+    head.innerHTML =
+        '<span class="rp-leg-dot" style="background:' + col + '"></span>' +
+        '<span class="rp-pane-name">' + indName(a) + '</span>' +
+        '<span class="rp-val" data-indval="' + a.id + '"></span>' +
+        (a.error ? '<span class="rp-leg-err" title="' +
+            a.error.replace(/"/g, '&quot;') + '">!</span>' : '') +
+        '<span class="rp-leg-btns">' +
+          '<button data-eye="' + a.id + '" title="Show / hide">' +
+            '<i class="fa-solid fa-eye' + (a.hidden ? '-slash' : '') + '"></i></button>' +
+          '<button data-gear2="' + a.id + '" title="Settings">' +
+            '<i class="fa-solid fa-gear"></i></button>' +
+          '<button data-kill="' + a.id + '" title="Remove">' +
+            '<i class="fa-solid fa-xmark"></i></button>' +
+        '</span>';
+    wireIndControls(head);
+    head.addEventListener('click', e => {
+        if (e.target.closest('button')) return;
+        e.stopPropagation();
+        selectIndicator(a.id);
+    });
+    head.addEventListener('dblclick', e => { e.stopPropagation(); openIndSettings(a.id); });
+}
+
+/* The eye, the gear and the cross behave the same wherever they appear — on
+   the chart legend and on a window header — so they are wired in one place. */
+function wireIndControls(root) {
+    root.querySelectorAll('[data-eye]').forEach(b =>
+        b.addEventListener('click', e => {
+            e.stopPropagation();
+            const a = activeInd.find(x => x.id === +b.dataset.eye);
+            if (a) { a.hidden = !a.hidden; refreshIndicators(lastPainted); saveIndicators(); }
+        }));
+    root.querySelectorAll('[data-gear2]').forEach(b =>
+        b.addEventListener('click', e => { e.stopPropagation(); openIndSettings(+b.dataset.gear2); }));
+    root.querySelectorAll('[data-kill]').forEach(b =>
+        b.addEventListener('click', e => {
+            e.stopPropagation();
+            removeIndicator(+b.dataset.kill); updateIndCount();
+        }));
+}
+
 const DASH = { solid: 0, dotted: 1, dashed: 2 };
 
 function lineOpts(st) {
@@ -1401,24 +1847,111 @@ function lineOpts(st) {
     };
 }
 
-function makeLine(pane, st, kind) {
-    const opts = lineOpts(st);
-    const lower = pane === 'lower';
-    if (lower) opts.priceScaleId = 'ind-lower';
+const TRANSPARENT = 'rgba(0,0,0,0)';
+
+function withAlpha(hex, a) {
+    const h = String(hex || '#888').replace('#', '');
+    const v = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+    return 'rgba(' + ((v >> 16) & 255) + ',' + ((v >> 8) & 255) + ',' + (v & 255) + ',' + a + ')';
+}
+
+/* A shaded zone rather than a second line. Lightweight Charts cannot fill
+   between two series, but a baseline series fills away from a price — so the
+   curve is drawn a second time with the threshold as its baseline and only
+   the half past that threshold given a colour. Above 70 fills, below it does
+   not, and the whole thing sits under the line itself. */
+function fillOpts(st, over) {
+    /* Both stops carry real colour, and neither is subtle. A baseline series
+       fades from the far edge of the scale towards the baseline, which is
+       precisely backwards for this: the shaded area lives AT the baseline —
+       an RSI four points past 70 is four points tall and a couple of pixels
+       wide — so a gradient that thins out there is invisible exactly where
+       the whole point of it is. */
+    const strong = withAlpha(st.color, 0.58), fade = withAlpha(st.color, 0.42);
+    return {
+        lineWidth: 1, baseLineVisible: false,
+        topLineColor: TRANSPARENT, bottomLineColor: TRANSPARENT,
+        topFillColor1:    over ? strong      : TRANSPARENT,
+        topFillColor2:    over ? fade        : TRANSPARENT,
+        bottomFillColor1: over ? TRANSPARENT : fade,
+        bottomFillColor2: over ? TRANSPARENT : strong,
+        priceLineVisible: false, lastValueVisible: false,
+        crosshairMarkerVisible: false,
+        visible: st.visible !== false
+    };
+}
+
+const levelFor = (item, kind) =>
+    kind === 'fillOver' ? +item.params.upper : +item.params.lower;
+
+const isFill = k => k === 'fillOver' || k === 'fillUnder';
+
+function makeLine(item, i) {
+    const st = item.styles[i];
+    const kind = (item.kinds || [])[i] || 'line';
+    const def = IND[item.type];
+    const c = item.lower ? panes.get(item.id).chart : chart;
     let sref;
     if (kind === 'histogram') {
         // A histogram takes a colour, not a line width, and each bar is
         // coloured by its own sign at paint time.
-        sref = chart.addHistogramSeries({
-            color: st.color, priceScaleId: opts.priceScaleId,
-            priceLineVisible: false, lastValueVisible: false,
-            visible: st.visible !== false
+        sref = c.addHistogramSeries({
+            color: st.color, priceLineVisible: false,
+            lastValueVisible: false, visible: st.visible !== false
         });
+    } else if (isFill(kind)) {
+        sref = c.addBaselineSeries(Object.assign(fillOpts(st, kind === 'fillOver'),
+            { baseValue: { type: 'price', price: levelFor(item, kind) } }));
     } else {
-        sref = chart.addLineSeries(opts);
+        sref = c.addLineSeries(lineOpts(st));
     }
-    if (lower) chart.priceScale('ind-lower').applyOptions({ scaleMargins: { top: 0.78, bottom: 0 } });
+    if (def && def.levels) {
+        try { sref.applyOptions({ autoscaleInfoProvider: autoInfo(item) }); } catch (e) {}
+    }
     return sref;
+}
+
+/* A study with thresholds scales to its own data — and then the thresholds
+   are folded in, so they can never end up off the top or bottom of the
+   window. Pinning the scale to 0-100 instead was the obvious thing to do and
+   the wrong one: an RSI that lives between 40 and 60 becomes a flat wiggle
+   across the middle of the window, thirty pixels tall, and the shading of the
+   part past 70 is then too small to see. This way the curve fills the window
+   it was given and 70 and 30 are always on the axis. */
+function autoInfo(item) {
+    const def = IND[item.type];
+    return original => {
+        const res = original();
+        if (!res || !res.priceRange) return res;
+        const lv = def.levels(item.params).filter(v => isFinite(v));
+        if (!lv.length) return res;
+        res.priceRange.minValue = Math.min(res.priceRange.minValue, Math.min.apply(null, lv));
+        res.priceRange.maxValue = Math.max(res.priceRange.maxValue, Math.max.apply(null, lv));
+        return res;
+    };
+}
+
+/* The thresholds, drawn on the axis. A price line carries its own axis label,
+   which is what puts a highlighted 70 and 30 on the scale instead of leaving
+   somebody to judge where they fall between the 60 and the 80. */
+function applyLevels(item) {
+    const s0 = item.lines[0];
+    if (!s0) return;
+    (item.priceLines || []).forEach(pl => { try { s0.removePriceLine(pl); } catch (e) {} });
+    item.priceLines = [];
+    const def = IND[item.type];
+    const lv = (def && def.levels) ? def.levels(item.params) : null;
+    if (!lv) return;
+    lv.forEach(v => {
+        if (!isFinite(v)) return;
+        try {
+            item.priceLines.push(s0.createPriceLine({
+                price: v, color: 'rgba(169,163,173,.42)', lineWidth: 1,
+                lineStyle: LightweightCharts.LineStyle.Dashed,
+                axisLabelVisible: true, title: ''
+            }));
+        } catch (e) {}
+    });
 }
 
 // Secondary plots of the same indicator are dimmed shades of its main colour,
@@ -1438,19 +1971,29 @@ function addIndicator(type, params, code, styles) {
     const item = {
         id: ++indSeq, type: type,
         params: Object.assign({ source: 'close' }, def ? def.params : {}, params || {}),
-        code: code || null, lines: [], styles: [], error: null, hidden: false
+        code: code || null, lines: [], styles: [], error: null, hidden: false,
+        kinds: (def && def.kinds) || [],
+        lower: !!(def && def.pane === 'lower'),
+        priceLines: []
     };
     const col = item.params.color || IND_COLORS[indSeq % IND_COLORS.length];
     item.params.color = col;
+
+    // Its window has to exist before its series can be created in it.
+    if (item.lower) ensurePane(item);
+
     for (let i = 0; i < count; i++) {
-        const st = Object.assign(
-            { color: shade(col, i), width: i === 0 ? 2 : 1, dash: 'solid', visible: true },
-            (styles && styles[i]) || {});
-        item.styles.push(st);
-        item.kinds = (def && def.kinds) || [];
-        item.lines.push(makeLine(def ? def.pane : 'price', st, item.kinds[i]));
+        /* Shaded zones are not dimmer shades of the curve — they mean
+           overbought and oversold, and those have their own colours. */
+        const base = (def && def.colors && def.colors[i]) || shade(col, i);
+        item.styles.push(Object.assign(
+            { color: base, width: i === 0 ? 2 : 1, dash: 'solid', visible: true },
+            (styles && styles[i]) || {}));
+        item.lines.push(makeLine(item, i));
     }
     activeInd.push(item);
+    applyLevels(item);
+    if (item.lower) { renderPaneHead(item); layoutPanes(); }
     renderIndicatorList();
     saveIndicators();
     refreshIndicators(lastPainted);
@@ -1464,13 +2007,19 @@ let selInd = null;
 
 function applyLineStyle(item, i) {
     const st = item.styles[i];
+    const kind = (item.kinds || [])[i] || 'line';
     const on = item.id === selInd;
     try {
-        item.lines[i].applyOptions((item.kinds || [])[i] === 'histogram'
-            ? { color: st.color, visible: st.visible !== false }
-            : Object.assign(lineOpts(st), on
+        if (kind === 'histogram') {
+            item.lines[i].applyOptions({ color: st.color, visible: st.visible !== false });
+        } else if (isFill(kind)) {
+            item.lines[i].applyOptions(Object.assign(fillOpts(st, kind === 'fillOver'),
+                { baseValue: { type: 'price', price: levelFor(item, kind) } }));
+        } else {
+            item.lines[i].applyOptions(Object.assign(lineOpts(st), on
                 ? { lineWidth: Math.min(4, (+st.width || 2) + 1), crosshairMarkerVisible: true }
                 : {}));
+        }
     } catch (e) {}
 }
 
@@ -1479,17 +2028,26 @@ function selectIndicator(id) {
     const was = selInd;
     selInd = id;
     activeInd.forEach(a => {
-        if (a.id === was || a.id === id) a.lines.forEach((_, i) => applyLineStyle(a, i));
+        if (a.id === was || a.id === id) {
+            a.lines.forEach((_, i) => applyLineStyle(a, i));
+            if (a.lower) renderPaneHead(a);
+        }
     });
     renderLegend();
+    paintIndValues(null);
 }
 
 function removeIndicator(id) {
     const i = activeInd.findIndex(a => a.id === id);
     if (i < 0) return;
-    activeInd[i].lines.forEach(l => { try { chart.removeSeries(l); } catch (e) {} });
+    const a = activeInd[i];
+    // A study in its own window takes the window with it; one on the price
+    // chart only has its series removed.
+    if (a.lower) dropPane(id);
+    else a.lines.forEach(l => { try { chart.removeSeries(l); } catch (e) {} });
     if (selInd === id) selInd = null;
     activeInd.splice(i, 1);
+    layoutPanes();
     renderIndicatorList();
     renderLegend();
     saveIndicators();
@@ -1497,11 +2055,16 @@ function removeIndicator(id) {
 
 function refreshIndicators(data) {
     if (!data || !data.length) {
-        activeInd.forEach(a => a.lines.forEach(l => l.setData([])));
+        activeInd.forEach(a => a.lines.forEach(l => { try { l.setData([]); } catch (e) {} }));
         return;
     }
     for (const a of activeInd) {
-        if (a.hidden) { a.lines.forEach(l => { try { l.setData([]); } catch (e) {} }); continue; }
+        if (a.hidden) {
+            a.lines.forEach(l => { try { l.setData([]); } catch (e) {} });
+            a.vals = null;
+            if (a.lower) renderPaneHead(a);
+            continue;
+        }
         let res;
         try {
             if (a.type === 'custom') {
@@ -1523,22 +2086,47 @@ function refreshIndicators(data) {
         }
         a.error = null;
         const sets = Array.isArray(res[0]) ? res : [res];
+        a.vals = [];
         a.lines.forEach((line, li) => {
             let vals = sets[li] || [];
             const off = +a.params.offset || 0;
             if (off) vals = shift(vals, off);
-            const hist = (a.kinds || [])[li] === 'histogram';
+            a.vals.push(vals);
+            const kind = (a.kinds || [])[li] || 'line';
+            const hist = kind === 'histogram';
             const up = a.styles[li].color;
             const dn = a.styles[li].colorDown || '#ef454a';
-            line.setData(data
-                .map((b, i) => {
-                    const v = vals[i];
-                    if (v === null || v === undefined || !isFinite(v)) return null;
-                    return hist ? { time: b.time, value: v, color: v >= 0 ? up : dn }
-                                : { time: b.time, value: v };
-                })
-                .filter(Boolean));
+            const rows = data.map((b, i) => {
+                const v = vals[i];
+                if (v === null || v === undefined || !isFinite(v)) {
+                    /* A window is a second chart, and two charts only stay in
+                       step if their series hold the same number of points. The
+                       first fourteen bars of an RSI have no value, and dropping
+                       them would shift the whole study fourteen candles to the
+                       left of the price it was computed from. A time with no
+                       value keeps the place. */
+                    return a.lower ? { time: b.time } : null;
+                }
+                return hist ? { time: b.time, value: v, color: v >= 0 ? up : dn }
+                            : { time: b.time, value: v };
+            });
+            try { line.setData(a.lower ? rows : rows.filter(Boolean)); } catch (e) {}
+            // A threshold that moved has to move the shading with it.
+            if (isFill(kind)) {
+                try {
+                    line.applyOptions({ baseValue: { type: 'price', price: levelFor(a, kind) } });
+                } catch (e) {}
+            }
         });
+        applyLevels(a);
+        if (a.lower) {
+            const def = IND[a.type];
+            const prec = (def && def.prec !== undefined) ? def.prec : pdp();
+            try {
+                a.lines[0].applyOptions({ priceFormat: {
+                    type: 'price', precision: prec, minMove: Math.pow(10, -prec) } });
+            } catch (e) {}
+        }
         // Keep the computed values so a double-click on the LINE can find
         // which indicator it landed on, not only a click on the legend.
         a.plot = sets.map(vals => data.map((b, i) => ({ t: b.time, v: vals[i] })));
@@ -1549,8 +2137,10 @@ function refreshIndicators(data) {
                 a.lastValue = primary[i]; break;
             }
         }
+        if (a.lower) renderPaneHead(a);
     }
     renderLegend();
+    paintIndValues(null);
 }
 
 // ------------------------------------------------- on-chart legend (TV-like)
@@ -1581,21 +2171,26 @@ function renderLegend() {
     const box = $('rp-legend');
     const toggle = $('rp-leg-toggle');
     if (!box) return;
-    toggle.hidden = !activeInd.length;
-    $('rp-leg-n').textContent = activeInd.length;
-    $('rp-leg-word').textContent = activeInd.length === 1 ? 'indicator' : 'indicators';
-    if (!activeInd.length) { box.innerHTML = ''; return; }
+    /* Studies in their own window are named on that window, where their
+       numbers are. Listing them up here as well would say the same thing
+       twice, three inches apart. */
+    const here = activeInd.filter(a => !a.lower);
+    toggle.hidden = !here.length;
+    $('rp-leg-n').textContent = here.length;
+    $('rp-leg-word').textContent = here.length === 1 ? 'indicator' : 'indicators';
+    if (!here.length) { box.innerHTML = ''; return; }
     // Fold with a class, never by emptying: removing the rows collapsed the
     // block and shifted everything around it.
     box.classList.toggle('folded', legendCollapsed);
 
-    box.innerHTML = activeInd.map(a => {
+    box.innerHTML = here.map(a => {
         const col = (a.styles[0] && a.styles[0].color) || a.params.color;
         const label = a.type === 'custom' ? 'Custom script'
             : IND[a.type].label + (a.params.period ? ' ' + a.params.period : '');
-        const last = a.lastValue;
-        const val = (last === null || last === undefined || !isFinite(last))
-            ? '' : '<b>' + fmt(last, pdp()) + '</b>';
+        // Filled in by paintIndValues, which follows the crosshair. Reading a
+        // study off a chart means knowing what it was worth at the candle
+        // under the pointer, not only at the last one.
+        const val = '<span class="rp-val" data-indval="' + a.id + '"></span>';
         // The controls are always in the row, never revealed on hover: a row
         // that changes width when the pointer crosses it shoves everything
         // beside it out of the way.
@@ -1630,19 +2225,7 @@ function renderLegend() {
             openIndSettings(+row.dataset.leg);
         });
     });
-    box.querySelectorAll('[data-eye]').forEach(b =>
-        b.addEventListener('click', e => {
-            e.stopPropagation();
-            const a = activeInd.find(x => x.id === +b.dataset.eye);
-            if (a) { a.hidden = !a.hidden; refreshIndicators(lastPainted); saveIndicators(); }
-        }));
-    box.querySelectorAll('[data-gear2]').forEach(b =>
-        b.addEventListener('click', e => { e.stopPropagation(); openIndSettings(+b.dataset.gear2); }));
-    box.querySelectorAll('[data-kill]').forEach(b =>
-        b.addEventListener('click', e => {
-            e.stopPropagation();
-            removeIndicator(+b.dataset.kill); updateIndCount();
-        }));
+    wireIndControls(box);
 }
 
 /* Double-clicking an indicator — on the chart legend or in the list — opens
@@ -1839,7 +2422,16 @@ function applyIndicatorParam(id, key, value) {
     if (!a) return;
     a.params[key] = key === 'color' ? value : (+value || a.params[key]);
     if (key === 'color') {
-        a.lines.forEach((l, i) => l.applyOptions({ color: value, lineWidth: i === 0 ? 2 : 1 }));
+        /* Recolour through the styles, not straight onto the series: a shaded
+           zone has no `color` option at all, and its green and red mean
+           overbought and oversold rather than "this study" — so they keep
+           what they were given. */
+        const def = IND[a.type];
+        a.styles.forEach((st, i) => {
+            if (def && def.colors && def.colors[i]) return;
+            st.color = shade(value, i);
+        });
+        a.lines.forEach((_, i) => applyLineStyle(a, i));
     }
     refreshIndicators(lastPainted);
     saveIndicators();
@@ -3536,8 +4128,15 @@ const GUIDE = [
               'Backtest Machine.',
         steps: [
             ['Add one', 'Press <b>Indicators</b>, search, click.'],
-            ['Select it', 'Click its line on the chart — the line thickens and its row in the ' +
-                          'top-left list lights up.'],
+            ['Its own window', 'RSI, MACD, ATR and the stochastic open below the chart with ' +
+                               'their own price scale, so they never cover the candles. ' +
+                               'Drag the divider to resize them.'],
+            ['Read the values', 'Move the pointer across the chart and every study shows what ' +
+                                'it was worth at that candle, beside its name.'],
+            ['Thresholds', 'RSI and the stochastic label their levels on the axis — 70 and 30 — ' +
+                           'and shade the curve where it goes past them.'],
+            ['Select it', 'Click its line, its row, or its window — the line thickens and the ' +
+                          'name lights up.'],
             ['Edit it', 'Double-click the line or the row. <b>Inputs</b> on one tab, per-plot ' +
                         '<b>Style</b> on the other.'],
             ['Manage the list', 'Eye hides, gear opens, cross removes, and the arrow folds the ' +
@@ -3573,6 +4172,9 @@ const GUIDE = [
                         '<kbd>Ctrl</kbd>+<kbd>S</kbd> saves straight back over the one you opened.'],
             ['Sessions', '<b>Save / load</b> at the bottom right keeps your trades, working orders ' +
                          'and balance.'],
+            ['Reloading', 'The instrument, the timeframe, your drawings and your indicators come ' +
+                          'back on their own. An open position or a replay in progress does not, ' +
+                          'so the browser asks before it lets a refresh take them.'],
             ['Clear up', 'Reload or delete either from its own menu — one at a time, or all at once.']
         ],
         note: 'Both live in this browser. Carrying them between machines needs an account, ' +
@@ -3857,6 +4459,35 @@ function openDateWheel() {
 
 const storeKey = kind => 'bt.replay.' + kind + '.' + S.symbol;
 
+/* Which instrument and timeframe were on screen. Reloading the page used to
+   drop everybody back on BTCUSDT however long they had been working on
+   EURUSD, which is the kind of thing that makes a tool feel like a demo. */
+const PLACE_KEY = 'bt.replay.place';
+
+function rememberPlace() {
+    try {
+        localStorage.setItem(PLACE_KEY, JSON.stringify(
+            { market: S.market, symbol: S.symbol, tf: S.tfMin }));
+    } catch (e) {}
+}
+
+function restorePlace() {
+    let p = null;
+    try { p = JSON.parse(localStorage.getItem(PLACE_KEY) || 'null'); } catch (e) {}
+    if (!p || !p.symbol || !MARKETS[p.market]) return;
+    S.market = p.market;
+    S.symbol = p.symbol;
+    const sel = $('rp-tf');
+    if (p.tf && sel.querySelector('option[value="' + p.tf + '"]')) {
+        S.tfMin = p.tf;
+        sel.value = String(p.tf);
+    }
+    syncTimeframes();
+    $('rp-inst-name').textContent = S.symbol;
+    // The category beside it comes from the catalogue, which is still loading.
+    loadCatalogue().then(syncInstButton).catch(() => {});
+}
+
 function saveDrawings(list) {
     try { localStorage.setItem(storeKey('draw'), JSON.stringify(list || [])); } catch (e) {}
 }
@@ -3968,6 +4599,25 @@ function applyTheme() {
     if (effectiveType() === 'candle') series.applyOptions(seriesOptions());
     else if (effectiveType() === 'bar') series.applyOptions({ upColor: theme.up, downColor: theme.down });
     else series.applyOptions({ color: theme.up, lineColor: theme.up });
+
+    // The windows below the chart are separate charts and would otherwise
+    // keep whatever colours they were built with.
+    panes.forEach(p => {
+        try {
+            p.chart.applyOptions({
+                layout: { background: { color: theme.bg }, textColor: theme.text },
+                grid: {
+                    vertLines: { visible: theme.gridV, color: theme.gridColor },
+                    horzLines: { visible: theme.gridH, color: theme.gridColor }
+                },
+                crosshair: {
+                    vertLine: { visible: theme.crosshair, labelVisible: theme.crosshair },
+                    horzLine: { visible: theme.crosshair, labelVisible: theme.crosshair }
+                },
+                timeScale: { secondsVisible: theme.seconds }
+            });
+        } catch (e) {}
+    });
 
     document.documentElement.style.setProperty('--pos', theme.up);
     document.documentElement.style.setProperty('--neg', theme.down);
@@ -4314,7 +4964,9 @@ function init() {
         if (t === null) return null;
         let best = null, bd = 9;
         for (const a of activeInd) {
-            if (a.hidden || !a.plot) continue;
+            // A study in its own window is not on this chart at all; its
+            // coordinates would be measured against the wrong canvas.
+            if (a.hidden || a.lower || !a.plot) continue;
             a.plot.forEach((serie, li) => {
                 if (a.styles[li] && a.styles[li].visible === false) return;
                 let near = null, nd = Infinity;
@@ -4495,6 +5147,9 @@ function init() {
     document.addEventListener('keydown', e => {
         if (!(e.key === 's' || e.key === 'S') || !(e.ctrlKey || e.metaKey)) return;
         e.preventDefault();
+        // A shortcut is not a way round the gate: the Layouts button asks for
+        // an account, and so does this.
+        if (locked) { upsell(); return; }
         if (loadedLayout) { saveLayout(loadedLayout); return; }
         const name = 'Chart ' + new Date().toLocaleDateString(undefined,
             { day: 'numeric', month: 'short' }) + ' ' +
@@ -4600,8 +5255,24 @@ function init() {
         if (e.code === 'ArrowLeft')  { e.preventDefault(); $('rp-back').click(); }
     });
 
+    /* Drawings and the indicator set save themselves as you work, so a reload
+       keeps them and warning about those would be crying wolf. What a reload
+       really does destroy is the simulated session — an open position, working
+       orders, the trade log — and a replay in progress. Only that is worth
+       stopping somebody for. The browser writes its own wording here; all a
+       page can do is ask for the prompt. */
+    window.addEventListener('beforeunload', e => {
+        if (!hasWorkToLose() && S.mode !== 'replay') return;
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+    });
+
+    watchPaneScales();
+
     window.addEventListener('resize', () => { renderCurve(); });
 
+    restorePlace();       // back to whatever was last on screen, not BTCUSDT
     $('rp-tk-icon').textContent = S.symbol.charAt(0);
     updateEquity();
     updateModeUI();
