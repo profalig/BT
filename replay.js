@@ -256,7 +256,7 @@ async function hostedKlines(symbol, interval, opts) {
        what one file yields. Capped, because a daily request would otherwise
        ask for six years of files in one go; panning fetches the rest as it
        is needed, and each file is only ever read once. */
-    const need = Math.min(24, Math.max(1, Math.ceil(limit * tf / 21600)));
+    const need = Math.min(30, Math.max(1, Math.ceil(limit * tf / 21600)));
 
     /* Three different questions get asked here, and only two were answered.
        Panning left calls this with endTime ALONE — "give me what came before
@@ -829,8 +829,12 @@ async function loadOlder() {
     if (S.loadingOlder || S.noMoreHistory || !S.oldestMs) return;
     S.loadingOlder = true;
     try {
+        /* Our own files are local and cached after the first read, so there
+           is no reason to creep backwards a thousand bars at a time and make
+           somebody drag the chart over and over to get through a year. */
+        const page = S.market === 'crypto' ? 1000 : 4000;
         const ks = await MARKETS[S.market].klines(S.symbol, TF_LABEL[S.tfMin],
-                        { endTime: S.oldestMs - 1, limit: 1000 });
+                        { endTime: S.oldestMs - 1, limit: page });
         if (!ks.length) { S.noMoreHistory = true; return; }
         // Belt and braces: only accept bars that really are older than what we
         // hold, and in replay never anything at or past the cut.
@@ -3733,7 +3737,14 @@ let wheelDate = { d: 1, m: 0, y: 2024 };
 function daysIn(y, m) { return new Date(Date.UTC(y, m + 1, 0)).getUTCDate(); }
 
 function buildWheel() {
-    const earliest = new Date(srcOfMarket().earliest);
+    /* The earliest date offered has to be the earliest date this INSTRUMENT
+       has, not the earliest the source could theoretically reach. The picker
+       was offering 2003 for EURUSD because gold goes back that far; choosing
+       it produced an empty chart. Where we host the history the manifest says
+       exactly which month each symbol starts at. */
+    const row = CATALOGUE && CATALOGUE.find(x => x.symbol === S.symbol);
+    const earliest = new Date(row && row.from ? row.from + '-01'
+                                              : srcOfMarket().earliest);
     const maxY = new Date().getUTCFullYear();
     const years = [];
     for (let y = earliest.getUTCFullYear(); y <= maxY; y++) years.push(y);
@@ -4343,13 +4354,22 @@ function init() {
         if (!overAxis(e).price) return;          // over the plot: leave it alone
         e.preventDefault();
         e.stopPropagation();
-        const k = e.deltaY > 0 ? 1.12 : 1 / 1.12;
+        const k = e.deltaY > 0 ? 1.18 : 1 / 1.18;
         priceMargins = {
-            top:    Math.min(0.42, Math.max(0.005, priceMargins.top * k)),
-            bottom: Math.min(0.42, Math.max(0.005, priceMargins.bottom * k))
+            top:    Math.min(0.45, Math.max(0.002, priceMargins.top * k)),
+            bottom: Math.min(0.45, Math.max(0.002, priceMargins.bottom * k))
         };
-        try { chart.priceScale('right').applyOptions({ scaleMargins: priceMargins }); }
-        catch (err) {}
+        /* autoScale MUST go back on. Dragging the price axis is how a trader
+           stretches it by hand, and the library switches autoScale off when
+           they do — after which scaleMargins does nothing at all, because
+           margins are padding around an automatically fitted range and there
+           is no longer a fitted range to pad. The wheel appeared to break
+           permanently the first time anyone dragged the axis. */
+        try {
+            chart.priceScale('right').applyOptions({
+                autoScale: true, scaleMargins: priceMargins
+            });
+        } catch (err) {}
     }, { passive: false, capture: true });
 
     makeDraggable($('rp-transport'), 'bt.replay.pos.transport');
