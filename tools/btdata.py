@@ -273,9 +273,15 @@ def month_is_complete(path):
     try:
         with gzip.open(path, "rb") as f:
             doc = json.loads(f.read().decode("utf-8"))
-        return not doc.get("gaps")
     except Exception:
         return False        # unreadable is not complete
+
+    # The key must be PRESENT and empty. A file written before gaps were
+    # recorded cannot say whether it lost a day, and some of them did — so
+    # "no answer" has to mean "rebuild it", not "it's fine". Absence of
+    # evidence is the one thing that must never read as evidence of absence
+    # in data somebody is going to trade against.
+    return "gaps" in doc and not doc["gaps"]
 
 
 def write_month(out_dir, symbol, year, month, bars, gaps=()):
@@ -423,6 +429,8 @@ def main():
     ap.add_argument("--to", dest="to", help="last month, YYYY-MM (default: this month)")
     ap.add_argument("--out", default="data", help="output folder (default: data)")
     ap.add_argument("--list", action="store_true", help="show what can be built")
+    ap.add_argument("--reindex", action="store_true",
+                    help="rewrite manifest.json from the files on disk")
     ap.add_argument("--verify", nargs="+", metavar=("SYMBOL", "DATE"),
                     help="cross-check candles against ticks, e.g. --verify EURUSD 2024-01-02")
     ap.add_argument("--force", action="store_true", help="rebuild months already on disk")
@@ -442,6 +450,17 @@ def main():
             for s, name, start in sorted(rows):
                 print(f"  {s:16} {name:28} 1-minute history from {start}")
         print("\ngroups:", ", ".join(GROUPS))
+        return
+
+    if a.reindex:
+        # The manifest is written when a run finishes, so a run that was
+        # interrupted leaves files on disk that nothing knows about.
+        man = update_manifest(a.out)
+        for sym, v in man["symbols"].items():
+            holed = v.get("incomplete", [])
+            print(f"  {sym:16} {v['from']} .. {v['to']}  {len(v['months'])} months"
+                  + (f"   INCOMPLETE: {len(holed)}" if holed else ""))
+        print(f"\n{len(man['symbols'])} symbols indexed in {a.out}/manifest.json")
         return
 
     if a.verify:
