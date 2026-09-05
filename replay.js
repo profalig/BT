@@ -441,6 +441,7 @@ async function loadCatalogue() {
         base: sym.slice(0, 3), quote: sym.slice(3, 6),
         name: (ASSET_NAMES[sym.slice(0, 3)] || sym.slice(0, 3)) + ' / ' +
               (ASSET_NAMES[sym.slice(3, 6)] || sym.slice(3, 6)),
+        res: '1D',
         vol: MARKETS.fx.symbols.length - MARKETS.fx.symbols.indexOf(sym)
     }));
 
@@ -488,11 +489,16 @@ async function loadCatalogue() {
                            index: 'other', stock: 'other' };
         hosted = Object.keys(man.symbols || {}).map(sym => {
             const it = man.symbols[sym];
+            const l = it.last || {};
             return {
                 symbol: sym, src: 'hosted', cat: KIND_CAT[it.kind] || 'other',
                 kind: it.kind,
                 base: sym.slice(0, 3), quote: sym.slice(3, 6),
                 name: it.name, from: it.from, to: it.to,
+                // Carried in the manifest so a list of two dozen rows costs
+                // one request rather than two dozen.
+                px: l.c, chg: l.chgPct,
+                res: '1m',
                 vol: it.kind === 'fx' ? 1e6 : 1e5      // list currencies first
             };
         });
@@ -2141,6 +2147,29 @@ function equityPass() {
     updateTicket();
 }
 
+/* The last 24 hours of whatever is loaded: close, change against the bar a day
+   earlier, the range, and the tick volume across it. Returns null rather than
+   guessing when there is not enough history to span a day. */
+function window24(hist) {
+    if (!hist || !hist.length) return null;
+    const last = hist[hist.length - 1];
+    const cutoff = last.time - 86400;              // seconds, as the chart uses
+    let i = hist.length - 1;
+    while (i > 0 && hist[i - 1].time >= cutoff) i--;
+    const from = hist[i];
+    let high = -Infinity, low = Infinity, vol = 0;
+    for (let k = i; k < hist.length; k++) {
+        if (hist[k].high > high) high = hist[k].high;
+        if (hist[k].low < low) low = hist[k].low;
+        vol += hist[k].volume || 0;
+    }
+    const base = from.open || from.close;
+    const chg = last.close - base;
+    return { close: last.close, chg: chg,
+             chgPct: base ? chg / base * 100 : 0,
+             high: high, low: low, vol: vol };
+}
+
 function renderTicker() {
     const t = S.tick;
     const el = $('rp-tk-price');
@@ -2164,18 +2193,26 @@ function renderTicker() {
     }
     $('rp-tk-pair').textContent = S.symbol;
     if (S.market !== 'crypto') {
-        const last = S.hist[S.hist.length - 1], prev = S.hist[S.hist.length - 2];
-        const d = last && prev ? last.close - prev.close : 0;
-        el.textContent = last ? px(last.close) : '—';
-        el.className = d >= 0 ? 'val-pos' : 'val-neg';
-        $('rp-tk-chg').textContent = last && prev
-            ? (d >= 0 ? '+' : '') + px(d) + '  (' + (d / prev.close * 100).toFixed(2) + '%)' : '—';
-        $('rp-tk-chg').className = 'rp-tk-chg ' + (d >= 0 ? 'val-pos' : 'val-neg');
-        $('rp-tk-chgabs').textContent = 'daily';
-        $('rp-tk-high').textContent = last ? px(last.high) : '—';
-        $('rp-tk-low').textContent = last ? px(last.low) : '—';
-        $('rp-tk-vol').textContent = '—';
-        $('rp-tk-turn').textContent = '—';
+        /* Binance hands over a ready-made 24-hour summary; our own files do
+           not, so it is measured here from the bars already loaded. It used to
+           compare the last two BARS, which on a 5-minute chart put a
+           five-minute move under a heading that said 24H CHANGE, and printed
+           the literal word "daily" where the absolute change belongs. */
+        const w = window24(S.hist);
+        el.textContent = w ? px(w.close) : '—';
+        el.className = w && w.chg >= 0 ? 'val-pos' : 'val-neg';
+        $('rp-tk-chg').textContent = w
+            ? (w.chg >= 0 ? '+' : '') + fmt(w.chgPct, 2) + '%' : '—';
+        $('rp-tk-chg').className = 'rp-tk-chg ' + (w && w.chg >= 0 ? 'val-pos' : 'val-neg');
+        $('rp-tk-chgabs').textContent = w ? (w.chg >= 0 ? '+' : '') + px(w.chg) : '—';
+        $('rp-tk-chgabs').className = w && w.chg >= 0 ? 'val-pos' : 'val-neg';
+        $('rp-tk-high').textContent = w ? px(w.high) : '—';
+        $('rp-tk-low').textContent = w ? px(w.low) : '—';
+        // Forex has no central exchange and therefore no true traded volume.
+        // What the feed carries is TICK volume — how many times the price was
+        // quoted — which is what every platform shows here and what the
+        // volume-weighted studies use. Turnover genuinely does not exist.
+        $('rp-tk-vol').textContent = w && w.vol ? compact(w.vol) + ' ticks' : '—';
         return;
     }
     if (!t) return;
@@ -2198,6 +2235,14 @@ function syncTicker() {
                 : S.market === 'hosted' ? 'Dukascopy · 1-minute'
                 : 'Binance · Spot';
     $('rp-tk-venue').textContent = replay ? 'Replay · historical' : venue;
+    /* Turnover is a number an exchange can produce because every trade goes
+       through it. Forex has no central exchange, so there is no turnover to
+       report — an empty field forever is worse than no field. */
+    const turnCell = $('rp-tk-turn') && $('rp-tk-turn').parentElement;
+    if (turnCell) turnCell.hidden = S.market !== 'crypto';
+    const volCell = $('rp-tk-vol') && $('rp-tk-vol').parentElement;
+    if (volCell) volCell.querySelector('span').textContent =
+        S.market === 'crypto' ? '24H Volume' : '24H Ticks';
     renderTicker();
     if (replay) $('rp-clock').textContent = S.working ? iso(S.working.time * 1000) : '—';
 }
@@ -3595,8 +3640,12 @@ function renderInstList() {
                  '<button class="rp-inst-star' + (fav ? ' on' : '') + '" data-fav="' + x.symbol +
                    '" title="' + (fav ? 'Remove from favourites' : 'Add to favourites') + '">' +
                    '<i class="fa-' + (fav ? 'solid' : 'regular') + ' fa-star"></i></button>' +
-                 '<span class="rp-inst-id"><b>' + x.symbol + '</b><span>' + x.name + '</span></span>' +
-                 '<span class="rp-inst-px">' + (isFinite(x.px) ? fmt(x.px, x.px < 1 ? 6 : 2) : '—') + '</span>' +
+                 '<span class="rp-inst-id"><b>' + x.symbol +
+                   (x.res ? '<i class="rp-inst-res' + (x.res === '1m' ? ' fine' : '') + '">' +
+                            x.res + '</i>' : '') +
+                   '</b><span>' + x.name + '</span></span>' +
+                 '<span class="rp-inst-px">' + (isFinite(x.px)
+                     ? fmt(x.px, x.px < 1 ? 5 : x.px < 10 ? 5 : x.px < 1000 ? 3 : 2) : '—') + '</span>' +
                  '<span class="rp-inst-chg ' + (chg === null ? '' : chg >= 0 ? 'val-pos' : 'val-neg') + '">' +
                    (chg === null ? '—' : (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%') + '</span>' +
                '</div>';

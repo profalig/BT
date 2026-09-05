@@ -335,6 +335,44 @@ def write_month(out_dir, symbol, year, month, bars, gaps=()):
     return path, len(blob), os.path.getsize(path)
 
 
+def last_summary(path):
+    """Close, and the move over the final 24 hours, from one month file."""
+    try:
+        with gzip.open(path, "rb") as f:
+            d = json.loads(f.read().decode("utf-8"))
+        n, sc, t0 = d["n"], d["scale"], d["t0"]
+        if not n:
+            return None
+        # Walk the deltas back into real numbers. Only the last day is needed,
+        # but the encoding is cumulative so it has to start at the beginning.
+        mins, closes, highs, lows, vols = [], [], [], [], d.get("v") or []
+        m = c = 0
+        for i in range(n):
+            m += d["t"][i]
+            c += d["c"][i]
+            mins.append(m)
+            closes.append(c)
+            highs.append(c + d["h"][i])
+            lows.append(c + d["l"][i])
+        end = mins[-1]
+        i = 0
+        while i < n and mins[i] < end - 1440:      # 1440 minutes back
+            i += 1
+        i = min(i, n - 1)
+        base = closes[i]
+        return {
+            "t": (t0 + end * 60) * 1000,
+            "c": round(closes[-1] / sc, 8),
+            "chg": round((closes[-1] - base) / sc, 8),
+            "chgPct": round((closes[-1] - base) / base * 100, 4) if base else 0,
+            "h": round(max(highs[i:]) / sc, 8),
+            "l": round(min(lows[i:]) / sc, 8),
+            "v": sum(vols[i:]) if vols else 0,
+        }
+    except Exception:
+        return None
+
+
 def update_manifest(out_dir):
     """What exists on disk, so the terminal never asks for a month we lack."""
     man = {"built": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -355,6 +393,14 @@ def update_manifest(out_dir):
         }
         if holed:
             man["symbols"][symbol]["incomplete"] = holed
+
+        # A last price and a day's change, read once here from the newest
+        # month. The instrument picker shows a row per symbol and cannot go
+        # and fetch a month of history for each one just to fill two columns,
+        # so the answer travels in the manifest it already loads.
+        summary = last_summary(os.path.join(folder, months[-1] + ".json.gz"))
+        if summary:
+            man["symbols"][symbol]["last"] = summary
     with open(os.path.join(out_dir, "manifest.json"), "w", encoding="utf-8") as f:
         json.dump(man, f, indent=1)
     return man

@@ -1490,3 +1490,19 @@ body.rp-locked .rp-locked-ctl::after {
     background: var(--accent); box-shadow: 0 0 0 2px rgba(247,166,0,.22);
     pointer-events: none;
 }
+
+
+/* Which resolution an instrument actually has. Two dozen forex pairs that
+   look identical but behave differently — seven with minute candles, the rest
+   one close a day — is a trap; the badge is the whole explanation. */
+.rp-inst-res {
+    display: inline-block; margin-left: 7px; vertical-align: middle;
+    padding: 1px 5px; border-radius: 3px;
+    font-style: normal; font-size: .58rem; font-weight: 700; letter-spacing: .6px;
+    background: var(--bg-3); color: var(--text-3);
+    border: 1px solid var(--hairline);
+}
+.rp-inst-res.fine {
+    background: rgba(32,178,108,.16); color: var(--pos);
+    border-color: rgba(32,178,108,.42);
+}
