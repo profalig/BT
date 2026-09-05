@@ -525,77 +525,130 @@
             <div class="corner-bracket bottom-right"></div>
 
             <div class="sub-header">
-                <div class="modal-status-tag">// CLEARANCE MATRIX & POWER SUBSCRIPTIONS</div>
+                <div class="modal-status-tag">// CLEARANCE MATRIX &amp; POWER SUBSCRIPTIONS</div>
                 <h2>QUANTITATIVE ACCESS TIERS</h2>
-                <p>Three tiers, two products. Take the machine that tests a system for you, the terminal you trade the past on, or both.</p>
+                <p>Two products. Take the machine that tests a system for you, the terminal you
+                   trade the past on, or both — and run as many backtests as it takes.</p>
+
+                <div class="billing-toggle" id="billing-toggle" role="tablist">
+                    <button type="button" class="bt-opt active" data-cycle="month" role="tab">MONTHLY</button>
+                    <button type="button" class="bt-opt" data-cycle="year" role="tab">
+                        YEARLY <span class="bt-save">2 MONTHS FREE</span>
+                    </button>
+                </div>
             </div>
 
             <div class="pricing-grid">
-                <!-- START PACK ($29) -->
-                <div class="tier-card">
-                    <div class="tier-name">BACKTEST ACCESS</div>
-                    <div class="tier-price">$29</div>
-                    <p class="tier-desc">The Backtest Machine on its own. Submit a system, get the full report back.</p>
-                    <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> Backtest Machine — full access</li>
-                        <li><i class="fa-solid fa-check"></i> Pack of 3 backtests</li>
-                        <li><i class="fa-solid fa-check"></i> Trade log &amp; PDF report</li>
-                        <li><i class="fa-solid fa-xmark unavailable"></i> BarTest Replay &amp; Chart</li>
-                    </ul>
-                    <button class="tier-btn select-tier-btn" data-plan="Backtest Access" data-tier="machine" data-price-id="price_1U16NFCWCAQzKASWoUezwHKg" data-credits="3" data-mode="payment">PAY WITH CARD ($29)</button>
-                    
-                    <!-- NEW CRYPTO BUTTON -->
-                    <button class="tier-btn crypto-pay-btn" onclick="openCryptoModal('Backtest Access', 29, 3, 'machine')" style="margin-top: 8px; border-color: #00ff66; color: #00ff66; background: rgba(0, 255, 102, 0.05); font-weight: bold;">
-                        <i class="fa-solid fa-coins"></i> PAY WITH USDC
-                    </button>
+
+                <!-- ===================================== REPLAY  $19 / $190 -->
+                <div class="tier-card"
+                     data-tier="replay"
+                     data-name="Replay Access"
+                     data-month-id="price_1UC6z2CWCAQzKASWW8mLFTww"  data-month-amt="19"
+                     data-year-id="price_1UC75tCWCAQzKASWni1MkVIW"   data-year-amt="190">
+                    <div>
+                        <div class="tier-name">REPLAY ACCESS</div>
+                        <div class="tier-price"><span class="cur">$</span><b class="amt">19</b><span class="per"> / mo</span></div>
+                        <div class="tier-billed">billed monthly</div>
+                        <p class="tier-desc">BarTest Replay &amp; Chart, in full. Trade the past bar by
+                           bar on your own account, at your own speed.</p>
+                        <ul class="tier-features">
+                            <li><i class="fa-solid fa-check"></i> Replay any market, candle by candle</li>
+                            <li><i class="fa-solid fa-check"></i> Full order ticket, leverage and fees</li>
+                            <li><i class="fa-solid fa-check"></i> Saved sessions, layouts and your own code</li>
+                            <li><i class="fa-solid fa-check"></i> PDF, CSV and JSON export</li>
+                            <li><i class="fa-solid fa-xmark unavailable"></i> Backtest Machine</li>
+                        </ul>
+                    </div>
+                    <div class="tier-actions">
+                        <button class="tier-btn select-tier-btn"
+                                data-plan="Replay Access" data-tier="replay"
+                                data-price-id="price_1UC6z2CWCAQzKASWW8mLFTww"
+                                data-credits="0" data-mode="subscription">SUBSCRIBE &mdash; <span class="btn-amt">$19</span></button>
+                        <button class="tier-btn crypto-pay-btn" data-usdc="replay">
+                            <i class="fa-solid fa-coins"></i> 1 MONTH WITH USDC
+                        </button>
+                    </div>
                 </div>
 
-                <!-- PRO PACK ($79) -->
-                <div class="tier-card featured">
-                    <div class="popular-badge">MOST POPULAR</div>
-                    <div class="tier-name" style="color: #00f0ff;">REPLAY ACCESS</div>
-                    <div class="tier-price" style="color: #00f0ff;">$79</div>
-                    <p class="tier-desc">BarTest Replay &amp; Chart, in full. Trade the past bar by bar, on your own account.</p>
-                    <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> BarTest Replay &amp; Chart — full access</li>
-                        <li><i class="fa-solid fa-check"></i> Unlimited replays, live &amp; historical trading</li>
-                        <li><i class="fa-solid fa-check"></i> Saved sessions, layouts &amp; your own code</li>
-                        <li><i class="fa-solid fa-xmark unavailable"></i> Backtest Machine</li>
-                    </ul>
-                    <button class="tier-btn featured-btn select-tier-btn" data-plan="Replay Access" data-tier="replay" data-price-id="price_1U16Q9CWCAQzKASWjG2gvbvf" data-credits="0" data-mode="payment"><i class="fa-solid fa-bolt"></i> PAY WITH CARD ($79)</button>
-
-                    <!-- NEW CRYPTO BUTTON -->
-                    <button class="tier-btn crypto-pay-btn" onclick="openCryptoModal('Replay Access', 79, 0, 'replay')" style="margin-top: 8px; border-color: #00ff66; color: #00ff66; background: rgba(0, 255, 102, 0.1); font-weight: bold;">
-                        <i class="fa-solid fa-coins"></i> PAY WITH USDC
-                    </button>
+                <!-- =================================== BACKTEST  $49 / $490 -->
+                <div class="tier-card"
+                     data-tier="machine"
+                     data-name="Backtest Access"
+                     data-month-id="price_1UC72jCWCAQzKASWIQJ8g1U7"  data-month-amt="49"
+                     data-year-id="price_1UC77vCWCAQzKASW3Y72EEuv"   data-year-amt="490">
+                    <div>
+                        <div class="tier-name">BACKTEST ACCESS</div>
+                        <div class="tier-price"><span class="cur">$</span><b class="amt">49</b><span class="per"> / mo</span></div>
+                        <div class="tier-billed">billed monthly</div>
+                        <p class="tier-desc">The Backtest Machine on its own. Submit a system, get the
+                           full report back — as many times as it takes to find one that works.</p>
+                        <ul class="tier-features">
+                            <li><i class="fa-solid fa-infinity"></i> <b>Unlimited backtests</b></li>
+                            <li><i class="fa-solid fa-check"></i> Multi-regime: bull, bear and ranging</li>
+                            <li><i class="fa-solid fa-check"></i> Trade-by-trade log and PDF report</li>
+                            <li><i class="fa-solid fa-check"></i> Every report kept in My Reports</li>
+                            <li><i class="fa-solid fa-xmark unavailable"></i> BarTest Replay &amp; Chart</li>
+                        </ul>
+                    </div>
+                    <div class="tier-actions">
+                        <button class="tier-btn select-tier-btn"
+                                data-plan="Backtest Access" data-tier="machine"
+                                data-price-id="price_1UC72jCWCAQzKASWIQJ8g1U7"
+                                data-credits="0" data-mode="subscription">SUBSCRIBE &mdash; <span class="btn-amt">$49</span></button>
+                        <button class="tier-btn crypto-pay-btn" data-usdc="machine">
+                            <i class="fa-solid fa-coins"></i> 1 MONTH WITH USDC
+                        </button>
+                    </div>
                 </div>
 
-                <!-- QUANT MONTHLY PASS ($199) -->
-                <div class="tier-card">
-                    <div class="tier-name" style="color: #ffd700;">FULL ACCESS</div>
-                    <div class="tier-price" style="color: #ffd700;">$199 <span>/ mo</span></div>
-                    <p class="tier-desc">Everything: the Backtest Machine and BarTest Replay &amp; Chart together.</p>
-                    <ul class="tier-features">
-                        <li><i class="fa-solid fa-check"></i> Backtest Machine — full access</li>
-                        <li><i class="fa-solid fa-check"></i> BarTest Replay &amp; Chart — full access</li>
-                        <li><i class="fa-solid fa-check"></i> 40 backtests a month</li>
-                        <li><i class="fa-solid fa-check"></i> 1-on-1 quant desk support</li>
-                    </ul>
-                    <button class="tier-btn select-tier-btn" data-plan="Full Access" data-tier="full" data-price-id="price_1U16RuCWCAQzKASW1SCBeQhn" data-credits="40" data-mode="subscription" style="border-color:#ffd700; color:#ffd700;"><i class="fa-solid fa-crown"></i> CARD SUB ($199)</button>
-
-                    <!-- NEW CRYPTO BUTTON -->
-                    <button class="tier-btn crypto-pay-btn" onclick="openCryptoModal('Full Access', 199, 40, 'full')" style="margin-top: 8px; border-color: #ffd700; color: #ffd700; background: rgba(255, 215, 0, 0.05); font-weight: bold;">
-                        <i class="fa-solid fa-coins"></i> PAY WITH USDC
-                    </button>
+                <!-- ======================================= FULL  $59 / $590 -->
+                <div class="tier-card featured"
+                     data-tier="full"
+                     data-name="Full Access"
+                     data-month-id="price_1UC74ZCWCAQzKASWCIn6lYAL"  data-month-amt="59"
+                     data-year-id="price_1UC78vCWCAQzKASWpAj2IZad"   data-year-amt="590">
+                    <div class="popular-badge">BEST VALUE</div>
+                    <div>
+                        <div class="tier-name">FULL ACCESS</div>
+                        <div class="tier-price"><span class="cur">$</span><b class="amt">59</b><span class="per"> / mo</span></div>
+                        <div class="tier-billed">billed monthly</div>
+                        <p class="tier-desc">Both products, and the loop between them: test a system,
+                           watch it fire in replay, change it, test it again.</p>
+                        <ul class="tier-features">
+                            <li><i class="fa-solid fa-infinity"></i> <b>Unlimited backtests</b></li>
+                            <li><i class="fa-solid fa-check"></i> BarTest Replay &amp; Chart — full access</li>
+                            <li><i class="fa-solid fa-check"></i> Trade-by-trade log and PDF report</li>
+                            <li><i class="fa-solid fa-check"></i> Your system as replay indicator code</li>
+                            <li><i class="fa-solid fa-check"></i> 1-on-1 quant desk support</li>
+                        </ul>
+                    </div>
+                    <div class="tier-actions">
+                        <button class="tier-btn featured-btn select-tier-btn"
+                                data-plan="Full Access" data-tier="full"
+                                data-price-id="price_1UC74ZCWCAQzKASWCIn6lYAL"
+                                data-credits="0" data-mode="subscription"><i class="fa-solid fa-crown"></i> SUBSCRIBE &mdash; <span class="btn-amt">$59</span></button>
+                        <button class="tier-btn crypto-pay-btn" data-usdc="full">
+                            <i class="fa-solid fa-coins"></i> 1 MONTH WITH USDC
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <p class="sub-note">
-                <i class="fa-solid fa-screwdriver-wrench"></i>
-                <span><b>Trading Campus</b> and the <b>System Building Factory</b> are still under
-                development and are not part of any tier yet. They will be added as they open —
-                no tier is priced for them today.</span>
-            </p>
+            <div class="sub-notes">
+                <p class="sub-note">
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                    <span><b>Trading Campus</b> and the <b>System Building Factory</b> are still under
+                    development and are not part of any tier yet. They will be added as they open —
+                    no tier is priced for them today.</span>
+                </p>
+                <p class="sub-note quiet">
+                    <i class="fa-solid fa-coins"></i>
+                    <span>USDC cannot recur, so a crypto payment buys <b>one month</b> of a tier
+                    outright and then lapses. Card subscriptions renew until you cancel, and
+                    cancelling keeps your access to the end of the period you paid for.</span>
+                </p>
+            </div>
         </div>
     </div>
 	

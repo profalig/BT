@@ -3142,3 +3142,103 @@ body.landed .module-details .action-btn {
     -ms-overflow-style: none;           /* old Edge */
 }
 .subscription-modal-card::-webkit-scrollbar { width: 0; height: 0; }
+
+
+/* =====================================================================
+   PRICING — premium pass
+   ===================================================================== */
+.sub-header p { max-width: 640px; margin-left: auto; margin-right: auto; }
+
+/* --- monthly / yearly -------------------------------------------------- */
+.billing-toggle {
+    display: inline-flex;
+    margin: 22px auto 4px;
+    padding: 4px;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 40px;
+}
+.billing-toggle .bt-opt {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: none; border: none; cursor: pointer;
+    padding: 8px 20px; border-radius: 40px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.74rem; letter-spacing: 1.8px;
+    color: rgba(255, 255, 255, 0.5);
+    transition: all 0.25s ease;
+}
+.billing-toggle .bt-opt:hover { color: rgba(255, 255, 255, 0.85); }
+.billing-toggle .bt-opt.active {
+    background: rgba(255, 176, 102, 0.16);
+    color: #ffb066;
+    box-shadow: inset 0 0 0 1px rgba(255, 176, 102, 0.45);
+}
+body.in-space .billing-toggle .bt-opt.active {
+    background: rgba(210, 213, 219, 0.14);
+    color: #d2d5db;
+    box-shadow: inset 0 0 0 1px rgba(210, 213, 219, 0.45);
+}
+.bt-save {
+    background: #20b26c; color: #04160d;
+    font-size: 0.58rem; font-weight: 700; letter-spacing: 1px;
+    padding: 2px 7px; border-radius: 20px;
+}
+
+/* --- the cards --------------------------------------------------------- */
+.pricing-grid { align-items: stretch; gap: 18px; margin-top: 26px; }
+
+.tier-card {
+    padding: 28px 22px 22px;
+    background: linear-gradient(170deg, rgba(255,255,255,0.035), rgba(255,255,255,0.008));
+    border-radius: 10px;
+}
+.tier-card.featured { transform: translateY(-6px); }
+.tier-card.featured:hover { transform: translateY(-10px); }
+
+.tier-price { display: flex; align-items: baseline; gap: 1px; margin-bottom: 2px; }
+.tier-price .cur { font-size: 1.2rem; opacity: 0.7; align-self: flex-start; margin-top: 6px; }
+.tier-price .amt { font-size: 2.9rem; line-height: 1; font-weight: 700; }
+.tier-price .per {
+    font-size: 0.9rem; font-weight: 400;
+    color: rgba(255, 255, 255, 0.4); margin-left: 3px;
+}
+.tier-billed {
+    font-size: 0.7rem; letter-spacing: 0.4px;
+    color: rgba(255, 255, 255, 0.38);
+    margin-bottom: 14px; min-height: 1em;
+}
+
+.tier-features li i.fa-infinity { color: #ffb066; }
+.tier-features li b { color: #fff; font-weight: 600; }
+
+/* --- the buttons ------------------------------------------------------- */
+.tier-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+.tier-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%;
+}
+.crypto-pay-btn {
+    background: rgba(0, 255, 102, 0.05) !important;
+    border: 1px solid rgba(0, 255, 102, 0.45) !important;
+    color: #00ff66 !important;
+    font-weight: 600;
+}
+.crypto-pay-btn:hover { background: rgba(0, 255, 102, 0.14) !important; }
+
+/* --- the notes underneath ---------------------------------------------- */
+.sub-notes { display: flex; flex-direction: column; gap: 10px; margin-top: 22px; }
+.sub-notes .sub-note { margin: 0; }
+.sub-note.quiet {
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.08);
+    border-left-color: rgba(0, 255, 102, 0.5);
+}
+.sub-note.quiet i { color: rgba(0, 255, 102, 0.75); }
+.sub-note.quiet b { color: rgba(255, 255, 255, 0.85); }
+
+@media (max-width: 860px), (orientation: portrait) {
+    .pricing-grid { grid-template-columns: 1fr; }
+    .tier-card.featured { transform: none; }
+    .tier-card.featured:hover { transform: translateY(-4px); }
+    .billing-toggle .bt-opt { padding: 7px 14px; font-size: 0.66rem; letter-spacing: 1.2px; }
+}

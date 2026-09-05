@@ -856,6 +856,69 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pl) pl.addEventListener('click', openSubscriptionModal);
 });
 
+/* =====================================================================
+   PRICING: monthly / yearly
+
+   Each card carries both Stripe prices. The toggle rewrites what is shown
+   and, more importantly, the data-price-id the checkout handler reads — so
+   the page can never advertise one number and charge another.
+
+   USDC is deliberately left out of it: crypto cannot recur, so a coin
+   payment always buys one month at the monthly price whichever way the
+   toggle is set.
+   ===================================================================== */
+let billingCycle = 'month';
+
+function applyBillingCycle(cycle) {
+    billingCycle = (cycle === 'year') ? 'year' : 'month';
+    const yearly = billingCycle === 'year';
+
+    document.querySelectorAll('#billing-toggle .bt-opt').forEach(b =>
+        b.classList.toggle('active', b.dataset.cycle === billingCycle));
+
+    document.querySelectorAll('.tier-card[data-tier]').forEach(card => {
+        const amt = card.dataset[yearly ? 'yearAmt' : 'monthAmt'];
+        const id  = card.dataset[yearly ? 'yearId'  : 'monthId'];
+
+        const amtEl = card.querySelector('.tier-price .amt');
+        const perEl = card.querySelector('.tier-price .per');
+        const bill  = card.querySelector('.tier-billed');
+        if (amtEl) amtEl.textContent = amt;
+        if (perEl) perEl.textContent = yearly ? ' / yr' : ' / mo';
+        if (bill) {
+            bill.textContent = yearly
+                ? '$' + (Math.round(+amt / 12 * 100) / 100).toFixed(2) + ' a month, billed yearly'
+                : 'billed monthly';
+        }
+
+        const btn = card.querySelector('.select-tier-btn');
+        if (btn) {
+            btn.setAttribute('data-price-id', id);
+            const label = btn.querySelector('.btn-amt');
+            if (label) label.textContent = '$' + amt;
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const toggle = document.getElementById('billing-toggle');
+    if (toggle) {
+        toggle.querySelectorAll('.bt-opt').forEach(b =>
+            b.addEventListener('click', () => applyBillingCycle(b.dataset.cycle)));
+        applyBillingCycle('month');
+    }
+
+    /* The USDC buttons were inline onclick handlers carrying their own copy of
+       the price. They read the card they sit in instead, so a price can only
+       be wrong in one place. */
+    document.querySelectorAll('.crypto-pay-btn[data-usdc]').forEach(b =>
+        b.addEventListener('click', () => {
+            const card = b.closest('.tier-card');
+            if (!card) return;
+            openCryptoModal(card.dataset.name, +card.dataset.monthAmt, 0, card.dataset.tier);
+        }));
+});
+
 // ABORT CONSOLE BUTTON
 const abortConsoleBtn = document.getElementById('abort-console-btn');
 if (abortConsoleBtn) {
