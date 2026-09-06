@@ -1724,18 +1724,33 @@ body.rp-locked .rp-locked-ctl::after {
 
     /* The style bar that appears over a selected drawing is a row of
        thirty-pixel squares, which is a mouse target rather than a thumb one. */
-    /* Wrapping, because a row of thumb-sized targets is wider than a phone
-       and the placement code can only slide it left, not fold it. */
+    /* Docked along the foot of the chart rather than floating over the
+       drawing. It is smaller than the desktop bar, not bigger: it is a strip
+       of controls you glance at, and the drawing it belongs to has to stay
+       visible while you use them. One line, scrolling sideways if a tool has
+       more controls than fit — never wrapping into a block. */
     .rp-tb {
-        gap: 3px; padding: 5px 6px;
-        flex-wrap: wrap; justify-content: center;
-        max-width: calc(100vw - 12px);
+        left: 8px !important; right: 8px;
+        top: auto !important; bottom: 8px;
+        width: auto; max-width: none;
+        gap: 2px; padding: 4px 6px;
+        justify-content: flex-start;
+        overflow-x: auto; overflow-y: hidden;
+        flex-wrap: nowrap;
+        scrollbar-width: none;
+        cursor: default;                 /* nothing to drag: it is pinned */
+        background: rgba(22,24,30,.96);
+        backdrop-filter: blur(8px);
     }
-    .rp-tb-sep { display: none; }
-    .rp-tb-b, .rp-tb-sw { min-width: 40px; height: 40px; }
-    .rp-tb-sw i { width: 19px; height: 19px; }
+    .rp-tb::-webkit-scrollbar { display: none; }
+    .rp-tb-b, .rp-tb-sw { min-width: 36px; height: 36px; flex: 0 0 auto; }
+    .rp-tb-sw i { width: 17px; height: 17px; }
+    .rp-tb-sep { flex: 0 0 auto; }
     .rp-pop { padding: 10px; }
     .rp-pop button { min-height: 38px; }
+
+    /* During a replay the transport already owns the foot of the chart. */
+    body.is-replay .rp-tb { bottom: 62px; }
 
     /* A long press on the chart opens a drawing's menu — the phone's
        stand-in for a right click — so the browser's own text-selection

@@ -5357,6 +5357,8 @@ function init() {
 const NARROW_Q = '(max-width: 760px), (max-height: 500px) and (max-width: 1024px)';
 const PHONE = window.matchMedia(NARROW_Q);
 const isPhone = () => PHONE.matches;
+// The drawing engine needs the same answer, and there must only be one of it.
+window.BTIsPhone = isPhone;
 const SHEETS = { draw: 'rp-rail', trade: 'rp-trade', book: 'rp-dock', more: 'rp-more' };
 let openSheetName = '';
 

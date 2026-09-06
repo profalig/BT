@@ -37,7 +37,14 @@ let histAt = -1;
 let restoring = false;
 
 const SEL  = '#5aa9f0';
-const HIT  = 10;
+
+/* How close counts as touching a drawing. Ten pixels is right for a mouse,
+   which lands where the arrow is; a finger reports the centre of a contact
+   patch several millimetres across, so on a phone a line a pixel and a half
+   wide would be almost impossible to take hold of. Set once at attach and
+   whenever the layout changes underneath it. */
+let HIT = 10;
+function syncHit() { HIT = phoneTools() ? 19 : 10; }
 /* Level sets are DATA on the shape, not constants in this file, so a trader
    can add the 1.13 they use, drop the 0.786 they never look at, and recolour
    the rest — the way every charting platform lets them. */
@@ -237,6 +244,8 @@ function attach(_chart, _series, _host, opts) {
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     bridgeTouch();
+    syncHit();
+    window.addEventListener('resize', syncHit);
     window.addEventListener('mousemove', onCfgMove);
     window.addEventListener('mouseup', onCfgUp);
     document.addEventListener('keydown', onKey);
@@ -322,7 +331,10 @@ function bridgeTouch() {
     host.addEventListener('touchstart', e => {
         if (!e.touches || e.touches.length !== 1) return;
         const p = e.touches[0];
-        pressAt = { x: p.clientX, y: p.clientY };
+        /* clientX/clientY, not x/y: this is passed straight to toChart and to
+           the relayed event, and both of those read a Touch, so it has to
+           look like one. */
+        pressAt = { clientX: p.clientX, clientY: p.clientY };
         clearTimeout(pressT);
         pressT = setTimeout(() => {
             pressT = null;
@@ -330,7 +342,31 @@ function bridgeTouch() {
             if (!c || !hitTest(c.x, c.y)) return;
             relay(e.target, 'contextmenu', pressAt);
         }, 520);
-    }, { passive: true });
+    }, { passive: true, capture: true });
+
+    /* A tap on empty chart clears the selection and takes the style bar with
+       it. The mouse path already does this inside onDown — but onDown only
+       runs for touches the bridge claims, and a tap on nothing is deliberately
+       not one of those, because that is how the chart keeps its pan. So the
+       tap is recognised here instead: no movement, nothing under it, and it
+       must not preventDefault or panning would go with it. */
+    /* Capture, like the bridge above it. A listener on the same element in
+       the same phase still runs after stopPropagation — a listener in a later
+       phase does not, and the bridge stops the events it claims. */
+    host.addEventListener('touchend', e => {
+        if (holding || selected === null || !pressAt) return;
+        const p = e.changedTouches && e.changedTouches[0];
+        if (!p) return;
+        if (Math.abs(p.clientX - pressAt.clientX) > 9 ||
+            Math.abs(p.clientY - pressAt.clientY) > 9) return;   // that was a pan
+        if (fromUI(e)) return;
+        const c = toChart(p);
+        if (c && hitTest(c.x, c.y)) return;                   // that was a drawing
+        selected = null;
+        closeHud();
+        closeSettings();
+        render();
+    }, { passive: true, capture: true });
 
     const dropPress = () => { clearTimeout(pressT); pressT = null; };
     host.addEventListener('touchmove', e => {
@@ -339,11 +375,11 @@ function bridgeTouch() {
         // A finger that wandered was a drag. A finger that trembled was not:
         // nobody holds a phone still to the pixel, and cancelling on the
         // first stray one would mean the press never fires.
-        if (p && (Math.abs(p.clientX - pressAt.x) > 9 ||
-                  Math.abs(p.clientY - pressAt.y) > 9)) dropPress();
-    }, { passive: true });
-    host.addEventListener('touchend', dropPress, { passive: true });
-    host.addEventListener('touchcancel', dropPress, { passive: true });
+        if (p && (Math.abs(p.clientX - pressAt.clientX) > 9 ||
+                  Math.abs(p.clientY - pressAt.clientY) > 9)) dropPress();
+    }, { passive: true, capture: true });
+    host.addEventListener('touchend', dropPress, { passive: true, capture: true });
+    host.addEventListener('touchcancel', dropPress, { passive: true, capture: true });
 }
 
 function resize() {
@@ -618,6 +654,7 @@ function onDown(e) {
     if (!hit) { if (selected !== null) { selected = null; closeHud(); closeSettings(); render(); } return; }
 
     e.preventDefault(); e.stopPropagation();
+    hudWanted = true;              // reaching for a drawing IS asking to edit it
     selected = hit.id;
     const s = shapes.find(x => x.id === hit.id);
     if (!(s.locked || lockAll)) {
@@ -709,6 +746,9 @@ function onUp() {
         }
         setTool(navTool);
         rememberStyle(s);
+        // Drawn, not selected for editing. The shape keeps its handles so it
+        // can be adjusted; the style bar stays away until it is asked for.
+        if (phoneTools()) hudWanted = false;
         if (spec(s).cap === 'text') openSettings(s.id, true);
     }
     if (s && spec(s).kind === 'position') sendToOrderPanel(s);
@@ -1655,6 +1695,18 @@ function closeFly() {
 
 let hudEl = null, hudId = null;
 
+/* Whether the style bar is welcome.
+
+   On a desktop it appears the moment a shape is selected, which includes the
+   moment you finish drawing one — the pointer is already there and so is the
+   bar. On a phone that is wrong twice over: the bar lands on top of the line
+   you have just drawn, and you did not ask to restyle it, you asked to draw
+   it. So on a phone the bar waits to be sent for. Tap the drawing and it
+   comes; tap the chart and it goes. */
+const phoneTools = () => (window.BTIsPhone ? window.BTIsPhone()
+                                           : window.innerWidth <= 760);
+let hudWanted = true;
+
 let hudOffset = { dx: 0, dy: 0 };   // where the trader dragged it to
 
 function buildHud() {
@@ -1743,6 +1795,9 @@ function hudFor(s) {
 }
 
 function openHud(id) {
+    // Opening it deliberately — from the lock toggle, or the settings dialog
+    // closing behind it — counts as asking for it.
+    hudWanted = true;
     const s = shapes.find(x => x.id === id);
     if (!s || !hudEl) return;
     hudId = id;
@@ -1815,6 +1870,16 @@ function setStyle(s, key, value) {
 
 function placeHud(s) {
     if (!hudEl || hudEl.hidden) return;
+    if (phoneTools()) {
+        /* Along the foot of the chart, out of the way. A bar that follows the
+           shape has nowhere to go on a phone: put it above a line near the
+           top and it is off the chart, put it anywhere else and it covers the
+           drawing being edited. The stylesheet pins it; clearing what was set
+           for a desktop is all that is needed here. */
+        hudEl.style.left = '';
+        hudEl.style.top = '';
+        return;
+    }
     const pts = s.pts.map(pxOf);
     if (pts.some(p => p === null)) { hudEl.hidden = true; return; }
     const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
@@ -1831,6 +1896,8 @@ function place() {
     if (selected === null) { closeHud(); return; }
     const s = shapes.find(x => x.id === selected);
     if (!s) { closeHud(); return; }
+    // Selected, but nobody asked to restyle it — see hudWanted.
+    if (!hudWanted) { closeHud(); return; }
     // Rebuild when the selection moved to a different shape — a rectangle's
     // toolbar is not a trend line's, and only repositioning it leaves the
     // wrong buttons under the cursor.
