@@ -1518,8 +1518,13 @@ function paneChartOptions() {
             vertLine: { visible: theme.crosshair, labelVisible: theme.crosshair },
             horzLine: { visible: theme.crosshair, labelVisible: theme.crosshair }
         },
-        watermark: { visible: false },
-        handleScale: { axisPressedMouseMove: { time: true, price: false } }
+        watermark: { visible: false }
+        /* No handleScale override. Pinning the price axis so an oscillator
+           could not be stretched by hand sounded tidy and was not: a scale
+           you cannot drag is half a scale, and the double-click that resets
+           it had nothing to reset. The library's defaults are the gestures
+           people already know — drag an axis to stretch it, double-click it
+           to put it back. */
     };
 }
 
@@ -1552,6 +1557,22 @@ function ensurePane(item) {
     });
     ro.observe(host);
 
+    /* An axis belongs to the chart, not to us. Double-clicking a price axis
+       resets its scale, and double-clicking the time axis resets the zoom
+       across every chart in the stack — the gestures every charting platform
+       has. Opening a settings dialog on top of them made both look broken:
+       the scale never moved and a dialog appeared instead.
+
+       The main chart has had this guard since it was written; the windows
+       below it were added later and did not. */
+    const onPaneAxis = e => {
+        const r = host.getBoundingClientRect();
+        let pw = 0, th = 0;
+        try { pw = c.priceScale('right').width() || 0; } catch (err) {}
+        try { th = c.timeScale().height() || 0; } catch (err) {}
+        return e.clientX >= r.right - pw || e.clientY >= r.bottom - th;
+    };
+
     // Clicking a window selects the study it belongs to, and double-clicking
     // opens its settings — the same gestures as on the chart above.
     el.addEventListener('click', e => {
@@ -1560,6 +1581,7 @@ function ensurePane(item) {
     });
     el.addEventListener('dblclick', e => {
         if (e.target.closest('button')) return;
+        if (onPaneAxis(e)) return;          // let the library reset the view
         openIndSettings(item.id);
     });
 
