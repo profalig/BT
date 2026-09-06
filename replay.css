@@ -1805,6 +1805,10 @@ body.rp-locked .rp-locked-ctl::after {
     #rp-rail::before, #rp-trade::before, #rp-dock::before, .rp-sheet::before {
         content: attr(data-sheet-title);
         flex: 0 0 auto;
+        /* The strip you pull the sheet down by — see grabSheet. Tall enough
+           to grab without aiming, which is why the pill sits inside it
+           rather than above it. */
+        touch-action: none;
         padding: 17px 16px 11px;
         font-size: .69rem; font-weight: 700; letter-spacing: 1.4px;
         text-transform: uppercase; color: var(--text-3);
@@ -1967,9 +1971,43 @@ body.rp-locked .rp-locked-ctl::after {
     .rp-help-body { grid-template-columns: 1fr; }
     .rp-help-nav {
         flex-direction: row; overflow-x: auto; flex: 0 0 auto;
+        height: 52px; align-items: center;
         border-right: none; border-bottom: 1px solid var(--hairline);
         -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
     }
+    .rp-help-nav::-webkit-scrollbar { display: none; }
+
+    /* There is more to the right, and a strip that simply ends at the edge of
+       the screen does not say so — people read what fits and conclude that is
+       all there is. A fade and an arrow say "keep going", and both go away
+       once there is nothing left to scroll to. */
+    .rp-help-body { position: relative; }
+    .rp-help-body::after {
+        content: '\203A';
+        position: absolute; top: 0; right: 0;
+        width: 52px; height: 52px;
+        display: grid; place-items: center; padding-left: 16px;
+        pointer-events: none;
+        color: var(--accent); font-size: 1.5rem; font-weight: 700; line-height: 1;
+        background: linear-gradient(90deg, rgba(22,24,30,0) 0%, var(--bg-1) 62%);
+        transition: opacity .2s;
+    }
+    .rp-help-body.at-end::after { opacity: 0; }
+
+    /* The dock's own tab strip runs off the side for the same reason. */
+    #rp-dock { position: fixed; }
+    #rp-dock::after {
+        content: '\203A';
+        position: absolute; top: 56px; right: 0;
+        width: 46px; height: 46px;
+        display: grid; place-items: center; padding-left: 14px;
+        pointer-events: none; z-index: 3;
+        color: var(--accent); font-size: 1.4rem; font-weight: 700; line-height: 1;
+        background: linear-gradient(90deg, rgba(22,24,30,0) 0%, var(--bg-1) 62%);
+        transition: opacity .2s;
+    }
+    #rp-dock.at-end::after { opacity: 0; }
     /* A strip that scrolls sideways: its items must stay on one line, or the
        selected one grows to three and shoves the rest off the end. */
     .rp-help-nav button { white-space: nowrap; flex: 0 0 auto; }

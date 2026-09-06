@@ -274,11 +274,17 @@ function attach(_chart, _series, _host, opts) {
 function touchIsOurs(e) {
     if (!e.touches || e.touches.length !== 1) return false;
     if (fromUI(e)) return false;
+    /* A menu is open over the chart. The next tap is how it gets closed, so
+       it must reach the page rather than draw something under it — choosing
+       the wrong kind of tool and tapping to back out should not leave a
+       shape behind. */
+    if (document.querySelector('.rp-flyout, .rp-ctx, .rp-pop')) return false;
+    const p = toChart(e.touches[0]);
+    if (!p || !inPlot(p.x, p.y)) return false;   // the axes belong to the chart
     if (pending) return true;               // a shape half built
     if (tool === 'eraser') return true;
     if (!NAV[tool]) return true;            // a drawing tool in hand
-    const p = toChart(e.touches[0]);
-    return !!(p && hitTest(p.x, p.y));      // reaching for an existing shape
+    return !!hitTest(p.x, p.y);             // reaching for an existing shape
 }
 
 function relay(target, type, touch) {
@@ -339,7 +345,7 @@ function bridgeTouch() {
         pressT = setTimeout(() => {
             pressT = null;
             const c = toChart(pressAt);
-            if (!c || !hitTest(c.x, c.y)) return;
+            if (!c || !inPlot(c.x, c.y) || !hitTest(c.x, c.y)) return;
             relay(e.target, 'contextmenu', pressAt);
         }, 520);
     }, { passive: true, capture: true });
@@ -458,6 +464,26 @@ function xToTime(x) {
     if (!bars.length) return null;
     const i = chart.timeScale().coordinateToLogical(x);
     return (i === null || !isFinite(i)) ? null : indexToTime(i);
+}
+
+/* Where the chart actually draws, as opposed to where its axes are.
+
+   The price axis down the right and the time axis along the foot belong to
+   the chart: dragging the price axis is how a trader stretches the scale by
+   hand. But a horizontal line counts as hit at EVERY x — that is what makes
+   it a horizontal line — so a drag that started on the axis took hold of the
+   line and moved it, while the trader thought they were rescaling. A ray, a
+   channel and a position box reach far enough right to do the same.
+
+   Anything that begins an interaction asks this first. What it does not
+   govern is a drag already under way: once you have hold of something,
+   following your finger out over the axis and back is yours to do. */
+function inPlot(x, y) {
+    let w = 0, h = 0;
+    try { w = chart.priceScale('right').width() || 0; } catch (e) {}
+    try { h = chart.timeScale().height() || 0; } catch (e) {}
+    return x >= 0 && y >= 0 &&
+           x <= cvs.clientWidth - w - 1 && y <= cvs.clientHeight - h - 1;
 }
 
 function toChart(e) {
@@ -603,6 +629,7 @@ function onDown(e) {
     if (e.button !== 0 || fromUI(e)) return;
     const p = toChart(e);
     if (!p) return;
+    if (!inPlot(p.x, p.y)) return;      // the axes are the chart's, not ours
 
     // A multi-click build in progress swallows clicks until it is complete.
     if (pending) {
@@ -806,7 +833,7 @@ function closeMenu() {
 function onContext(e) {
     if (fromUI(e)) return;
     const p = toChart(e);
-    if (!p) return;
+    if (!p || !inPlot(p.x, p.y)) return;
     e.preventDefault(); e.stopPropagation();
 
     const hit = hitTest(p.x, p.y);
@@ -906,11 +933,13 @@ function showMenu(cx, cy, items) {
         }));
     setTimeout(() => {
         document.addEventListener('mousedown', outside);
+        document.addEventListener('touchstart', outside, { passive: true });
         document.addEventListener('contextmenu', outside);
     }, 0);
     function outside(ev) {
         if (menuEl && menuEl.contains(ev.target)) return;
         document.removeEventListener('mousedown', outside);
+        document.removeEventListener('touchstart', outside);
         document.removeEventListener('contextmenu', outside);
         closeMenu();
     }
@@ -1635,13 +1664,20 @@ function buildRail() {
             }
         }));
 
-    document.addEventListener('mousedown', e => {
-        // Not every mousedown targets an element — a document- or text-node
+    /* A tap is not a mousedown. A browser synthesises one after a tap, but
+       only when the touch was not preventDefaulted — and the drawing bridge
+       preventDefaults every touch it claims. So the menu of tool variants
+       could be opened on a phone and then had no way of being closed except
+       by choosing something from it. */
+    const away = e => {
+        // Not every event targets an element — a document- or text-node
         // target has no closest() and threw straight through this handler.
         if (!openFly) return;
         const t = e.target;
         if (!t || typeof t.closest !== 'function' || !t.closest('.rp-flyout, .rp-tgroup')) closeFly();
-    });
+    };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('touchstart', away, { passive: true });
 }
 
 function flyout(g, el) {
@@ -1917,12 +1953,24 @@ function popAt(anchor, html) {
     document.body.appendChild(popEl);
     const r = anchor.getBoundingClientRect();
     popEl.style.left = Math.max(8, Math.min(window.innerWidth - popEl.offsetWidth - 8, r.left - 10)) + 'px';
-    popEl.style.top  = (r.bottom + 6) + 'px';
+    /* Below the button where there is room below it, above where there is
+       not. On a phone the style bar is docked at the foot of the chart, so
+       below it is the tab bar and then the edge of the screen — a colour
+       picker opening downwards there is a colour picker you cannot see. */
+    const h = popEl.offsetHeight;
+    const below = r.bottom + 6;
+    popEl.style.top = (below + h > window.innerHeight - 8
+        ? Math.max(8, r.top - h - 6)
+        : below) + 'px';
     const el = popEl;
-    setTimeout(() => document.addEventListener('mousedown', outside), 0);
+    setTimeout(() => {
+        document.addEventListener('mousedown', outside);
+        document.addEventListener('touchstart', outside, { passive: true });
+    }, 0);
     function outside(e) {
         if (el && !el.contains(e.target)) {
             document.removeEventListener('mousedown', outside);
+            document.removeEventListener('touchstart', outside);
             if (popEl === el) closePop();
         }
     }

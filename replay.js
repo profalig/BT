@@ -4052,8 +4052,10 @@ const GUIDE = [
         id: 'replay', icon: 'replay', group: 'Start here', title: 'Replay a market',
         lede: 'Hide everything after a date, then take it back one bar at a time.',
         steps: [
-            ['Open it', 'Press <b>Replay</b> in the top bar.'],
-            ['Choose the moment', 'Double-click any candle, or roll the date wheel and press <b>Use date</b>.'],
+            ['Open it', 'Press <b>Replay</b> in the top bar.',
+                        'Press <b>More</b>, then <b>Replay</b>.'],
+            ['Choose the moment', 'Double-click any candle, or roll the date wheel and press <b>Use date</b>.',
+                                  'Tap any candle, or roll the date wheel and press <b>Use date</b>.'],
             ['Cut the chart', '<b>Start replay</b> withholds every bar after that point.'],
             ['Move through it', 'Step one bar at a time, or press play and set bars per second.'],
             ['Come back', '<b>Back to full chart</b> returns to live prices. Your trade log survives.']
@@ -4068,7 +4070,8 @@ const GUIDE = [
         short: 'Instruments',
         lede: 'Crypto and gold are priced from Binance, currencies from the European Central Bank.',
         steps: [
-            ['Open the picker', 'Click the instrument button in the top bar.'],
+            ['Open the picker', 'Click the instrument button in the top bar.',
+                                'Tap the instrument button at the top.'],
             ['Browse', 'Tabs for Favourites, Crypto, Forex and Commodities. Search stays inside the open tab.'],
             ['Keep what you use', 'Star anything to pin it to Favourites.'],
             ['Crypto', 'Minute data back to 2017 — every timeframe works and replay steps minute by minute.'],
@@ -4132,13 +4135,21 @@ const GUIDE = [
         lede: 'Forty tools in seven groups on the left rail, saved per instrument as you draw.',
         steps: [
             ['Pick one', 'Click a rail icon to use the tool showing; its corner arrow — or a ' +
-                         'right-click — opens the whole group.'],
+                         'right-click — opens the whole group.',
+                         'Press <b>Draw</b> and tap a tool. The arrow at the end of a row opens ' +
+                         'the rest of that group.'],
             ['Pin your favourites', 'Star a tool in that menu and it appears at the top of the ' +
-                                    'right-click menu, anywhere on the chart.'],
+                                    'right-click menu, anywhere on the chart.',
+                                    'Star a tool in that menu and it comes first when you hold a ' +
+                                    'drawing on the chart.'],
             ['Restyle it', 'Select a drawing and a toolbar floats above it. Drag the toolbar if ' +
-                           'it sits where you need to look.'],
+                           'it sits where you need to look.',
+                           'Tap a drawing and its style bar appears along the foot of the chart. ' +
+                           'Tap the chart to put it away.'],
             ['Go deeper', 'Double-click for full settings. Fibonacci levels can be edited, added, ' +
-                          'recoloured or switched off one by one.']
+                          'recoloured or switched off one by one.',
+                          'The gear on that bar opens full settings. Fibonacci levels can be ' +
+                          'edited, added, recoloured or switched off one by one.']
         ],
         keys: [['Ctrl+Z', 'Undo'], ['Ctrl+Shift+Z', 'Redo'], ['Del', 'Delete selected'], ['Esc', 'Cancel']],
         note: 'The magnet on the rail snaps new points to the nearest open, high, low or close. ' +
@@ -4161,6 +4172,8 @@ const GUIDE = [
             ['Select it', 'Click its line, its row, or its window — the line thickens and the ' +
                           'name lights up.'],
             ['Edit it', 'Double-click the line or the row. <b>Inputs</b> on one tab, per-plot ' +
+                        '<b>Style</b> on the other.',
+                        'Tap the gear on its row. <b>Inputs</b> on one tab, per-plot ' +
                         '<b>Style</b> on the other.'],
             ['Manage the list', 'Eye hides, gear opens, cross removes, and the arrow folds the ' +
                                 'whole list away.'],
@@ -4192,8 +4205,12 @@ const GUIDE = [
         keys: [['Ctrl+S', 'Save the chart to its layout']],
         steps: [
             ['Layouts', 'Instrument, timeframe, theme, indicators and drawings, saved under a name. ' +
-                        '<kbd>Ctrl</kbd>+<kbd>S</kbd> saves straight back over the one you opened.'],
+                        '<kbd>Ctrl</kbd>+<kbd>S</kbd> saves straight back over the one you opened.',
+                        'Instrument, timeframe, theme, indicators and drawings, saved under a ' +
+                        'name. Under <b>More</b>.'],
             ['Sessions', '<b>Save / load</b> at the bottom right keeps your trades, working orders ' +
+                         'and balance.',
+                         '<b>Save / load</b> under <b>More</b> keeps your trades, working orders ' +
                          'and balance.'],
             ['Reloading', 'The instrument, the timeframe, your drawings and your indicators come ' +
                           'back on their own. An open position or a replay in progress does not, ' +
@@ -4229,9 +4246,15 @@ function renderGuide() {
     $('rp-help-doc').innerHTML =
         '<span class="rp-help-kicker">' + g.group + '</span>' +
         '<h3>' + g.title + '</h3><p class="lede">' + g.lede + '</p>' +
+        /* A step may carry a third string: what to do on a phone, where the
+           instruction is not merely worded differently but actually
+           different — Replay is under More, not in the top bar, and nobody
+           right-clicks. Only the steps that would otherwise be wrong have
+           one, so there is no second copy of the guide to keep in step. */
         '<ol class="rp-help-steps">' + g.steps.map((st, i) =>
             '<li class="rp-help-step"><span class="rp-help-num">' + (i + 1) + '</span>' +
-            '<div><b>' + st[0] + '</b><p>' + st[1] + '</p></div></li>').join('') + '</ol>' +
+            '<div><b>' + st[0] + '</b><p>' +
+            ((isPhone() && st[2]) ? st[2] : st[1]) + '</p></div></li>').join('') + '</ol>' +
         (g.keys ? '<div class="rp-help-keys">' + g.keys.map(k =>
             '<span><kbd>' + k[0] + '</kbd>' + k[1] + '</span>').join('') + '</div>' : '') +
         (g.note ? '<div class="rp-help-note">' + g.note + '</div>' : '');
@@ -5400,6 +5423,14 @@ function wirePhone() {
     const scrim = $('rp-scrim');
     if (scrim) scrim.addEventListener('click', () => showSheet(''));
 
+    Object.keys(SHEETS).forEach(k => { const el = sheetEl(k); if (el) grabSheet(el); });
+
+    /* The arrows that say a strip has more to the right stop saying it once
+       there is nothing left. A hint that never goes away stops being a hint
+       and becomes furniture. */
+    scrollHint($('rp-help-nav'), $('rp-help-nav') && $('rp-help-nav').parentElement);
+    scrollHint(document.querySelector('#rp-tabs'), $('rp-dock'));
+
     // Forward to the real control, so the gate and the wiring are the ones
     // the desktop already has.
     const more = $('rp-more');
@@ -5445,6 +5476,65 @@ function wirePhone() {
     const onWidth = () => { phrase(); if (!PHONE.matches) showSheet(''); };
     if (PHONE.addEventListener) PHONE.addEventListener('change', onWidth);
     else if (PHONE.addListener) PHONE.addListener(onWidth);
+}
+
+function scrollHint(strip, marker) {
+    if (!strip || !marker) return;
+    const check = () => {
+        const room = strip.scrollWidth - strip.clientWidth;
+        marker.classList.toggle('at-end', room < 8 || strip.scrollLeft >= room - 8);
+    };
+    strip.addEventListener('scroll', check, { passive: true });
+    new ResizeObserver(check).observe(strip);
+    check();
+}
+
+/* Pull a sheet down by its header to put it away.
+
+   Every sheet on a phone does this, and it is worth having for a reason
+   beyond familiarity: without it the only way out is a tap on the strip of
+   chart showing above the sheet, which on a tall panel is a couple of
+   centimetres of target and not an obvious one.
+
+   Only the header drags. Everything below it scrolls, and a sheet that
+   closed when you tried to scroll its contents would be worse than one that
+   did not close at all. */
+function grabSheet(el) {
+    const HEADER = 56;      // the title strip drawn by ::before
+    let from = null, moved = 0;
+
+    el.addEventListener('touchstart', e => {
+        if (e.touches.length !== 1) return;
+        const r = el.getBoundingClientRect();
+        if (e.touches[0].clientY - r.top > HEADER) return;
+        from = e.touches[0].clientY;
+        moved = 0;
+        el.style.transition = 'none';       // follow the finger, do not chase it
+    }, { passive: true });
+
+    el.addEventListener('touchmove', e => {
+        if (from === null) return;
+        /* Not passive, and prevented: the drawing-tools sheet is itself a
+           scrolling list, and without this a pull on its header scrolls the
+           list of tools instead of moving the sheet. */
+        e.preventDefault();
+        // Downwards only. Dragging a sheet up does nothing; letting it lift
+        // off the bottom of the screen would just show the gap behind it.
+        moved = Math.max(0, e.touches[0].clientY - from);
+        el.style.transform = 'translateY(' + moved + 'px)';
+    }, { passive: false });
+
+    const release = () => {
+        if (from === null) return;
+        from = null;
+        el.style.transition = '';
+        el.style.transform = '';
+        // Far enough to mean it. A short tug springs back, which is the
+        // feedback that says the gesture exists.
+        if (moved > 64) showSheet('');
+    };
+    el.addEventListener('touchend', release);
+    el.addEventListener('touchcancel', release);
 }
 
 /* How many rows are waiting in the dock, on the bar itself — a working order
