@@ -20,8 +20,10 @@
     <meta name="twitter:description" content="It is time to upgrade the level of our reality. Submit a system, get the full report.">
     <meta name="twitter:image" content="https://bt-inky.vercel.app/images/room-start-desktop.jpg">
 
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500;6..96,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="bt-ui.css">
+    <link rel="stylesheet" href="front.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;600;800&family=Damion&display=swap" rel="stylesheet">
     
@@ -287,6 +289,93 @@
     <!-- INTRO SCENE: LUXURY ROOM -> PUSH IN -> THE SEEDLING GROWS
          Scroll scrubs the growth footage. Each branch that forms brings one
          service forward, so the tree itself becomes the navigation. -->
+<!-- ==================================================  NAVIGATION  ======
+     The site had none: the tree was the only route to anything, so a visitor
+     who came for the pricing had to sit through a film to find it. Left side
+     only — the account HUD owns the right. -->
+<nav id="fd-nav">
+    <a class="fd-brand" href="/"><b>Bar</b><span>Test</span></a>
+    <div class="fd-links">
+        <a href="#" data-goto="replay">Replay</a>
+        <a href="#" data-goto="backtest">Backtest Machine</a>
+        <a href="#" data-jump="fd-tiers-block">Pricing</a>
+        <a href="#" data-goto="about">About</a>
+    </div>
+    <button type="button" class="fd-btn brass" data-goto="replay">Open the terminal</button>
+</nav>
+
+<!-- ===============================================  THE FRONT DOOR  ======
+
+     Scroll is time.
+
+     BarTest Replay exists to step a market forward one candle at a time, so
+     the front door hands that over before a word is read: the scroll position
+     is the clock, and dragging down prints the next candle. What prints is
+     the night of the 2016 referendum, built from the minute history in
+     data/GBPUSD/2016-06.json.gz — the measured prices, not an illustration.
+     The order ticket opens as soon as the market moves, so a visitor can go
+     long at half past eleven and keep scrolling into the crash. -->
+<section id="fd-scrub">
+    <div id="fd-hero">
+
+        <div class="fd-head">
+            <div class="fd-inst">
+                <span class="sym">GBP / USD</span>
+                <span class="tag">1-minute &middot; Dukascopy</span>
+                <span class="tag">2m candles</span>
+            </div>
+            <div class="fd-clock">
+                <b id="fd-clock">22:00</b>
+                <span id="fd-clock-day">23 June 2016 &middot; London</span>
+            </div>
+        </div>
+
+        <div class="fd-canvas">
+            <canvas id="fd-tape" aria-label="GBPUSD replaying through the night of the 2016 referendum"></canvas>
+
+            <div class="fd-say">
+                <h1 class="fd-display">The next candle has not happened yet.</h1>
+                <p>Polls have just closed. The pound is at the highest it has been all year.
+                   You do not know what comes next &mdash; and neither did anyone on the desk.</p>
+            </div>
+
+            <div class="fd-note" id="fd-note"><i></i><span id="fd-note-text"></span></div>
+            <div class="fd-cue">Scroll to move the market<span></span></div>
+
+            <div class="fd-verdict">
+                <div>
+                    <h2 class="fd-display">You have just traded the worst night sterling has had since 1985.</h2>
+                    <p>None of that was a video. Those are the measured prices, and BarTest holds
+                       every other night as well.</p>
+                    <div class="fd-stat">
+                        <span>8 instruments</span><span>129 months</span><span>1-minute fills</span>
+                    </div>
+                    <button type="button" class="fd-btn brass" data-goto="replay">Pick your own date</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="fd-desk">
+            <button type="button" class="fd-btn long" id="fd-buy" disabled>Buy</button>
+            <button type="button" class="fd-btn short" id="fd-sell" disabled>Sell</button>
+            <span class="fd-spacer"></span>
+            <div class="fd-read"><span>Last</span><b class="fd-tnum" id="fd-last">1.48773</b></div>
+            <div class="fd-read" id="fd-pos" hidden>
+                <span id="fd-pos-side">Long from</span><b class="fd-tnum" id="fd-pos-entry">&mdash;</b>
+                <span>P&amp;L</span><b class="fd-tnum" id="fd-pos-pl">&mdash;</b>
+            </div>
+        </div>
+
+        <dl class="fd-facts">
+            <div><dt>Instrument</dt><dd>GBPUSD</dd></div>
+            <div><dt>The night</dt><dd>23&ndash;24 Jun 2016</dd></div>
+            <div><dt>High</dt><dd class="fd-up">1.50177</dd></div>
+            <div><dt>Low</dt><dd class="fd-down">1.32271</dd></div>
+            <div><dt>Move</dt><dd class="fd-down">&minus;1,790 pips</dd></div>
+        </dl>
+    </div>
+</section>
+
     <section id="intro-scene">
         <div id="intro-sticky">
             <div id="room-scene">
@@ -377,6 +466,221 @@
     </section>
 
     <!-- AUTHENTICATION & SUBSCRIPTION CORNER (HUD DOCK) -->
+
+<!-- ===============================================  THE PAGE  ============
+
+     Everything below the tree. The tree stays exactly as it was and remains
+     the most distinctive thing on the site — it is simply no longer the only
+     way to reach anything, and a visitor who scrolls past it now arrives
+     somewhere instead of nowhere. -->
+<div id="fd-page">
+    <div class="fd-shell">
+
+        <!-- ------------------------------------------------ the two products -->
+        <section class="fd-block">
+            <p class="fd-eyebrow">What BarTest is</p>
+            <div class="fd-lede">
+                <h2 class="fd-display">Two products, and the loop between them.</h2>
+                <div><p>One tests a system for you and hands back the numbers. The other lets you
+                    stand in the middle of the history and trade it yourself. <b>Together they are
+                    the only way to find out both what a system does and what it feels like</b> —
+                    and nobody else sells both ends of that.</p></div>
+            </div>
+
+            <div class="fd-products">
+                <article class="fd-slab lead">
+                    <span class="role">The terminal</span>
+                    <h3 class="fd-display">BarTest Replay</h3>
+                    <p>A full charting terminal that hides the future. Pick any date since 2016,
+                       step the market forward candle by candle, and trade it with a real order
+                       ticket &mdash; leverage, fees, stops and automatic position sizing.</p>
+                    <ul>
+                        <li>Eleven years of verified 1-minute forex history</li>
+                        <li>Forty drawing tools and nine studies, with your own indicator code</li>
+                        <li>Saved layouts and sessions, PDF, CSV and JSON export</li>
+                        <li>Runs on a phone as well as it runs on a desk</li>
+                    </ul>
+                    <div class="foot">
+                        <button type="button" class="fd-btn brass" data-goto="replay">Open the terminal</button>
+                    </div>
+                </article>
+
+                <article class="fd-slab">
+                    <span class="role">The evidence</span>
+                    <h3 class="fd-display">Backtest Machine</h3>
+                    <p>Describe a system once, in plain English. It is coded by the desk, run
+                       across bull, bear and ranging markets, and comes back as a report with
+                       every trade in it.</p>
+                    <ul>
+                        <li>Multi-regime, not one lucky stretch</li>
+                        <li>Trade-by-trade log and a PDF</li>
+                        <li>As many runs as it takes</li>
+                    </ul>
+                    <div class="foot">
+                        <button type="button" class="fd-btn" data-goto="backtest">Submit a system</button>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- ------------------------------------------------- the machine, shown -->
+        <section class="fd-block">
+            <p class="fd-eyebrow">What comes back</p>
+            <div class="fd-lede">
+                <h2 class="fd-display">You write the rules in English. It returns evidence.</h2>
+                <div><p>No pseudo-code, no platform syntax, no account with anyone else. If a
+                    person could follow the rules, the desk can code them. <b>The figures below
+                    are an example</b> &mdash; the shape of the thing is exactly what arrives.</p></div>
+            </div>
+
+            <div class="fd-machine">
+                <div class="fd-submit">
+                    <span class="role">What you send</span>
+                    <p class="rules">Buy when the 21 EMA crosses above the 55 EMA
+and the daily trend is up.
+
+Stop below the last swing low.
+Target twice the risk.
+
+Risk 1% per trade. EURUSD, 1 hour.</p>
+                    <span class="sent">Sent to the engineering desk</span>
+                    <p class="note">Your rules are turned into code, checked by hand and run
+                       against real history. You are emailed the moment the report is ready.</p>
+                </div>
+
+                <div class="fd-report" id="fd-report">
+                    <div class="fd-report-top">
+                        <h4>EMA 21/55 pullback &mdash; EURUSD 1H</h4>
+                        <span class="ex">Example report</span>
+                    </div>
+
+                    <svg id="fd-curve" viewBox="0 0 640 168" preserveAspectRatio="none"
+                         role="img" aria-label="Example equity curve rising through one drawdown"></svg>
+
+                    <dl class="fd-metrics">
+                        <div><dt>Net return</dt><dd class="fd-up" data-count="38.4" data-suffix="%" data-prefix="+">+0.0%</dd></div>
+                        <div><dt>Profit factor</dt><dd data-count="1.62" data-dp="2">0.00</dd></div>
+                        <div><dt>Win rate</dt><dd data-count="47" data-suffix="%" data-dp="0">0%</dd></div>
+                        <div><dt>Max drawdown</dt><dd class="fd-down" data-count="11.2" data-suffix="%" data-prefix="&minus;">&minus;0.0%</dd></div>
+                        <div><dt>Trades</dt><dd data-count="318" data-dp="0">0</dd></div>
+                        <div><dt>Regimes</dt><dd>Bull &middot; Bear &middot; Range</dd></div>
+                    </dl>
+
+                    <div class="fd-logwrap">
+                        <table class="fd-log">
+                            <thead><tr><th>Opened</th><th>Side</th><th class="r">Entry</th><th class="r">Exit</th><th class="r">R</th></tr></thead>
+                            <tbody>
+                                <tr><td>2019-03-14</td><td class="fd-up">Long</td><td class="r">1.12840</td><td class="r">1.13910</td><td class="r fd-up">+2.0</td></tr>
+                                <tr><td>2019-04-02</td><td class="fd-up">Long</td><td class="r">1.11960</td><td class="r">1.11430</td><td class="r fd-down">&minus;1.0</td></tr>
+                                <tr><td>2020-06-08</td><td class="fd-down">Short</td><td class="r">1.13020</td><td class="r">1.11880</td><td class="r fd-up">+2.0</td></tr>
+                                <tr><td>2022-09-21</td><td class="fd-down">Short</td><td class="r">0.98310</td><td class="r">0.96450</td><td class="r fd-up">+2.0</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ------------------------------------------------------- the loop -->
+        <section class="fd-block">
+            <p class="fd-eyebrow">The thing only BarTest can say</p>
+            <div class="fd-lede">
+                <h2 class="fd-display">A loop, not two tools.</h2>
+                <div><p>The two products are the same idea at two speeds. Numbers tell you whether
+                    a system works; replay tells you whether you could have followed it. Most
+                    systems die on the second question.</p></div>
+            </div>
+            <div class="fd-loop">
+                <div>
+                    <span class="k">Test</span>
+                    <h4>Prove it on eleven years</h4>
+                    <p>The Machine runs the rules across every regime and hands back the numbers.</p>
+                </div>
+                <div>
+                    <span class="k">Watch</span>
+                    <h4>See it fire, bar by bar</h4>
+                    <p>Replay the trades the report lists and find out what they felt like at the time.</p>
+                </div>
+                <div>
+                    <span class="k">Change</span>
+                    <h4>Fix what you saw</h4>
+                    <p>Adjust the rules and run it again. Either half alone is a tool; the loop is the product.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ------------------------------------------------------ the tiers -->
+        <section class="fd-block" id="fd-tiers-block">
+            <p class="fd-eyebrow">What it costs</p>
+            <div class="fd-lede">
+                <h2 class="fd-display">Every tier is unlimited.</h2>
+                <div><p>The point is to run a system until it works, and a credit counter fights
+                    that. The yearly price is shown as what it costs a month, because that is the
+                    number anyone actually compares.</p></div>
+            </div>
+
+            <div class="fd-cycle" role="group" aria-label="Billing cycle">
+                <button type="button" id="fd-cyc-m" aria-pressed="true">Monthly</button>
+                <button type="button" id="fd-cyc-y" aria-pressed="false">Yearly &middot; 2 months free</button>
+            </div>
+
+            <!-- built by front.js from the subscription modal, so a price is
+                 stated in exactly one place -->
+            <div id="fd-tiers"></div>
+
+            <dl class="fd-spec">
+                <div><dt>Markets</dt><dd>Forex &middot; Metals &middot; Crypto</dd></div>
+                <div><dt>History</dt><dd>Since 2016</dd></div>
+                <div><dt>Resolution</dt><dd>1 minute</dd></div>
+                <div><dt>Timeframes</dt><dd>1m &rarr; 1D</dd></div>
+                <div><dt>Export</dt><dd>PDF &middot; CSV &middot; JSON</dd></div>
+            </dl>
+        </section>
+
+        <!-- -------------------------------------------------------- the map -->
+        <section class="fd-block">
+            <p class="fd-eyebrow">Everything else</p>
+            <div class="fd-lede">
+                <h2 class="fd-display">The rest of the tree, in a row.</h2>
+                <div><p>The same six destinations the branches lead to, for anyone who would
+                    rather not scroll back up and aim at one.</p></div>
+            </div>
+            <nav class="fd-map">
+                <button type="button" data-goto="databank">
+                    <span class="t">System Building Factory</span>
+                    <span class="s">Where tested systems are built and released</span>
+                    <span class="soon">In development</span></button>
+                <button type="button" data-goto="campus">
+                    <span class="t">Trading Campus</span>
+                    <span class="s">Learn to build and prove your own edge</span>
+                    <span class="soon">In development</span></button>
+                <button type="button" data-goto="about">
+                    <span class="t">About BarTest</span>
+                    <span class="s">How the numbers are actually produced</span></button>
+                <button type="button" data-goto="contact">
+                    <span class="t">Contact</span>
+                    <span class="s">Talk to the engineering desk</span></button>
+            </nav>
+        </section>
+
+        <footer id="fd-foot">
+            <div>
+                <a class="fd-brand" href="/"><b>Bar</b><span>Test</span></a>
+                <p>Historical data is Dukascopy tick and minute history, rebuilt and verified
+                   against the record. Nothing here is investment advice, and a backtest is a
+                   measurement of the past rather than a promise about the future.</p>
+            </div>
+            <div class="cols">
+                <button type="button" data-goto="replay">Replay</button>
+                <button type="button" data-goto="backtest">Backtest Machine</button>
+                <button type="button" data-plans>Pricing</button>
+                <button type="button" data-goto="contact">Contact</button>
+            </div>
+        </footer>
+
+    </div>
+</div>
+
     <div id="auth-corner">
         <div class="hud-bar">
             <!-- 1. AGENT / SIGN IN -->
@@ -969,6 +1273,7 @@
       </div>
     </div>
 	
+    <script src="front.js"></script>
     <script src="app.js"></script>
     <!-- after app.js: it reuses the client app.js already built -->
     <script src="bt-access.js"></script>
