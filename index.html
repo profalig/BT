@@ -327,42 +327,92 @@
 
     <div id="fd-world">
 
-        <!-- ------------------------------------------- 0 · the front door -->
+        <!-- ------------------------------------------- 0 · the front door
+
+             Two things have to happen before anybody scrolls: a stranger has
+             to understand what is sold here, and the page has to be alive.
+             So the opening is the service performing itself. A rule written
+             the way a trader would say it sweeps, character by character,
+             into the code the desk would write from it, and that sweeps into
+             the report that comes back. Nothing is claimed in words that is
+             not shown happening.
+
+             Then scrolling hands the same screen over to the market: it
+             becomes 23 June 2016, the polls have just closed, and the night
+             runs. Both acts sit in one grid cell and cross-fade, so the
+             handover happens in place rather than as a second screen. -->
         <section class="fd-station near" style="--cx:0; --cy:0">
             <span class="fd-ghost" aria-hidden="true">0</span>
             <div class="fd-inner">
-                <div class="fd-clockline">
-                    <b id="fd-clock">22:00</b>
-                    <span id="fd-clock-day">23 June 2016 &middot; London</span>
-                    <span class="tag">GBP / USD</span>
-                    <span class="tag">1-minute &middot; Dukascopy</span>
-                </div>
+              <div class="fd-stack">
 
-                <div class="fd-say">
-                    <h1 class="fd-display">The next candle has not happened yet.</h1>
-                    <p>Polls have just closed and the pound is at the highest it has been all
-                       year. You do not know what comes next &mdash; and neither did anyone on
-                       the desk. Scroll, and the night happens.</p>
-                </div>
+                <!-- act one · the machine, running -->
+                <div class="fd-open" id="fd-open">
+                    <span class="fd-live"><i></i>Backtest Machine &middot; running</span>
 
-                <div class="fd-note" id="fd-note"><i></i><span id="fd-note-text"></span></div>
+                    <h1 class="fd-display">Say it in plain English.<br>Get it back as evidence.</h1>
 
-                <div class="fd-desk">
-                    <button type="button" class="fd-btn long" id="fd-buy" disabled>Buy</button>
-                    <button type="button" class="fd-btn short" id="fd-sell" disabled>Sell</button>
-                    <div class="fd-read"><span>Last</span><b class="fd-tnum" id="fd-last">1.48773</b></div>
-                    <div class="fd-read" id="fd-pos" hidden>
-                        <span id="fd-pos-side">Long from</span><b class="fd-tnum" id="fd-pos-entry">&mdash;</b>
-                        <span>P&amp;L</span><b class="fd-tnum" id="fd-pos-pl">&mdash;</b>
+                    <ol class="fd-steps" id="fd-steps">
+                        <li><b>01</b><span>You write the rule</span></li>
+                        <li><b>02</b><span>The desk codes it</span></li>
+                        <li><b>03</b><span>The evidence comes back</span></li>
+                    </ol>
+
+                    <div class="fd-morph" id="fd-morph" aria-hidden="true"></div>
+
+                    <div class="fd-sparkrow">
+                        <span class="cap" id="fd-sparkcap">Example report &middot; EMA 21/55 &middot; EURUSD 1H</span>
+                        <svg class="fd-spark" id="fd-spark" viewBox="0 0 640 168"
+                             preserveAspectRatio="none" aria-hidden="true"></svg>
+                    </div>
+
+                    <p class="fd-openlede">Two things on one desk: a machine that tests any system
+                       you can put into words, and a terminal that lets you trade the past one bar
+                       at a time. Scroll, and the market takes over.</p>
+
+                    <div class="fd-actions">
+                        <button type="button" class="fd-btn brass" data-service="backtest">Submit a system</button>
+                        <button type="button" class="fd-btn" data-service="replay">BarTest Replay</button>
                     </div>
                 </div>
 
-                <dl class="fd-facts">
-                    <div><dt>The night</dt><dd>23&ndash;24 Jun 2016</dd></div>
-                    <div><dt>High</dt><dd class="fd-up">1.50177</dd></div>
-                    <div><dt>Low</dt><dd class="fd-down">1.32271</dd></div>
-                    <div><dt>Move</dt><dd class="fd-down">&minus;1,790 pips</dd></div>
-                </dl>
+                <!-- act two · the night itself -->
+                <div class="fd-night" id="fd-night">
+                    <div class="fd-clockline">
+                        <b id="fd-clock">22:00</b>
+                        <span id="fd-clock-day">23 June 2016 &middot; London</span>
+                        <span class="tag">GBP / USD</span>
+                        <span class="tag">1-minute &middot; Dukascopy</span>
+                    </div>
+
+                    <div class="fd-say">
+                        <h1 class="fd-display">The next candle has not happened yet.</h1>
+                        <p>Polls have just closed and the pound is at the highest it has been all
+                           year. You do not know what comes next &mdash; and neither did anyone on
+                           the desk.</p>
+                    </div>
+
+                    <div class="fd-note" id="fd-note"><i></i><span id="fd-note-text"></span></div>
+
+                    <div class="fd-desk">
+                        <button type="button" class="fd-btn long" id="fd-buy" disabled>Buy</button>
+                        <button type="button" class="fd-btn short" id="fd-sell" disabled>Sell</button>
+                        <div class="fd-read"><span>Last</span><b class="fd-tnum" id="fd-last">1.48773</b></div>
+                        <div class="fd-read" id="fd-pos" hidden>
+                            <span id="fd-pos-side">Long from</span><b class="fd-tnum" id="fd-pos-entry">&mdash;</b>
+                            <span>P&amp;L</span><b class="fd-tnum" id="fd-pos-pl">&mdash;</b>
+                        </div>
+                    </div>
+
+                    <dl class="fd-facts">
+                        <div><dt>The night</dt><dd>23&ndash;24 Jun 2016</dd></div>
+                        <div><dt>High</dt><dd class="fd-up">1.50177</dd></div>
+                        <div><dt>Low</dt><dd class="fd-down">1.32271</dd></div>
+                        <div><dt>Move</dt><dd class="fd-down">&minus;1,790 pips</dd></div>
+                    </dl>
+                </div>
+
+              </div>
             </div>
         </section>
 

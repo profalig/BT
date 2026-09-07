@@ -179,7 +179,7 @@ body.fd-stuck #fd-nav {
             font-size: clamp(.92rem, 1.5vw, 1.05rem);
             text-shadow: 0 1px 20px rgba(6,5,14,.96); }
 .fd-say { transition: opacity .6s ease; }
-body.fd-moved .fd-say { opacity: .2; }
+body.fd-underway .fd-say { opacity: .2; }
 body.fd-night-over .fd-say { opacity: 0; }
 
 .fd-clockline {
@@ -1051,7 +1051,7 @@ body.fd-console #auth-corner { opacity: 0 !important; pointer-events: none !impo
 
 /* Coming back from the submission page left the header invisible. The cause
    was a leftover: `body.landed` is the old ship-and-planet state, and the one
-   rule of it still standing says "hide the title and the account controls" -
+   rule of it still standing says "hide the title and the account controls" —
    with !important, so the inline opacity the legacy close handler set could
    never win. That call is gone now; this states the invariant as well, since
    the header is part of the page rather than something a panel hides. The
@@ -1171,4 +1171,150 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
     max-height: none !important;
     overflow: visible !important;
     transform: none !important;
+}
+
+
+/* ==========================================================================
+   STATION ZERO, ACT ONE - THE MACHINE, RUNNING
+
+   The first screen used to be a mood: a headline about a candle over a chart
+   that did nothing until you scrolled. It read as atmosphere, not as a
+   business. So the opening now performs the service instead of describing
+   it - a rule in the words a trader would use sweeps into the code the desk
+   would write from it, and that sweeps into the report that comes back.
+
+   The sweep runs strictly left to right, which is why one line only ever
+   needs three spans: what has already turned into the next state, the few
+   characters churning at the head of the wave, and what has not been reached
+   yet. That last part still reads as the previous state, so you watch English
+   turn into code in place.
+
+   Act one and act two share one grid cell and cross-fade on scroll, so the
+   handover to the market happens where you are already looking.
+   ========================================================================== */
+
+.fd-stack { display: grid; }
+.fd-stack > * { grid-area: 1 / 1; align-self: center; }
+
+.fd-open, .fd-night { transition: opacity .25s linear; }
+
+/* the running light */
+.fd-live {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: 'IBM Plex Mono', monospace; font-size: .62rem;
+    letter-spacing: .22em; text-transform: uppercase; color: var(--fd-brass);
+}
+.fd-live i {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--fd-brass);
+    animation: fd-pulse 2.6s ease-out infinite;
+}
+@keyframes fd-pulse {
+    0%        { box-shadow: 0 0 0 0 rgba(247,166,0,.45); }
+    70%, 100% { box-shadow: 0 0 0 10px rgba(247,166,0,0); }
+}
+
+.fd-open h1 {
+    margin: 13px 0 0; max-width: 20ch;
+    font-size: clamp(2.1rem, 5vw, 4rem); line-height: .99; letter-spacing: -.026em;
+    color: var(--fd-vellum); text-shadow: 0 2px 34px rgba(6,5,14,.95);
+}
+
+/* three steps, which are also the whole explanation of the service */
+.fd-steps {
+    list-style: none; display: flex; flex-wrap: wrap; gap: 0;
+    margin: 28px 0 0; padding: 0; border-top: 1px solid var(--fd-hair);
+}
+.fd-steps li {
+    display: flex; align-items: baseline; gap: 10px; padding: 11px 30px 11px 0;
+    font-family: 'IBM Plex Mono', monospace; font-size: .64rem;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--fd-dim);
+    transition: color .4s ease;
+}
+.fd-steps li b { font-weight: 500; color: var(--fd-dim); transition: color .4s ease; }
+.fd-steps li.on { color: var(--fd-vellum); }
+.fd-steps li.on b { color: var(--fd-brass); }
+
+/* the line that turns into itself */
+.fd-morph {
+    margin-top: 16px; min-height: calc(3 * 1.9em);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: clamp(.76rem, 1.22vw, .95rem); line-height: 1.9;
+    white-space: pre-wrap; word-break: break-word;
+}
+.fd-morph .ln { min-height: 1.9em; }
+.fd-morph s  { text-decoration: none; color: var(--fd-vellum); }
+.fd-morph em { font-style: normal; color: var(--fd-brass); }
+.fd-morph u  { text-decoration: none; color: var(--fd-smoke); }
+.fd-morph i  {
+    display: none; width: .55em; height: 1.05em; margin-left: 1px;
+    background: var(--fd-brass); vertical-align: -.17em;
+}
+.fd-morph.caret .ln:last-child i { display: inline-block; animation: fd-blink 1.05s steps(1) infinite; }
+@keyframes fd-blink { 50% { opacity: 0; } }
+
+/* the report, drawing itself. The space is reserved whether or not it is
+   showing, so the block above it never moves. */
+.fd-sparkrow {
+    display: flex; align-items: center; gap: 16px; height: 46px; margin-top: 12px;
+    max-width: 640px;
+}
+.fd-sparkrow .cap {
+    flex: 0 0 auto; max-width: 40%; line-height: 1.5;
+    font-family: 'IBM Plex Mono', monospace; font-size: .56rem;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--fd-dim);
+    opacity: 0; transition: opacity .5s ease;
+}
+.fd-spark { flex: 1 1 auto; height: 46px; opacity: 0; transition: opacity .5s ease; }
+.fd-spark .line { fill: none; stroke: var(--fd-brass); stroke-width: 2;
+                  vector-effect: non-scaling-stroke; }
+.fd-sparkrow.on .cap, .fd-sparkrow.on .fd-spark { opacity: 1; }
+
+.fd-openlede {
+    max-width: 52ch; margin: 22px 0 0;
+    font-size: clamp(.92rem, 1.4vw, 1.02rem);
+    text-shadow: 0 1px 20px rgba(6,5,14,.96);
+}
+.fd-open .fd-actions { margin-top: 22px; }
+
+/* the opening arrives in order, once */
+.fd-open > * { animation: fd-rise .75s cubic-bezier(.16,.84,.3,1) both; }
+.fd-open > *:nth-child(1) { animation-delay: .10s; }
+.fd-open > *:nth-child(2) { animation-delay: .18s; }
+.fd-open > *:nth-child(3) { animation-delay: .30s; }
+.fd-open > *:nth-child(4) { animation-delay: .38s; }
+.fd-open > *:nth-child(5) { animation-delay: .46s; }
+.fd-open > *:nth-child(6) { animation-delay: .54s; }
+.fd-open > *:nth-child(7) { animation-delay: .62s; }
+@keyframes fd-rise { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .fd-open > * { animation: none !important; }
+    .fd-live i { animation: none !important; }
+    /* Nothing drives the cross-fade when the camera is switched off, so the
+       two acts stop sharing a cell and become what they are: the machine,
+       then the night. */
+    .fd-stack { display: block; }
+    .fd-night { margin-top: 40px; padding-top: 34px; border-top: 1px solid var(--fd-hair); }
+}
+
+@media (max-width: 720px) {
+    /* Act two is the taller of the two, and the two share one grid row: if it
+       does not fit the row, the row scrolls and act one inherits a scrollbar
+       it has no use for. So the night is tightened until both fit. */
+    .fd-night .fd-say p { margin-top: 11px; }
+    .fd-night .fd-note  { margin-top: 16px; }
+    .fd-night .fd-desk  { margin-top: 15px; }
+    .fd-night .fd-facts { margin-top: 16px; gap: 16px 22px; }
+
+    .fd-open h1 { font-size: clamp(1.9rem, 8.4vw, 2.6rem); max-width: none; }
+    .fd-steps li { padding: 9px 18px 9px 0; font-size: .56rem; letter-spacing: .14em; }
+    .fd-morph { font-size: .72rem; line-height: 1.8; min-height: calc(3 * 1.8em); margin-top: 12px; }
+    /* The label stays on a phone. An unlabelled rising curve reads as a
+       claim; labelled, it is an exhibit, and it is the same exhibit the
+       Machine station shows. */
+    .fd-sparkrow { display: block; height: 52px; margin-top: 10px; }
+    .fd-sparkrow .cap { display: block; max-width: none; margin-bottom: 3px; }
+    .fd-spark { display: block; width: 100%; height: 30px; }
+    .fd-openlede { margin-top: 16px; font-size: .9rem; }
+    .fd-open .fd-actions { margin-top: 16px; }
 }

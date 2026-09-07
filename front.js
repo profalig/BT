@@ -285,6 +285,170 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
         tellNight();
     }
 
+    // ================================================ act one, the machine
+
+    /* The opening has to answer "what is this?" before anybody scrolls, and
+       it has to move while it does. So it runs the service on a loop: a rule
+       written the way a trader would say it turns into the code the desk
+       would write from it, and that turns into the report that comes back.
+
+       One mechanism does all of it. The wave runs strictly left to right, so
+       at any instant a line is three pieces - what has already become the
+       next state, the handful of characters churning at the head, and the
+       tail that still reads as the state it is leaving. You watch English
+       become code in place, which is the product in one gesture. */
+
+    const DEMO = [
+        { say:  ['Buy when the 21 EMA crosses above the 55 EMA.',
+                 'Stop below the last swing low. Target twice that.',
+                 'EURUSD, one hour, as far back as the data goes.'],
+          code: ['if (ema(21).crossesAbove(ema(55))) {',
+                 '    buy({ stop: swingLow(), target: risk * 2 });',
+                 '}   // EURUSD  1h  2016-01 -> today'] },
+
+        { say:  ['Short when RSI comes back under 70 from above.',
+                 'Out at the 20 EMA, or at three times the risk.',
+                 'One per cent a trade. GBPUSD, fifteen minutes.'],
+          code: ['if (rsi(14).crossesUnder(70)) {',
+                 '    sell({ exit: ema(20), target: risk * 3 });',
+                 '}   // GBPUSD  15m  risk 1% of equity'] },
+
+        { say:  ['Only the London open, and only the first pullback.',
+                 'Flat by the New York close. Nothing held overnight.',
+                 'Any major pair. Show me every trade it took.'],
+          code: ['onSession("London", () => {',
+                 '    if (firstPullback()) buy({ flat: nyClose() });',
+                 '});   // all majors  -> full trade log'] }
+    ];
+
+    /* The third state is the same whichever rule was on screen, and it makes
+       no claim about that rule: it describes what the desk sends back. The
+       one set of figures on this page lives at station one, labelled with the
+       system it belongs to, and the curve here carries that same label. */
+    const BACK = ['report.pdf     1 attachment     emailed to you',
+                  'every trade listed - entry, exit, time on each',
+                  'bull, bear and ranging - usually within a day'];
+
+    const GLYPH = '#$%&/()[]{}<>=+*-_?!:;.,|~^0123456789'.split('');
+    const WAVE = 7;                 // characters churning at the head at once
+    const MORPH_MS = 950;
+    const HOLD = [2700, 2300, 3900];
+
+    const mo = { from: ['', '', ''], to: ['', '', ''] };
+    let ruleI = 0, seqI = 0, phase = 'morph', pT0 = 0, demoOn = false;
+    let demoWanted = true;
+
+    function stateLines(i) {
+        return i === 2 ? BACK : (i === 0 ? DEMO[ruleI].say : DEMO[ruleI].code);
+    }
+
+    function setStep(n) {
+        const ol = $('fd-steps');
+        if (ol) [].forEach.call(ol.children, (li, i) => li.classList.toggle('on', i === n));
+    }
+
+    function renderMorph(p) {
+        const host = $('fd-morph');
+        if (!host) return;
+        if (host.children.length !== 3) {
+            host.innerHTML = '<div class="ln"><s></s><em></em><u></u><i></i></div>'.repeat(3);
+        }
+        for (let i = 0; i < 3; i++) {
+            const from = mo.from[i] || '', to = mo.to[i] || '';
+            const L = Math.max(from.length, to.length);
+            // each line sets off a little after the one above it, so the wave
+            // crosses the block on a diagonal rather than as a wall
+            const q = clamp((p - i * 0.09) / (1 - 0.18), 0, 1);
+            const head = q * (L + WAVE);
+            const done = Math.round(clamp(head - WAVE, 0, L));
+            const hot = Math.round(clamp(head, 0, L));
+            let churn = '';
+            for (let k = done; k < hot; k++) churn += GLYPH[(Math.random() * GLYPH.length) | 0];
+            const ln = host.children[i];
+            ln.children[0].textContent = to.slice(0, done);
+            ln.children[1].textContent = churn;
+            ln.children[2].textContent = from.slice(hot);
+        }
+    }
+
+    function sparkOn(on) {
+        const row = document.querySelector('.fd-sparkrow');
+        const svg = $('fd-spark');
+        if (!row || !svg) return;
+        row.classList.toggle('on', on);
+        if (!on) return;
+        if (!svg.dataset.built) {
+            svg.innerHTML = '<path class="line" d="' + equityPath() + '"/>';
+            svg.dataset.built = '1';
+        }
+        const line = svg.querySelector('.line');
+        const len = line.getTotalLength();
+        line.style.transition = 'none';
+        line.style.strokeDasharray = len;
+        line.style.strokeDashoffset = len;
+        line.getBoundingClientRect();
+        line.style.transition = 'stroke-dashoffset 2.2s cubic-bezier(.3,.9,.3,1)';
+        line.style.strokeDashoffset = '0';
+    }
+
+    function demoTick(t) {
+        if (!demoOn) return;
+        const host = $('fd-morph');
+        if (phase === 'morph') {
+            const p = clamp((t - pT0) / MORPH_MS, 0, 1);
+            renderMorph(p);
+            if (p >= 1) {
+                mo.from = mo.to;
+                phase = 'hold'; pT0 = t;
+                if (host) host.classList.toggle('caret', seqI === 0);
+            }
+        } else if (t - pT0 > HOLD[seqI]) {
+            seqI = (seqI + 1) % 3;
+            if (seqI === 0) ruleI = (ruleI + 1) % DEMO.length;
+            mo.to = stateLines(seqI);
+            phase = 'morph'; pT0 = t;
+            setStep(seqI);
+            if (host) host.classList.remove('caret');
+            sparkOn(seqI === 2);
+        }
+        requestAnimationFrame(demoTick);
+    }
+
+    function demoWant(on) {
+        if (on === demoOn) return;
+        demoOn = on;
+        if (on) { pT0 = performance.now(); requestAnimationFrame(demoTick); }
+    }
+
+    function startDemo() {
+        mo.from = ['', '', ''];
+        mo.to = stateLines(0);
+        setStep(0);
+        if (CALM) { renderMorph(1); return; }
+        phase = 'morph';
+        demoWant(true);
+        document.addEventListener('visibilitychange',
+            () => demoWant(!document.hidden && demoWanted));
+    }
+
+    /* Act one hands the screen to act two in place. Both sit in the same grid
+       cell, so this is a cross-fade rather than a second screen, and it is
+       over inside the first tenth of station zero's hold - long before the
+       night has anything to say. */
+    function paintOpen() {
+        const o = $('fd-open'), n = $('fd-night');
+        if (!o || !n) return;
+        const k = clamp((nightP - 0.03) / 0.17, 0, 1);
+        o.style.opacity = (1 - k).toFixed(3);
+        o.style.transform = 'translateY(' + (-16 * k).toFixed(1) + 'px)';
+        o.style.pointerEvents = k > 0.5 ? 'none' : 'auto';
+        n.style.opacity = k.toFixed(3);
+        n.style.transform = 'translateY(' + (14 * (1 - k)).toFixed(1) + 'px)';
+        n.style.pointerEvents = k > 0.5 ? 'auto' : 'none';
+        demoWanted = k < 0.6 && at === 0;
+        demoWant(demoWanted && !document.hidden);
+    }
+
     // ============================================================ the camera
 
     function place(p) {
@@ -355,7 +519,9 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
         const want = Math.max(FLOOR, Math.round(FLOOR + nightP * (BREXIT.length - FLOOR)));
         if (want !== shownBars) { shownBars = want; tellNight(); }
 
+        paintOpen();
         document.body.classList.toggle('fd-moved', p > 0.004);
+        document.body.classList.toggle('fd-underway', nightP > 0.4);
         document.body.classList.toggle('fd-night-over', nightP > 0.985);
         document.body.classList.toggle('fd-stuck', p > 0.02);
 
@@ -618,6 +784,8 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
         wire();
         wireSubmitPage();
 
+        startDemo();
+
         if (CALM) {
             shownBars = BREXIT.length;
             tellNight();
@@ -629,6 +797,7 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
         addEventListener('scroll', onScroll, { passive: true });
         addEventListener('resize', measure, { passive: true });
         measure();
+        paintOpen();
         tellNight();
 
         /* The report draws itself the first time its station is the one you
