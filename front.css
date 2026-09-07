@@ -71,7 +71,7 @@ html.fd-on body { overflow-x: hidden; }
 #fd-nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 900;
     display: flex; align-items: center; gap: 26px;
-    padding: 14px clamp(16px, 3vw, 34px); padding-right: 178px;
+    padding: 14px clamp(16px, 3vw, 34px); padding-right: 232px;
     font-family: 'IBM Plex Sans', system-ui, sans-serif;
     background: transparent; border-bottom: 1px solid transparent;
     transition: background .3s ease, border-color .3s ease, backdrop-filter .3s;
@@ -97,7 +97,7 @@ body.fd-stuck #fd-nav {
     color: var(--fd-vellum); border-bottom-color: var(--fd-brass);
 }
 #fd-nav .fd-btn { margin-left: auto; }
-@media (max-width: 940px) { .fd-links { display: none; } #fd-nav { padding-right: 150px; } }
+@media (max-width: 940px) { .fd-links { display: none; } #fd-nav { padding-right: 210px; } }
 @media (max-width: 560px) { #fd-nav .fd-btn { display: none; } }
 
 /* ================================================================== stage ==
@@ -758,4 +758,167 @@ body.warping .fd-cue {
     .fd-tier.lead { padding-left: 0; border-left: none; margin-left: 0; }
     .fd-spec > div { border-right: none; border-bottom: 1px solid var(--fd-hair); }
     .fd-map button { border-right: none; }
+}
+
+/* ==========================================================================
+   THE HEADER, THE CONSOLE, AND NO PANELS IN BETWEEN
+   ========================================================================== */
+
+/* The account controls were a floating chip parked over the page. They are
+   part of the header now: bare icons at the top right, on the same baseline
+   as the wordmark, sitting in the space the nav already reserves for them. */
+#auth-corner {
+    top: 12px !important; right: clamp(14px, 3vw, 30px) !important;
+    z-index: 901 !important;
+    display: flex; align-items: center; gap: 4px;
+}
+#auth-corner .hud-slot {
+    background: transparent !important; border: 1px solid transparent !important;
+    box-shadow: none !important; backdrop-filter: none !important;
+    width: 42px; height: 42px; min-width: 0 !important;
+    display: grid !important; place-items: center;
+    border-radius: 2px !important; padding: 0 !important;
+}
+#auth-corner .hud-slot:hover {
+    background: rgba(236,231,221,.06) !important;
+    border-color: var(--fd-hair) !important;
+}
+#auth-corner .hud-icon-box { color: var(--fd-smoke); font-size: 1rem; }
+#auth-corner .hud-slot:hover .hud-icon-box { color: var(--fd-brass); }
+/* The labels are what made it a chip. The icons say enough, and the title
+   attributes are still there for anyone who hovers or uses a reader. */
+#auth-corner .hud-label-box { display: none !important; }
+body.fd-stuck #auth-corner .hud-slot { border-color: transparent !important; }
+
+/* The description panel between a click and the thing it opens is gone.
+   It stays in the document so app.js keeps its references, and never shows. */
+#cinematic-overlay { display: none !important; }
+
+/* ---------------------------------------------------------- the console
+
+   The submission screen is the product for anyone who came to have a system
+   tested, so it reads as a page rather than a terminal: one column of
+   questions in plain words, and what comes back stated beside it. */
+
+#gas-giant-atmosphere .gas-clouds,
+#gas-giant-atmosphere .lightning-flash { display: none !important; }
+#gas-giant-atmosphere {
+    background:
+        radial-gradient(110% 80% at 14% 6%, rgba(247,166,0,.12), transparent 56%),
+        radial-gradient(150% 130% at 50% 50%, transparent 40%, rgba(2,1,6,.9) 100%),
+        var(--fd-ink) !important;
+}
+.submission-console {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif !important;
+    color: var(--fd-vellum);
+}
+.submission-console .console-kicker {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: .64rem !important; letter-spacing: .24em !important;
+    text-transform: uppercase; color: var(--fd-brass) !important;
+}
+.submission-console .console-header h2 {
+    font-family: 'Bodoni Moda', Didot, Georgia, serif !important;
+    font-weight: 400 !important; text-transform: none !important;
+    letter-spacing: -.02em !important; line-height: 1.05;
+    font-size: clamp(1.8rem, 3.4vw, 2.9rem) !important;
+    color: var(--fd-vellum) !important; max-width: 20ch;
+}
+.submission-console .console-header p {
+    color: var(--fd-smoke) !important; max-width: 62ch;
+    font-size: .96rem; line-height: 1.62;
+}
+.submission-console .input-group label {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: .62rem !important; letter-spacing: .2em !important;
+    text-transform: uppercase; color: var(--fd-dim) !important;
+}
+.submission-console .ig-step {
+    color: var(--fd-brass) !important; background: none !important;
+    border: none !important; margin-right: 4px;
+}
+.submission-console input, .submission-console textarea {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif !important;
+    font-size: 16px !important;
+    background: rgba(236,231,221,.045) !important;
+    border: 1px solid var(--fd-hair) !important;
+    border-radius: 2px !important; color: var(--fd-vellum) !important;
+    box-shadow: inset 0 1px 0 rgba(236,231,221,.05);
+}
+.submission-console textarea { line-height: 1.62; }
+.submission-console input:focus, .submission-console textarea:focus {
+    border-color: var(--fd-brass) !important; outline: none;
+    background: rgba(236,231,221,.06) !important;
+}
+.submission-console input::placeholder,
+.submission-console textarea::placeholder { color: var(--fd-dim) !important; }
+.submission-console .ig-hint { color: var(--fd-dim) !important; font-size: .8rem !important; }
+.submission-console .submit-system-btn,
+.submission-console .rail-btn, .submission-console #abort-console-btn {
+    border-radius: 2px !important; text-transform: none !important;
+    letter-spacing: .01em !important;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif !important;
+}
+.submission-console .rail-card {
+    background: linear-gradient(rgba(236,231,221,.03), rgba(236,231,221,0) 40%),
+                rgba(15,13,29,.9) !important;
+    border: 1px solid var(--fd-hair) !important; border-radius: 2px !important;
+    box-shadow: inset 0 1px 0 rgba(236,231,221,.06);
+}
+.submission-console .rail-title {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: .6rem !important; letter-spacing: .2em !important;
+    text-transform: uppercase; color: var(--fd-dim) !important;
+}
+.submission-console .rail-credit-n {
+    font-family: 'Bodoni Moda', Georgia, serif !important; font-weight: 400 !important;
+    color: var(--fd-vellum) !important;
+}
+.submission-console .rail-list b { color: var(--fd-vellum) !important; }
+.submission-console .rail-list span, .submission-console .rail-foot {
+    color: var(--fd-smoke) !important;
+}
+.submission-console .rail-list i, .submission-console .rail-foot i { color: var(--fd-brass) !important; }
+
+/* the last station's contact row, as links rather than tiles */
+.fd-map a {
+    background: none; padding: 18px 22px 18px 0; text-decoration: none;
+    color: inherit; display: flex; flex-direction: column; gap: 4px;
+    border-bottom: 1px solid var(--fd-hair); border-right: 1px solid var(--fd-hair);
+    transition: background .16s;
+}
+.fd-map a:hover { background: rgba(236,231,221,.035); }
+.fd-map a:last-of-type { border-right: none; }
+.fd-map .soon-cell {
+    padding: 18px 22px 18px 0; display: flex; flex-direction: column; gap: 4px;
+    border-bottom: 1px solid var(--fd-hair); opacity: .6;
+}
+
+
+/* The container was still a chip: a rounded box with a border drawn around
+   the account controls. Sign in and sign up are icons in the header exactly
+   like the pricing one beside them, so the box goes and the icons stand on
+   their own. */
+#auth-corner {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+}
+#auth-corner > * { margin: 0 !important; }
+
+
+/* The chip was a child element, not the container: .hud-bar carried the amber
+   border and the ten-pixel radius. The account controls are icons in the
+   header now, so the bar around them goes. */
+#auth-corner .hud-bar {
+    background: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    gap: 2px !important;
 }

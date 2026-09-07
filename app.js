@@ -848,6 +848,9 @@ function backtestState(a) {
 
 /* The console's own rail: how many runs are left, whose account this is,
    and a way to your reports without closing the console to find them. */
+// Reached from the front of the site as well, which opens the console
+// directly rather than through a description panel.
+
 async function fillConsoleRail() {
     const n   = document.getElementById('console-credits');
     const who = document.getElementById('console-who');
@@ -870,6 +873,7 @@ async function fillConsoleRail() {
         if (up) up.hidden = st.unlimited;
     } catch (e) { who.textContent = ''; }
 }
+window.fillConsoleRail = fillConsoleRail;
 
 document.addEventListener('DOMContentLoaded', () => {
     const rep = document.getElementById('console-reports-btn');

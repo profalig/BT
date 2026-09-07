@@ -301,20 +301,20 @@
      auth flow and the checkout are untouched. -->
 
 <nav id="fd-nav">
-    <a class="fd-brand" href="/"><b>Bar</b><span>Test</span></a>
+    <a class="fd-brand" href="/">BarTest</a>
     <div class="fd-links">
-        <button type="button" data-st="1">Replay</button>
-        <button type="button" data-st="2">Backtest Machine</button>
+        <button type="button" data-st="1">Backtest Machine</button>
+        <button type="button" data-st="2">BarTest Replay</button>
         <button type="button" data-st="3">The loop</button>
         <button type="button" data-st="4">Plans</button>
     </div>
-    <button type="button" class="fd-btn brass" data-service="replay">Open the terminal</button>
+    <button type="button" class="fd-btn brass" data-service="replay">BarTest Replay</button>
 </nav>
 
 <div id="fd-rail" aria-label="Where you are on the route">
     <button type="button" data-st="0"><em>The tape</em></button>
-    <button type="button" data-st="1"><em>Replay</em></button>
-    <button type="button" data-st="2"><em>The machine</em></button>
+    <button type="button" data-st="1"><em>The machine</em></button>
+    <button type="button" data-st="2"><em>BarTest Replay</em></button>
     <button type="button" data-st="3"><em>The loop</em></button>
     <button type="button" data-st="4"><em>Plans</em></button>
     <button type="button" data-st="5"><em>Everything else</em></button>
@@ -366,48 +366,21 @@
             </div>
         </section>
 
-        <!-- --------------------------------------------------- 1 · replay -->
+        <!-- -------------------------------------------------- 1 · machine -->
         <section class="fd-station" style="--cx:1; --cy:0">
             <span class="fd-ghost" aria-hidden="true">1</span>
             <div class="fd-inner">
-                <div class="fd-num">01 &middot; The terminal<i></i></div>
-                <h2 class="fd-display">You just used it.<br>This is the rest of it.</h2>
-                <div class="fd-two lede" style="margin-top:20px">
-                    <p>Every candle you scrolled through came out of the same history the
-                       terminal runs on. Pick any date since 2016, cut the chart there, and step
-                       the market forward at your own speed with a real order ticket &mdash;
-                       leverage, fees, stops, position sizing off your risk.</p>
-                    <p><b>Future bars are never in the chart at all</b>, so they cannot be peeked
-                       at by dragging. It is the same engine, on the same data, as the night you
-                       have just traded.</p>
-                </div>
-
-                <dl class="fd-spec">
-                    <div><dt>History</dt><dd>Eleven years, 1-minute</dd></div>
-                    <div><dt>Order types</dt><dd>Market, limit, stop</dd></div>
-                    <div><dt>Drawing</dt><dd>40 tools, 9 studies</dd></div>
-                    <div><dt>Your code</dt><dd>Custom indicators</dd></div>
-                    <div><dt>Export</dt><dd>PDF, CSV, JSON</dd></div>
-                </dl>
-
-                <div class="fd-actions">
-                    <button type="button" class="fd-btn brass" data-service="replay">Open the terminal</button>
-                    <button type="button" class="fd-btn" data-st="4">See the plans</button>
-                </div>
-            </div>
-        </section>
-
-        <!-- -------------------------------------------------- 2 · machine -->
-        <section class="fd-station" style="--cx:1; --cy:1">
-            <span class="fd-ghost" aria-hidden="true">2</span>
-            <div class="fd-inner">
-                <div class="fd-num">02 &middot; Below the tape<i></i></div>
+                <div class="fd-num">01 &middot; What it is for<i></i></div>
                 <div class="fd-two wide">
                     <div>
-                        <h2 class="fd-display">Write the rules in English. Get evidence back.</h2>
-                        <p style="margin-top:14px">No pseudo-code, no platform syntax, no account
-                           with anyone else. If a person could follow the rules, the desk can code
-                           them &mdash; then run them across bull, bear and ranging markets.</p>
+                        <h2 class="fd-display">Describe your system in a paragraph. Find out whether it works.</h2>
+                        <p style="margin-top:14px"><b>You type your rules the way you would explain
+                           them to another trader.</b> The desk turns them into code, runs them over
+                           whatever stretch of history you ask for &mdash; a year, five, or as far
+                           back as the data goes &mdash; and emails you a report with every trade in
+                           it, usually within a day.</p>
+                        <p>No pseudo-code, no platform syntax, no account with anyone else, and no
+                           limit on how many times you do it.</p>
                         <div class="fd-send">
                             <span class="role">What you send</span>
                             <p class="fd-rules">Buy when the 21 EMA crosses above the 55 EMA
@@ -440,6 +413,37 @@ Risk 1% per trade. EURUSD, 1 hour.</p>
                             <div><dt>Regimes</dt><dd>Bull &middot; Bear &middot; Range</dd></div>
                         </dl>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- --------------------------------------------------- 2 · replay -->
+        <section class="fd-station" style="--cx:1; --cy:1">
+            <span class="fd-ghost" aria-hidden="true">2</span>
+            <div class="fd-inner">
+                <div class="fd-num">02 &middot; The terminal<i></i></div>
+                <h2 class="fd-display">You just used it.<br>This is the rest of it.</h2>
+                <div class="fd-two lede" style="margin-top:20px">
+                    <p>Every candle you scrolled through came out of the same history the
+                       terminal runs on. Pick any date since 2016, cut the chart there, and step
+                       the market forward at your own speed with a real order ticket &mdash;
+                       leverage, fees, stops, position sizing off your risk.</p>
+                    <p><b>Future bars are never in the chart at all</b>, so they cannot be peeked
+                       at by dragging. It is the same engine, on the same data, as the night you
+                       have just traded.</p>
+                </div>
+
+                <dl class="fd-spec">
+                    <div><dt>History</dt><dd>Eleven years, 1-minute</dd></div>
+                    <div><dt>Order types</dt><dd>Market, limit, stop</dd></div>
+                    <div><dt>Drawing</dt><dd>40 tools, 9 studies</dd></div>
+                    <div><dt>Your code</dt><dd>Custom indicators</dd></div>
+                    <div><dt>Export</dt><dd>PDF, CSV, JSON</dd></div>
+                </dl>
+
+                <div class="fd-actions">
+                    <button type="button" class="fd-btn brass" data-service="replay">BarTest Replay</button>
+                    <button type="button" class="fd-btn" data-st="4">See the plans</button>
                 </div>
             </div>
         </section>
@@ -508,30 +512,31 @@ Risk 1% per trade. EURUSD, 1 hour.</p>
             <div class="fd-inner">
                 <div class="fd-num">05 &middot; The rest of it<i></i></div>
                 <div class="fd-two lede">
-                    <div><h2 class="fd-display">Everything else on the desk.</h2></div>
-                    <div><p>Two of these are still being built and are not part of any tier yet.
-                        They will be added as they open.</p></div>
+                    <div><h2 class="fd-display">Who is behind the numbers.</h2></div>
+                    <div><p>Professional quantitative backtesters. Every figure comes from
+                        itemised execution records over multi-year historical cycles &mdash; the
+                        lower-timeframe history that is close to impossible to pull by hand
+                        &mdash; so compounding is shown rather than claimed.</p></div>
                 </div>
 
                 <nav class="fd-map">
-                    <button type="button" data-service="databank">
-                        <span class="t">System Building Factory</span>
-                        <span class="s">Where tested systems are built and released</span>
-                        <span class="soon">In development</span></button>
-                    <button type="button" data-service="campus">
-                        <span class="t">Trading Campus</span>
-                        <span class="s">Learn to build and prove your own edge</span>
-                        <span class="soon">In development</span></button>
-                    <button type="button" data-service="about">
-                        <span class="t">About BarTest</span>
-                        <span class="s">How the numbers are actually produced</span></button>
-                    <button type="button" data-service="contact">
-                        <span class="t">Contact</span>
-                        <span class="s">Talk to the engineering desk</span></button>
+                    <a href="mailto:backtest.factory@gmail.com">
+                        <span class="t">Email</span>
+                        <span class="s">backtest.factory@gmail.com</span></a>
+                    <a href="https://t.me/Dr_AliSadeghi" target="_blank" rel="noopener">
+                        <span class="t">Telegram</span>
+                        <span class="s">@Dr_AliSadeghi</span></a>
+                    <a href="https://instagram.com/backtest.factory" target="_blank" rel="noopener">
+                        <span class="t">Instagram</span>
+                        <span class="s">backtest.factory</span></a>
+                    <div class="soon-cell">
+                        <span class="t">Factory &amp; Campus</span>
+                        <span class="s">Systems released, and a place to learn to build them</span>
+                        <span class="soon">In development</span></div>
                 </nav>
                 <div class="fd-actions" style="margin-top:26px">
-                    <button type="button" class="fd-btn brass" data-service="replay">Open the terminal</button>
-                    <button type="button" class="fd-btn" data-service="contact">Talk to the desk</button>
+                    <button type="button" class="fd-btn brass" data-service="backtest">Submit a system</button>
+                    <button type="button" class="fd-btn" data-service="replay">BarTest Replay</button>
                 </div>
 
                 <p class="fd-fine">Historical data is Dukascopy tick and minute history, rebuilt
@@ -617,31 +622,37 @@ Risk 1% per trade. EURUSD, 1 hour.</p>
         <div class="lightning-flash"></div>
         
         <div class="submission-console">
-            <button id="abort-console-btn"><i class="fa-solid fa-xmark"></i> ABORT UPLINK</button>
+            <button id="abort-console-btn"><i class="fa-solid fa-xmark"></i> Close</button>
 
             <div class="console-header">
-                <span class="console-kicker">// SEC-01 &middot; BACKTEST MACHINE</span>
-                <h2>SYSTEM SUBMISSION PROTOCOL</h2>
-                <p>Describe your system once. It is run against real historical data across
-                   bull, bear and ranging markets, and comes back as a full report.</p>
+                <span class="console-kicker">Backtest Machine</span>
+                <h2>Describe your system. We test it and send back the numbers.</h2>
+                <p>Write your rules below in ordinary words &mdash; the way you would explain them
+                   to another trader. There is nothing to install and no syntax to learn. The desk
+                   turns what you write into code, runs it over the period you ask for across bull,
+                   bear and ranging markets, and emails you a report with every trade listed.
+                   Usually within a day, and as many times as you like.</p>
             </div>
 
             <div class="console-grid">
                 <form id="system-submit-form">
                     <div class="input-group">
-                        <label><span class="ig-step">1</span> SYSTEM DESIGNATION</label>
-                        <input type="text" id="system-name" placeholder="e.g., Mean Reversion Alpha v2" required>
+                        <label><span class="ig-step">1</span> What is it called?</label>
+                        <input type="text" id="system-name" placeholder="Mean reversion on EURUSD" required>
                     </div>
                     <div class="input-group">
-                        <label><span class="ig-step">2</span> CONTACT COMM-LINK (Email)</label>
-                        <input type="email" id="contact-email" placeholder="Where should we send the data analysis?" required>
+                        <label><span class="ig-step">2</span> Where should the report go?</label>
+                        <input type="email" id="contact-email" placeholder="you@example.com" required>
                     </div>
                     <div class="input-group">
-                        <label><span class="ig-step">3</span> SYSTEM ARCHITECTURE &amp; RULES</label>
-                        <textarea id="system-rules" placeholder="Define your logic. Include entry/exit criteria, timeframes, asset classes, and risk management parameters..." rows="7" required></textarea>
-                        <span class="ig-hint">The more exact the rules, the less we have to assume.</span>
+                        <label><span class="ig-step">3</span> How does it work?</label>
+                        <textarea id="system-rules" rows="9" required
+                            placeholder="Buy when the 21 EMA crosses above the 55 EMA and the daily trend is up.&#10;Stop below the last swing low. Target twice the risk.&#10;Risk 1% per trade. EURUSD, 1 hour."></textarea>
+                        <span class="ig-hint">Entries, exits, stop, target, risk per trade, which
+                            market, which timeframe &mdash; and how far back you want it run. The
+                            more exact you are, the less we have to assume.</span>
                     </div>
-                    <button type="submit" id="submit-btn" class="submit-system-btn">INITIATE DEEP BACKTEST <i class="fa-solid fa-bolt"></i></button>
+                    <button type="submit" id="submit-btn" class="submit-system-btn">Send it to the desk <i class="fa-solid fa-arrow-right"></i></button>
                 </form>
 
                 <aside class="console-rail">
@@ -652,14 +663,14 @@ Risk 1% per trade. EURUSD, 1 hour.</p>
                     </div>
 
                     <button type="button" id="console-reports-btn" class="rail-btn primary">
-                        <i class="fa-solid fa-folder-open"></i> MY REPORTS
+                        <i class="fa-solid fa-folder-open"></i> My reports
                     </button>
                     <button type="button" id="console-plans-btn" class="rail-btn">
                         <i class="fa-solid fa-infinity"></i> GET UNLIMITED BACKTESTS
                     </button>
 
                     <div class="rail-card">
-                        <div class="rail-title">WHAT COMES BACK</div>
+                        <div class="rail-title">What comes back</div>
                         <ul class="rail-list">
                             <li><i class="fa-solid fa-layer-group"></i>
                                 <span><b>Multi-regime results</b>Bull, bear and ranging — not one lucky stretch.</span></li>

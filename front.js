@@ -46,8 +46,8 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
        there. */
     const ROUTE = [
         { id: 'tape',    cx: 0, cy: 0, hold: 3.4, label: 'The tape' },
-        { id: 'replay',  cx: 1, cy: 0, hold: 1.5, label: 'Replay' },
-        { id: 'machine', cx: 1, cy: 1, hold: 1.7, label: 'The machine' },
+        { id: 'machine', cx: 1, cy: 0, hold: 1.7, label: 'The machine' },
+        { id: 'replay',  cx: 1, cy: 1, hold: 1.5, label: 'BarTest Replay' },
         { id: 'loop',    cx: 0, cy: 1, hold: 1.3, label: 'The loop' },
         { id: 'plans',   cx: 0, cy: 2, hold: 1.5, label: 'Plans' },
         { id: 'rest',    cx: 1, cy: 2, hold: 1.4, label: 'Everything else' }
@@ -501,11 +501,7 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
     function wire() {
         document.addEventListener('click', e => {
             const go = e.target.closest('[data-service]');
-            if (go) {
-                e.preventDefault();
-                if (typeof window.openService === 'function') window.openService(go.dataset.service);
-                return;
-            }
+            if (go) { e.preventDefault(); goService(go.dataset.service); return; }
             if (e.target.closest('[data-plans]')) {
                 e.preventDefault();
                 const b = $('nav-subscription-btn');
@@ -519,6 +515,33 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
         const buy = $('fd-buy'), sell = $('fd-sell');
         if (buy) buy.addEventListener('click', () => takePosition('long'));
         if (sell) sell.addEventListener('click', () => takePosition('short'));
+    }
+
+    /* Straight in. The old flow put a description panel between the click and
+       the thing — read this, then press Initialize, then arrive. Everything
+       that panel said is now on the station you clicked from, so the click
+       goes where it says it goes.
+
+       The gate is the same gate: not signed in means the sign-in dialog, and
+       nothing opens behind it. */
+    async function goService(id) {
+        if (window.BTAccess) {
+            let a = null;
+            try { a = await BTAccess.get(); } catch (e) {}
+            if (a && !a.signedIn) {
+                if (window.setAuthMode) window.setAuthMode('signin');
+                const am = $('auth-modal-overlay');
+                if (am) am.classList.add('active');
+                return;
+            }
+        }
+        if (id === 'replay') { location.href = 'replay.html'; return; }
+        if (id === 'backtest') {
+            if (typeof window.fillConsoleRail === 'function') window.fillConsoleRail();
+            const gas = $('gas-giant-atmosphere');
+            if (gas) gas.classList.add('active');
+            document.body.classList.add('fd-console');
+        }
     }
 
     // ================================================================= start
@@ -544,7 +567,7 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
         /* The report draws itself the first time its station is the one you
            are standing at, not on a timer and not on load. */
         const watch = setInterval(() => {
-            if (at === 2) { paintReport(); clearInterval(watch); }
+            if (at === 1) { paintReport(); clearInterval(watch); }
         }, 260);
     }
 
