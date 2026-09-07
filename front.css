@@ -922,3 +922,243 @@ body.fd-stuck #auth-corner .hud-slot { border-color: transparent !important; }
     padding: 0 !important;
     gap: 2px !important;
 }
+
+
+/* ==========================================================================
+   THE SUBMISSION PAGE
+
+   It is a page, not a dialog: a header of its own, a document down the left
+   and a reading of that document down the right. The reading is the reason
+   this is worth designing at all — the thing that stops somebody submitting
+   is not knowing whether they have said enough, so the page marks off the
+   seven things a rule set needs before anyone can code it, as they type.
+   ========================================================================== */
+
+#gas-giant-atmosphere { overflow-y: auto; }
+.submission-console {
+    max-width: min(1240px, 94vw) !important;
+    width: 100% !important; margin: 0 auto !important;
+    padding: 0 0 60px !important;
+    background: none !important; border: none !important; box-shadow: none !important;
+}
+
+.sc-top {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; align-items: center; gap: 18px;
+    padding: 16px 0 14px; margin-bottom: 26px;
+    border-bottom: 1px solid var(--fd-hair);
+    background: linear-gradient(rgba(6,5,14,.97) 70%, rgba(6,5,14,0));
+}
+.sc-top .fd-brand { font-size: 1.15rem; }
+.sc-where {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: .62rem; letter-spacing: .24em; text-transform: uppercase;
+    color: var(--fd-brass); padding-left: 18px; border-left: 1px solid var(--fd-hair);
+}
+.sc-top #abort-console-btn {
+    position: static !important; margin-left: auto;
+    background: transparent !important; color: var(--fd-smoke) !important;
+    border: 1px solid var(--fd-hair-2) !important;
+}
+
+.sc-body { display: grid; gap: clamp(24px, 4vw, 54px);
+           grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr);
+           align-items: start; }
+
+.sc-write .console-header h2 { max-width: 17ch; }
+.sc-write .console-header p { margin-top: 14px; }
+.sc-write form { display: flex; flex-direction: column; gap: 22px; margin-top: 32px; }
+.sc-write .input-group { display: flex; flex-direction: column; gap: 8px; }
+.sc-write textarea { min-height: 240px; resize: vertical; }
+.sc-write .submit-system-btn {
+    align-self: flex-start; padding: 13px 22px !important; font-size: .92rem !important;
+    background: var(--fd-brass) !important; color: #17130a !important;
+    border: 1px solid var(--fd-brass) !important; font-weight: 600 !important;
+}
+
+/* ------------------------------------------------------------ the reading */
+.sc-read { display: flex; flex-direction: column; gap: 22px;
+           position: sticky; top: 84px; }
+
+.sc-meter { border: 1px solid var(--fd-hair); background: rgba(21,19,39,.7);
+            padding: 16px 18px; border-radius: 2px;
+            box-shadow: inset 0 1px 0 rgba(236,231,221,.06); }
+.sc-meter-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.sc-meter-l { font-family: 'IBM Plex Mono', monospace !important; font-size: .58rem;
+              letter-spacing: .2em; text-transform: uppercase; color: var(--fd-dim); }
+#sc-score { font-family: 'IBM Plex Mono', monospace !important; font-size: .95rem;
+            font-weight: 600; color: var(--fd-vellum); }
+.sc-bar { height: 3px; margin-top: 11px; background: rgba(236,231,221,.10); overflow: hidden; }
+.sc-bar i { display: block; height: 100%; width: 0;
+            background: linear-gradient(90deg, var(--fd-brass-d), var(--fd-brass));
+            transition: width .5s cubic-bezier(.16,.84,.3,1); }
+.sc-meter-note { margin: 11px 0 0 !important; font-size: .8rem; color: var(--fd-smoke) !important; }
+
+.sc-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 0;
+             border-top: 1px solid var(--fd-hair); }
+.sc-checks li { display: grid; grid-template-columns: 16px 1fr; gap: 12px; align-items: start;
+                padding: 11px 0; border-bottom: 1px solid var(--fd-hair);
+                opacity: .45; transition: opacity .3s ease; }
+.sc-checks li.got { opacity: 1; }
+.sc-checks li > i {
+    width: 12px; height: 12px; margin-top: 4px; border-radius: 50%;
+    border: 1px solid var(--fd-dim); background: transparent;
+    transition: background .3s ease, border-color .3s ease, box-shadow .3s ease;
+}
+.sc-checks li.got > i { background: var(--fd-rise); border-color: var(--fd-rise);
+                        box-shadow: 0 0 0 3px rgba(32,178,108,.16); }
+.sc-checks span { display: flex; flex-direction: column; gap: 2px; font-size: .82rem;
+                  color: var(--fd-smoke) !important; }
+.sc-checks b { color: var(--fd-vellum) !important; font-weight: 600; font-size: .86rem; }
+
+.sc-rail { display: flex; flex-direction: column; gap: 10px; }
+.sc-rail .rail-card { padding: 16px 18px !important; text-align: center; }
+.sc-rail .rail-credit-n { font-size: 2rem !important; line-height: 1; }
+.sc-rail .rail-credit-l { font-family: 'IBM Plex Mono', monospace !important;
+                          font-size: .58rem !important; letter-spacing: .2em !important;
+                          text-transform: uppercase; color: var(--fd-dim) !important;
+                          margin-top: 6px; }
+.sc-rail .rail-credit-who { font-size: .76rem !important; color: var(--fd-smoke) !important;
+                            margin-top: 6px; }
+.sc-rail .rail-btn { justify-content: center; width: 100%;
+                     border: 1px solid var(--fd-hair-2) !important;
+                     background: transparent !important; color: var(--fd-vellum) !important;
+                     padding: 11px 14px !important; }
+
+.sc-back { border-top: 1px solid var(--fd-hair); padding-top: 16px; }
+.sc-back .rail-title { margin-bottom: 12px; }
+.sc-back .rail-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 13px; }
+.sc-back .rail-list li { display: grid; grid-template-columns: 17px 1fr; gap: 11px; }
+.sc-back .rail-list span { display: flex; flex-direction: column; gap: 2px; font-size: .8rem; }
+.sc-back .rail-list b { font-size: .84rem; }
+
+@media (max-width: 900px) {
+    .sc-body { grid-template-columns: 1fr; }
+    .sc-read { position: static; }
+    .sc-write textarea { min-height: 190px; }
+}
+
+/* The submission page was painting underneath the tape: the stage is a fixed
+   layer at z-index 2 and the console had nothing above it. It is a page, so
+   it takes the screen — and the route furniture and the stage itself stand
+   down while it has it, rather than showing through. */
+#gas-giant-atmosphere { z-index: 950 !important; }
+body.fd-console #fd-stage { visibility: hidden; }
+body.fd-console #fd-nav,
+body.fd-console #fd-rail,
+body.fd-console .fd-cue { opacity: 0; pointer-events: none; }
+body.fd-console #auth-corner { opacity: 0; pointer-events: none; }
+
+/* ==========================================================================
+   THE PHONE
+
+   A station is one screen, and on a phone a screen is small. Two things
+   follow: everything tightens, and the one station that can never fit — three
+   price columns — stops trying and becomes a swipe, which is the gesture a
+   phone already has for "there is more beside this".
+   ========================================================================== */
+
+@media (max-width: 820px) {
+
+    .fd-station { padding: 68px clamp(16px, 5vw, 26px) 22px; align-items: center; }
+    .fd-inner { max-height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch;
+                overscroll-behavior: contain; }
+
+    .fd-station h2 { font-size: clamp(1.7rem, 7.4vw, 2.3rem); }
+    .fd-say h1     { font-size: clamp(2rem, 9vw, 2.9rem); }
+    .fd-station p  { font-size: .92rem; line-height: 1.56; }
+    .fd-num { font-size: .58rem; margin-bottom: 10px; }
+
+    .fd-two, .fd-two.wide, .fd-two.lede { gap: 14px; }
+    .fd-actions { margin-top: 18px; }
+    .fd-spec { grid-template-columns: 1fr 1fr; margin-top: 20px; }
+    .fd-spec > div { padding: 11px 14px 11px 0; border-right: 1px solid var(--fd-hair);
+                     border-bottom: 1px solid var(--fd-hair); }
+    .fd-spec > div:nth-child(2n) { border-right: none; }
+    .fd-spec dd { font-size: .86rem; }
+
+    .fd-loop { gap: 12px; margin-top: 18px; }
+    .fd-loop p { font-size: .82rem; }
+
+    .fd-rules { font-size: .74rem !important; }
+    .fd-metrics { grid-template-columns: repeat(2, 1fr); }
+    #fd-curve { height: 92px; }
+
+    /* the plans, as a swipe rather than a column that never ends */
+    .fd-cycle { margin-top: 14px; }
+    #fd-tiers {
+        display: flex; gap: 0; margin-top: 18px;
+        overflow-x: auto; scroll-snap-type: x mandatory;
+        scrollbar-width: none; border-top: none;
+        margin-inline: calc(clamp(16px, 5vw, 26px) * -1);
+        padding-inline: clamp(16px, 5vw, 26px);
+    }
+    #fd-tiers::-webkit-scrollbar { display: none; }
+    .fd-tier {
+        flex: 0 0 78%; scroll-snap-align: start;
+        padding: 18px 20px 18px 0; border-right: 1px solid var(--fd-hair);
+        border-bottom: none;
+    }
+    .fd-tier.lead { padding-left: 20px; margin-left: 0; }
+    .fd-tier:last-child { padding-right: 20px; }
+    .fd-swipe {
+        display: flex; align-items: center; gap: 8px; margin-top: 12px;
+        font-family: 'IBM Plex Mono', monospace; font-size: .58rem;
+        letter-spacing: .18em; text-transform: uppercase; color: var(--fd-dim);
+    }
+    .fd-swipe::after { content: '\203A'; font-size: 1.1rem; color: var(--fd-brass);
+                       line-height: 1; letter-spacing: 0; }
+
+    .fd-map { grid-template-columns: 1fr; margin-top: 18px; }
+    .fd-map a, .fd-map .soon-cell { padding: 13px 0; border-right: none; }
+    .fd-map .t { font-size: .92rem; }
+    .fd-map .s { font-size: .78rem; }
+    .fd-fine { font-size: .74rem; margin-top: 14px !important; }
+
+    /* the submission page */
+    .sc-top { padding: 12px 0 11px; margin-bottom: 18px; }
+    .sc-where { display: none; }
+    .sc-write .console-header h2 { font-size: 1.6rem !important; max-width: none; }
+    .sc-write form { gap: 16px; margin-top: 22px; }
+    .sc-read { gap: 16px; }
+    .sc-checks li { padding: 9px 0; }
+}
+
+/* A phone on its side has no height at all; the stations stop pretending. */
+@media (max-width: 940px) and (max-height: 480px) {
+    .fd-station { padding-top: 58px; }
+    .fd-say h1 { font-size: 1.7rem; }
+    .fd-station h2 { font-size: 1.5rem; }
+}
+
+/* the swipe cue is a phone thing */
+.fd-swipe { display: none; }
+
+/* The carousel bled past the station's padding with a negative margin, which
+   gave the station itself something to scroll sideways — two horizontal
+   scrollers nested, and the one that moved was the wrong one. It stays inside
+   its padding, and the station never scrolls sideways at all. */
+@media (max-width: 820px) {
+    .fd-inner { overflow-x: hidden; }
+    #fd-tiers { margin-inline: 0; padding-inline: 0; }
+    .fd-tier { flex: 0 0 84%; }
+    .fd-tier:first-child { padding-left: 0; }
+}
+
+/* One scroller, not two. The console was a flex item capped at 92vh with its
+   own overflow, so the page inside a page had to be scrolled while the thing
+   around it stayed put — on a phone that put the submit button somewhere a
+   thumb could not reach. The overlay scrolls and the console simply flows,
+   which is what makes the sticky header behave and what makes it a page. */
+#gas-giant-atmosphere {
+    display: block !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 clamp(16px, 3vw, 30px) !important;
+}
+.submission-console {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    transform: none !important;
+}

@@ -371,29 +371,20 @@
             <span class="fd-ghost" aria-hidden="true">1</span>
             <div class="fd-inner">
                 <div class="fd-num">01 &middot; What it is for<i></i></div>
-                <div class="fd-two wide">
+                <h2 class="fd-display" style="max-width:19ch">Describe your system in a
+                   paragraph. Find out whether it works.</h2>
+
+                <div class="fd-two wide" style="margin-top:22px">
                     <div>
-                        <h2 class="fd-display">Describe your system in a paragraph. Find out whether it works.</h2>
-                        <p style="margin-top:14px"><b>You type your rules the way you would explain
-                           them to another trader.</b> The desk turns them into code, runs them over
-                           whatever stretch of history you ask for &mdash; a year, five, or as far
-                           back as the data goes &mdash; and emails you a report with every trade in
-                           it, usually within a day.</p>
-                        <p>No pseudo-code, no platform syntax, no account with anyone else, and no
-                           limit on how many times you do it.</p>
-                        <div class="fd-send">
-                            <span class="role">What you send</span>
-                            <p class="fd-rules">Buy when the 21 EMA crosses above the 55 EMA
-and the daily trend is up.
-
-Stop below the last swing low.
-Target twice the risk.
-
-Risk 1% per trade. EURUSD, 1 hour.</p>
-                            <span class="fd-sent">Sent to the engineering desk</span>
-                            <div class="foot">
-                                <button type="button" class="fd-btn" data-service="backtest">Submit a system</button>
-                            </div>
+                        <p><b>You type your rules the way you would explain them to another
+                           trader.</b> The desk turns them into code, runs them over whatever
+                           stretch of history you ask for &mdash; a year, five, or as far back as
+                           the data goes &mdash; and emails you a report with every trade in it,
+                           usually within a day.</p>
+                        <p style="margin-top:12px">No pseudo-code, no platform syntax, no account
+                           with anyone else, and no limit on how many times you do it.</p>
+                        <div class="fd-actions">
+                            <button type="button" class="fd-btn brass" data-service="backtest">Submit a system</button>
                         </div>
                     </div>
 
@@ -503,6 +494,7 @@ Risk 1% per trade. EURUSD, 1 hour.</p>
 
                 <!-- built from the subscription modal, so a price is stated once -->
                 <div id="fd-tiers"></div>
+                <div class="fd-swipe">Swipe for the other tiers</div>
             </div>
         </section>
 
@@ -563,15 +555,10 @@ Risk 1% per trade. EURUSD, 1 hour.</p>
                 </div>
             </div>
 
-            <!-- 2. CREDITS -->
-            <div class="hud-slot credits" id="nav-credits-btn">
-                <div class="hud-icon-box">
-                    <i class="fa-solid fa-coins"></i>
-                </div>
-                <div class="hud-label-box">
-                    <span id="nav-credits-label">BACKTESTS: --</span>
-                </div>
-            </div>
+            <!-- The run counter lived here as its own icon, which meant two
+                 icons for one fact: the plan is what decides how many runs you
+                 have, and the plan icon is right there. It still exists in the
+                 submission page's rail, where it is actually being spent. -->
 
             <!-- 3. SUBSCRIPTIONS -->
             <div class="hud-slot subs" id="nav-subscription-btn">
@@ -622,70 +609,99 @@ Risk 1% per trade. EURUSD, 1 hour.</p>
         <div class="lightning-flash"></div>
         
         <div class="submission-console">
-            <button id="abort-console-btn"><i class="fa-solid fa-xmark"></i> Close</button>
 
-            <div class="console-header">
-                <span class="console-kicker">Backtest Machine</span>
-                <h2>Describe your system. We test it and send back the numbers.</h2>
-                <p>Write your rules below in ordinary words &mdash; the way you would explain them
-                   to another trader. There is nothing to install and no syntax to learn. The desk
-                   turns what you write into code, runs it over the period you ask for across bull,
-                   bear and ranging markets, and emails you a report with every trade listed.
-                   Usually within a day, and as many times as you like.</p>
-            </div>
+            <header class="sc-top">
+                <span class="fd-brand">BarTest</span>
+                <span class="sc-where">Backtest Machine</span>
+                <button id="abort-console-btn"><i class="fa-solid fa-xmark"></i> Close</button>
+            </header>
 
-            <div class="console-grid">
-                <form id="system-submit-form">
-                    <div class="input-group">
-                        <label><span class="ig-step">1</span> What is it called?</label>
-                        <input type="text" id="system-name" placeholder="Mean reversion on EURUSD" required>
-                    </div>
-                    <div class="input-group">
-                        <label><span class="ig-step">2</span> Where should the report go?</label>
-                        <input type="email" id="contact-email" placeholder="you@example.com" required>
-                    </div>
-                    <div class="input-group">
-                        <label><span class="ig-step">3</span> How does it work?</label>
-                        <textarea id="system-rules" rows="9" required
-                            placeholder="Buy when the 21 EMA crosses above the 55 EMA and the daily trend is up.&#10;Stop below the last swing low. Target twice the risk.&#10;Risk 1% per trade. EURUSD, 1 hour."></textarea>
-                        <span class="ig-hint">Entries, exits, stop, target, risk per trade, which
-                            market, which timeframe &mdash; and how far back you want it run. The
-                            more exact you are, the less we have to assume.</span>
-                    </div>
-                    <button type="submit" id="submit-btn" class="submit-system-btn">Send it to the desk <i class="fa-solid fa-arrow-right"></i></button>
-                </form>
+            <div class="sc-body">
 
-                <aside class="console-rail">
-                    <div class="rail-card rail-credits">
-                        <div class="rail-credit-n" id="console-credits">&mdash;</div>
-                        <div class="rail-credit-l" id="console-credits-label">BACKTEST RUNS</div>
-                        <div class="rail-credit-who" id="console-who">not signed in</div>
+                <!-- ------------------------------------------- what you write -->
+                <div class="sc-write">
+                    <div class="console-header">
+                        <span class="console-kicker">Submit a system</span>
+                        <h2>Say it in your own words. We turn it into evidence.</h2>
+                        <p>There is nothing to install and no syntax to learn. Write the rules the
+                           way you would explain them to another trader; the desk codes them, runs
+                           them over the period you ask for across bull, bear and ranging markets,
+                           and emails a report with every trade listed.</p>
                     </div>
 
-                    <button type="button" id="console-reports-btn" class="rail-btn primary">
-                        <i class="fa-solid fa-folder-open"></i> My reports
-                    </button>
-                    <button type="button" id="console-plans-btn" class="rail-btn">
-                        <i class="fa-solid fa-infinity"></i> GET UNLIMITED BACKTESTS
-                    </button>
+                    <form id="system-submit-form">
+                        <div class="input-group">
+                            <label><span class="ig-step">1</span> What is it called?</label>
+                            <input type="text" id="system-name" placeholder="Mean reversion on EURUSD" required>
+                        </div>
+                        <div class="input-group">
+                            <label><span class="ig-step">2</span> Where should the report go?</label>
+                            <input type="email" id="contact-email" placeholder="you@example.com" required>
+                        </div>
+                        <div class="input-group">
+                            <label><span class="ig-step">3</span> How does it work?</label>
+                            <textarea id="system-rules" rows="12" required
+                                placeholder="Buy when the 21 EMA crosses above the 55 EMA and the daily trend is up.&#10;Stop below the last swing low. Target twice the risk.&#10;Risk 1% per trade. EURUSD, 1 hour. Run it over the last five years."></textarea>
+                            <span class="ig-hint">Write as much or as little as you like &mdash; the
+                                reading on the right shows what has come through so far.</span>
+                        </div>
+                        <button type="submit" id="submit-btn" class="submit-system-btn">Send it to the desk <i class="fa-solid fa-arrow-right"></i></button>
+                    </form>
+                </div>
 
-                    <div class="rail-card">
+                <!-- ------------------------------------------ what we read back
+
+                     The one thing that stops a person submitting is not knowing
+                     whether they have said enough. So the page reads what they
+                     have written back to them and marks off the seven things a
+                     rule set needs before anybody can code it. It is a
+                     completeness check and says so — it is not claiming to have
+                     understood the strategy. -->
+                <aside class="sc-read">
+                    <div class="sc-meter">
+                        <div class="sc-meter-top">
+                            <span class="sc-meter-l">What has come through</span>
+                            <b id="sc-score" class="fd-tnum">0 / 7</b>
+                        </div>
+                        <div class="sc-bar"><i id="sc-bar-fill"></i></div>
+                        <p class="sc-meter-note" id="sc-note">Start writing and this fills in.</p>
+                    </div>
+
+                    <ul class="sc-checks" id="sc-checks">
+                        <li data-k="entry"><i></i><span><b>Entry</b>When you get in</span></li>
+                        <li data-k="exit"><i></i><span><b>Exit</b>When you get out in profit</span></li>
+                        <li data-k="stop"><i></i><span><b>Stop</b>Where you are wrong</span></li>
+                        <li data-k="risk"><i></i><span><b>Risk</b>How much per trade</span></li>
+                        <li data-k="market"><i></i><span><b>Market</b>Which instrument</span></li>
+                        <li data-k="timeframe"><i></i><span><b>Timeframe</b>Which chart</span></li>
+                        <li data-k="period"><i></i><span><b>Period</b>How far back to run it</span></li>
+                    </ul>
+
+                    <div class="sc-rail">
+                        <div class="rail-card rail-credits">
+                            <div class="rail-credit-n" id="console-credits">&mdash;</div>
+                            <div class="rail-credit-l" id="console-credits-label">Backtest runs</div>
+                            <div class="rail-credit-who" id="console-who">not signed in</div>
+                        </div>
+                        <button type="button" id="console-reports-btn" class="rail-btn primary">
+                            <i class="fa-solid fa-folder-open"></i> My reports
+                        </button>
+                        <button type="button" id="console-plans-btn" class="rail-btn">
+                            <i class="fa-solid fa-infinity"></i> Get unlimited backtests
+                        </button>
+                    </div>
+
+                    <div class="sc-back">
                         <div class="rail-title">What comes back</div>
                         <ul class="rail-list">
                             <li><i class="fa-solid fa-layer-group"></i>
-                                <span><b>Multi-regime results</b>Bull, bear and ranging — not one lucky stretch.</span></li>
+                                <span><b>Multi-regime results</b>Bull, bear and ranging &mdash; not one lucky stretch.</span></li>
                             <li><i class="fa-solid fa-list-check"></i>
                                 <span><b>Every trade, listed</b>Entries, exits and execution times, wins and losses alike.</span></li>
                             <li><i class="fa-solid fa-file-pdf"></i>
                                 <span><b>A PDF report</b>Win rate, drawdown, profit factor and the compounding curve.</span></li>
                         </ul>
                     </div>
-
-                    <p class="rail-foot">
-                        <i class="fa-solid fa-clock"></i>
-                        Your rules are turned into code, checked by the engineering desk and
-                        run against real history. You are emailed the moment the report is ready.
-                    </p>
                 </aside>
             </div>
         </div>

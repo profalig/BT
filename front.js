@@ -345,6 +345,7 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
         if (document.body.classList.contains('modal-locked')) return;
 
         const track = $('fd-track');
+        if (!track) return;
         const travel = track.offsetHeight - VH;
         if (travel <= 0) return;
         const p = clamp(scrollY / travel, 0, 1);
@@ -512,6 +513,12 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
             if (st) { e.preventDefault(); goTo(+st.dataset.st); }
         });
 
+        /* Closing the submission page hands the screen back. app.js owns the
+           overlay's own close; this only has to undo what opening it did. */
+        const close = $('abort-console-btn');
+        if (close) close.addEventListener('click',
+            () => document.body.classList.remove('fd-console'));
+
         const buy = $('fd-buy'), sell = $('fd-sell');
         if (buy) buy.addEventListener('click', () => takePosition('long'));
         if (sell) sell.addEventListener('click', () => takePosition('short'));
@@ -544,12 +551,72 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
         }
     }
 
+    /* ------------------------------------------------ reading it back
+
+       The single thing that stops somebody submitting a system is not knowing
+       whether they have said enough. So the page reads what they have written
+       and marks off the seven things a rule set needs before anyone can code
+       it. It is a completeness check and the page says so — it is not
+       claiming to have understood the strategy, and it never blocks the
+       submit button, because a trader who leaves something out on purpose is
+       still allowed to send it. */
+    const READS = [
+        ['entry',     /\b(buy|long|sell|short|enter|entry|entries|cross(es|ing)?\s+above|cross(es|ing)?\s+below|breakout)\b/i],
+        ['exit',      /\b(exit|close|take[- ]?profit|target|tp|profit\s+at|r:?r|reward)\b/i],
+        ['stop',      /\b(stop|sl|stop[- ]?loss|invalidat\w*|below\s+the\s+\w+\s+low|above\s+the\s+\w+\s+high)\b/i],
+        ['risk',      /\b(risk|\d+(\.\d+)?\s*%|percent|lot|position\s+size|sizing|per\s+trade)\b/i],
+        ['market',    /\b([A-Z]{6}|eur\/?usd|gbp\/?usd|usd\/?jpy|xau|gold|silver|btc|eth|nas100|us30|spx|forex|indices|crypto|stocks?)\b/i],
+        ['timeframe', /\b(\d+\s?(m|min|mins|minute|minutes|h|hr|hour|hours|d|day|daily|w|week|weekly)|m1|m5|m15|m30|h1|h4|d1|intraday|swing)\b/i],
+        ['period',    /\b(since\s+(19|20)\d\d|(19|20)\d\d\s*(to|-|–)\s*(19|20)\d\d|last\s+\w+\s+years?|\d+\s+years?|as\s+far\s+back|all\s+(the\s+)?history|whole\s+history)\b/i]
+    ];
+
+    const NOTES = [
+        'Start writing and this fills in.',
+        'Keep going — the more of these are lit, the less the desk has to assume.',
+        'Enough to code, and the desk will ask about anything still missing.',
+        'That is a complete rule set. Send it whenever you are ready.'
+    ];
+
+    function readBack() {
+        const box = $('sc-checks');
+        const rules = $('system-rules');
+        if (!box || !rules) return;
+
+        const text = (rules.value || '') + ' ' + (($('system-name') || {}).value || '');
+        let got = 0;
+        READS.forEach(([key, re]) => {
+            const hit = re.test(text);
+            if (hit) got++;
+            const li = box.querySelector('[data-k="' + key + '"]');
+            if (li) li.classList.toggle('got', hit);
+        });
+
+        const score = $('sc-score'), fill = $('sc-bar-fill'), note = $('sc-note');
+        if (score) score.textContent = got + ' / ' + READS.length;
+        if (fill) fill.style.width = (got / READS.length * 100).toFixed(1) + '%';
+        if (note) {
+            note.textContent = got === 0 ? NOTES[0]
+                             : got < 4   ? NOTES[1]
+                             : got < 7   ? NOTES[2]
+                             : NOTES[3];
+        }
+    }
+
+    function wireSubmitPage() {
+        const rules = $('system-rules'), name = $('system-name');
+        if (!rules) return;
+        rules.addEventListener('input', readBack);
+        if (name) name.addEventListener('input', readBack);
+        readBack();
+    }
+
     // ================================================================= start
 
     function start() {
         document.documentElement.classList.add('fd-on');
         buildTiers();
         wire();
+        wireSubmitPage();
 
         if (CALM) {
             shownBars = BREXIT.length;
