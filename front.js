@@ -466,13 +466,17 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
             const feats = Array.from(card.querySelectorAll('.tier-features li')).map(li =>
                 '<li' + (li.querySelector('.unavailable') ? ' class="no"' : '') + '>' +
                 li.textContent.trim() + '</li>').join('');
-            return '<article class="fd-card' + (i === cards.length - 1 ? ' lead' : '') + '">' +
+            /* A column divided by a hairline, not a box. Three boxed cards
+               side by side is the shape every SaaS page has had for ten
+               years; the same information set as type, separated by a rule,
+               reads as a price list in a good catalogue instead. */
+            return '<article class="fd-tier' + (i === cards.length - 1 ? ' lead' : '') + '">' +
                 '<span class="role">' + (name ? name.textContent.trim() : '') + '</span>' +
                 '<div class="fd-price"><b class="fd-tnum" data-m="' + m + '" data-y="' +
                     (yr / 12).toFixed(2) + '">' + m + '</b><i>$ / month</i></div>' +
                 '<p class="fd-billed" data-m="Billed monthly" data-y="$' + yr +
                     ' billed once a year">Billed monthly</p>' +
-                '<p>' + (desc ? desc.textContent.trim() : '') + '</p>' +
+                '<p class="fd-tier-desc">' + (desc ? desc.textContent.trim() : '') + '</p>' +
                 '<ul class="fd-list">' + feats + '</ul>' +
                 '<div class="foot"><button class="fd-btn' +
                     (i === cards.length - 1 ? ' brass' : '') + '" data-plans>Choose this</button></div>' +

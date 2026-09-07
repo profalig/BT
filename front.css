@@ -343,3 +343,419 @@ body.fd-moved .fd-cue { opacity: 0; }
                   border-top: 1px solid var(--fd-hair); }
     #fd-track, #fd-rail, .fd-cue { display: none; }
 }
+
+/* ==========================================================================
+   THE FINISH
+
+   Everything above builds the place. This makes it feel like somewhere
+   expensive to be, and drags every surface the site had before — the service
+   panel, the modals, the account chip, the reports — into the same language.
+   No screen should look like it came from a different product.
+
+   Three things do most of the work, in this order: light, material, and
+   restraint. Light means the world is lit from somewhere rather than being
+   flat black. Material means a panel has an edge catching that light and a
+   shadow underneath it, not a one-pixel outline. Restraint means the accent
+   appears about six times per screen and nowhere else.
+   ========================================================================== */
+
+/* ------------------------------------------------------------ 1 · the air */
+
+/* A key light in the upper left and a vignette everywhere else, so the world
+   has a direction to be lit from. Behind the panels, above the chart. */
+#fd-sky   { z-index: 0; }
+#fd-world { z-index: 2; }
+#fd-stage::before {
+    content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background:
+        radial-gradient(112% 82% at 16% 8%,  rgba(247,166,0,.13), transparent 56%),
+        radial-gradient(90% 70%  at 88% 96%, rgba(90,169,240,.07), transparent 60%),
+        radial-gradient(150% 130% at 50% 50%, transparent 42%, rgba(2,1,6,.82) 100%);
+}
+
+/* Grain. Four kilobytes of turbulence over the whole screen is the single
+   cheapest thing that stops a dark page looking like a dark rectangle: it
+   gives every gradient a surface and kills the banding they would otherwise
+   show on a wide gamut display. */
+#fd-stage::after {
+    content: ''; position: fixed; inset: -50%; z-index: 60; pointer-events: none;
+    opacity: .042;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* --------------------------------------------------------- 2 · the material
+
+   A premium surface is not a border. It is an edge that catches the light at
+   the top, a body that is slightly lighter than what is behind it, and a
+   shadow deep enough to say the thing is sitting above the page rather than
+   drawn on it. Radius stays at two pixels throughout: precision reads as
+   expensive here, roundness reads as an app. */
+
+.fd-card, .fd-report, .fd-map, .fd-rules {
+    border-radius: 2px;
+    box-shadow:
+        inset 0 1px 0 rgba(236,231,221,.07),
+        0 1px 0 rgba(6,5,14,.9),
+        0 28px 64px -28px rgba(0,0,0,.86);
+}
+.fd-card {
+    background:
+        linear-gradient(rgba(236,231,221,.028), rgba(236,231,221,0) 42%),
+        rgba(13,12,26,.80);
+}
+.fd-card.lead {
+    background:
+        radial-gradient(88% 130% at 100% 0%, rgba(247,166,0,.16), transparent 56%),
+        linear-gradient(rgba(236,231,221,.04), rgba(236,231,221,0) 44%),
+        rgba(23,20,42,.88);
+    box-shadow:
+        inset 0 1px 0 rgba(247,166,0,.20),
+        0 30px 70px -26px rgba(0,0,0,.9),
+        0 0 0 1px rgba(247,166,0,.10);
+}
+.fd-report { background:
+        linear-gradient(rgba(236,231,221,.03), rgba(236,231,221,0) 38%),
+        rgba(21,19,39,.90); }
+
+/* ------------------------------------------------------- 3 · the typography
+
+   The display face is a didone, so it earns its keep at size and loses it at
+   small sizes. Headlines go up; everything that is not a headline stays
+   quiet and monospaced. */
+
+.fd-station h2 { font-size: clamp(2.1rem, 4.6vw, 4.1rem); letter-spacing: -.022em; }
+.fd-say h1     { font-size: clamp(2.4rem, 6vw, 5rem);      letter-spacing: -.026em; }
+.fd-card h3    { font-size: clamp(1.4rem, 2.7vw, 2.1rem);  letter-spacing: -.016em; }
+
+.fd-station p { font-size: clamp(.94rem, 1.15vw, 1.06rem); max-width: 62ch; }
+.fd-two.lede p { max-width: 46ch; }
+
+/* The station number, set once at the size a didone deserves and dropped
+   behind the words. It is the only decoration on the page and it is telling
+   the truth: it says which of six stops you are standing at. */
+.fd-station { position: absolute; }
+.fd-ghost {
+    position: absolute; z-index: -1; pointer-events: none;
+    right: clamp(18px, 6vw, 96px); top: 50%;
+    transform: translateY(-50%);
+    font-family: 'Bodoni Moda', Didot, Georgia, serif;
+    font-size: clamp(12rem, 34vw, 30rem); line-height: .8; font-weight: 400;
+    color: rgba(236,231,221,.028);
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+}
+@media (max-width: 980px) { .fd-ghost { display: none; } }
+
+.fd-num { letter-spacing: .28em; font-size: .62rem; }
+.fd-num i { background: linear-gradient(90deg, rgba(247,166,0,.5), transparent); max-width: 220px; }
+
+/* ---------------------------------------------------- 4 · the arrival
+
+   Content assembles when the camera lands, in the order it should be read.
+   One curve everywhere, so the whole site moves with the same hand. */
+
+.fd-inner > *:not(.fd-note) {
+    opacity: 0; transform: translateY(20px);
+    transition: opacity .72s cubic-bezier(.16,.84,.3,1),
+                transform .72s cubic-bezier(.16,.84,.3,1);
+}
+.fd-station.near .fd-inner > *:not(.fd-note) { opacity: 1; transform: none; }
+/* The caption is not part of the arrival: it appears when the price says
+   something, which is a different clock from the camera's. */
+.fd-station.near .fd-inner > *:nth-child(1) { transition-delay: .06s; }
+.fd-station.near .fd-inner > *:nth-child(2) { transition-delay: .14s; }
+.fd-station.near .fd-inner > *:nth-child(3) { transition-delay: .22s; }
+.fd-station.near .fd-inner > *:nth-child(4) { transition-delay: .30s; }
+.fd-station.near .fd-inner > *:nth-child(5) { transition-delay: .38s; }
+.fd-station.near .fd-inner > *:nth-child(6) { transition-delay: .46s; }
+
+/* ------------------------------------------------------------ 5 · controls
+
+   A button fills rather than changes colour. It costs one gradient and it is
+   the difference between a control that responds and a control that blinks. */
+
+.fd-btn, .tier-btn, .action-btn, .abort-btn, .rpt-btn,
+.submit-system-btn, .crypto-pay-btn {
+    background-image: linear-gradient(var(--fd-brass), var(--fd-brass));
+    background-repeat: no-repeat;
+    background-size: 0% 100%;
+    transition: background-size .34s cubic-bezier(.16,.84,.3,1),
+                color .22s ease, border-color .22s ease;
+}
+.fd-btn:hover, .tier-btn:hover, .action-btn:hover, .rpt-btn:hover,
+.submit-system-btn:hover, .crypto-pay-btn:hover {
+    background-size: 100% 100%;
+    color: #17130a !important;
+    border-color: var(--fd-brass) !important;
+}
+.fd-btn.brass { background-size: 100% 100%; }
+.fd-btn.brass:hover { background-image: linear-gradient(var(--fd-brass-d), var(--fd-brass-d)); }
+.fd-btn.long:hover  { background-image: linear-gradient(var(--fd-rise), var(--fd-rise)); color: #06120c !important; }
+.fd-btn.short:hover { background-image: linear-gradient(var(--fd-fall), var(--fd-fall)); color: #1a0708 !important; }
+
+/* the compass gets a spine, so it reads as an instrument */
+#fd-rail::before {
+    content: ''; position: absolute; right: 3px; top: -8px; bottom: -8px; width: 1px;
+    background: linear-gradient(transparent, rgba(236,231,221,.14) 12%,
+                                rgba(236,231,221,.14) 88%, transparent);
+}
+
+/* ==========================================================================
+   6 · EVERY SURFACE THE SITE ALREADY HAD
+
+   The service panel, the modals, the account chip and the report screens
+   were written in a different voice — uppercase monospace, hard cyan and
+   green, corner brackets. They are the same product and they now look it.
+   ========================================================================== */
+
+/* One family across all of it. !important because a couple of these carry
+   inline styles from before, and a half-converted screen is worse than an
+   unconverted one. */
+.module-details, .module-details *,
+#subscription-modal-overlay, #subscription-modal-overlay *,
+#auth-modal-overlay, #auth-modal-overlay *,
+#tactical-modal-overlay, #tactical-modal-overlay *,
+#crypto-modal-overlay, #crypto-modal-overlay *,
+#reports-library, #reports-library *,
+#report-dashboard, #report-dashboard *,
+#auth-corner, #auth-corner * {
+    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif !important;
+    letter-spacing: normal;
+}
+.module-details .module-tag, .module-details .stat-title,
+#subscription-modal-overlay .tier-name, #subscription-modal-overlay .tier-billed,
+#subscription-modal-overlay .billing-toggle button,
+#auth-modal-overlay label, #tactical-modal-overlay .modal-status-tag,
+#crypto-modal-overlay #crypto-wallet-address, #crypto-modal-overlay #crypto-amount-due,
+#reports-library .rl-counts, #report-dashboard .rpt-note {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace !important;
+}
+.module-details h2, #subscription-modal-overlay h2,
+#auth-modal-overlay h2, #tactical-modal-overlay h2,
+#reports-library h2, #report-dashboard h2 {
+    font-family: 'Bodoni Moda', Didot, Georgia, serif !important;
+    font-weight: 400; letter-spacing: -.02em; text-transform: none;
+}
+
+:is(.module-details, #subscription-modal-overlay, #auth-modal-overlay,
+     #tactical-modal-overlay, #crypto-modal-overlay, #reports-library,
+     #report-dashboard, #auth-corner) .fa-solid,
+:is(.module-details, #subscription-modal-overlay, #auth-modal-overlay,
+     #tactical-modal-overlay, #crypto-modal-overlay, #reports-library,
+     #report-dashboard, #auth-corner) .fa-regular {
+    font-family: 'Font Awesome 6 Free' !important;
+}
+:is(.module-details, #subscription-modal-overlay, #auth-modal-overlay,
+     #tactical-modal-overlay, #crypto-modal-overlay, #reports-library,
+     #report-dashboard, #auth-corner) .fa-brands {
+    font-family: 'Font Awesome 6 Brands' !important;
+}
+
+/* the corner brackets were the loudest thing in the old voice */
+.corner-bracket { opacity: .22; filter: saturate(0) brightness(1.6); }
+
+/* --------------------------------------------------------- service panel */
+.module-details {
+    background:
+        linear-gradient(rgba(236,231,221,.03), rgba(236,231,221,0) 30%),
+        rgba(10,9,20,.94) !important;
+    backdrop-filter: blur(18px);
+    border-left: 1px solid rgba(247,166,0,.34) !important;
+    box-shadow: -40px 0 100px -40px rgba(0,0,0,.9);
+}
+.module-details .module-tag {
+    font-size: .64rem !important; letter-spacing: .24em !important;
+    text-transform: uppercase; color: var(--fd-brass) !important;
+}
+.module-details h2 { font-size: clamp(1.9rem, 3.4vw, 2.9rem) !important; color: var(--fd-vellum) !important; }
+.module-details .module-rule { height: 1px !important; background: rgba(247,166,0,.5) !important; }
+.module-details .module-lead { color: var(--fd-brass) !important; font-weight: 500; }
+.module-details #module-desc, .module-details .mp-text { color: var(--fd-smoke) !important; }
+.module-details .mp-title { color: var(--fd-vellum) !important; font-weight: 600; }
+.module-details .module-point {
+    border-top: 1px solid var(--fd-hair) !important;
+    border-bottom: none !important; background: none !important;
+}
+.module-details .stat-card {
+    background: rgba(236,231,221,.035) !important;
+    border: 1px solid var(--fd-hair) !important; border-radius: 2px !important;
+    box-shadow: inset 0 1px 0 rgba(236,231,221,.06);
+}
+.module-details .stat-title { font-size: .58rem !important; letter-spacing: .2em !important;
+                              text-transform: uppercase; color: var(--fd-dim) !important; }
+.module-details .stat-value { font-family: 'IBM Plex Mono', monospace !important;
+                              font-variant-numeric: tabular-nums; }
+.module-details .action-btn, .module-details #return-btn {
+    border-radius: 2px !important; letter-spacing: .1em !important;
+    text-transform: none !important; font-weight: 600;
+}
+
+/* ------------------------------------------------------------ the modals */
+#subscription-modal-overlay, #auth-modal-overlay,
+#tactical-modal-overlay, #crypto-modal-overlay {
+    background: rgba(4,3,10,.86) !important;
+    backdrop-filter: blur(14px) !important;
+}
+.subscription-modal-card, #auth-modal-overlay .auth-modal-card,
+#tactical-modal-overlay > div, #crypto-modal-overlay > div,
+#auth-modal-overlay > div {
+    background:
+        linear-gradient(rgba(236,231,221,.03), rgba(236,231,221,0) 26%),
+        rgba(11,10,22,.97) !important;
+    border: 1px solid var(--fd-hair-2) !important;
+    border-radius: 3px !important;
+    box-shadow: inset 0 1px 0 rgba(236,231,221,.07), 0 40px 90px -30px rgba(0,0,0,.92) !important;
+}
+
+#subscription-modal-overlay .tier-card {
+    background:
+        linear-gradient(rgba(236,231,221,.028), rgba(236,231,221,0) 40%),
+        rgba(15,13,29,.9) !important;
+    border: 1px solid var(--fd-hair) !important; border-radius: 2px !important;
+    box-shadow: inset 0 1px 0 rgba(236,231,221,.06), 0 24px 56px -26px rgba(0,0,0,.8);
+}
+#subscription-modal-overlay .tier-name {
+    font-size: .62rem !important; letter-spacing: .22em !important; color: var(--fd-brass) !important;
+}
+#subscription-modal-overlay .tier-price .amt {
+    font-family: 'Bodoni Moda', Georgia, serif !important; font-weight: 400 !important;
+    font-size: clamp(2.4rem, 4vw, 3.2rem) !important; color: var(--fd-vellum) !important;
+}
+#subscription-modal-overlay .tier-price .cur,
+#subscription-modal-overlay .tier-price .per { color: var(--fd-smoke) !important; }
+#subscription-modal-overlay .tier-desc,
+#subscription-modal-overlay .tier-features li { color: var(--fd-smoke) !important; }
+#subscription-modal-overlay .tier-features .fa-check { color: var(--fd-brass) !important; }
+#subscription-modal-overlay .tier-features .unavailable { color: var(--fd-dim) !important; }
+#subscription-modal-overlay .billing-toggle { border-radius: 2px !important; }
+#subscription-modal-overlay .billing-toggle .bt-opt {
+    letter-spacing: .12em !important; border-radius: 0 !important;
+}
+#subscription-modal-overlay .tier-btn { border-radius: 2px !important; letter-spacing: .06em !important; }
+
+#auth-modal-overlay input, #auth-modal-overlay .input-group input {
+    background: rgba(236,231,221,.045) !important;
+    border: 1px solid var(--fd-hair) !important; border-radius: 2px !important;
+    color: var(--fd-vellum) !important; font-size: 16px !important;
+}
+#auth-modal-overlay input:focus { border-color: var(--fd-brass) !important; outline: none; }
+#auth-modal-overlay label { font-size: .6rem !important; letter-spacing: .2em !important;
+                            text-transform: uppercase; color: var(--fd-dim) !important; }
+
+/* --------------------------------------------------------- account chip */
+#auth-corner .hud-slot {
+    background: rgba(11,10,22,.8) !important;
+    border: 1px solid var(--fd-hair) !important; border-radius: 2px !important;
+    backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 0 rgba(236,231,221,.06);
+    transition: border-color .2s, background .2s;
+}
+#auth-corner .hud-slot:hover { border-color: rgba(247,166,0,.5) !important; }
+#auth-corner .hud-label-box { font-family: 'IBM Plex Mono', monospace !important;
+                              font-size: .58rem !important; letter-spacing: .18em !important; }
+
+/* ----------------------------------------------------------- the reports */
+#reports-library, #report-dashboard { background: rgba(4,3,10,.9) !important;
+                                      backdrop-filter: blur(14px) !important; }
+#reports-library .rl-card, #report-dashboard .rpt-card {
+    background: linear-gradient(rgba(236,231,221,.028), rgba(236,231,221,0) 40%),
+                rgba(15,13,29,.92) !important;
+    border: 1px solid var(--fd-hair) !important; border-radius: 2px !important;
+    box-shadow: inset 0 1px 0 rgba(236,231,221,.06), 0 24px 56px -26px rgba(0,0,0,.8);
+}
+#report-dashboard .rpt-kpis .metric-box {
+    background: rgba(236,231,221,.035) !important;
+    border: 1px solid var(--fd-hair) !important; border-radius: 2px !important;
+}
+#reports-library .rl-filter { border-radius: 2px !important; letter-spacing: .1em !important; }
+
+/* -------------------------------------------------------------- motion off */
+@media (prefers-reduced-motion: reduce) {
+    .fd-inner > * { opacity: 1 !important; transform: none !important; }
+    #fd-stage::after { display: none; }
+    .fd-ghost { display: none; }
+}
+
+
+/* A service panel is a room you have stepped into. The route furniture —
+   the nav and the compass — belongs to the journey, so it stands down while
+   you are in there rather than sitting on top of the panel. */
+body.warping #fd-nav,
+body.warping #fd-rail,
+body.warping .fd-cue {
+    opacity: 0; pointer-events: none;
+    transition: opacity .3s ease;
+}
+
+
+/* ==========================================================================
+   NO DESCRIPTION CARDS
+
+   A boxed panel with a heading, a paragraph and five ticks is the shape every
+   software page has had for a decade, and it is the shape people have learnt
+   to skip. What replaces it here is typography and rules: the headline
+   carries the claim, one paragraph carries the argument, and the specifics
+   sit in a row of facts where a reader can compare them at a glance.
+
+   Two things keep an edge, because they are not descriptions: the rule you
+   send to the desk, and the report that comes back. Those are documents.
+   ========================================================================== */
+
+/* the row of facts that replaced the feature list */
+.fd-spec {
+    display: grid; gap: 0;
+    grid-template-columns: repeat(auto-fit, minmax(146px, 1fr));
+    margin: 30px 0 0; border-top: 1px solid var(--fd-hair);
+}
+.fd-spec > div { padding: 15px 20px 15px 0; border-right: 1px solid var(--fd-hair); }
+.fd-spec > div:last-child { border-right: none; }
+.fd-spec dt { font-family: 'IBM Plex Mono', monospace; font-size: .58rem;
+              letter-spacing: .2em; text-transform: uppercase; color: var(--fd-dim); }
+.fd-spec dd { margin: 6px 0 0; font-size: .92rem; font-weight: 500; color: var(--fd-vellum); }
+
+.fd-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
+
+/* what you send: a left rule and a monospace block, no frame */
+.fd-send { margin-top: 22px; display: flex; flex-direction: column; gap: 12px;
+           align-items: flex-start; }
+.fd-send .role { font-family: 'IBM Plex Mono', monospace; font-size: .58rem;
+                 letter-spacing: .2em; text-transform: uppercase; color: var(--fd-dim); }
+.fd-rules { box-shadow: none !important; background: transparent !important;
+            padding: 2px 0 2px 16px !important; }
+
+/* the tiers, as columns in a catalogue */
+#fd-tiers { grid-template-columns: repeat(3, 1fr); gap: 0; margin-top: 26px;
+            border-top: 1px solid var(--fd-hair); }
+.fd-tier {
+    display: flex; flex-direction: column; gap: 11px;
+    padding: 24px 26px 24px 0; border-right: 1px solid var(--fd-hair);
+}
+.fd-tier:last-child { border-right: none; padding-right: 0; }
+.fd-tier.lead { padding-left: 26px; border-left: 1px solid rgba(247,166,0,.3);
+                margin-left: -1px; }
+.fd-tier .role { font-family: 'IBM Plex Mono', monospace; font-size: .6rem;
+                 letter-spacing: .2em; text-transform: uppercase; color: var(--fd-dim); }
+.fd-tier.lead .role { color: var(--fd-brass); }
+.fd-tier .fd-tier-desc { font-size: .88rem; color: var(--fd-smoke); margin: 0; }
+.fd-tier .fd-list { gap: 7px; }
+.fd-tier .fd-list li { font-size: .84rem; }
+.fd-tier .foot { margin-top: auto; padding-top: 10px; }
+
+/* destinations: a list with rules, not tiles */
+.fd-map { background: none; border: none; border-top: 1px solid var(--fd-hair);
+          gap: 0; margin-top: 26px; }
+.fd-map button { background: none !important; border-bottom: 1px solid var(--fd-hair);
+                 border-right: 1px solid var(--fd-hair); padding: 18px 22px 18px 0;
+                 box-shadow: none; }
+.fd-map button:last-child { border-right: none; }
+.fd-map button:hover { background: rgba(236,231,221,.035) !important; }
+.fd-map .t { font-size: 1rem; }
+
+@media (max-width: 980px) {
+    #fd-tiers { grid-template-columns: 1fr; }
+    .fd-tier { border-right: none; border-bottom: 1px solid var(--fd-hair);
+               padding-right: 0; }
+    .fd-tier.lead { padding-left: 0; border-left: none; margin-left: 0; }
+    .fd-spec > div { border-right: none; border-bottom: 1px solid var(--fd-hair); }
+    .fd-map button { border-right: none; }
+}

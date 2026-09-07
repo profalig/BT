@@ -329,6 +329,7 @@
 
         <!-- ------------------------------------------- 0 · the front door -->
         <section class="fd-station near" style="--cx:0; --cy:0">
+            <span class="fd-ghost" aria-hidden="true">0</span>
             <div class="fd-inner">
                 <div class="fd-clockline">
                     <b id="fd-clock">22:00</b>
@@ -367,39 +368,38 @@
 
         <!-- --------------------------------------------------- 1 · replay -->
         <section class="fd-station" style="--cx:1; --cy:0">
+            <span class="fd-ghost" aria-hidden="true">1</span>
             <div class="fd-inner">
                 <div class="fd-num">01 &middot; The terminal<i></i></div>
-                <div class="fd-two lede">
-                    <div>
-                        <h2 class="fd-display">You just used it. This is the rest of it.</h2>
-                        <p style="margin-top:16px">Every candle you scrolled through came out of
-                           the same history the terminal runs on. Pick any date since 2016, cut
-                           the chart there, and step the market forward at your own speed with a
-                           real order ticket &mdash; leverage, fees, stops, position sizing off
-                           your risk.</p>
-                        <p><b>Future bars are never in the chart at all</b>, so they cannot be
-                           peeked at by dragging.</p>
-                    </div>
-                    <div class="fd-card lead">
-                        <span class="role">BarTest Replay &amp; Chart</span>
-                        <h3 class="fd-display">Trade the past, one candle at a time</h3>
-                        <ul class="fd-list">
-                            <li>Eleven years of verified 1-minute forex history</li>
-                            <li>Forty drawing tools and nine studies</li>
-                            <li>Your own system as indicator code</li>
-                            <li>Saved layouts, sessions, PDF / CSV / JSON</li>
-                            <li>Runs on a phone as well as on a desk</li>
-                        </ul>
-                        <div class="foot">
-                            <button type="button" class="fd-btn brass" data-service="replay">Open the terminal</button>
-                        </div>
-                    </div>
+                <h2 class="fd-display">You just used it.<br>This is the rest of it.</h2>
+                <div class="fd-two lede" style="margin-top:20px">
+                    <p>Every candle you scrolled through came out of the same history the
+                       terminal runs on. Pick any date since 2016, cut the chart there, and step
+                       the market forward at your own speed with a real order ticket &mdash;
+                       leverage, fees, stops, position sizing off your risk.</p>
+                    <p><b>Future bars are never in the chart at all</b>, so they cannot be peeked
+                       at by dragging. It is the same engine, on the same data, as the night you
+                       have just traded.</p>
+                </div>
+
+                <dl class="fd-spec">
+                    <div><dt>History</dt><dd>Eleven years, 1-minute</dd></div>
+                    <div><dt>Order types</dt><dd>Market, limit, stop</dd></div>
+                    <div><dt>Drawing</dt><dd>40 tools, 9 studies</dd></div>
+                    <div><dt>Your code</dt><dd>Custom indicators</dd></div>
+                    <div><dt>Export</dt><dd>PDF, CSV, JSON</dd></div>
+                </dl>
+
+                <div class="fd-actions">
+                    <button type="button" class="fd-btn brass" data-service="replay">Open the terminal</button>
+                    <button type="button" class="fd-btn" data-st="4">See the plans</button>
                 </div>
             </div>
         </section>
 
         <!-- -------------------------------------------------- 2 · machine -->
         <section class="fd-station" style="--cx:1; --cy:1">
+            <span class="fd-ghost" aria-hidden="true">2</span>
             <div class="fd-inner">
                 <div class="fd-num">02 &middot; Below the tape<i></i></div>
                 <div class="fd-two wide">
@@ -408,7 +408,7 @@
                         <p style="margin-top:14px">No pseudo-code, no platform syntax, no account
                            with anyone else. If a person could follow the rules, the desk can code
                            them &mdash; then run them across bull, bear and ranging markets.</p>
-                        <div class="fd-card" style="margin-top:18px">
+                        <div class="fd-send">
                             <span class="role">What you send</span>
                             <p class="fd-rules">Buy when the 21 EMA crosses above the 55 EMA
 and the daily trend is up.
@@ -446,6 +446,7 @@ Risk 1% per trade. EURUSD, 1 hour.</p>
 
         <!-- ----------------------------------------------------- 3 · loop -->
         <section class="fd-station" style="--cx:0; --cy:1">
+            <span class="fd-ghost" aria-hidden="true">3</span>
             <div class="fd-inner">
                 <div class="fd-num">03 &middot; Why both<i></i></div>
                 <div class="fd-two lede">
@@ -481,6 +482,7 @@ Risk 1% per trade. EURUSD, 1 hour.</p>
 
         <!-- ---------------------------------------------------- 4 · plans -->
         <section class="fd-station" style="--cx:0; --cy:2">
+            <span class="fd-ghost" aria-hidden="true">4</span>
             <div class="fd-inner">
                 <div class="fd-num">04 &middot; What it costs<i></i></div>
                 <div class="fd-two lede">
@@ -502,6 +504,7 @@ Risk 1% per trade. EURUSD, 1 hour.</p>
 
         <!-- ----------------------------------------------------- 5 · rest -->
         <section class="fd-station" style="--cx:1; --cy:2">
+            <span class="fd-ghost" aria-hidden="true">5</span>
             <div class="fd-inner">
                 <div class="fd-num">05 &middot; The rest of it<i></i></div>
                 <div class="fd-two lede">
@@ -526,6 +529,10 @@ Risk 1% per trade. EURUSD, 1 hour.</p>
                         <span class="t">Contact</span>
                         <span class="s">Talk to the engineering desk</span></button>
                 </nav>
+                <div class="fd-actions" style="margin-top:26px">
+                    <button type="button" class="fd-btn brass" data-service="replay">Open the terminal</button>
+                    <button type="button" class="fd-btn" data-service="contact">Talk to the desk</button>
+                </div>
 
                 <p class="fd-fine">Historical data is Dukascopy tick and minute history, rebuilt
                    and verified against the record. Nothing here is investment advice, and a
@@ -600,7 +607,7 @@ Risk 1% per trade. EURUSD, 1 hour.</p>
             <ul class="module-points" id="module-points"></ul>
             <div class="stats-grid" id="stats-grid"></div>
             <button class="action-btn" id="module-action-btn">INITIALIZE MODULE <i class="fa-solid fa-chevron-right"></i></button>
-            <button id="return-btn"><i class="fa-solid fa-arrow-left-long"></i> BACK TO THE TREE</button>
+            <button id="return-btn"><i class="fa-solid fa-arrow-left-long"></i> Back to the chart</button>
         </div>
     </div>
 
