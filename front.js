@@ -1,13 +1,23 @@
 /* ==========================================================================
-   BarTest — the front of the site
+   BarTest — THE TAPE
 
-   Two things live here and nothing else: the chart that IS the front door,
-   and the page underneath the tree. Everything the site could already do —
-   the room, the branches, the module panels, auth, checkout, reports — is
-   untouched, and every control added here reaches those by clicking the
-   control that already exists rather than by calling into app.js. That way
-   the plan gate, the sign-in prompt and the Stripe wiring are all the ones
-   that were already tested.
+   Six stations laid out in a world two screens wide and three deep, and a
+   camera that walks between them as you scroll: right, down, left, down,
+   right. The route is drawn into the world as a line, because the line is a
+   price and the price is what BarTest sells.
+
+   Two mechanics share the scroll and never fight, because they are
+   sequenced. The first stretch holds the camera still at station zero while
+   the night of the 2016 referendum prints candle by candle — scroll is time.
+   After that the night is done and scroll is distance — the camera travels.
+
+   The panels ride in one transformed layer and the chart is painted on a
+   viewport-sized canvas in camera space, so a move is one transform and one
+   cheap redraw rather than a relayout.
+
+   Nothing here reimplements the site. Every action calls openService(), the
+   shared entry point the branches used, so the plan gate, the sign-in prompt
+   and the Stripe wiring are the ones that were already tested.
    ========================================================================== */
 
 (function () {
@@ -22,216 +32,372 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
 
     const $ = id => document.getElementById(id);
     const CALM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+    const lerp = (a, b, t) => a + (b - a) * t;
+    // Ease every leg, so the camera arrives and departs rather than jerking.
+    const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-    /* Clicking the site's own control rather than reimplementing what it
-       does. A missing target is not worth throwing over — the page still
-       reads, it just cannot open that panel. */
-    function press(sel) {
-        const el = document.querySelector(sel);
-        if (el) el.click();
+    /* --------------------------------------------------------------- route
+
+       Cell coordinates in screens. Right, down, left, down, right — the shape
+       a reader's eye already makes, turned into a floor plan. `hold` is how
+       much of the scroll is spent standing still at that station relative to
+       a leg of travel; station zero holds longest because the night happens
+       there. */
+    const ROUTE = [
+        { id: 'tape',    cx: 0, cy: 0, hold: 3.4, label: 'The tape' },
+        { id: 'replay',  cx: 1, cy: 0, hold: 1.5, label: 'Replay' },
+        { id: 'machine', cx: 1, cy: 1, hold: 1.7, label: 'The machine' },
+        { id: 'loop',    cx: 0, cy: 1, hold: 1.3, label: 'The loop' },
+        { id: 'plans',   cx: 0, cy: 2, hold: 1.5, label: 'Plans' },
+        { id: 'rest',    cx: 1, cy: 2, hold: 1.4, label: 'Everything else' }
+    ];
+    const LEG = 1.15;                 // scroll spent travelling between two stations
+
+    /* Where in the scroll each station begins and ends. Built once so the
+       camera, the compass and the night all read the same clock. */
+    const marks = (() => {
+        const out = []; let t = 0;
+        ROUTE.forEach((s, i) => {
+            if (i) t += LEG;
+            out.push({ from: t, to: t + s.hold });
+            t += s.hold;
+        });
+        return { spans: out, total: t };
+    })();
+
+    let VW = innerWidth, VH = innerHeight;
+    const cam = { x: 0, y: 0, z: 1 };
+    let at = 0;                       // nearest station
+    let nightP = 0;                   // 0..1 through the referendum night
+    let legK = 0;                     // 0 parked at a station, 1 mid-journey
+
+    // ===================================================== the world canvas
+
+    const sky = $('fd-sky');
+    const sctx = sky ? sky.getContext('2d') : null;
+
+    function fitCanvas() {
+        if (!sky) return;
+        const dpr = Math.min(devicePixelRatio || 1, 2);
+        sky.width = Math.round(VW * dpr);
+        sky.height = Math.round(VH * dpr);
+        sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
-    // ======================================================== the front door
+    /* The chart lives across the top row of the world, two screens wide. It
+       is the same 240 candles the night is made of, so travelling right is
+       literally travelling along the tape you have just watched print. */
+    function chartBox() {
+        return { x: VW * 0.06, y: VH * 0.16, w: VW * 1.88, h: VH * 0.62 };
+    }
 
-    function hero() {
-        const cvs = $('fd-tape');
-        if (!cvs) return;
-        const ctx   = cvs.getContext('2d');
-        const box   = $('fd-hero');
-        const scrub = $('fd-scrub');
-        const noteE = $('fd-note'), noteT = $('fd-note-text');
-        const clock = $('fd-clock'), clockD = $('fd-clock-day');
-        const lastE = $('fd-last');
-        const buyB  = $('fd-buy'),  sellB = $('fd-sell');
-        const posW  = $('fd-pos'),  posS  = $('fd-pos-side');
-        const posE  = $('fd-pos-entry'), posP = $('fd-pos-pl');
+    function paintSky() {
+        if (!sctx) return;
+        sctx.setTransform(1, 0, 0, 1, 0, 0);
+        const dpr = Math.min(devicePixelRatio || 1, 2);
+        sctx.scale(dpr, dpr);
+        sctx.clearRect(0, 0, VW, VH);
 
-        const FLOOR = 40;
-        let shown = CALM ? BREXIT.length : FLOOR;
-        let position = null, started = CALM;
+        sctx.save();
+        sctx.translate(VW / 2 - cam.x * cam.z, VH / 2 - cam.y * cam.z);
+        sctx.scale(cam.z, cam.z);
 
-        /* Captions fire on what the price does, not on the clock. Triggering
-           on the data is both more honest and more dramatic than a script:
-           the note about the high appears when the high actually prints. */
-        const marks = [
-            { at: h => h >= 1.5000,
-              text: 'A new high for the year. The market has decided it knows the answer.' },
-            { at: (h, l, c) => c <= 1.4500,
-              text: 'Sunderland. The first number that does not fit.' },
-            { at: (h, l, c) => c <= 1.4000,
-              text: 'Down four hundred pips. The desk is awake now.' },
-            { at: (h, l, c) => c <= 1.3500,
-              text: 'No bid. This is the part nobody had a plan for.' },
-            { at: (h, l) => l <= 1.32300,
-              text: '1.32271 — the low. Thirty-one years since sterling was here.' }
-        ];
-        const fired = marks.map(() => false);
+        const worldW = 2 * VW, worldH = 3 * VH;
 
-        const PAD = { t: 18, r: 78, b: 22, l: 12 };
+        // a grid, so movement has something to be measured against
+        const step = VW / 14;
+        sctx.strokeStyle = 'rgba(236,231,221,.045)';
+        sctx.lineWidth = 1 / cam.z;
+        sctx.beginPath();
+        for (let x = 0; x <= worldW; x += step) { sctx.moveTo(x, 0); sctx.lineTo(x, worldH); }
+        for (let y = 0; y <= worldH; y += step) { sctx.moveTo(0, y); sctx.lineTo(worldW, y); }
+        sctx.stroke();
 
-        function size() {
-            const dpr = Math.min(devicePixelRatio || 1, 2);
-            const w = cvs.clientWidth, h = cvs.clientHeight;
-            if (!w || !h) return false;
-            cvs.width = Math.round(w * dpr);
-            cvs.height = Math.round(h * dpr);
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            return true;
+        // the route, drawn as the thing it is: a line through a market
+        const pts = ROUTE.map(s => [s.cx * VW + VW / 2, s.cy * VH + VH / 2]);
+        sctx.strokeStyle = 'rgba(247,166,0,.22)';
+        sctx.lineWidth = 2 / cam.z;
+        sctx.beginPath();
+        pts.forEach((p, i) => i ? sctx.lineTo(p[0], p[1]) : sctx.moveTo(p[0], p[1]));
+        sctx.stroke();
+
+        // travelled so far, brighter — you can see where you have been
+        const doneTo = at + (marks.spans[at] ? 0 : 0);
+        sctx.strokeStyle = 'rgba(247,166,0,.75)';
+        sctx.lineWidth = 2.5 / cam.z;
+        sctx.beginPath();
+        for (let i = 0; i <= doneTo && i < pts.length; i++) {
+            i ? sctx.lineTo(pts[i][0], pts[i][1]) : sctx.moveTo(pts[i][0], pts[i][1]);
+        }
+        sctx.stroke();
+
+        pts.forEach((p, i) => {
+            const live = i === at;
+            sctx.fillStyle = i <= at ? '#f7a600' : 'rgba(99,94,120,.9)';
+            sctx.beginPath();
+            sctx.arc(p[0], p[1], (live ? 7 : 4) / cam.z, 0, 6.284);
+            sctx.fill();
+            if (live) {
+                sctx.strokeStyle = 'rgba(247,166,0,.28)';
+                sctx.lineWidth = 10 / cam.z;
+                sctx.beginPath(); sctx.arc(p[0], p[1], 12 / cam.z, 0, 6.284); sctx.stroke();
+            }
+        });
+
+        paintTape(sctx);
+
+        /* A ground for the words. Parked at a station the cell you are
+           standing in is dimmed from the left, so the panel is legible and
+           the market still shows through behind it; the moment the camera
+           moves the dimming lifts and you see the whole place you are
+           travelling across. Drawn last, so it covers the route as well —
+           a glowing line through a paragraph is worse than no line. */
+        const cell = ROUTE[at];
+        if (legK < 0.98) {
+            const g = sctx.createLinearGradient(cell.cx * VW, 0, cell.cx * VW + VW, 0);
+            const k = 1 - legK;
+            g.addColorStop(0,   'rgba(6,5,14,' + (0.95 * k).toFixed(3) + ')');
+            g.addColorStop(0.62,'rgba(6,5,14,' + (0.86 * k).toFixed(3) + ')');
+            g.addColorStop(1,   'rgba(6,5,14,' + (0.42 * k).toFixed(3) + ')');
+            sctx.fillStyle = g;
+            sctx.fillRect(cell.cx * VW, cell.cy * VH, VW, VH);
         }
 
-        function draw() {
-            if (!size()) return;
-            const W = cvs.clientWidth, H = cvs.clientHeight;
-            ctx.clearRect(0, 0, W, H);
-            const rows = BREXIT.slice(0, shown);
-            if (!rows.length) return;
+        sctx.restore();
+    }
 
-            let hi = -Infinity, lo = Infinity;
-            for (const r of rows) { if (r[1] > hi) hi = r[1]; if (r[2] < lo) lo = r[2]; }
-            const pad = (hi - lo) * 0.10 || 0.001;
-            hi += pad; lo -= pad;
+    /* ------------------------------------------------------------ the tape */
 
-            const plotW = W - PAD.l - PAD.r, plotH = H - PAD.t - PAD.b;
-            const y = p => PAD.t + (hi - p) / (hi - lo) * plotH;
+    const FLOOR = 40;                       // candles showing before anyone moves
+    let shownBars = FLOOR;
 
-            /* The window runs a little ahead of what has printed, so there is
-               always empty chart to the right of the last candle. That gap is
-               the whole idea of the product — it is where the next candle
-               goes, and you cannot see it. */
-            const slots = Math.min(BREXIT.length, Math.max(56, Math.round(shown * 1.28)));
-            const slot = plotW / slots;
-            const bw = Math.max(1.4, Math.min(6, slot * 0.66));
+    function paintTape(c) {
+        const box = chartBox();
+        const rows = BREXIT.slice(0, shownBars);
+        if (!rows.length) return;
 
-            ctx.font = '500 10px "IBM Plex Mono", monospace';
-            ctx.textBaseline = 'middle';
-            const step = 0.02;
-            for (let p = Math.ceil(lo / step) * step; p <= hi; p += step) {
-                const yy = y(p);
-                ctx.strokeStyle = 'rgba(236,231,221,.055)';
-                ctx.beginPath(); ctx.moveTo(PAD.l, yy); ctx.lineTo(W - PAD.r, yy); ctx.stroke();
-                ctx.fillStyle = '#635e78';
-                ctx.textAlign = 'left';
-                ctx.fillText(p.toFixed(4), W - PAD.r + 9, yy);
-            }
+        let hi = -Infinity, lo = Infinity;
+        for (const r of rows) { if (r[1] > hi) hi = r[1]; if (r[2] < lo) lo = r[2]; }
+        const pad = (hi - lo) * 0.10 || 0.001;
+        hi += pad; lo -= pad;
+        const y = p => box.y + (hi - p) / (hi - lo) * box.h;
 
-            for (let i = 0; i < rows.length; i++) {
-                const o = rows[i][0], h = rows[i][1], l = rows[i][2], c = rows[i][3];
-                const x = PAD.l + i * slot + slot / 2;
-                ctx.strokeStyle = ctx.fillStyle = c >= o ? '#20b26c' : '#ef454a';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(Math.round(x) + .5, y(h));
-                ctx.lineTo(Math.round(x) + .5, y(l));
-                ctx.stroke();
-                const top = y(Math.max(o, c)), bot = y(Math.min(o, c));
-                ctx.fillRect(x - bw / 2, top, bw, Math.max(1, bot - top));
-            }
+        /* The window runs ahead of what has printed, so there is always empty
+           chart to the right of the last candle. That gap is the product:
+           it is where the next candle goes, and you cannot see it. */
+        const slots = Math.min(BREXIT.length, Math.max(56, Math.round(shownBars * 1.28)));
+        const slot = box.w / slots;
+        const bw = Math.max(1.2, Math.min(9, slot * 0.66));
 
-            const lastRow = rows[rows.length - 1];
-            const c = lastRow[3], o = lastRow[0], yy = y(c);
-            ctx.fillStyle = c >= o ? '#20b26c' : '#ef454a';
-            ctx.fillRect(W - PAD.r + 4, yy - 9, PAD.r - 8, 18);
-            ctx.fillStyle = '#070612';
-            ctx.textAlign = 'center';
-            ctx.font = '600 11px "IBM Plex Mono", monospace';
-            ctx.fillText(c.toFixed(5), W - PAD.r + 4 + (PAD.r - 8) / 2, yy);
-
-            ctx.strokeStyle = c >= o ? 'rgba(32,178,108,.34)' : 'rgba(239,69,74,.34)';
-            ctx.setLineDash([3, 4]);
-            ctx.beginPath(); ctx.moveTo(PAD.l, yy); ctx.lineTo(W - PAD.r, yy); ctx.stroke();
-            ctx.setLineDash([]);
+        c.font = (11 / cam.z).toFixed(1) + 'px "IBM Plex Mono", monospace';
+        c.textBaseline = 'middle';
+        const gstep = 0.02;
+        for (let p = Math.ceil(lo / gstep) * gstep; p <= hi; p += gstep) {
+            const yy = y(p);
+            c.strokeStyle = 'rgba(236,231,221,.06)';
+            c.lineWidth = 1 / cam.z;
+            c.beginPath(); c.moveTo(box.x, yy); c.lineTo(box.x + box.w, yy); c.stroke();
+            c.fillStyle = '#635e78';
+            c.textAlign = 'left';
+            c.fillText(p.toFixed(4), box.x + box.w + 10, yy);
         }
 
-        function stamp() {
-            const secs = BREXIT_START + (shown - 1) * BREXIT_STEP + 3600;   // London is UTC+1
-            const d = new Date(secs * 1000);
-            clock.textContent = String(d.getUTCHours()).padStart(2, '0') + ':' +
-                                String(d.getUTCMinutes()).padStart(2, '0');
-            clockD.textContent = d.getUTCDate() + ' June 2016 · London';
+        for (let i = 0; i < rows.length; i++) {
+            const o = rows[i][0], h = rows[i][1], l = rows[i][2], cl = rows[i][3];
+            const x = box.x + i * slot + slot / 2;
+            c.strokeStyle = c.fillStyle = cl >= o ? '#20b26c' : '#ef454a';
+            c.lineWidth = Math.max(1 / cam.z, bw * 0.16);
+            c.beginPath(); c.moveTo(x, y(h)); c.lineTo(x, y(l)); c.stroke();
+            const top = y(Math.max(o, cl)), bot = y(Math.min(o, cl));
+            c.fillRect(x - bw / 2, top, bw, Math.max(1 / cam.z, bot - top));
+        }
 
-            const rows = BREXIT.slice(0, shown);
-            let hi = -Infinity, lo = Infinity;
-            for (const r of rows) { if (r[1] > hi) hi = r[1]; if (r[2] < lo) lo = r[2]; }
-            const c = rows[rows.length - 1][3];
+        const last = rows[rows.length - 1];
+        const yy = y(last[3]);
+        c.strokeStyle = last[3] >= last[0] ? 'rgba(32,178,108,.4)' : 'rgba(239,69,74,.4)';
+        c.lineWidth = 1 / cam.z;
+        c.setLineDash([4 / cam.z, 5 / cam.z]);
+        c.beginPath(); c.moveTo(box.x, yy); c.lineTo(box.x + box.w, yy); c.stroke();
+        c.setLineDash([]);
+    }
+
+    // ============================================== the night, told by price
+
+    const marksText = [
+        { at: h => h >= 1.5000,
+          text: 'A new high for the year. The market has decided it knows the answer.' },
+        { at: (h, l, c) => c <= 1.4500, text: 'Sunderland. The first number that does not fit.' },
+        { at: (h, l, c) => c <= 1.4000, text: 'Down four hundred pips. The desk is awake now.' },
+        { at: (h, l, c) => c <= 1.3500, text: 'No bid. This is the part nobody had a plan for.' },
+        { at: (h, l) => l <= 1.32300,
+          text: '1.32271 — the low. Thirty-one years since sterling was here.' }
+    ];
+    const fired = marksText.map(() => false);
+    let position = null;
+
+    function tellNight() {
+        const rows = BREXIT.slice(0, shownBars);
+        let hi = -Infinity, lo = Infinity;
+        for (const r of rows) { if (r[1] > hi) hi = r[1]; if (r[2] < lo) lo = r[2]; }
+        const c = rows[rows.length - 1][3];
+
+        const secs = BREXIT_START + (shownBars - 1) * BREXIT_STEP + 3600;  // London is UTC+1
+        const d = new Date(secs * 1000);
+        const clock = $('fd-clock'), day = $('fd-clock-day'), lastE = $('fd-last');
+        if (clock) clock.textContent = String(d.getUTCHours()).padStart(2, '0') + ':' +
+                                      String(d.getUTCMinutes()).padStart(2, '0');
+        if (day) day.textContent = d.getUTCDate() + ' June 2016 · London';
+        if (lastE) {
             lastE.textContent = c.toFixed(5);
             lastE.className = 'fd-tnum ' + (c >= BREXIT[0][0] ? 'fd-up' : 'fd-down');
+        }
 
-            marks.forEach((m, i) => {
-                if (!started || fired[i] || !m.at(hi, lo, c)) return;
-                fired[i] = true;
-                noteT.textContent = m.text;
-                noteE.classList.add('on');
-            });
+        const noteE = $('fd-note'), noteT = $('fd-note-text');
+        marksText.forEach((m, i) => {
+            if (fired[i] || shownBars <= FLOOR || !m.at(hi, lo, c)) return;
+            fired[i] = true;
+            if (noteT) noteT.textContent = m.text;
+            if (noteE) noteE.classList.add('on');
+        });
 
-            if (position) {
-                const pips = (c - position.at) * 10000 * (position.side === 'long' ? 1 : -1);
-                posP.textContent = (pips >= 0 ? '+' : '') + pips.toFixed(0) + ' pips';
-                posP.className = 'fd-tnum ' + (pips >= 0 ? 'fd-up' : 'fd-down');
+        if (position) {
+            const pips = (c - position.at) * 10000 * (position.side === 'long' ? 1 : -1);
+            const pl = $('fd-pos-pl');
+            if (pl) {
+                pl.textContent = (pips >= 0 ? '+' : '') + pips.toFixed(0) + ' pips';
+                pl.className = 'fd-tnum ' + (pips >= 0 ? 'fd-up' : 'fd-down');
             }
         }
-
-        function take(side) {
-            const c = BREXIT[shown - 1][3];
-            position = { side: side, at: c };
-            posW.hidden = false;
-            posS.textContent = side === 'long' ? 'Long from' : 'Short from';
-            posE.textContent = c.toFixed(5);
-            buyB.disabled = sellB.disabled = true;
-            stamp();
-        }
-        if (buyB)  buyB.addEventListener('click', () => take('long'));
-        if (sellB) sellB.addEventListener('click', () => take('short'));
-
-        /* The scroll position of the tall section behind the chart is the
-           clock. Read on a frame rather than on every scroll event, because a
-           phone fires those faster than it can draw. */
-        let queued = false;
-        function fromScroll() {
-            queued = false;
-            if (CALM) return;
-            /* While a modal pins the body with position:fixed the page reports
-               scroll 0, which would snap the night back to its first candle
-               behind the overlay. The tree scrubber parks for the same reason. */
-            if (document.body.classList.contains('modal-locked')) return;
-
-            const r = scrub.getBoundingClientRect();
-            const travel = scrub.offsetHeight - innerHeight;
-            if (travel <= 0) return;
-            const p = Math.min(1, Math.max(0, -r.top / travel));
-
-            /* The ticket opens as soon as the market starts moving. Being able
-               to go long at half past eleven and then keep scrolling into the
-               crash is the whole product in one gesture. */
-            if (p > 0.004) {
-                started = true;
-                box.classList.add('moving');
-                if (!position && buyB) { buyB.disabled = false; sellB.disabled = false; }
-            } else {
-                box.classList.remove('moving');
-            }
-            box.classList.toggle('over', p > 0.985);
-
-            const want = Math.max(FLOOR, Math.round(FLOOR + p * (BREXIT.length - FLOOR)));
-            if (want === shown) return;
-            shown = want;
-            draw(); stamp();
-        }
-        function onScroll() {
-            if (!queued) { queued = true; requestAnimationFrame(fromScroll); }
-        }
-
-        addEventListener('scroll', onScroll, { passive: true });
-        addEventListener('resize', () => { draw(); onScroll(); }, { passive: true });
-        draw(); stamp(); fromScroll();
     }
 
-    // ================================================== the example report
+    function takePosition(side) {
+        const c = BREXIT[shownBars - 1][3];
+        position = { side: side, at: c };
+        const w = $('fd-pos');
+        if (w) w.hidden = false;
+        const s = $('fd-pos-side'), e = $('fd-pos-entry');
+        if (s) s.textContent = side === 'long' ? 'Long from' : 'Short from';
+        if (e) e.textContent = c.toFixed(5);
+        const b = $('fd-buy'), sl = $('fd-sell');
+        if (b) b.disabled = true;
+        if (sl) sl.disabled = true;
+        tellNight();
+    }
+
+    // ============================================================ the camera
+
+    function place(p) {
+        /* p is 0..1 over the whole route. Find which span it falls in: inside
+           a station's hold the camera stands still, between two it travels. */
+        const t = p * marks.total;
+        const sp = marks.spans;
+
+        let i = 0;
+        for (let k = 0; k < sp.length; k++) if (t >= sp[k].from) i = k;
+
+        let a = i, b = i, leg = 0;
+        if (t > sp[i].to && i < sp.length - 1) {
+            a = i; b = i + 1;
+            leg = clamp((t - sp[i].to) / LEG, 0, 1);
+        }
+
+        const A = ROUTE[a], B = ROUTE[b];
+        const k = ease(leg);
+        cam.x = lerp(A.cx * VW + VW / 2, B.cx * VW + VW / 2, k);
+        cam.y = lerp(A.cy * VH + VH / 2, B.cy * VH + VH / 2, k);
+        /* Zoom is 1 wherever anyone is reading, and pulls back only while
+           moving — so text is never rendered at a fractional scale, and the
+           journey still shows you the shape of the place. */
+        cam.z = 1 - 0.26 * Math.sin(Math.PI * leg);
+        legK = Math.sin(Math.PI * leg);
+        at = leg > 0.5 ? b : a;
+
+        // the night runs through station zero's hold and nowhere else
+        const s0 = sp[0];
+        nightP = clamp((t - s0.from) / (s0.to - s0.from), 0, 1);
+    }
+
+    function applyCamera() {
+        const world = $('fd-world');
+        if (world) {
+            world.style.transform =
+                'translate3d(' + (VW / 2 - cam.x * cam.z).toFixed(2) + 'px,' +
+                (VH / 2 - cam.y * cam.z).toFixed(2) + 'px,0) scale(' + cam.z.toFixed(4) + ')';
+        }
+        document.querySelectorAll('.fd-station').forEach((el, i) =>
+            el.classList.toggle('near', i === at));
+        document.querySelectorAll('#fd-rail button').forEach((b, i) =>
+            b.classList.toggle('on', i === at));
+        document.querySelectorAll('.fd-links button').forEach(b =>
+            b.classList.toggle('on', b.dataset.st !== undefined && +b.dataset.st === at));
+        paintSky();
+    }
+
+    // ============================================================== scroll
+
+    let queued = false;
+    function read() {
+        queued = false;
+        if (CALM) return;
+        /* While a modal pins the body the page reports scroll 0, which would
+           throw the camera back to the first station behind the overlay. */
+        if (document.body.classList.contains('modal-locked')) return;
+
+        const track = $('fd-track');
+        const travel = track.offsetHeight - VH;
+        if (travel <= 0) return;
+        const p = clamp(scrollY / travel, 0, 1);
+
+        place(p);
+
+        const want = Math.max(FLOOR, Math.round(FLOOR + nightP * (BREXIT.length - FLOOR)));
+        if (want !== shownBars) { shownBars = want; tellNight(); }
+
+        document.body.classList.toggle('fd-moved', p > 0.004);
+        document.body.classList.toggle('fd-night-over', nightP > 0.985);
+        document.body.classList.toggle('fd-stuck', p > 0.02);
+
+        /* The ticket opens as soon as the market starts moving. Going long at
+           half past eleven and then scrolling into the crash is the product in
+           one gesture. */
+        if (nightP > 0.01 && !position) {
+            const b = $('fd-buy'), s = $('fd-sell');
+            if (b) b.disabled = false;
+            if (s) s.disabled = false;
+        }
+
+        applyCamera();
+    }
+    function onScroll() { if (!queued) { queued = true; requestAnimationFrame(read); } }
+
+    function goTo(i) {
+        const sp = marks.spans[i];
+        if (!sp) return;
+        const mid = (sp.from + sp.to) / 2;
+        const track = $('fd-track');
+        const travel = track.offsetHeight - VH;
+        scrollTo({ top: (mid / marks.total) * travel, behavior: CALM ? 'auto' : 'smooth' });
+    }
+
+    function measure() {
+        VW = innerWidth; VH = innerHeight;
+        const track = $('fd-track');
+        /* The track's height is what the whole route costs in scroll. One
+           screen per unit of hold or travel keeps a leg feeling like a leg on
+           any display. */
+        if (track) track.style.height = (marks.total * VH + VH) + 'px';
+        fitCanvas();
+        read();
+    }
+
+    // ===================================================== the example report
 
     /* An equity curve worth looking at has a shape, not just a slope: a run
-       up, a drawdown deep enough to be honest about, and a recovery. Built
-       from a fixed seed so the page draws the same curve every time — an
-       example that changed on reload would be a chart of nothing. */
-    function equityPoints() {
+       up, a drawdown deep enough to be honest about, and a recovery. Fixed
+       seed, so the page draws the same curve every time — an example that
+       changed on reload would be a chart of nothing. */
+    function equityPath() {
         let seed = 20160624, v = 0;
         const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff - .5;
         const pts = [];
@@ -240,17 +406,16 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
             pts.push(v);
         }
         const lo = Math.min.apply(null, pts), hi = Math.max.apply(null, pts);
-        return pts.map((p, i) => [i / 120 * 640, 150 - (p - lo) / (hi - lo) * 128]);
+        return pts.map((p, i) =>
+            (i ? 'L' : 'M') + (i / 120 * 640).toFixed(1) + ' ' +
+            (150 - (p - lo) / (hi - lo) * 128).toFixed(1)).join(' ');
     }
 
     function paintReport() {
         const svg = $('fd-curve');
         if (!svg || svg.dataset.done) return;
         svg.dataset.done = '1';
-
-        const d = equityPoints()
-            .map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1))
-            .join(' ');
+        const d = equityPath();
         svg.innerHTML =
             '<defs><linearGradient id="fd-eg" x1="0" y1="0" x2="0" y2="1">' +
             '<stop offset="0%" stop-color="#f7a600" stop-opacity=".30"/>' +
@@ -282,115 +447,101 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
         });
     }
 
-    // ========================================================= the tiers
+    // ============================================================== the tiers
 
-    /* Built from the subscription modal's own cards rather than written out
-       again. The modal carries the Stripe price ids and the amounts, so it is
-       the one place a price is stated — change it there and the front page
-       follows. Two copies of a price is one copy too many. */
-    function tiers() {
+    /* Built from the subscription modal's own cards. The modal carries the
+       Stripe price ids and the amounts, so it stays the one place a price is
+       stated — change it there and this follows. */
+    function buildTiers() {
         const host = $('fd-tiers');
         if (!host) return;
         const cards = document.querySelectorAll('#subscription-modal-overlay .tier-card');
-        if (!cards.length) { host.closest('.fd-block').hidden = true; return; }
+        if (!cards.length) return;
 
-        let html = '';
-        cards.forEach((card, i) => {
+        host.innerHTML = Array.from(cards).map((card, i) => {
             const name = card.querySelector('.tier-name');
             const desc = card.querySelector('.tier-desc');
             const m = +card.dataset.monthAmt || 0;
             const yr = +card.dataset.yearAmt || 0;
-            const feats = Array.from(card.querySelectorAll('.tier-features li')).map(li => ({
-                text: li.textContent.trim(),
-                no: !!li.querySelector('.unavailable')
-            }));
-            html +=
-                '<article class="fd-slab' + (i === cards.length - 1 ? ' lead' : '') + '">' +
-                  '<span class="role">' + (name ? name.textContent.trim() : '') + '</span>' +
-                  '<div class="fd-price"><b class="fd-tnum" data-m="' + m + '" data-y="' +
-                     (yr / 12).toFixed(2) + '">' + m + '</b>' +
-                     '<i>$ / month</i></div>' +
-                  '<p class="fd-billed" data-m="Billed monthly" data-y="$' + yr +
-                     ' billed once a year">Billed monthly</p>' +
-                  '<p>' + (desc ? desc.textContent.trim() : '') + '</p>' +
-                  '<ul>' + feats.map(f =>
-                      '<li' + (f.no ? ' class="no"' : '') + '>' + f.text + '</li>').join('') + '</ul>' +
-                  '<div class="foot"><button class="fd-btn' +
-                     (i === cards.length - 1 ? ' brass' : '') +
-                     '" data-tier="' + (card.dataset.tier || '') + '">Choose this</button></div>' +
+            const feats = Array.from(card.querySelectorAll('.tier-features li')).map(li =>
+                '<li' + (li.querySelector('.unavailable') ? ' class="no"' : '') + '>' +
+                li.textContent.trim() + '</li>').join('');
+            return '<article class="fd-card' + (i === cards.length - 1 ? ' lead' : '') + '">' +
+                '<span class="role">' + (name ? name.textContent.trim() : '') + '</span>' +
+                '<div class="fd-price"><b class="fd-tnum" data-m="' + m + '" data-y="' +
+                    (yr / 12).toFixed(2) + '">' + m + '</b><i>$ / month</i></div>' +
+                '<p class="fd-billed" data-m="Billed monthly" data-y="$' + yr +
+                    ' billed once a year">Billed monthly</p>' +
+                '<p>' + (desc ? desc.textContent.trim() : '') + '</p>' +
+                '<ul class="fd-list">' + feats + '</ul>' +
+                '<div class="foot"><button class="fd-btn' +
+                    (i === cards.length - 1 ? ' brass' : '') + '" data-plans>Choose this</button></div>' +
                 '</article>';
-        });
-        host.innerHTML = html;
-
-        host.querySelectorAll('[data-tier]').forEach(b =>
-            b.addEventListener('click', () => press('#nav-subscription-btn')));
+        }).join('');
 
         const mB = $('fd-cyc-m'), yB = $('fd-cyc-y');
         function cycle(yearly) {
             if (mB) mB.setAttribute('aria-pressed', String(!yearly));
             if (yB) yB.setAttribute('aria-pressed', String(yearly));
-            host.querySelectorAll('.fd-price b').forEach(b => {
-                b.textContent = yearly ? b.dataset.y : b.dataset.m;
-            });
-            host.querySelectorAll('.fd-billed').forEach(p => {
-                p.textContent = yearly ? p.dataset.y : p.dataset.m;
-            });
+            host.querySelectorAll('.fd-price b').forEach(b =>
+                b.textContent = yearly ? b.dataset.y : b.dataset.m);
+            host.querySelectorAll('.fd-billed').forEach(p =>
+                p.textContent = yearly ? p.dataset.y : p.dataset.m);
         }
         if (mB) mB.addEventListener('click', () => cycle(false));
         if (yB) yB.addEventListener('click', () => cycle(true));
     }
 
-    // ============================================================= wiring
+    // ================================================================ wiring
 
     function wire() {
-        document.querySelectorAll('[data-goto]').forEach(b =>
-            b.addEventListener('click', e => {
+        document.addEventListener('click', e => {
+            const go = e.target.closest('[data-service]');
+            if (go) {
                 e.preventDefault();
-                press('.branch[data-id="' + b.dataset.goto + '"]');
-            }));
-
-        document.querySelectorAll('[data-plans]').forEach(b =>
-            b.addEventListener('click', e => { e.preventDefault(); press('#nav-subscription-btn'); }));
-
-        document.querySelectorAll('[data-jump]').forEach(a =>
-            a.addEventListener('click', e => {
+                if (typeof window.openService === 'function') window.openService(go.dataset.service);
+                return;
+            }
+            if (e.target.closest('[data-plans]')) {
                 e.preventDefault();
-                const t = document.getElementById(a.dataset.jump);
-                if (t) t.scrollIntoView({ behavior: CALM ? 'auto' : 'smooth', block: 'start' });
-            }));
+                const b = $('nav-subscription-btn');
+                if (b) b.click();
+                return;
+            }
+            const st = e.target.closest('[data-st]');
+            if (st) { e.preventDefault(); goTo(+st.dataset.st); }
+        });
 
-        // the bar earns a background once it is over content rather than sky
-        const onScroll = () =>
-            document.body.classList.toggle('fd-stuck', scrollY > innerHeight * 0.4);
-        addEventListener('scroll', onScroll, { passive: true });
-        onScroll();
+        const buy = $('fd-buy'), sell = $('fd-sell');
+        if (buy) buy.addEventListener('click', () => takePosition('long'));
+        if (sell) sell.addEventListener('click', () => takePosition('short'));
     }
 
-    function reveals() {
-        if (CALM || !('IntersectionObserver' in window)) return;
-        document.body.classList.add('fd-anim');
-        const io = new IntersectionObserver(es => {
-            es.forEach(e => {
-                if (!e.isIntersecting) return;
-                e.target.classList.add('fd-here');
-                io.unobserve(e.target);
-            });
-        }, { rootMargin: '0px 0px -12% 0px' });
-        document.querySelectorAll('.fd-block').forEach(b => io.observe(b));
-
-        const rio = new IntersectionObserver(es => {
-            es.forEach(e => { if (e.isIntersecting) { paintReport(); rio.disconnect(); } });
-        }, { rootMargin: '0px 0px -20% 0px' });
-        const rep = $('fd-report');
-        if (rep) rio.observe(rep);
-    }
+    // ================================================================= start
 
     function start() {
-        hero();
-        tiers();
+        document.documentElement.classList.add('fd-on');
+        buildTiers();
         wire();
-        reveals();
-        if (CALM || !('IntersectionObserver' in window)) paintReport();
+
+        if (CALM) {
+            shownBars = BREXIT.length;
+            tellNight();
+            paintReport();
+            document.querySelectorAll('.fd-station').forEach(el => el.classList.add('near'));
+            return;
+        }
+
+        addEventListener('scroll', onScroll, { passive: true });
+        addEventListener('resize', measure, { passive: true });
+        measure();
+        tellNight();
+
+        /* The report draws itself the first time its station is the one you
+           are standing at, not on a timer and not on load. */
+        const watch = setInterval(() => {
+            if (at === 2) { paintReport(); clearInterval(watch); }
+        }, 260);
     }
 
     if (document.readyState === 'loading') addEventListener('DOMContentLoaded', start);
