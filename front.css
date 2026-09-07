@@ -1047,7 +1047,17 @@ body.fd-console #fd-stage { visibility: hidden; }
 body.fd-console #fd-nav,
 body.fd-console #fd-rail,
 body.fd-console .fd-cue { opacity: 0; pointer-events: none; }
-body.fd-console #auth-corner { opacity: 0; pointer-events: none; }
+body.fd-console #auth-corner { opacity: 0 !important; pointer-events: none !important; }
+
+/* Coming back from the submission page left the header invisible. The cause
+   was a leftover: `body.landed` is the old ship-and-planet state, and the one
+   rule of it still standing says "hide the title and the account controls" -
+   with !important, so the inline opacity the legacy close handler set could
+   never win. That call is gone now; this states the invariant as well, since
+   the header is part of the page rather than something a panel hides. The
+   submission page above is the single exception, and it says so. */
+body.landed #auth-corner { opacity: 1 !important; pointer-events: auto !important; }
+body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: none !important; }
 
 /* ==========================================================================
    THE PHONE

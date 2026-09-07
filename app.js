@@ -965,7 +965,9 @@ if (abortConsoleBtn) {
         if (gasAtmosphere) gasAtmosphere.classList.remove('active');
         
         setTimeout(() => {
-            document.body.classList.add('landed');
+            // `landed` was the old ship-and-planet state. The module panel it
+            // belonged to no longer opens, so the only thing it still did was
+            // hide the header on the way back out of the console.
             const titleContainer = document.getElementById('spaceship-title-container');
             const authCorner = document.getElementById('auth-corner');
             if (titleContainer) titleContainer.style.opacity = '1';
@@ -1652,9 +1654,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
     
             setTimeout(() => {
-                if (activeServiceId) {
-                    document.body.classList.add('landed');
-                }
+                // See above: re-entering `landed` on the way out only hid the
+                // header, because that is all the class still controls.
                 const titleContainer = document.getElementById('spaceship-title-container');
                 if (authCorner) authCorner.style.opacity = '1';
                 if (titleContainer) titleContainer.style.opacity = '1';
