@@ -709,6 +709,14 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
             }
         }
         if (id === 'replay') { location.href = 'replay.html'; return; }
+        /* The reports library was only reachable from the account badge and
+           from inside the submission page, which is the one place you are
+           not when you go looking for a finished report. It stands beside
+           Submit a system now, behind the same gate. */
+        if (id === 'reports') {
+            if (typeof window.openReportsLibrary === 'function') window.openReportsLibrary();
+            return;
+        }
         if (id === 'backtest') {
             if (typeof window.fillConsoleRail === 'function') window.fillConsoleRail();
             const gas = $('gas-giant-atmosphere');

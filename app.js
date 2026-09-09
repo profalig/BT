@@ -1759,11 +1759,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    /* The run counter is not in the dock any more - the plan is what the
+       dock says. It still shows where it is being spent: the submission
+       page's own rail, which this refreshes. */
     function updateCreditBadgeUI(credits) {
-        const badgeEl = document.getElementById('nav-credits-label');
-        if (badgeEl) {
-            badgeEl.innerHTML = `FREE RUNS: ${credits}`;
-        }
+        if (typeof fillConsoleRail === 'function') fillConsoleRail();
     }
 
     function setAuthMode(mode) {
@@ -1937,21 +1937,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <span id="nav-user-label">AGENT: ${displayName.toUpperCase()}</span>
                                 </div>
                             </div>
-                            <div class="hud-slot credits" id="nav-credits-btn">
+                            <!-- A coin and a gem were two icons for one fact.
+                                 What somebody signed in actually wants to know
+                                 is which plan they are on, so the dock says
+                                 that, and clicking it still opens the plans. -->
+                            <div class="hud-slot plan" id="nav-plan-btn" title="Your plan">
                                 <div class="hud-icon-box">
-                                    <i class="fa-solid fa-coins"></i>
+                                    <span class="plan-tag" id="nav-plan-tag">&middot; &middot; &middot;</span>
                                 </div>
-                                <div class="hud-label-box">
-                                    <span id="nav-credits-label">FREE RUNS: ${userCredits}</span>
-                                </div>
-                            </div>
-                            <div class="hud-slot subs" id="my-sub-btn">
-                                <div class="hud-icon-box">
-                                    <i class="fa-solid fa-gem"></i>
-                                </div>
-                                <div class="hud-label-box">
-                                    <span>SUBSCRIPTIONS</span>
-                                </div>
+                                <div class="hud-label-box"><span>PLAN</span></div>
                             </div>
                             <div class="hud-slot logout" id="signout-btn">
                                 <div class="hud-icon-box">
@@ -1964,16 +1958,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     `;
 
-                    // Filled once access is known; a raw credit count would be
-                    // wrong for anyone on a plan that includes the machine.
+                    // Filled once access is known. Nobody is on a plan until
+                    // the profile has been read, so it says nothing until then
+                    // rather than saying the wrong thing.
                     if (window.BTAccess) BTAccess.get().then(a => {
-                        const el = document.getElementById('nav-credits-label');
-                        if (el) el.innerHTML = backtestState(a).short;
+                        const el = document.getElementById('nav-plan-tag');
+                        if (!el) return;
+                        el.textContent = a.planLabel ? a.planLabel : 'Free plan';
+                        el.closest('.hud-slot')?.classList.toggle('is-paid', !!a.planLabel);
                     });
 
                     document.getElementById('nav-agent-btn')?.addEventListener('click', openUserReportsModal);
-                    document.getElementById('nav-credits-btn')?.addEventListener('click', openSubscriptionModal);
-                    document.getElementById('my-sub-btn')?.addEventListener('click', openSubscriptionModal);
+                    document.getElementById('nav-plan-btn')?.addEventListener('click', openSubscriptionModal);
 
                     document.getElementById('signout-btn')?.addEventListener('click', async () => {
                         await supabaseClient.auth.signOut();

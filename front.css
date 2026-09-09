@@ -1318,3 +1318,40 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
     .fd-openlede { margin-top: 16px; font-size: .9rem; }
     .fd-open .fd-actions { margin-top: 16px; }
 }
+
+
+/* ==========================================================================
+   THE DOCK SAYS WHICH PLAN YOU ARE ON
+
+   Signed in, the dock carried a coin and a gem: how many free runs are left,
+   and a way to the plans. Two icons for one fact, and the wrong fact - the
+   plan is what decides the runs, and somebody who has paid does not want to
+   be told about free ones. So one slot, in words, and clicking it still
+   opens the plans. It is wider than an icon and says so.
+   ========================================================================== */
+
+#auth-corner .hud-slot.plan {
+    width: auto !important; height: 42px;
+    padding: 0 13px !important;
+    border: 1px solid var(--fd-hair) !important;
+}
+#auth-corner .hud-slot.plan:hover { border-color: rgba(247,166,0,.5) !important; }
+#auth-corner .hud-slot.plan .hud-icon-box { font-size: inherit; }
+#auth-corner .plan-tag {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: .58rem; font-weight: 500; letter-spacing: .18em;
+    text-transform: uppercase; white-space: nowrap;
+    color: var(--fd-smoke);
+    transition: color .18s;
+}
+#auth-corner .hud-slot.plan:hover .plan-tag { color: var(--fd-brass); }
+#auth-corner .hud-slot.plan.is-paid { border-color: rgba(247,166,0,.34) !important; }
+#auth-corner .hud-slot.plan.is-paid .plan-tag { color: var(--fd-brass); }
+body.fd-stuck #auth-corner .hud-slot.plan { border-color: var(--fd-hair) !important; }
+
+@media (max-width: 560px) {
+    /* On a phone the dock is four things wide already. The plan keeps its
+       word but loses the tracking that made it long. */
+    #auth-corner .hud-slot.plan { padding: 0 9px !important; }
+    #auth-corner .plan-tag { font-size: .54rem; letter-spacing: .1em; }
+}
