@@ -1181,17 +1181,22 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
    want to read a sentence still gets an object turning at them, and a reader
    who does gets the explanation beside it.
 
-   The headline and the reading are two separate blocks rather than one, so
-   that a phone can put the object between them instead of leaving it at the
-   bottom of a screen nobody scrolled to the end of. */
+   The headline takes the whole row. Sharing it with the terminal left it a
+   column narrow enough to break "Get it back as evidence." across two lines
+   of its own, and a display face set at that size is the first thing on the
+   page - it does not get to be the thing that wraps.
+
+   The reading and the terminal are separate blocks below it, which is also
+   what lets a phone put the terminal between the headline and the reading
+   rather than at the bottom of a screen nobody scrolled to the end of. */
 .fd-open {
     display: grid; align-items: start;
-    grid-template-columns: minmax(0, 1fr) clamp(230px, 27vw, 400px);
-    column-gap: clamp(20px, 3.6vw, 56px);
+    grid-template-columns: minmax(0, 1fr) clamp(260px, 34vw, 470px);
+    column-gap: clamp(20px, 3.4vw, 52px);
 }
-.fd-open-head { grid-column: 1; grid-row: 1; min-width: 0; }
+.fd-open-head { grid-column: 1 / -1; grid-row: 1; min-width: 0; }
 .fd-open-body { grid-column: 1; grid-row: 2; min-width: 0; }
-.fd-model     { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+.fd-model     { grid-column: 2; grid-row: 2; align-self: center; }
 /* The compass is fixed to the right edge of the window and its label reaches
    about a hundred pixels in from it. Everywhere else on the route that strip
    lands on a paragraph, which survives it; here it would land on the corner
@@ -1216,7 +1221,7 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
 }
 
 .fd-open h1 {
-    margin: 13px 0 0; max-width: 20ch;
+    margin: 13px 0 26px; max-width: none;
     font-size: clamp(2.1rem, 5vw, 4rem); line-height: .99; letter-spacing: -.026em;
     color: var(--fd-vellum); text-shadow: 0 2px 34px rgba(6,5,14,.95);
 }
@@ -1244,9 +1249,9 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
    shape of a finished specification is on screen before any of it is known,
    and each rule turns brass as its own phrase is reached. */
 .fd-slots {
-    display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px clamp(13px, 2.1vw, 26px);
-    margin-top: 30px; max-width: 860px;
+    margin-top: 30px; max-width: 620px;
 }
 .fd-slot { position: relative; padding: 12px 0 0; border-top: 1px solid var(--fd-hair); }
 .fd-slot::before {
@@ -1282,20 +1287,101 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
     text-shadow: 0 1px 20px rgba(6,5,14,.96);
 }
 
-/* The report, as an object with three sides. The legend under it names the
-   face that is currently pointing at you, so the turning is legible instead
-   of being decoration that happens to rotate. */
+/* The other product, running. A drawing of a terminal proves nothing; this
+   one plays the loop Replay is for - the tape moves a bar at a time, a trade
+   goes on at a bar that has not happened yet, and the dock keeps the score -
+   and pressing it takes you to the station that explains it. */
 .fd-model { margin: 0; min-width: 0; }
-#fd-cube { display: block; width: 100%; height: clamp(230px, 27vw, 400px); }
-.fd-model figcaption {
-    display: flex; flex-direction: column; gap: 7px; margin-top: 10px;
-    font-family: 'IBM Plex Mono', monospace; font-size: .55rem;
-    letter-spacing: .18em; text-transform: uppercase;
+
+.fd-replay {
+    display: block; width: 100%; padding: 0; text-align: left;
+    font: inherit; color: inherit; cursor: pointer;
+    background: rgba(9,9,15,.94);
+    border: 1px solid var(--fd-hair-2); border-radius: 4px;
+    overflow: hidden; position: relative;
+    box-shadow: 0 14px 44px rgba(0,0,0,.42);
+    transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
-.fd-model .ex { color: var(--fd-dim); }
-.fd-model .faces { display: flex; flex-wrap: wrap; gap: 6px 16px; }
-.fd-model .faces b { font-weight: 500; color: var(--fd-dim); transition: color .55s ease; }
-.fd-model .faces b.on { color: var(--fd-brass); }
+.fd-replay:hover {
+    border-color: rgba(247,166,0,.42);
+    box-shadow: 0 18px 54px rgba(0,0,0,.55);
+    transform: translateY(-2px);
+}
+
+.fd-replay .rp-top {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 11px; border-bottom: 1px solid var(--fd-hair);
+    font-family: 'IBM Plex Mono', monospace; font-size: .56rem;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--fd-dim);
+}
+.fd-replay .rp-live {
+    width: 5px; height: 5px; border-radius: 50%; background: #35d07f;
+    flex: 0 0 auto; animation: fd-pulse 2.6s ease-out infinite;
+}
+.fd-replay .rp-top b  { color: var(--fd-vellum); font-weight: 600; letter-spacing: .1em; }
+.fd-replay .rp-top em { font-style: normal; }
+.fd-replay .rp-clock  { margin-left: auto; color: var(--fd-smoke);
+                        font-variant-numeric: tabular-nums; letter-spacing: .06em; }
+.fd-replay .rp-state {
+    padding: 2px 7px; border: 1px solid var(--fd-hair); border-radius: 2px;
+    color: var(--fd-smoke); white-space: nowrap;
+}
+.fd-replay .rp-state.long  { color: #35d07f; border-color: rgba(53,208,127,.4); }
+.fd-replay .rp-state.done  { color: var(--fd-brass); border-color: rgba(247,166,0,.4); }
+
+#rp-chart { display: block; width: 100%; height: clamp(132px, 15vw, 196px); }
+
+.fd-replay .rp-dock { display: block; border-top: 1px solid var(--fd-hair); }
+.fd-replay .rp-tabs {
+    display: flex; gap: 0; border-bottom: 1px solid var(--fd-hair);
+    font-family: 'IBM Plex Mono', monospace; font-size: .5rem;
+    letter-spacing: .14em; text-transform: uppercase;
+}
+.fd-replay .rp-tabs b {
+    padding: 7px 10px; font-weight: 500; color: var(--fd-dim);
+    border-bottom: 1px solid transparent; margin-bottom: -1px;
+    transition: color .3s ease, border-color .3s ease;
+}
+.fd-replay .rp-tabs b.on { color: var(--fd-vellum); border-bottom-color: var(--fd-brass); }
+.fd-replay .rp-read {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px; background: var(--fd-hair);
+}
+.fd-replay .rp-read span {
+    display: block; padding: 8px 10px; background: rgba(9,9,15,.97);
+    font-family: 'IBM Plex Mono', monospace;
+}
+.fd-replay .rp-read i {
+    display: block; font-style: normal; font-size: .48rem; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--fd-dim);
+}
+.fd-replay .rp-read u {
+    display: block; margin-top: 4px; text-decoration: none;
+    font-size: .72rem; font-variant-numeric: tabular-nums; color: var(--fd-vellum);
+}
+.fd-replay .rp-read u.up   { color: #35d07f; }
+.fd-replay .rp-read u.down { color: #ef454a; }
+
+/* the affordance, which only has to be there once you are looking at it */
+.fd-replay .rp-go {
+    position: absolute; right: 9px; bottom: 9px;
+    padding: 5px 9px; border-radius: 2px;
+    background: var(--fd-brass); color: #1a1200;
+    font-family: 'IBM Plex Mono', monospace; font-size: .5rem; font-weight: 600;
+    letter-spacing: .12em; text-transform: uppercase; white-space: nowrap;
+    opacity: 0; transform: translateY(4px);
+    transition: opacity .2s ease, transform .2s ease;
+}
+.fd-replay:hover .rp-go, .fd-replay:focus-visible .rp-go { opacity: 1; transform: none; }
+
+.fd-model figcaption {
+    display: flex; flex-direction: column; gap: 6px; margin-top: 10px;
+    font-family: 'IBM Plex Mono', monospace; font-size: .55rem;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--fd-dim);
+}
+.fd-model .say { text-transform: none; letter-spacing: .02em; font-size: .74rem;
+                 font-family: 'IBM Plex Sans', system-ui, sans-serif;
+                 color: var(--fd-smoke); }
 
 /* the opening arrives in order, once */
 .fd-open-head > *, .fd-open-body > *, .fd-model {
@@ -1316,29 +1402,42 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
     .fd-live i { animation: none !important; }
     .fd-sentence mark, .fd-slot::before, .fd-slot .k, .fd-slot .v,
     .fd-sentence, .fd-slots { transition: none !important; }
-}
-
-/* Six across needs the whole width of a wide desk. Anywhere narrower the
-   object is taking a third of the row, so the spec folds to two rows of three
-   rather than squeezing six columns until the values wrap inside them. */
-@media (max-width: 1440px) and (min-width: 721px) {
-    .fd-slots { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 580px; }
+    .fd-replay .rp-live { animation: none !important; }
+    .fd-replay .rp-go { opacity: 1; transform: none; }
 }
 
 /* Between the phone and a wide desk the words share the row with the object,
    so the headline is sized against the column it is actually in rather than
    against the window - otherwise the second line breaks in the middle. */
-@media (min-width: 721px) and (max-width: 1560px) {
-    .fd-open h1 { font-size: clamp(1.85rem, 3.3vw, 3.4rem); }
+/* The row is the full width now, but on a narrow desk that is still not
+   twenty-four characters of a didone at five per cent of the window. */
+@media (min-width: 721px) and (max-width: 1180px) {
+    .fd-open h1 { font-size: clamp(1.9rem, 4.2vw, 3rem); margin-bottom: 20px; }
 }
 
 @media (max-width: 720px) {
     /* One column, and the object sits between the headline and the reading
        rather than at the bottom - a phone screen is short enough that
        anything under the paragraph is something nobody saw. */
-    .fd-open { grid-template-columns: 1fr; row-gap: 13px; padding-right: 0; }
+    .fd-open { grid-template-columns: 1fr; row-gap: 11px; padding-right: 0; }
     .fd-open-head, .fd-open-body, .fd-model { grid-column: auto; grid-row: auto; }
-    #fd-cube { height: 148px; }
+    #rp-chart { height: 118px; }
+    .fd-replay .rp-top { padding: 7px 9px; gap: 7px; }
+    .fd-replay .rp-read span { padding: 7px 8px; }
+
+    /* A hover badge floating over the dock has nothing to hover on a phone and
+       lands on the third readout, so it becomes the bar along the bottom that
+       a phone would have wanted in the first place. The caption's second line
+       goes with it - the bar says the same thing, in a place you can press. */
+    .fd-replay .rp-go {
+        position: static; display: block; width: 100%;
+        padding: 8px 10px; border-radius: 0; text-align: center;
+        opacity: 1; transform: none;
+    }
+    .fd-model figcaption { margin-top: 8px; }
+    .fd-model .say { display: none; }
+
+    .fd-open h1 { margin-bottom: 14px; }
     .fd-model figcaption { flex-direction: row; align-items: baseline;
                            gap: 6px 14px; flex-wrap: wrap; margin-top: 7px; }
 
@@ -1350,7 +1449,12 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
     .fd-slot { padding-top: 8px; }
     .fd-slot .k { font-size: .52rem; letter-spacing: .16em; }
     .fd-slot .v { margin-top: 4px; font-size: .74rem; }
-    .fd-openlede { margin-top: 16px; font-size: .88rem; }
+    /* A station is one screen, and on a phone this one was carrying a
+       headline, a running terminal, a sentence and a six-slot spec already.
+       The paragraph is the only thing on it that is said again further down -
+       stations one and two are that paragraph at length - so it is the thing
+       that goes rather than the thing that gets a scrollbar. */
+    .fd-openlede { display: none; }
 }
 
 

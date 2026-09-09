@@ -311,7 +311,6 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
                 '<span class="k">' + esc(p[1]) + '</span>' +
                 '<span class="v">' + esc(p[2]) + '</span>' +
             '</div>').join('');
-        deck = makeDeck(sysI);
         setLive('Backtest Machine \u00b7 reading');
         const open = $('fd-open');
         if (open) open.classList.remove('out');
@@ -348,7 +347,7 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
 
     function readTick(t) {
         if (!readOn) return;
-        paintCube(t);
+        paintReplay(t);
         const e = t - cueT0;
         while (cueI < cue.length && cue[cueI].t <= e) cue[cueI++].go();
         if (cueI >= cue.length) {
@@ -370,11 +369,11 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
     }
 
     function startRead() {
-        deck = makeDeck(0);
-        fitCube();
+        fitReplay();
         drawSystem();
         if (CALM) {
-            paintCube(2600);          // one frame, at an angle worth stopping on
+            // the session, already finished, which is the frame worth stopping on
+            paintReplay(RP_B + 900);
             const n = picks(SYSTEMS[0]).length;
             for (let i = 0; i < n; i++) { light(i); fill(i); }
             setLive('Backtest Machine \u00b7 ' + n + ' of ' + n + ' read');
@@ -385,206 +384,187 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
             () => readWant(!document.hidden && at === 0));
     }
 
-    // ================================================= the object on the desk
+    // ============================================== the other desk, running
 
-    /* A report has three sides. The market the system met, the curve that came
-       out of it and the log of every trade it took are one document, and a
-       page can only ever show you one of them at a time. So the opening
-       carries the document as an object: three faces of a slowly turning cube,
-       and the legend underneath names whichever one is pointing at you.
+    /* A picture of a terminal proves nothing, so this one runs. It plays the
+       loop BarTest Replay exists for, on a fixed series so it is the same
+       session every time: the tape moves forward one bar at a time, a trade
+       goes on at a bar that has not happened yet, and the dock keeps the
+       score. Pressing it goes to the Replay station rather than into the
+       terminal itself - somebody who has not read what it is should read that
+       first, and the station is where that is written.
 
-       It is drawn from a fixed seed per system, which makes it an exhibit
-       rather than a number - the same shape on every load, and no figure
-       anywhere near it. The one set of real figures on this site is at station
-       one, attached to the report it came out of.
+       The window holds every bar of the session and the price axis is taken
+       from all of them at once, so the chart does not rescale under itself
+       while it prints. */
 
-       The maths is eleven lines: a point in cube space, one turn about the
-       upright, one fixed tilt, one perspective divide. A 3D library for that
-       would be a dependency for nothing. */
+    const TAPE = (() => {
+        let x = 20160624, p = 1.2684;
+        const rnd = () => (x = (x * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+        const out = [];
+        for (let i = 0; i < 46; i++) {
+            const o = p;
+            // it turns where the trade goes on, which is the point of the demo
+            p += (i < 30 ? -0.00013 : 0.00046) + (rnd() - 0.5) * 0.00165;
+            out.push([o, Math.max(o, p) + rnd() * 0.0007,
+                         Math.min(o, p) - rnd() * 0.0007, p]);
+        }
+        return out;
+    })();
 
-    /* Origin, across, up, the outward normal, and which of the three things
-       is printed on it. Both faces of each opposing pair carry the same thing,
-       because a box with content on three sides only spends three quarters of
-       its turn looking like anything - for the other quarter you are staring
-       at the blank back of it. The floor is the one face nobody ever sees,
-       since the camera stands above. */
-    const FACES = [
-        { o: [-1, -1,  1], u: [ 2, 0,  0], v: [0, 2,  0], n: [ 0, 0,  1], k: 0 },
-        { o: [ 1, -1, -1], u: [-2, 0,  0], v: [0, 2,  0], n: [ 0, 0, -1], k: 0 },
-        { o: [ 1, -1,  1], u: [ 0, 0, -2], v: [0, 2,  0], n: [ 1, 0,  0], k: 1 },
-        { o: [-1, -1, -1], u: [ 0, 0,  2], v: [0, 2,  0], n: [-1, 0,  0], k: 1 },
-        { o: [-1,  1,  1], u: [ 2, 0,  0], v: [0, 0, -2], n: [ 0, 1,  0], k: 2 }
-    ];
-    const TILT = 0.32, DIST = 6.2, SPIN = 0.000232;     // radians per millisecond
+    const RP_ENTRY_BAR = 30, RP_LAST_BAR = 45;
+    const RP_A = 3400, RP_B = 6500, RP_CYCLE = 9600, RP_STEP = 190;
+    const rpEntry = TAPE[RP_ENTRY_BAR][3], rpExit = TAPE[RP_LAST_BAR][3];
 
-    const cube = $('fd-cube');
-    const cctx = cube ? cube.getContext('2d') : null;
-    let cubeW = 0, cubeH = 0, deck = null;
+    const rchart = $('rp-chart');
+    const rctx = rchart ? rchart.getContext('2d') : null;
+    let rW = 0, rH = 0, rShown = -1, rPhase = -1;
 
-    function fitCube() {
-        if (!cube || !cctx) return;
-        const r = cube.getBoundingClientRect();
+    function fitReplay() {
+        if (!rchart || !rctx) return;
+        const r = rchart.getBoundingClientRect();
         if (!r.width || !r.height) return;
         const dpr = Math.min(devicePixelRatio || 1, 2);
-        cubeW = r.width; cubeH = r.height;
-        cube.width = Math.round(r.width * dpr);
-        cube.height = Math.round(r.height * dpr);
-        cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        rW = r.width; rH = r.height;
+        rchart.width = Math.round(r.width * dpr);
+        rchart.height = Math.round(r.height * dpr);
+        rctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        rShown = -1;                       // force the dock to repaint too
     }
 
-    /* One report per system, the same one every time: the bars it was measured
-       over, the curve that came out, and which slots of the log are filled. */
-    function makeDeck(seed) {
-        let x = (seed + 7) * 90210;
-        const rnd = () => (x = (x * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    function rpAt(e) {
+        if (e < RP_A)  return { shown: 15 + Math.min(16, (e / RP_STEP) | 0), phase: 0 };
+        if (e < RP_B)  return { shown: 31 + Math.min(15, ((e - RP_A) / RP_STEP) | 0), phase: 1 };
+        return { shown: 46, phase: 2 };
+    }
 
-        const bars = [];
-        let p = 0.5, top = -Infinity, bot = Infinity;
-        for (let i = 0; i < 22; i++) {
-            const o = p;
-            p = p + (rnd() - 0.46) * 0.13;
-            const hi = Math.max(o, p) + rnd() * 0.055;
-            const lo = Math.min(o, p) - rnd() * 0.055;
-            if (hi > top) top = hi;
-            if (lo < bot) bot = lo;
-            bars.push([o, p, hi, lo]);
+    const pips = (a, b) => ((b - a) * 10000);
+    const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
+    const signed = v => (v >= 0 ? '+' : '\u2212') + plural(+Math.abs(v).toFixed(0), 'pip');
+
+    function paintReplay(t) {
+        if (!rctx || !rW) return;
+        const st = rpAt(t % RP_CYCLE);
+        drawTape(st);
+        if (st.shown !== rShown || st.phase !== rPhase) {
+            rShown = st.shown; rPhase = st.phase;
+            drawDock(st);
         }
-        /* A random walk left alone sits in a band down the middle of the face
-           and reads as a flat line. Normalising it to the face is what a
-           chart does anyway - the axis fits the data. */
-        const span = (top - bot) || 1;
-        bars.forEach(b => {
-            for (let j = 0; j < 4; j++) b[j] = 0.10 + (b[j] - bot) / span * 0.80;
-        });
-
-        const raw = [];
-        let v = 0;
-        for (let i = 0; i <= 40; i++) {
-            v += (i > 17 && i < 26 ? -0.58 : 0.36) + (rnd() - 0.5) * 1.3;
-            raw.push(v);
-        }
-        const lo = Math.min.apply(null, raw), hi = Math.max.apply(null, raw);
-        const curve = raw.map((e, i) =>
-            [i / 40, 0.13 + (e - lo) / ((hi - lo) || 1) * 0.74]);
-
-        const log = [];
-        for (let i = 0; i < 63; i++) log.push(rnd() > 0.36);
-
-        return { bars: bars, curve: curve, log: log };
     }
 
-    function turn(p, cs, sn) {
-        const x =  p[0] * cs + p[2] * sn;
-        const z = -p[0] * sn + p[2] * cs;
-        const ct = Math.cos(TILT), st = Math.sin(TILT);
-        return [x, p[1] * ct - z * st, p[1] * st + z * ct];
-    }
+    function drawTape(st) {
+        const padL = 9, padR = 52, padT = 12, padB = 12;
+        const w = rW - padL - padR, h = rH - padT - padB;
 
-    function paintCube(t) {
-        if (!cctx || !cubeW || !deck) return;
-        const rot = t * SPIN, cs = Math.cos(rot), sn = Math.sin(rot);
-        const k = Math.min(cubeW, cubeH) * 0.335;
+        let hi = -Infinity, lo = Infinity;
+        for (const b of TAPE) { if (b[1] > hi) hi = b[1]; if (b[2] < lo) lo = b[2]; }
+        const pad = (hi - lo) * 0.09;
+        hi += pad; lo -= pad;
+        const y = p => padT + (hi - p) / (hi - lo) * h;
 
-        const P = p => {
-            const q = turn(p, cs, sn);
-            const f = DIST / (DIST - q[2]);
-            return [cubeW / 2 + q[0] * f * k, cubeH / 2 - q[1] * f * k];
-        };
+        const slots = TAPE.length + 3;          // the gap on the right is the point
+        const slot = w / slots;
+        const bw = Math.max(1.4, slot * 0.62);
+        const x = i => padL + i * slot + slot / 2;
 
-        cctx.clearRect(0, 0, cubeW, cubeH);
-        cctx.lineJoin = cctx.lineCap = 'round';
+        rctx.clearRect(0, 0, rW, rH);
 
-        /* All twelve edges, front and back, so it stays a box you can see
-           through rather than a solid that hides its own far side. */
-        const C = [];
-        for (let i = 0; i < 8; i++)
-            C.push(P([(i & 1) ? 1 : -1, (i & 2) ? 1 : -1, (i & 4) ? 1 : -1]));
-        const E = [[0,1],[2,3],[4,5],[6,7],[0,2],[1,3],[4,6],[5,7],[0,4],[1,5],[2,6],[3,7]];
-        cctx.strokeStyle = 'rgba(236,231,221,.12)';
-        cctx.lineWidth = 1;
-        cctx.beginPath();
-        for (const e of E) { cctx.moveTo(C[e[0]][0], C[e[0]][1]); cctx.lineTo(C[e[1]][0], C[e[1]][1]); }
-        cctx.stroke();
-
-        let best = 0, bestD = -2;
-        for (const F of FACES) {
-            const d = turn(F.n, cs, sn)[2];
-            if (d > bestD) { bestD = d; best = F.k; }
-            if (d > 0.05) paintFace(F.k, F, P, Math.min(1, (d - 0.05) / 0.34));
+        rctx.strokeStyle = 'rgba(236,231,221,.05)';
+        rctx.lineWidth = 1;
+        for (let g = 0; g <= 4; g++) {
+            const yy = Math.round(padT + h * g / 4) + 0.5;
+            rctx.beginPath(); rctx.moveTo(padL, yy); rctx.lineTo(rW - padR, yy); rctx.stroke();
         }
 
-        const legend = $('fd-faces');
-        if (legend) [].forEach.call(legend.children,
-            (b, i) => b.classList.toggle('on', i === best));
+        for (let i = 0; i < st.shown; i++) {
+            const b = TAPE[i], up = b[3] >= b[0];
+            rctx.strokeStyle = rctx.fillStyle = up ? '#20b26c' : '#ef454a';
+            rctx.lineWidth = Math.max(1, bw * 0.18);
+            rctx.beginPath(); rctx.moveTo(x(i), y(b[1])); rctx.lineTo(x(i), y(b[2])); rctx.stroke();
+            const top = y(Math.max(b[0], b[3])), bot = y(Math.min(b[0], b[3]));
+            rctx.fillRect(x(i) - bw / 2, top, bw, Math.max(1, bot - top));
+        }
+
+        const last = TAPE[st.shown - 1][3];
+
+        // the entry, once it is on
+        if (st.phase >= 1) {
+            const ey = y(rpEntry);
+            rctx.strokeStyle = 'rgba(247,166,0,.55)';
+            rctx.lineWidth = 1;
+            rctx.setLineDash([3, 4]);
+            rctx.beginPath();
+            rctx.moveTo(x(RP_ENTRY_BAR), ey); rctx.lineTo(rW - padR, ey);
+            rctx.stroke();
+            rctx.setLineDash([]);
+
+            rctx.fillStyle = '#20b26c';
+            const mx = x(RP_ENTRY_BAR), my = y(TAPE[RP_ENTRY_BAR][2]) + 5;
+            rctx.beginPath();
+            rctx.moveTo(mx, my); rctx.lineTo(mx - 4.5, my + 7); rctx.lineTo(mx + 4.5, my + 7);
+            rctx.closePath(); rctx.fill();
+        }
+
+        // and the exit, once it is off
+        if (st.phase === 2) {
+            rctx.fillStyle = '#f7a600';
+            const mx = x(RP_LAST_BAR), my = y(TAPE[RP_LAST_BAR][1]) - 5;
+            rctx.beginPath();
+            rctx.moveTo(mx, my); rctx.lineTo(mx - 4.5, my - 7); rctx.lineTo(mx + 4.5, my - 7);
+            rctx.closePath(); rctx.fill();
+        }
+
+        // the last price, which is the number a replay session is reading
+        const ly = y(last);
+        rctx.strokeStyle = 'rgba(236,231,221,.16)';
+        rctx.setLineDash([2, 3]);
+        rctx.beginPath(); rctx.moveTo(padL, ly); rctx.lineTo(rW - padR, ly); rctx.stroke();
+        rctx.setLineDash([]);
+
+        const up = last >= TAPE[0][0];
+        rctx.fillStyle = up ? 'rgba(32,178,108,.9)' : 'rgba(239,69,74,.9)';
+        rctx.fillRect(rW - padR + 4, ly - 8, padR - 8, 16);
+        rctx.fillStyle = '#06050e';
+        rctx.font = '600 9.5px "IBM Plex Mono", monospace';
+        rctx.textAlign = 'center'; rctx.textBaseline = 'middle';
+        rctx.fillText(last.toFixed(4), rW - padR + 4 + (padR - 8) / 2, ly);
     }
 
-    function paintFace(i, F, P, fade) {
-        const at = (a, b) => P([F.o[0] + F.u[0] * a + F.v[0] * b,
-                                F.o[1] + F.u[1] * a + F.v[1] * b,
-                                F.o[2] + F.u[2] * a + F.v[2] * b]);
-        // a rectangle in face coordinates, which is a quadrilateral on screen
-        const box = (a, b, w, h) => {
-            const p0 = at(a, b), p1 = at(a + w, b), p2 = at(a + w, b + h), p3 = at(a, b + h);
-            cctx.beginPath();
-            cctx.moveTo(p0[0], p0[1]); cctx.lineTo(p1[0], p1[1]);
-            cctx.lineTo(p2[0], p2[1]); cctx.lineTo(p3[0], p3[1]);
-            cctx.closePath(); cctx.fill();
-        };
-        const edge = () => {
-            const p = [at(0, 0), at(1, 0), at(1, 1), at(0, 1)];
-            cctx.strokeStyle = 'rgba(236,231,221,' + (0.10 + 0.17 * fade).toFixed(3) + ')';
-            cctx.lineWidth = 1;
-            cctx.beginPath();
-            cctx.moveTo(p[0][0], p[0][1]);
-            for (let j = 1; j < 4; j++) cctx.lineTo(p[j][0], p[j][1]);
-            cctx.closePath(); cctx.stroke();
-        };
-        const rule = (a0, a1, b, alpha) => {
-            const p0 = at(a0, b), p1 = at(a1, b);
-            cctx.strokeStyle = 'rgba(236,231,221,' + (alpha * fade).toFixed(3) + ')';
-            cctx.lineWidth = 1;
-            cctx.beginPath(); cctx.moveTo(p0[0], p0[1]); cctx.lineTo(p1[0], p1[1]); cctx.stroke();
-        };
+    function drawDock(st) {
+        const clock = $('rp-clock'), state = $('rp-state'),
+              tabs = $('rp-tabs'), read = $('rp-read');
 
-        edge();
+        if (clock) {
+            const mins = 9 * 60 + 15 + (st.shown - 1) * 15;
+            clock.textContent = String(((mins / 60) | 0) % 24).padStart(2, '0') + ':' +
+                                String(mins % 60).padStart(2, '0');
+        }
+        if (state) {
+            state.textContent = st.phase === 0 ? 'Playing'
+                              : st.phase === 1 ? 'Long 0.10' : 'Closed';
+            state.className = 'rp-state' + (st.phase === 1 ? ' long' : st.phase === 2 ? ' done' : '');
+        }
+        if (tabs) [].forEach.call(tabs.children,
+            (b, i) => b.classList.toggle('on', i === (st.phase === 2 ? 2 : 0)));
 
-        if (i === 0) {
-            for (let g = 1; g < 4; g++) rule(0.05, 0.95, g / 4, 0.055);
-            const last = deck.bars[deck.bars.length - 1][1];
-            const pl = at(0.05, last), pr = at(0.95, last);
-            cctx.strokeStyle = 'rgba(247,166,0,' + (0.34 * fade).toFixed(3) + ')';
-            cctx.lineWidth = 1;
-            cctx.setLineDash([3, 4]);
-            cctx.beginPath(); cctx.moveTo(pl[0], pl[1]); cctx.lineTo(pr[0], pr[1]); cctx.stroke();
-            cctx.setLineDash([]);
+        if (!read) return;
+        const cell = (k, v, tone) =>
+            '<span><i>' + k + '</i><u' + (tone ? ' class="' + tone + '"' : '') + '>' + v + '</u></span>';
 
-            const n = deck.bars.length, w = 0.9 / n;
-            deck.bars.forEach((bar, j) => {
-                const x = 0.05 + j * w, up = bar[1] >= bar[0];
-                cctx.fillStyle = up ? 'rgba(32,178,108,' + (0.85 * fade).toFixed(3) + ')'
-                                    : 'rgba(239,69,74,' + (0.8 * fade).toFixed(3) + ')';
-                box(x + w * 0.42, bar[3], w * 0.16, bar[2] - bar[3]);
-                box(x + w * 0.12, Math.min(bar[0], bar[1]), w * 0.76,
-                    Math.max(0.008, Math.abs(bar[1] - bar[0])));
-            });
-        } else if (i === 1) {
-            rule(0.05, 0.95, 0.13, 0.08);
-            cctx.strokeStyle = 'rgba(247,166,0,' + (0.92 * fade).toFixed(3) + ')';
-            cctx.lineWidth = 1.7;
-            cctx.beginPath();
-            deck.curve.forEach((pt, j) => {
-                const q = at(0.05 + pt[0] * 0.9, pt[1]);
-                if (j) cctx.lineTo(q[0], q[1]); else cctx.moveTo(q[0], q[1]);
-            });
-            cctx.stroke();
+        if (st.phase === 0) {
+            read.innerHTML = cell('Bars', st.shown + ' / 46') +
+                             cell('Position', 'Flat') +
+                             cell('Speed', '1 bar / step');
+        } else if (st.phase === 1) {
+            const p = pips(rpEntry, TAPE[st.shown - 1][3]);
+            read.innerHTML = cell('Entry', rpEntry.toFixed(4)) +
+                             cell('Open P&amp;L', signed(p), p >= 0 ? 'up' : 'down') +
+                             cell('Held', plural(st.shown - 1 - RP_ENTRY_BAR, 'bar'));
         } else {
-            const cols = 9;
-            deck.log.forEach((on, j) => {
-                const cx = j % cols, cy = (j / cols) | 0;
-                cctx.fillStyle = on ? 'rgba(247,166,0,' + (0.55 * fade).toFixed(3) + ')'
-                                    : 'rgba(236,231,221,' + (0.14 * fade).toFixed(3) + ')';
-                box(0.08 + cx * 0.095, 0.10 + cy * 0.115, 0.062, 0.062);
-            });
+            const p = pips(rpEntry, rpExit);
+            read.innerHTML = cell('Trades', '1') +
+                             cell('Result', signed(p), p >= 0 ? 'up' : 'down') +
+                             cell('Session', 'Example');
         }
     }
 
@@ -683,7 +663,7 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
            any display. */
         if (track) track.style.height = (marks.total * VH + VH) + 'px';
         fitCanvas();
-        fitCube();
+        fitReplay();
         read();
     }
 

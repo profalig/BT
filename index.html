@@ -295,8 +295,8 @@
      is not a tour of a building. Nobody else can hold the eleven years of
      verified minute history that makes the route real.
 
-     The camera, the route and the night that prints at station zero all live
-     in front.js. Every action here calls openService(), the same shared entry
+     The camera, the route, the reading at station zero and the terminal
+     playing beside it all live in front.js. Every action here calls openService(), the same shared entry
      point the old branches used, so the module panels, the plan gate, the
      auth flow and the checkout are untouched. -->
 
@@ -355,19 +355,42 @@
                   <h1 class="fd-display">Say it in plain English.<br>Get it back as evidence.</h1>
                 </div>
 
-                <!-- A report has three sides and a page can only show one of
-                     them at a time. This is the object: the market the system
-                     met on one face, the curve it made on the next, every
-                     trade it took on the third, turning slowly so all three
-                     are the same thing. It is drawn from a fixed seed per
-                     system, so it is an exhibit rather than a number. -->
+                <!-- The other half of the desk, running. This is the Replay
+                     terminal in miniature playing the loop it is for: the tape
+                     moves one bar at a time, a trade goes on at a bar that had
+                     not happened yet, and the dock keeps the score. Pressing it
+                     goes to the Replay station rather than straight into the
+                     terminal, because somebody who has not read what it is yet
+                     should read that first.
+
+                     Everything inside is drawn by front.js from a fixed series,
+                     so it is the same session every time and it is labelled as
+                     an example. -->
                 <figure class="fd-model">
-                  <canvas id="fd-cube" aria-hidden="true"></canvas>
-                  <figcaption>
-                    <span class="ex">Example report</span>
-                    <span class="faces" id="fd-faces">
-                      <b data-f="0">The market</b><b data-f="1">The curve</b><b data-f="2">Every trade</b>
+                  <button type="button" class="fd-replay" id="fd-replay" data-st="2"
+                          aria-label="BarTest Replay - see what it does">
+                    <span class="rp-top">
+                      <i class="rp-live"></i>
+                      <b>GBPUSD</b><em>15m</em>
+                      <span class="rp-clock" id="rp-clock">09:15</span>
+                      <span class="rp-state" id="rp-state">Playing</span>
                     </span>
+
+                    <canvas id="rp-chart" aria-hidden="true"></canvas>
+
+                    <span class="rp-dock">
+                      <span class="rp-tabs" id="rp-tabs">
+                        <b class="on">Position</b><b>Trade history</b><b>Performance</b>
+                      </span>
+                      <span class="rp-read" id="rp-read"></span>
+                    </span>
+
+                    <span class="rp-go">Open BarTest Replay &rarr;</span>
+                  </button>
+
+                  <figcaption>
+                    <span class="ex">Example session</span>
+                    <span class="say">Trade the past one bar at a time, and keep the score.</span>
                   </figcaption>
                 </figure>
 
@@ -433,15 +456,15 @@
             <span class="fd-ghost" aria-hidden="true">2</span>
             <div class="fd-inner">
                 <div class="fd-num">02 &middot; The terminal<i></i></div>
-                <h2 class="fd-display">You just used it.<br>This is the rest of it.</h2>
+                <h2 class="fd-display">You have just watched it.<br>This is the rest of it.</h2>
                 <div class="fd-two lede" style="margin-top:20px">
-                    <p>Every candle you scrolled through came out of the same history the
-                       terminal runs on. Pick any date since 2016, cut the chart there, and step
-                       the market forward at your own speed with a real order ticket &mdash;
-                       leverage, fees, stops, position sizing off your risk.</p>
+                    <p>The session running at the top of this page is this terminal at a tenth of
+                       the size. Pick any date since 2016, cut the chart there, and step the market
+                       forward at your own speed with a real order ticket &mdash; leverage, fees,
+                       stops, position sizing off your risk.</p>
                     <p><b>Future bars are never in the chart at all</b>, so they cannot be peeked
-                       at by dragging. It is the same engine, on the same data, as the night you
-                       have just traded.</p>
+                       at by dragging. Every candle behind you on the way here came out of the
+                       same history the terminal runs on.</p>
                 </div>
 
                 <dl class="fd-spec">
