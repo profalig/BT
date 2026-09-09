@@ -65,8 +65,8 @@ const planetData = {
         body: "Reach out for quantitative system discussions, data analytics, or professional networking.",
         links: [
             { icon: "fa-envelope", label: "Email", val: "backtest.factory@gmail.com", href: "mailto:backtest.factory@gmail.com" },
-            { icon: "fa-paper-plane", label: "Telegram", val: "@Dr_AliSadeghi", href: "https://t.me/Dr_AliSadeghi" },
-            { icon: "fa-instagram", label: "Instagram", val: "backtest.factory", href: "https://instagram.com/backtest.factory", brand: true }
+            { icon: "fa-youtube", label: "YouTube", val: "@BarTest_TV", href: "https://www.youtube.com/@BarTest_TV", brand: true },
+            { icon: "fa-instagram", label: "Instagram", val: "@BarTest.ig", href: "https://instagram.com/BarTest.ig", brand: true }
         ],
         stats: [{ label: "COMM LINK", val: "Encrypted" }, { label: "RESPONSE", val: "Active" }, { label: "LOCATION", val: "Italy" }, { label: "NETWORK", val: "Open" }]
     },
