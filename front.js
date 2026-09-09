@@ -438,9 +438,19 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
         return { shown: 46, phase: 2 };
     }
 
-    const pips = (a, b) => ((b - a) * 10000);
+    /* One lot of 0.10 on a dollar-quoted pair is a dollar a pip, which is why
+       the account can move in whole numbers without anybody having to be told
+       the contract size. */
+    const RP_BAL = 50000, RP_PER_PIP = 1;
+    const pips = (a, b) => (b - a) * 10000;
     const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
     const signed = v => (v >= 0 ? '+' : '\u2212') + plural(+Math.abs(v).toFixed(0), 'pip');
+    const money = v => (v >= 0 ? '+$' : '\u2212$') + Math.abs(v).toFixed(2);
+    const hhmm = bar => {
+        const m = 9 * 60 + 15 + bar * 15;
+        return String(((m / 60) | 0) % 24).padStart(2, '0') + ':' +
+               String(m % 60).padStart(2, '0');
+    };
 
     function paintReplay(t) {
         if (!rctx || !rW) return;
@@ -453,33 +463,45 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
     }
 
     function drawTape(st) {
-        const padL = 9, padR = 52, padT = 12, padB = 12;
+        const padL = 9, padR = 54, padT = 11, padB = 19;
         const w = rW - padL - padR, h = rH - padT - padB;
 
         let hi = -Infinity, lo = Infinity;
         for (const b of TAPE) { if (b[1] > hi) hi = b[1]; if (b[2] < lo) lo = b[2]; }
-        const pad = (hi - lo) * 0.09;
+        const pad = (hi - lo) * 0.08;
         hi += pad; lo -= pad;
         const y = p => padT + (hi - p) / (hi - lo) * h;
 
         const slots = TAPE.length + 3;          // the gap on the right is the point
         const slot = w / slots;
-        const bw = Math.max(1.4, slot * 0.62);
+        const bw = Math.max(1.6, slot * 0.6);
         const x = i => padL + i * slot + slot / 2;
 
         rctx.clearRect(0, 0, rW, rH);
+        rctx.font = '9px "IBM Plex Mono", monospace';
+        rctx.textBaseline = 'middle';
 
-        rctx.strokeStyle = 'rgba(236,231,221,.05)';
+        /* the axes, which are most of what makes a chart read as a chart */
+        rctx.strokeStyle = 'rgba(236,231,221,.055)';
         rctx.lineWidth = 1;
         for (let g = 0; g <= 4; g++) {
             const yy = Math.round(padT + h * g / 4) + 0.5;
             rctx.beginPath(); rctx.moveTo(padL, yy); rctx.lineTo(rW - padR, yy); rctx.stroke();
+            rctx.fillStyle = '#635e78';
+            rctx.textAlign = 'left';
+            rctx.fillText((hi - (hi - lo) * g / 4).toFixed(4), rW - padR + 7, yy);
         }
+        const axis = Math.round(rH - padB) + 0.5;
+        rctx.strokeStyle = 'rgba(236,231,221,.09)';
+        rctx.beginPath(); rctx.moveTo(padL, axis); rctx.lineTo(rW - padR, axis); rctx.stroke();
+        rctx.textAlign = 'center';
+        rctx.fillStyle = '#635e78';
+        for (let i = 4; i < TAPE.length; i += 10) rctx.fillText(hhmm(i), x(i), rH - padB / 2 + 1);
 
         for (let i = 0; i < st.shown; i++) {
             const b = TAPE[i], up = b[3] >= b[0];
             rctx.strokeStyle = rctx.fillStyle = up ? '#20b26c' : '#ef454a';
-            rctx.lineWidth = Math.max(1, bw * 0.18);
+            rctx.lineWidth = Math.max(1, bw * 0.17);
             rctx.beginPath(); rctx.moveTo(x(i), y(b[1])); rctx.lineTo(x(i), y(b[2])); rctx.stroke();
             const top = y(Math.max(b[0], b[3])), bot = y(Math.min(b[0], b[3]));
             rctx.fillRect(x(i) - bw / 2, top, bw, Math.max(1, bot - top));
@@ -487,10 +509,9 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
 
         const last = TAPE[st.shown - 1][3];
 
-        // the entry, once it is on
-        if (st.phase >= 1) {
+        if (st.phase >= 1) {                       // the trade, once it is on
             const ey = y(rpEntry);
-            rctx.strokeStyle = 'rgba(247,166,0,.55)';
+            rctx.strokeStyle = 'rgba(53,208,127,.5)';
             rctx.lineWidth = 1;
             rctx.setLineDash([3, 4]);
             rctx.beginPath();
@@ -504,9 +525,7 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
             rctx.moveTo(mx, my); rctx.lineTo(mx - 4.5, my + 7); rctx.lineTo(mx + 4.5, my + 7);
             rctx.closePath(); rctx.fill();
         }
-
-        // and the exit, once it is off
-        if (st.phase === 2) {
+        if (st.phase === 2) {                      // and once it is off
             rctx.fillStyle = '#f7a600';
             const mx = x(RP_LAST_BAR), my = y(TAPE[RP_LAST_BAR][1]) - 5;
             rctx.beginPath();
@@ -514,56 +533,88 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
             rctx.closePath(); rctx.fill();
         }
 
-        // the last price, which is the number a replay session is reading
         const ly = y(last);
-        rctx.strokeStyle = 'rgba(236,231,221,.16)';
+        rctx.strokeStyle = 'rgba(236,231,221,.17)';
         rctx.setLineDash([2, 3]);
         rctx.beginPath(); rctx.moveTo(padL, ly); rctx.lineTo(rW - padR, ly); rctx.stroke();
         rctx.setLineDash([]);
 
         const up = last >= TAPE[0][0];
-        rctx.fillStyle = up ? 'rgba(32,178,108,.9)' : 'rgba(239,69,74,.9)';
-        rctx.fillRect(rW - padR + 4, ly - 8, padR - 8, 16);
+        rctx.fillStyle = up ? '#20b26c' : '#ef454a';
+        rctx.fillRect(rW - padR + 3, ly - 8, padR - 6, 16);
         rctx.fillStyle = '#06050e';
-        rctx.font = '600 9.5px "IBM Plex Mono", monospace';
-        rctx.textAlign = 'center'; rctx.textBaseline = 'middle';
-        rctx.fillText(last.toFixed(4), rW - padR + 4 + (padR - 8) / 2, ly);
+        rctx.font = '600 9px "IBM Plex Mono", monospace';
+        rctx.textAlign = 'center';
+        rctx.fillText(last.toFixed(4), rW - padR + 3 + (padR - 6) / 2, ly);
     }
 
     function drawDock(st) {
-        const clock = $('rp-clock'), state = $('rp-state'),
-              tabs = $('rp-tabs'), read = $('rp-read');
+        const last = TAPE[st.shown - 1][3];
+        const open = TAPE[0][0];
+        const held = st.shown - 1 - RP_ENTRY_BAR;
+        const live = st.phase === 1 ? pips(rpEntry, last) : 0;
+        const shut = pips(rpEntry, rpExit);
 
-        if (clock) {
-            const mins = 9 * 60 + 15 + (st.shown - 1) * 15;
-            clock.textContent = String(((mins / 60) | 0) % 24).padStart(2, '0') + ':' +
-                                String(mins % 60).padStart(2, '0');
-        }
+        const set = (id, text, tone) => {
+            const el = $(id);
+            if (!el) return;
+            el.textContent = text;
+            if (tone !== undefined) el.className = tone || '';
+        };
+
+        set('rp-price', last.toFixed(4));
+        const chg = (last - open) / open * 100;
+        set('rp-chg', (chg >= 0 ? '+' : '\u2212') + Math.abs(chg).toFixed(2) + '%',
+            chg >= 0 ? 'up' : 'down');
+        set('rp-clock', hhmm(st.shown - 1));
+
+        const cash = st.phase === 2 ? shut * RP_PER_PIP : 0;
+        const paper = live * RP_PER_PIP;
+        set('rp-eq', '$' + (RP_BAL + cash + paper).toLocaleString('en-US',
+            { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+        set('rp-upl', st.phase === 1 ? money(paper) : '$0.00',
+            st.phase === 1 ? (paper >= 0 ? 'up' : 'down') : '');
+
+        const prog = $('rp-prog');
+        if (prog) prog.style.width = (st.shown / TAPE.length * 100).toFixed(1) + '%';
+
+        const state = $('rp-state');
         if (state) {
             state.textContent = st.phase === 0 ? 'Playing'
                               : st.phase === 1 ? 'Long 0.10' : 'Closed';
-            state.className = 'rp-state' + (st.phase === 1 ? ' long' : st.phase === 2 ? ' done' : '');
+            state.className = 'rp-state' + (st.phase === 1 ? ' long'
+                                          : st.phase === 2 ? ' done' : '');
         }
+        const pos = $('rp-pos');
+        if (pos) {
+            pos.textContent = st.phase === 1 ? 'Long 0.10 @ ' + rpEntry.toFixed(4) : 'Flat';
+            pos.className = 'rp-t-pos' + (st.phase === 1 ? ' long' : '');
+        }
+
+        const tabs = $('rp-tabs');
         if (tabs) [].forEach.call(tabs.children,
             (b, i) => b.classList.toggle('on', i === (st.phase === 2 ? 2 : 0)));
 
+        const read = $('rp-read');
         if (!read) return;
         const cell = (k, v, tone) =>
-            '<span><i>' + k + '</i><u' + (tone ? ' class="' + tone + '"' : '') + '>' + v + '</u></span>';
+            '<span><i>' + k + '</i><u' + (tone ? ' class="' + tone + '"' : '') + '>' +
+            v + '</u></span>';
 
         if (st.phase === 0) {
-            read.innerHTML = cell('Bars', st.shown + ' / 46') +
+            read.innerHTML = cell('Bars', st.shown + ' / ' + TAPE.length) +
                              cell('Position', 'Flat') +
-                             cell('Speed', '1 bar / step');
+                             cell('Step', '1 bar') +
+                             cell('Session', 'Example');
         } else if (st.phase === 1) {
-            const p = pips(rpEntry, TAPE[st.shown - 1][3]);
             read.innerHTML = cell('Entry', rpEntry.toFixed(4)) +
-                             cell('Open P&amp;L', signed(p), p >= 0 ? 'up' : 'down') +
-                             cell('Held', plural(st.shown - 1 - RP_ENTRY_BAR, 'bar'));
+                             cell('Open P&amp;L', signed(live), live >= 0 ? 'up' : 'down') +
+                             cell('Unrealised', money(paper), paper >= 0 ? 'up' : 'down') +
+                             cell('Held', plural(held, 'bar'));
         } else {
-            const p = pips(rpEntry, rpExit);
             read.innerHTML = cell('Trades', '1') +
-                             cell('Result', signed(p), p >= 0 ? 'up' : 'down') +
+                             cell('Result', signed(shut), shut >= 0 ? 'up' : 'down') +
+                             cell('Realised', money(cash), cash >= 0 ? 'up' : 'down') +
                              cell('Session', 'Example');
         }
     }

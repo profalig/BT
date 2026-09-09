@@ -130,6 +130,9 @@ body.fd-stuck #fd-nav {
 }
 .fd-station.near { opacity: 1; pointer-events: auto; }
 .fd-inner { width: min(1080px, 100%); margin-inline: auto; }
+/* Station zero carries a terminal beside a paragraph, and a terminal wants
+   the room a terminal has. It is the only station wide enough to need it. */
+.fd-station:first-of-type .fd-inner { width: min(1400px, 100%); }
 
 .fd-station h2 { margin: 0; font-size: clamp(1.8rem, 3.8vw, 3.1rem); }
 .fd-station p  { color: var(--fd-smoke); line-height: 1.62; }
@@ -1191,8 +1194,8 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
    rather than at the bottom of a screen nobody scrolled to the end of. */
 .fd-open {
     display: grid; align-items: start;
-    grid-template-columns: minmax(0, 1fr) clamp(260px, 34vw, 470px);
-    column-gap: clamp(20px, 3.4vw, 52px);
+    grid-template-columns: minmax(300px, 1fr) clamp(400px, 40vw, 760px);
+    column-gap: clamp(20px, 3.2vw, 52px);
 }
 .fd-open-head { grid-column: 1 / -1; grid-row: 1; min-width: 0; }
 .fd-open-body { grid-column: 1; grid-row: 2; min-width: 0; }
@@ -1287,79 +1290,147 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
     text-shadow: 0 1px 20px rgba(6,5,14,.96);
 }
 
-/* The other product, running. A drawing of a terminal proves nothing; this
-   one plays the loop Replay is for - the tape moves a bar at a time, a trade
-   goes on at a bar that has not happened yet, and the dock keeps the score -
-   and pressing it takes you to the station that explains it. */
+/* The other product, running. A drawing of a terminal proves nothing, so
+   this is the terminal: the rail, the ticker, the chart with its own axes,
+   the transport, the order ticket and the dock, all of it the furniture
+   replay.html has, playing the loop Replay exists for. Pressing it goes to
+   the station that explains it. */
 .fd-model { margin: 0; min-width: 0; }
 
 .fd-replay {
     display: block; width: 100%; padding: 0; text-align: left;
     font: inherit; color: inherit; cursor: pointer;
-    background: rgba(9,9,15,.94);
-    border: 1px solid var(--fd-hair-2); border-radius: 4px;
+    background: #0b0b12;
+    border: 1px solid var(--fd-hair-2); border-radius: 5px;
     overflow: hidden; position: relative;
-    box-shadow: 0 14px 44px rgba(0,0,0,.42);
+    box-shadow: 0 18px 54px rgba(0,0,0,.5);
     transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
 .fd-replay:hover {
     border-color: rgba(247,166,0,.42);
-    box-shadow: 0 18px 54px rgba(0,0,0,.55);
+    box-shadow: 0 22px 66px rgba(0,0,0,.6);
     transform: translateY(-2px);
 }
+.fd-replay b, .fd-replay em, .fd-replay i, .fd-replay u { font-style: normal; }
 
-.fd-replay .rp-top {
-    display: flex; align-items: center; gap: 9px;
-    padding: 8px 11px; border-bottom: 1px solid var(--fd-hair);
-    font-family: 'IBM Plex Mono', monospace; font-size: .56rem;
-    letter-spacing: .12em; text-transform: uppercase; color: var(--fd-dim);
+/* ---------------------------------------------------------- the ticker */
+.fd-replay .rp-tick {
+    display: flex; align-items: center; gap: clamp(10px, 1.6vw, 22px);
+    padding: 7px 11px; border-bottom: 1px solid var(--fd-hair);
+    background: #0e0e17;
+    font-family: 'IBM Plex Mono', monospace; font-size: .55rem;
 }
+.fd-replay .rp-pair { display: flex; align-items: baseline; gap: 7px; }
 .fd-replay .rp-live {
-    width: 5px; height: 5px; border-radius: 50%; background: #35d07f;
-    flex: 0 0 auto; animation: fd-pulse 2.6s ease-out infinite;
+    align-self: center; width: 5px; height: 5px; border-radius: 50%;
+    background: #35d07f; flex: 0 0 auto; animation: fd-pulse 2.6s ease-out infinite;
 }
-.fd-replay .rp-top b  { color: var(--fd-vellum); font-weight: 600; letter-spacing: .1em; }
-.fd-replay .rp-top em { font-style: normal; }
-.fd-replay .rp-clock  { margin-left: auto; color: var(--fd-smoke);
-                        font-variant-numeric: tabular-nums; letter-spacing: .06em; }
+.fd-replay .rp-pair b { color: var(--fd-vellum); font-size: .74rem; font-weight: 600;
+                        letter-spacing: .04em; }
+.fd-replay .rp-pair em { color: var(--fd-dim); letter-spacing: .1em; text-transform: uppercase; }
+.fd-replay .rp-last { display: flex; align-items: baseline; gap: 7px; }
+.fd-replay .rp-last b { color: var(--fd-vellum); font-size: .78rem; font-weight: 600;
+                        font-variant-numeric: tabular-nums; }
+.fd-replay .rp-last u { text-decoration: none; color: var(--fd-smoke); }
+.fd-replay .rp-last u.up { color: #35d07f; }
+.fd-replay .rp-last u.down { color: #ef454a; }
+.fd-replay .rp-acct { display: flex; align-items: center; gap: clamp(9px, 1.4vw, 20px);
+                      margin-left: auto; }
+.fd-replay .rp-acct > span { display: block; white-space: nowrap; }
+.fd-replay .rp-acct i { display: block; font-size: .46rem; letter-spacing: .14em;
+                        text-transform: uppercase; color: var(--fd-dim); }
+.fd-replay .rp-acct b { display: block; margin-top: 2px; color: var(--fd-vellum);
+                        font-size: .68rem; font-variant-numeric: tabular-nums; }
+.fd-replay .rp-acct b.up { color: #35d07f; }
+.fd-replay .rp-acct b.down { color: #ef454a; }
+
+/* ------------------------------------------- rail, chart, order ticket */
+.fd-replay .rp-body { display: grid; grid-template-columns: 30px minmax(0, 1fr) 114px; }
+
+.fd-replay .rp-rail {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 6px 0; border-right: 1px solid var(--fd-hair); background: #0e0e17;
+    font-size: .58rem; color: var(--fd-dim);
+}
+.fd-replay .rp-rail i { padding: 5px 0; width: 100%; text-align: center; }
+.fd-replay .rp-rail i.on { color: var(--fd-brass); background: rgba(247,166,0,.09); }
+
+.fd-replay .rp-stage { position: relative; display: block; min-width: 0; }
+#rp-chart { display: block; width: 100%; height: clamp(160px, 17vw, 300px); }
+
+.fd-replay .rp-transport {
+    position: absolute; left: 50%; top: 8px; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 9px;
+    padding: 5px 10px; border-radius: 20px;
+    background: rgba(14,14,23,.94); border: 1px solid var(--fd-hair);
+    font-family: 'IBM Plex Mono', monospace; font-size: .5rem; color: var(--fd-smoke);
+    white-space: nowrap;
+}
+.fd-replay .rp-transport i:first-child { color: var(--fd-brass); }
+.fd-replay .rp-track { display: block; width: clamp(48px, 7vw, 100px); height: 2px;
+                       background: rgba(236,231,221,.16); border-radius: 2px; }
+.fd-replay .rp-track b { display: block; height: 100%; width: 0;
+                         background: var(--fd-brass); border-radius: 2px; }
 .fd-replay .rp-state {
-    padding: 2px 7px; border: 1px solid var(--fd-hair); border-radius: 2px;
-    color: var(--fd-smoke); white-space: nowrap;
+    position: absolute; left: 9px; top: 8px;
+    padding: 2px 7px; border-radius: 2px;
+    background: rgba(14,14,23,.9); border: 1px solid var(--fd-hair);
+    font-family: 'IBM Plex Mono', monospace; font-size: .5rem;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--fd-smoke);
 }
-.fd-replay .rp-state.long  { color: #35d07f; border-color: rgba(53,208,127,.4); }
-.fd-replay .rp-state.done  { color: var(--fd-brass); border-color: rgba(247,166,0,.4); }
+.fd-replay .rp-state.long { color: #35d07f; border-color: rgba(53,208,127,.42); }
+.fd-replay .rp-state.done { color: var(--fd-brass); border-color: rgba(247,166,0,.42); }
 
-#rp-chart { display: block; width: 100%; height: clamp(132px, 15vw, 196px); }
+.fd-replay .rp-ticket {
+    display: flex; flex-direction: column; gap: 6px; padding: 8px;
+    border-left: 1px solid var(--fd-hair); background: #0e0e17;
+    font-family: 'IBM Plex Mono', monospace; font-size: .5rem;
+}
+.fd-replay .rp-t-h { font-size: .46rem; letter-spacing: .14em; text-transform: uppercase;
+                     color: var(--fd-dim); }
+.fd-replay .rp-t-row { display: flex; justify-content: space-between; align-items: baseline;
+                       padding: 4px 6px; border: 1px solid var(--fd-hair); border-radius: 3px; }
+.fd-replay .rp-t-row i { color: var(--fd-dim); }
+.fd-replay .rp-t-row b { color: var(--fd-vellum); font-variant-numeric: tabular-nums; }
+.fd-replay .rp-t-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.fd-replay .rp-t-btns b {
+    padding: 5px 0; text-align: center; border-radius: 3px; font-size: .54rem;
+    font-weight: 600; letter-spacing: .04em;
+}
+.fd-replay .rp-t-btns .buy  { color: #35d07f; border: 1px solid rgba(53,208,127,.4);
+                              background: rgba(53,208,127,.08); }
+.fd-replay .rp-t-btns .sell { color: #ef454a; border: 1px solid rgba(239,69,74,.4);
+                              background: rgba(239,69,74,.07); }
+.fd-replay .rp-t-pos { margin-top: auto; padding-top: 6px; font-size: .46rem;
+                       line-height: 1.5; overflow-wrap: anywhere;
+                       border-top: 1px solid var(--fd-hair); color: var(--fd-smoke); }
+.fd-replay .rp-t-pos.long { color: #35d07f; }
 
+/* ------------------------------------------------------------- the dock */
 .fd-replay .rp-dock { display: block; border-top: 1px solid var(--fd-hair); }
 .fd-replay .rp-tabs {
-    display: flex; gap: 0; border-bottom: 1px solid var(--fd-hair);
+    display: flex; gap: 0; border-bottom: 1px solid var(--fd-hair); background: #0e0e17;
     font-family: 'IBM Plex Mono', monospace; font-size: .5rem;
-    letter-spacing: .14em; text-transform: uppercase;
+    letter-spacing: .13em; text-transform: uppercase;
 }
 .fd-replay .rp-tabs b {
-    padding: 7px 10px; font-weight: 500; color: var(--fd-dim);
+    padding: 7px 11px; font-weight: 500; color: var(--fd-dim);
     border-bottom: 1px solid transparent; margin-bottom: -1px;
     transition: color .3s ease, border-color .3s ease;
 }
 .fd-replay .rp-tabs b.on { color: var(--fd-vellum); border-bottom-color: var(--fd-brass); }
 .fd-replay .rp-read {
-    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1px; background: var(--fd-hair);
 }
-.fd-replay .rp-read span {
-    display: block; padding: 8px 10px; background: rgba(9,9,15,.97);
-    font-family: 'IBM Plex Mono', monospace;
-}
-.fd-replay .rp-read i {
-    display: block; font-style: normal; font-size: .48rem; letter-spacing: .16em;
-    text-transform: uppercase; color: var(--fd-dim);
-}
-.fd-replay .rp-read u {
-    display: block; margin-top: 4px; text-decoration: none;
-    font-size: .72rem; font-variant-numeric: tabular-nums; color: var(--fd-vellum);
-}
-.fd-replay .rp-read u.up   { color: #35d07f; }
+.fd-replay .rp-read span { display: block; padding: 7px 11px; background: #0b0b12;
+                           font-family: 'IBM Plex Mono', monospace; }
+.fd-replay .rp-read i { display: block; font-size: .46rem; letter-spacing: .15em;
+                        text-transform: uppercase; color: var(--fd-dim); }
+.fd-replay .rp-read u { display: block; margin-top: 3px; text-decoration: none;
+                        font-size: .68rem; font-variant-numeric: tabular-nums;
+                        color: var(--fd-vellum); }
+.fd-replay .rp-read u.up { color: #35d07f; }
 .fd-replay .rp-read u.down { color: #ef454a; }
 
 /* the affordance, which only has to be there once you are looking at it */
@@ -1421,9 +1492,18 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
        anything under the paragraph is something nobody saw. */
     .fd-open { grid-template-columns: 1fr; row-gap: 11px; padding-right: 0; }
     .fd-open-head, .fd-open-body, .fd-model { grid-column: auto; grid-row: auto; }
-    #rp-chart { height: 118px; }
-    .fd-replay .rp-top { padding: 7px 9px; gap: 7px; }
-    .fd-replay .rp-read span { padding: 7px 8px; }
+    /* A phone gets the chart, the clock and the score. The tool rail, the
+       order ticket and the balances are furniture you cannot press at this
+       size, and the terminal reads better without them than squeezed. */
+    #rp-chart { height: 126px; }
+    .fd-replay .rp-body { grid-template-columns: 1fr; }
+    .fd-replay .rp-rail, .fd-replay .rp-ticket { display: none; }
+    .fd-replay .rp-tick { gap: 10px; padding: 6px 9px; }
+    .fd-replay .rp-pair em { display: none; }
+    .fd-replay .rp-acct > span:not(.clk) { display: none; }
+    .fd-replay .rp-read { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .fd-replay .rp-read span { padding: 6px 9px; }
+    .fd-replay .rp-tabs b { padding: 6px 9px; }
 
     /* A hover badge floating over the dock has nothing to hover on a phone and
        lands on the third readout, so it becomes the bar along the bottom that

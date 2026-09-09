@@ -355,32 +355,71 @@
                   <h1 class="fd-display">Say it in plain English.<br>Get it back as evidence.</h1>
                 </div>
 
-                <!-- The other half of the desk, running. This is the Replay
-                     terminal in miniature playing the loop it is for: the tape
-                     moves one bar at a time, a trade goes on at a bar that had
-                     not happened yet, and the dock keeps the score. Pressing it
-                     goes to the Replay station rather than straight into the
-                     terminal, because somebody who has not read what it is yet
-                     should read that first.
+                <!-- The other half of the desk, running - the terminal
+                     itself, not a picture of it. Left rail, ticker, chart with
+                     its own axes, transport, order ticket, dock: the same
+                     furniture replay.html has, at a size that fits beside a
+                     paragraph, playing the loop it exists for. The tape steps
+                     forward a bar at a time, a trade goes on at a bar that has
+                     not happened yet, the account moves with it, and the dock
+                     keeps the score.
 
-                     Everything inside is drawn by front.js from a fixed series,
-                     so it is the same session every time and it is labelled as
-                     an example. -->
+                     Everything inside is drawn by front.js from one fixed
+                     series, so it is the same session on every load and it
+                     says so underneath. Pressing it goes to the Replay
+                     station, not into the terminal - somebody who has not read
+                     what it is should read that first. -->
                 <figure class="fd-model">
                   <button type="button" class="fd-replay" id="fd-replay" data-st="2"
                           aria-label="BarTest Replay - see what it does">
-                    <span class="rp-top">
-                      <i class="rp-live"></i>
-                      <b>GBPUSD</b><em>15m</em>
-                      <span class="rp-clock" id="rp-clock">09:15</span>
-                      <span class="rp-state" id="rp-state">Playing</span>
+
+                    <span class="rp-tick">
+                      <span class="rp-pair"><i class="rp-live"></i><b>GBPUSD</b>
+                            <em>Dukascopy &middot; 15m</em></span>
+                      <span class="rp-last"><b id="rp-price">1.2655</b>
+                            <u id="rp-chg">&mdash;</u></span>
+                      <span class="rp-acct">
+                        <span><i>Balance</i><b>$50,000</b></span>
+                        <span><i>Equity</i><b id="rp-eq">$50,000</b></span>
+                        <span><i>Unrealised</i><b id="rp-upl">$0.00</b></span>
+                        <span class="clk"><i>Replay clock</i><b id="rp-clock">17:15</b></span>
+                      </span>
                     </span>
 
-                    <canvas id="rp-chart" aria-hidden="true"></canvas>
+                    <span class="rp-body">
+                      <span class="rp-rail" aria-hidden="true">
+                        <i class="fa-solid fa-arrow-pointer on"></i>
+                        <i class="fa-solid fa-pen-nib"></i>
+                        <i class="fa-solid fa-ruler-horizontal"></i>
+                        <i class="fa-solid fa-draw-polygon"></i>
+                        <i class="fa-solid fa-wave-square"></i>
+                        <i class="fa-solid fa-font"></i>
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                      </span>
+
+                      <span class="rp-stage">
+                        <canvas id="rp-chart" aria-hidden="true"></canvas>
+                        <span class="rp-transport">
+                          <i class="fa-solid fa-play"></i>
+                          <i class="fa-solid fa-backward-step"></i>
+                          <i class="fa-solid fa-forward-step"></i>
+                          <span class="rp-track"><b id="rp-prog"></b></span>
+                          <em>1&times;</em>
+                        </span>
+                        <span class="rp-state" id="rp-state">Playing</span>
+                      </span>
+
+                      <span class="rp-ticket">
+                        <span class="rp-t-h">Order ticket</span>
+                        <span class="rp-t-row"><i>Size</i><b>0.10</b></span>
+                        <span class="rp-t-btns"><b class="buy">Buy</b><b class="sell">Sell</b></span>
+                        <span class="rp-t-pos" id="rp-pos">Flat</span>
+                      </span>
+                    </span>
 
                     <span class="rp-dock">
                       <span class="rp-tabs" id="rp-tabs">
-                        <b class="on">Position</b><b>Trade history</b><b>Performance</b>
+                        <b class="on">Positions</b><b>Trade history</b><b>Performance</b>
                       </span>
                       <span class="rp-read" id="rp-read"></span>
                     </span>
