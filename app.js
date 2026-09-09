@@ -1937,15 +1937,20 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <span id="nav-user-label">AGENT: ${displayName.toUpperCase()}</span>
                                 </div>
                             </div>
-                            <!-- A coin and a gem were two icons for one fact.
-                                 What somebody signed in actually wants to know
-                                 is which plan they are on, so the dock says
-                                 that, and clicking it still opens the plans. -->
-                            <div class="hud-slot plan" id="nav-plan-btn" title="Your plan">
+                            <!-- A coin and a gem were two icons for one fact,
+                                 so they became one word - but the word sat in
+                                 a hard box, which made it look like a button,
+                                 and pressing it offered the plans to somebody
+                                 who had already bought one. On a plan it is a
+                                 readout now, and it goes to the account page.
+                                 Without one it becomes the button, because
+                                 that is the person the button is for. -->
+                            <div class="hud-slot plan" id="nav-plan-btn">
                                 <div class="hud-icon-box">
+                                    <i class="plan-pip"></i>
                                     <span class="plan-tag" id="nav-plan-tag">&middot; &middot; &middot;</span>
                                 </div>
-                                <div class="hud-label-box"><span>PLAN</span></div>
+                                <div class="hud-label-box"><span id="nav-plan-hint">PLAN</span></div>
                             </div>
                             <div class="hud-slot logout" id="signout-btn">
                                 <div class="hud-icon-box">
@@ -1962,14 +1967,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     // the profile has been read, so it says nothing until then
                     // rather than saying the wrong thing.
                     if (window.BTAccess) BTAccess.get().then(a => {
-                        const el = document.getElementById('nav-plan-tag');
-                        if (!el) return;
-                        el.textContent = a.planLabel ? a.planLabel : 'Free plan';
-                        el.closest('.hud-slot')?.classList.toggle('is-paid', !!a.planLabel);
+                        const tag = document.getElementById('nav-plan-tag');
+                        const slot = document.getElementById('nav-plan-btn');
+                        const hint = document.getElementById('nav-plan-hint');
+                        if (!tag || !slot) return;
+                        const paid = !!a.planLabel;
+                        tag.textContent = paid ? a.planLabel : 'Get access';
+                        slot.classList.toggle('is-paid', paid);
+                        slot.classList.toggle('is-free', !paid);
+                        slot.title = paid ? a.planLabel + ' \u2014 opens your account'
+                                          : 'See the plans';
+                        if (hint) hint.textContent = paid ? 'YOUR ACCOUNT' : 'SEE THE PLANS';
                     });
 
                     document.getElementById('nav-agent-btn')?.addEventListener('click', openUserReportsModal);
-                    document.getElementById('nav-plan-btn')?.addEventListener('click', openSubscriptionModal);
+                    /* A plan somebody already pays for does not need selling
+                       to them again. The readout goes to the account page,
+                       where the renewal date and CHANGE PLAN are. Without a
+                       plan it is the shortest way to the plans. */
+                    document.getElementById('nav-plan-btn')?.addEventListener('click', function () {
+                        if (this.classList.contains('is-paid')) openUserReportsModal();
+                        else openSubscriptionModal();
+                    });
 
                     document.getElementById('signout-btn')?.addEventListener('click', async () => {
                         await supabaseClient.auth.signOut();

@@ -42,10 +42,12 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
        Cell coordinates in screens. Right, down, left, down, right — the shape
        a reader's eye already makes, turned into a floor plan. `hold` is how
        much of the scroll is spent standing still at that station relative to
-       a leg of travel; station zero holds longest because the night happens
-       there. */
+       a leg of travel. Station zero used to hold for three and a half screens
+       because a whole night ran there. The opening reads on a clock of its
+       own now, so the hold only has to be long enough for the tape behind it
+       to finish printing. */
     const ROUTE = [
-        { id: 'tape',    cx: 0, cy: 0, hold: 3.4, label: 'The tape' },
+        { id: 'tape',    cx: 0, cy: 0, hold: 2.0, label: 'The tape' },
         { id: 'machine', cx: 1, cy: 0, hold: 1.7, label: 'The machine' },
         { id: 'replay',  cx: 1, cy: 1, hold: 1.5, label: 'BarTest Replay' },
         { id: 'loop',    cx: 0, cy: 1, hold: 1.3, label: 'The loop' },
@@ -69,7 +71,7 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
     let VW = innerWidth, VH = innerHeight;
     const cam = { x: 0, y: 0, z: 1 };
     let at = 0;                       // nearest station
-    let nightP = 0;                   // 0..1 through the referendum night
+    let openP = 0;                    // 0..1 through station zero's hold
     let legK = 0;                     // 0 parked at a station, 1 mid-journey
 
     // ===================================================== the world canvas
@@ -222,231 +224,368 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
         c.setLineDash([]);
     }
 
-    // ============================================== the night, told by price
+    // ================================================ station zero, reading
 
-    const marksText = [
-        { at: h => h >= 1.5000,
-          text: 'A new high for the year. The market has decided it knows the answer.' },
-        { at: (h, l, c) => c <= 1.4500, text: 'Sunderland. The first number that does not fit.' },
-        { at: (h, l, c) => c <= 1.4000, text: 'Down four hundred pips. The desk is awake now.' },
-        { at: (h, l, c) => c <= 1.3500, text: 'No bid. This is the part nobody had a plan for.' },
-        { at: (h, l) => l <= 1.32300,
-          text: '1.32271 — the low. Thirty-one years since sterling was here.' }
+    /* The opening has one job: a stranger has to know what is sold here
+       before they scroll. Two attempts failed at it. A headline about a
+       candle over a chart read as atmosphere. A sentence churning character
+       by character into code was alive, but it showed a machine typing, and
+       nobody buys the typing.
+
+       What is unusual on this desk is the reading. So the screen reads. A
+       rule written the way a trader would say it out loud is taken phrase by
+       phrase, and each phrase lands in the slot of the specification it
+       fills. Six labelled gaps become a spec while you watch.
+
+       Every system here is written in full and marked up by hand rather than
+       matched with a pattern. The submission page has the regexes, where they
+       are reading something a person actually typed; a demonstration that
+       parses its own fixture would be theatre pretending to be a parser. */
+
+    const SYSTEMS = [
+        ['Buy when the ',
+         ['21 EMA crosses above the 55 EMA', 'Entry', 'EMA 21 \u2191 55'],
+         '. Stop ',
+         ['below the last swing low', 'Stop', 'Last swing low'],
+         ', and take ',
+         ['twice that as the target', 'Target', '2 \u00d7 risk'],
+         '. Run it on ',
+         ['EURUSD', 'Market', 'EURUSD'],
+         ', ',
+         ['one hour', 'Timeframe', '1 hour'],
+         ', ',
+         ['as far back as the data goes', 'History', '2016 \u2192 today'],
+         '.'],
+
+        ['Short when ',
+         ['RSI comes back under 70 from above', 'Entry', 'RSI 14 \u2193 70'],
+         '. Cover at ',
+         ['the 20 EMA', 'Exit', 'EMA 20'],
+         ', or at ',
+         ['three times the risk', 'Target', '3 \u00d7 risk'],
+         '. Risk ',
+         ['one per cent of the account on each trade', 'Size', '1% of equity'],
+         '. ',
+         ['GBPUSD', 'Market', 'GBPUSD'],
+         ', ',
+         ['fifteen minutes', 'Timeframe', '15 minutes'],
+         '.'],
+
+        ['Trade only ',
+         ['the London open', 'Session', 'London open'],
+         ', and only ',
+         ['the first pullback', 'Entry', 'First pullback'],
+         '. Be ',
+         ['flat by the New York close', 'Exit', 'NY close'],
+         ' \u2014 ',
+         ['nothing held overnight', 'Rule', 'No overnight'],
+         '. ',
+         ['Any major pair', 'Market', '7 majors'],
+         ', and ',
+         ['show me every trade it took', 'Output', 'Full trade log'],
+         '.']
     ];
-    const fired = marksText.map(() => false);
-    let position = null;
 
-    function tellNight() {
-        const rows = BREXIT.slice(0, shownBars);
-        let hi = -Infinity, lo = Infinity;
-        for (const r of rows) { if (r[1] > hi) hi = r[1]; if (r[2] < lo) lo = r[2]; }
-        const c = rows[rows.length - 1][3];
+    const IN_MS = 480, STEP_MS = 660, LIGHT_MS = 210, DWELL_MS = 2500, OUT_MS = 400;
 
-        const secs = BREXIT_START + (shownBars - 1) * BREXIT_STEP + 3600;  // London is UTC+1
-        const d = new Date(secs * 1000);
-        const clock = $('fd-clock'), day = $('fd-clock-day'), lastE = $('fd-last');
-        if (clock) clock.textContent = String(d.getUTCHours()).padStart(2, '0') + ':' +
-                                      String(d.getUTCMinutes()).padStart(2, '0');
-        if (day) day.textContent = d.getUTCDate() + ' June 2016 · London';
-        if (lastE) {
-            lastE.textContent = c.toFixed(5);
-            lastE.className = 'fd-tnum ' + (c >= BREXIT[0][0] ? 'fd-up' : 'fd-down');
+    let sysI = 0, cue = [], cueI = 0, cueT0 = 0, readOn = false;
+
+    const esc = t => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    const picks = sys => sys.filter(p => Array.isArray(p));
+
+    function setLive(t) { const e = $('fd-live-text'); if (e) e.textContent = t; }
+
+    function drawSystem() {
+        const line = $('fd-sentence'), slots = $('fd-slots');
+        if (!line || !slots) return;
+        const sys = SYSTEMS[sysI];
+        let html = '', n = 0;
+        sys.forEach(p => {
+            html += Array.isArray(p)
+                ? '<mark data-i="' + (n++) + '">' + esc(p[0]) + '</mark>'
+                : esc(p);
+        });
+        line.innerHTML = html;
+        slots.innerHTML = picks(sys).map((p, i) =>
+            '<div class="fd-slot" data-i="' + i + '">' +
+                '<span class="k">' + esc(p[1]) + '</span>' +
+                '<span class="v">' + esc(p[2]) + '</span>' +
+            '</div>').join('');
+        deck = makeDeck(sysI);
+        setLive('Backtest Machine \u00b7 reading');
+        const open = $('fd-open');
+        if (open) open.classList.remove('out');
+    }
+
+    function light(i) {
+        const m = document.querySelector('#fd-sentence mark[data-i="' + i + '"]');
+        if (m) m.classList.add('on');
+    }
+    function fill(i) {
+        const el = document.querySelector('#fd-slots .fd-slot[data-i="' + i + '"]');
+        if (el) el.classList.add('on');
+    }
+
+    /* One pass over one system, as a list of things to do and when. Built
+       fresh each time round so a system with a different number of phrases
+       simply takes a different length of time. */
+    function schedule() {
+        const n = picks(SYSTEMS[sysI]).length;
+        const out = [{ t: 0, go: drawSystem }];
+        for (let i = 0; i < n; i++) {
+            out.push({ t: IN_MS + i * STEP_MS,             go: () => light(i) });
+            out.push({ t: IN_MS + i * STEP_MS + LIGHT_MS,  go: () => fill(i) });
         }
+        const done = IN_MS + (n - 1) * STEP_MS + LIGHT_MS + 320;
+        out.push({ t: done, go: () => setLive('Backtest Machine \u00b7 ' + n + ' of ' + n + ' read') });
+        out.push({ t: done + DWELL_MS, go: () => {
+            const open = $('fd-open');
+            if (open) open.classList.add('out');
+        } });
+        out.push({ t: done + DWELL_MS + OUT_MS, go: () => {} });
+        return out;
+    }
 
-        const noteE = $('fd-note'), noteT = $('fd-note-text');
-        marksText.forEach((m, i) => {
-            if (fired[i] || shownBars <= FLOOR || !m.at(hi, lo, c)) return;
-            fired[i] = true;
-            if (noteT) noteT.textContent = m.text;
-            if (noteE) noteE.classList.add('on');
+    function readTick(t) {
+        if (!readOn) return;
+        paintCube(t);
+        const e = t - cueT0;
+        while (cueI < cue.length && cue[cueI].t <= e) cue[cueI++].go();
+        if (cueI >= cue.length) {
+            sysI = (sysI + 1) % SYSTEMS.length;
+            cue = schedule(); cueI = 0; cueT0 = t;
+        }
+        requestAnimationFrame(readTick);
+    }
+
+    /* Off the moment the camera leaves station zero or the tab is hidden, and
+       it starts the current system again rather than resuming mid-sentence -
+       half a read is not worth coming back to. */
+    function readWant(on) {
+        if (on === readOn) return;
+        readOn = on;
+        if (!on) return;
+        cue = schedule(); cueI = 0; cueT0 = performance.now();
+        requestAnimationFrame(readTick);
+    }
+
+    function startRead() {
+        deck = makeDeck(0);
+        fitCube();
+        drawSystem();
+        if (CALM) {
+            paintCube(2600);          // one frame, at an angle worth stopping on
+            const n = picks(SYSTEMS[0]).length;
+            for (let i = 0; i < n; i++) { light(i); fill(i); }
+            setLive('Backtest Machine \u00b7 ' + n + ' of ' + n + ' read');
+            return;
+        }
+        readWant(true);
+        document.addEventListener('visibilitychange',
+            () => readWant(!document.hidden && at === 0));
+    }
+
+    // ================================================= the object on the desk
+
+    /* A report has three sides. The market the system met, the curve that came
+       out of it and the log of every trade it took are one document, and a
+       page can only ever show you one of them at a time. So the opening
+       carries the document as an object: three faces of a slowly turning cube,
+       and the legend underneath names whichever one is pointing at you.
+
+       It is drawn from a fixed seed per system, which makes it an exhibit
+       rather than a number - the same shape on every load, and no figure
+       anywhere near it. The one set of real figures on this site is at station
+       one, attached to the report it came out of.
+
+       The maths is eleven lines: a point in cube space, one turn about the
+       upright, one fixed tilt, one perspective divide. A 3D library for that
+       would be a dependency for nothing. */
+
+    /* Origin, across, up, the outward normal, and which of the three things
+       is printed on it. Both faces of each opposing pair carry the same thing,
+       because a box with content on three sides only spends three quarters of
+       its turn looking like anything - for the other quarter you are staring
+       at the blank back of it. The floor is the one face nobody ever sees,
+       since the camera stands above. */
+    const FACES = [
+        { o: [-1, -1,  1], u: [ 2, 0,  0], v: [0, 2,  0], n: [ 0, 0,  1], k: 0 },
+        { o: [ 1, -1, -1], u: [-2, 0,  0], v: [0, 2,  0], n: [ 0, 0, -1], k: 0 },
+        { o: [ 1, -1,  1], u: [ 0, 0, -2], v: [0, 2,  0], n: [ 1, 0,  0], k: 1 },
+        { o: [-1, -1, -1], u: [ 0, 0,  2], v: [0, 2,  0], n: [-1, 0,  0], k: 1 },
+        { o: [-1,  1,  1], u: [ 2, 0,  0], v: [0, 0, -2], n: [ 0, 1,  0], k: 2 }
+    ];
+    const TILT = 0.32, DIST = 6.2, SPIN = 0.000232;     // radians per millisecond
+
+    const cube = $('fd-cube');
+    const cctx = cube ? cube.getContext('2d') : null;
+    let cubeW = 0, cubeH = 0, deck = null;
+
+    function fitCube() {
+        if (!cube || !cctx) return;
+        const r = cube.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        const dpr = Math.min(devicePixelRatio || 1, 2);
+        cubeW = r.width; cubeH = r.height;
+        cube.width = Math.round(r.width * dpr);
+        cube.height = Math.round(r.height * dpr);
+        cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    /* One report per system, the same one every time: the bars it was measured
+       over, the curve that came out, and which slots of the log are filled. */
+    function makeDeck(seed) {
+        let x = (seed + 7) * 90210;
+        const rnd = () => (x = (x * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+
+        const bars = [];
+        let p = 0.5, top = -Infinity, bot = Infinity;
+        for (let i = 0; i < 22; i++) {
+            const o = p;
+            p = p + (rnd() - 0.46) * 0.13;
+            const hi = Math.max(o, p) + rnd() * 0.055;
+            const lo = Math.min(o, p) - rnd() * 0.055;
+            if (hi > top) top = hi;
+            if (lo < bot) bot = lo;
+            bars.push([o, p, hi, lo]);
+        }
+        /* A random walk left alone sits in a band down the middle of the face
+           and reads as a flat line. Normalising it to the face is what a
+           chart does anyway - the axis fits the data. */
+        const span = (top - bot) || 1;
+        bars.forEach(b => {
+            for (let j = 0; j < 4; j++) b[j] = 0.10 + (b[j] - bot) / span * 0.80;
         });
 
-        if (position) {
-            const pips = (c - position.at) * 10000 * (position.side === 'long' ? 1 : -1);
-            const pl = $('fd-pos-pl');
-            if (pl) {
-                pl.textContent = (pips >= 0 ? '+' : '') + pips.toFixed(0) + ' pips';
-                pl.className = 'fd-tnum ' + (pips >= 0 ? 'fd-up' : 'fd-down');
-            }
+        const raw = [];
+        let v = 0;
+        for (let i = 0; i <= 40; i++) {
+            v += (i > 17 && i < 26 ? -0.58 : 0.36) + (rnd() - 0.5) * 1.3;
+            raw.push(v);
         }
+        const lo = Math.min.apply(null, raw), hi = Math.max.apply(null, raw);
+        const curve = raw.map((e, i) =>
+            [i / 40, 0.13 + (e - lo) / ((hi - lo) || 1) * 0.74]);
+
+        const log = [];
+        for (let i = 0; i < 63; i++) log.push(rnd() > 0.36);
+
+        return { bars: bars, curve: curve, log: log };
     }
 
-    function takePosition(side) {
-        const c = BREXIT[shownBars - 1][3];
-        position = { side: side, at: c };
-        const w = $('fd-pos');
-        if (w) w.hidden = false;
-        const s = $('fd-pos-side'), e = $('fd-pos-entry');
-        if (s) s.textContent = side === 'long' ? 'Long from' : 'Short from';
-        if (e) e.textContent = c.toFixed(5);
-        const b = $('fd-buy'), sl = $('fd-sell');
-        if (b) b.disabled = true;
-        if (sl) sl.disabled = true;
-        tellNight();
+    function turn(p, cs, sn) {
+        const x =  p[0] * cs + p[2] * sn;
+        const z = -p[0] * sn + p[2] * cs;
+        const ct = Math.cos(TILT), st = Math.sin(TILT);
+        return [x, p[1] * ct - z * st, p[1] * st + z * ct];
     }
 
-    // ================================================ act one, the machine
+    function paintCube(t) {
+        if (!cctx || !cubeW || !deck) return;
+        const rot = t * SPIN, cs = Math.cos(rot), sn = Math.sin(rot);
+        const k = Math.min(cubeW, cubeH) * 0.335;
 
-    /* The opening has to answer "what is this?" before anybody scrolls, and
-       it has to move while it does. So it runs the service on a loop: a rule
-       written the way a trader would say it turns into the code the desk
-       would write from it, and that turns into the report that comes back.
+        const P = p => {
+            const q = turn(p, cs, sn);
+            const f = DIST / (DIST - q[2]);
+            return [cubeW / 2 + q[0] * f * k, cubeH / 2 - q[1] * f * k];
+        };
 
-       One mechanism does all of it. The wave runs strictly left to right, so
-       at any instant a line is three pieces - what has already become the
-       next state, the handful of characters churning at the head, and the
-       tail that still reads as the state it is leaving. You watch English
-       become code in place, which is the product in one gesture. */
+        cctx.clearRect(0, 0, cubeW, cubeH);
+        cctx.lineJoin = cctx.lineCap = 'round';
 
-    const DEMO = [
-        { say:  ['Buy when the 21 EMA crosses above the 55 EMA.',
-                 'Stop below the last swing low. Target twice that.',
-                 'EURUSD, one hour, as far back as the data goes.'],
-          code: ['if (ema(21).crossesAbove(ema(55))) {',
-                 '    buy({ stop: swingLow(), target: risk * 2 });',
-                 '}   // EURUSD  1h  2016-01 -> today'] },
+        /* All twelve edges, front and back, so it stays a box you can see
+           through rather than a solid that hides its own far side. */
+        const C = [];
+        for (let i = 0; i < 8; i++)
+            C.push(P([(i & 1) ? 1 : -1, (i & 2) ? 1 : -1, (i & 4) ? 1 : -1]));
+        const E = [[0,1],[2,3],[4,5],[6,7],[0,2],[1,3],[4,6],[5,7],[0,4],[1,5],[2,6],[3,7]];
+        cctx.strokeStyle = 'rgba(236,231,221,.12)';
+        cctx.lineWidth = 1;
+        cctx.beginPath();
+        for (const e of E) { cctx.moveTo(C[e[0]][0], C[e[0]][1]); cctx.lineTo(C[e[1]][0], C[e[1]][1]); }
+        cctx.stroke();
 
-        { say:  ['Short when RSI comes back under 70 from above.',
-                 'Out at the 20 EMA, or at three times the risk.',
-                 'One per cent a trade. GBPUSD, fifteen minutes.'],
-          code: ['if (rsi(14).crossesUnder(70)) {',
-                 '    sell({ exit: ema(20), target: risk * 3 });',
-                 '}   // GBPUSD  15m  risk 1% of equity'] },
-
-        { say:  ['Only the London open, and only the first pullback.',
-                 'Flat by the New York close. Nothing held overnight.',
-                 'Any major pair. Show me every trade it took.'],
-          code: ['onSession("London", () => {',
-                 '    if (firstPullback()) buy({ flat: nyClose() });',
-                 '});   // all majors  -> full trade log'] }
-    ];
-
-    /* The third state is the same whichever rule was on screen, and it makes
-       no claim about that rule: it describes what the desk sends back. The
-       one set of figures on this page lives at station one, labelled with the
-       system it belongs to, and the curve here carries that same label. */
-    const BACK = ['report.pdf     1 attachment     emailed to you',
-                  'every trade listed - entry, exit, time on each',
-                  'bull, bear and ranging - usually within a day'];
-
-    const GLYPH = '#$%&/()[]{}<>=+*-_?!:;.,|~^0123456789'.split('');
-    const WAVE = 7;                 // characters churning at the head at once
-    const MORPH_MS = 950;
-    const HOLD = [2700, 2300, 3900];
-
-    const mo = { from: ['', '', ''], to: ['', '', ''] };
-    let ruleI = 0, seqI = 0, phase = 'morph', pT0 = 0, demoOn = false;
-    let demoWanted = true;
-
-    function stateLines(i) {
-        return i === 2 ? BACK : (i === 0 ? DEMO[ruleI].say : DEMO[ruleI].code);
-    }
-
-    function setStep(n) {
-        const ol = $('fd-steps');
-        if (ol) [].forEach.call(ol.children, (li, i) => li.classList.toggle('on', i === n));
-    }
-
-    function renderMorph(p) {
-        const host = $('fd-morph');
-        if (!host) return;
-        if (host.children.length !== 3) {
-            host.innerHTML = '<div class="ln"><s></s><em></em><u></u><i></i></div>'.repeat(3);
+        let best = 0, bestD = -2;
+        for (const F of FACES) {
+            const d = turn(F.n, cs, sn)[2];
+            if (d > bestD) { bestD = d; best = F.k; }
+            if (d > 0.05) paintFace(F.k, F, P, Math.min(1, (d - 0.05) / 0.34));
         }
-        for (let i = 0; i < 3; i++) {
-            const from = mo.from[i] || '', to = mo.to[i] || '';
-            const L = Math.max(from.length, to.length);
-            // each line sets off a little after the one above it, so the wave
-            // crosses the block on a diagonal rather than as a wall
-            const q = clamp((p - i * 0.09) / (1 - 0.18), 0, 1);
-            const head = q * (L + WAVE);
-            const done = Math.round(clamp(head - WAVE, 0, L));
-            const hot = Math.round(clamp(head, 0, L));
-            let churn = '';
-            for (let k = done; k < hot; k++) churn += GLYPH[(Math.random() * GLYPH.length) | 0];
-            const ln = host.children[i];
-            ln.children[0].textContent = to.slice(0, done);
-            ln.children[1].textContent = churn;
-            ln.children[2].textContent = from.slice(hot);
+
+        const legend = $('fd-faces');
+        if (legend) [].forEach.call(legend.children,
+            (b, i) => b.classList.toggle('on', i === best));
+    }
+
+    function paintFace(i, F, P, fade) {
+        const at = (a, b) => P([F.o[0] + F.u[0] * a + F.v[0] * b,
+                                F.o[1] + F.u[1] * a + F.v[1] * b,
+                                F.o[2] + F.u[2] * a + F.v[2] * b]);
+        // a rectangle in face coordinates, which is a quadrilateral on screen
+        const box = (a, b, w, h) => {
+            const p0 = at(a, b), p1 = at(a + w, b), p2 = at(a + w, b + h), p3 = at(a, b + h);
+            cctx.beginPath();
+            cctx.moveTo(p0[0], p0[1]); cctx.lineTo(p1[0], p1[1]);
+            cctx.lineTo(p2[0], p2[1]); cctx.lineTo(p3[0], p3[1]);
+            cctx.closePath(); cctx.fill();
+        };
+        const edge = () => {
+            const p = [at(0, 0), at(1, 0), at(1, 1), at(0, 1)];
+            cctx.strokeStyle = 'rgba(236,231,221,' + (0.10 + 0.17 * fade).toFixed(3) + ')';
+            cctx.lineWidth = 1;
+            cctx.beginPath();
+            cctx.moveTo(p[0][0], p[0][1]);
+            for (let j = 1; j < 4; j++) cctx.lineTo(p[j][0], p[j][1]);
+            cctx.closePath(); cctx.stroke();
+        };
+        const rule = (a0, a1, b, alpha) => {
+            const p0 = at(a0, b), p1 = at(a1, b);
+            cctx.strokeStyle = 'rgba(236,231,221,' + (alpha * fade).toFixed(3) + ')';
+            cctx.lineWidth = 1;
+            cctx.beginPath(); cctx.moveTo(p0[0], p0[1]); cctx.lineTo(p1[0], p1[1]); cctx.stroke();
+        };
+
+        edge();
+
+        if (i === 0) {
+            for (let g = 1; g < 4; g++) rule(0.05, 0.95, g / 4, 0.055);
+            const last = deck.bars[deck.bars.length - 1][1];
+            const pl = at(0.05, last), pr = at(0.95, last);
+            cctx.strokeStyle = 'rgba(247,166,0,' + (0.34 * fade).toFixed(3) + ')';
+            cctx.lineWidth = 1;
+            cctx.setLineDash([3, 4]);
+            cctx.beginPath(); cctx.moveTo(pl[0], pl[1]); cctx.lineTo(pr[0], pr[1]); cctx.stroke();
+            cctx.setLineDash([]);
+
+            const n = deck.bars.length, w = 0.9 / n;
+            deck.bars.forEach((bar, j) => {
+                const x = 0.05 + j * w, up = bar[1] >= bar[0];
+                cctx.fillStyle = up ? 'rgba(32,178,108,' + (0.85 * fade).toFixed(3) + ')'
+                                    : 'rgba(239,69,74,' + (0.8 * fade).toFixed(3) + ')';
+                box(x + w * 0.42, bar[3], w * 0.16, bar[2] - bar[3]);
+                box(x + w * 0.12, Math.min(bar[0], bar[1]), w * 0.76,
+                    Math.max(0.008, Math.abs(bar[1] - bar[0])));
+            });
+        } else if (i === 1) {
+            rule(0.05, 0.95, 0.13, 0.08);
+            cctx.strokeStyle = 'rgba(247,166,0,' + (0.92 * fade).toFixed(3) + ')';
+            cctx.lineWidth = 1.7;
+            cctx.beginPath();
+            deck.curve.forEach((pt, j) => {
+                const q = at(0.05 + pt[0] * 0.9, pt[1]);
+                if (j) cctx.lineTo(q[0], q[1]); else cctx.moveTo(q[0], q[1]);
+            });
+            cctx.stroke();
+        } else {
+            const cols = 9;
+            deck.log.forEach((on, j) => {
+                const cx = j % cols, cy = (j / cols) | 0;
+                cctx.fillStyle = on ? 'rgba(247,166,0,' + (0.55 * fade).toFixed(3) + ')'
+                                    : 'rgba(236,231,221,' + (0.14 * fade).toFixed(3) + ')';
+                box(0.08 + cx * 0.095, 0.10 + cy * 0.115, 0.062, 0.062);
+            });
         }
-    }
-
-    function sparkOn(on) {
-        const row = document.querySelector('.fd-sparkrow');
-        const svg = $('fd-spark');
-        if (!row || !svg) return;
-        row.classList.toggle('on', on);
-        if (!on) return;
-        if (!svg.dataset.built) {
-            svg.innerHTML = '<path class="line" d="' + equityPath() + '"/>';
-            svg.dataset.built = '1';
-        }
-        const line = svg.querySelector('.line');
-        const len = line.getTotalLength();
-        line.style.transition = 'none';
-        line.style.strokeDasharray = len;
-        line.style.strokeDashoffset = len;
-        line.getBoundingClientRect();
-        line.style.transition = 'stroke-dashoffset 2.2s cubic-bezier(.3,.9,.3,1)';
-        line.style.strokeDashoffset = '0';
-    }
-
-    function demoTick(t) {
-        if (!demoOn) return;
-        const host = $('fd-morph');
-        if (phase === 'morph') {
-            const p = clamp((t - pT0) / MORPH_MS, 0, 1);
-            renderMorph(p);
-            if (p >= 1) {
-                mo.from = mo.to;
-                phase = 'hold'; pT0 = t;
-                if (host) host.classList.toggle('caret', seqI === 0);
-            }
-        } else if (t - pT0 > HOLD[seqI]) {
-            seqI = (seqI + 1) % 3;
-            if (seqI === 0) ruleI = (ruleI + 1) % DEMO.length;
-            mo.to = stateLines(seqI);
-            phase = 'morph'; pT0 = t;
-            setStep(seqI);
-            if (host) host.classList.remove('caret');
-            sparkOn(seqI === 2);
-        }
-        requestAnimationFrame(demoTick);
-    }
-
-    function demoWant(on) {
-        if (on === demoOn) return;
-        demoOn = on;
-        if (on) { pT0 = performance.now(); requestAnimationFrame(demoTick); }
-    }
-
-    function startDemo() {
-        mo.from = ['', '', ''];
-        mo.to = stateLines(0);
-        setStep(0);
-        if (CALM) { renderMorph(1); return; }
-        phase = 'morph';
-        demoWant(true);
-        document.addEventListener('visibilitychange',
-            () => demoWant(!document.hidden && demoWanted));
-    }
-
-    /* Act one hands the screen to act two in place. Both sit in the same grid
-       cell, so this is a cross-fade rather than a second screen, and it is
-       over inside the first tenth of station zero's hold - long before the
-       night has anything to say. */
-    function paintOpen() {
-        const o = $('fd-open'), n = $('fd-night');
-        if (!o || !n) return;
-        const k = clamp((nightP - 0.03) / 0.17, 0, 1);
-        o.style.opacity = (1 - k).toFixed(3);
-        o.style.transform = 'translateY(' + (-16 * k).toFixed(1) + 'px)';
-        o.style.pointerEvents = k > 0.5 ? 'none' : 'auto';
-        n.style.opacity = k.toFixed(3);
-        n.style.transform = 'translateY(' + (14 * (1 - k)).toFixed(1) + 'px)';
-        n.style.pointerEvents = k > 0.5 ? 'auto' : 'none';
-        demoWanted = k < 0.6 && at === 0;
-        demoWant(demoWanted && !document.hidden);
     }
 
     // ============================================================ the camera
@@ -477,9 +616,9 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
         legK = Math.sin(Math.PI * leg);
         at = leg > 0.5 ? b : a;
 
-        // the night runs through station zero's hold and nowhere else
+        // the tape prints across station zero's hold and nowhere else
         const s0 = sp[0];
-        nightP = clamp((t - s0.from) / (s0.to - s0.from), 0, 1);
+        openP = clamp((t - s0.from) / (s0.to - s0.from), 0, 1);
     }
 
     function applyCamera() {
@@ -516,23 +655,12 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
 
         place(p);
 
-        const want = Math.max(FLOOR, Math.round(FLOOR + nightP * (BREXIT.length - FLOOR)));
-        if (want !== shownBars) { shownBars = want; tellNight(); }
+        shownBars = Math.max(FLOOR,
+            Math.round(FLOOR + openP * (BREXIT.length - FLOOR)));
 
-        paintOpen();
+        readWant(at === 0 && !document.hidden);
         document.body.classList.toggle('fd-moved', p > 0.004);
-        document.body.classList.toggle('fd-underway', nightP > 0.4);
-        document.body.classList.toggle('fd-night-over', nightP > 0.985);
         document.body.classList.toggle('fd-stuck', p > 0.02);
-
-        /* The ticket opens as soon as the market starts moving. Going long at
-           half past eleven and then scrolling into the crash is the product in
-           one gesture. */
-        if (nightP > 0.01 && !position) {
-            const b = $('fd-buy'), s = $('fd-sell');
-            if (b) b.disabled = false;
-            if (s) s.disabled = false;
-        }
 
         applyCamera();
     }
@@ -555,6 +683,7 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
            any display. */
         if (track) track.style.height = (marks.total * VH + VH) + 'px';
         fitCanvas();
+        fitCube();
         read();
     }
 
@@ -684,10 +813,6 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
         const close = $('abort-console-btn');
         if (close) close.addEventListener('click',
             () => document.body.classList.remove('fd-console'));
-
-        const buy = $('fd-buy'), sell = $('fd-sell');
-        if (buy) buy.addEventListener('click', () => takePosition('long'));
-        if (sell) sell.addEventListener('click', () => takePosition('short'));
     }
 
     /* Straight in. The old flow put a description panel between the click and
@@ -792,11 +917,10 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
         wire();
         wireSubmitPage();
 
-        startDemo();
+        startRead();
 
         if (CALM) {
             shownBars = BREXIT.length;
-            tellNight();
             paintReport();
             document.querySelectorAll('.fd-station').forEach(el => el.classList.add('near'));
             return;
@@ -805,8 +929,6 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
         addEventListener('scroll', onScroll, { passive: true });
         addEventListener('resize', measure, { passive: true });
         measure();
-        paintOpen();
-        tellNight();
 
         /* The report draws itself the first time its station is the one you
            are standing at, not on a timer and not on load. */

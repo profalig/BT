@@ -171,52 +171,6 @@ body.fd-stuck #fd-nav {
 }
 @media (max-width: 720px) { #fd-rail { display: none; } }
 
-/* ============================================== station 0 — the front door */
-
-.fd-say h1 { margin: 0; font-size: clamp(2.1rem, 5.4vw, 4.3rem); color: var(--fd-vellum);
-             text-shadow: 0 2px 34px rgba(6,5,14,.95); max-width: 15ch; }
-.fd-say p { max-width: 34ch; margin: 15px 0 0; color: var(--fd-vellum);
-            font-size: clamp(.92rem, 1.5vw, 1.05rem);
-            text-shadow: 0 1px 20px rgba(6,5,14,.96); }
-.fd-say { transition: opacity .6s ease; }
-body.fd-underway .fd-say { opacity: .2; }
-body.fd-night-over .fd-say { opacity: 0; }
-
-.fd-clockline {
-    display: flex; align-items: baseline; gap: 13px; flex-wrap: wrap; margin-bottom: 16px;
-    font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums;
-}
-.fd-clockline b { font-size: 1.45rem; font-weight: 500; letter-spacing: .04em; }
-.fd-clockline span { font-size: .64rem; letter-spacing: .16em;
-                     text-transform: uppercase; color: var(--fd-dim); }
-.fd-clockline .tag { border: 1px solid var(--fd-hair); border-radius: 2px; padding: 2px 7px; }
-
-.fd-note {
-    display: flex; align-items: baseline; gap: 12px; margin-top: 20px; min-height: 1.4em;
-    font-family: 'IBM Plex Mono', monospace; font-size: clamp(.78rem, 1.5vw, .92rem);
-    color: var(--fd-vellum); opacity: 0; transform: translateY(6px);
-    transition: opacity .45s ease, transform .45s ease;
-}
-.fd-note.on { opacity: 1; transform: none; }
-.fd-note i { font-style: normal; flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%;
-             background: var(--fd-brass); transform: translateY(-2px);
-             box-shadow: 0 0 0 4px rgba(247,166,0,.16); }
-
-.fd-desk { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
-.fd-read { display: flex; align-items: baseline; gap: 8px;
-           font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums;
-           font-size: .85rem; }
-.fd-read[hidden] { display: none; }
-.fd-read span { color: var(--fd-dim); font-size: .64rem; letter-spacing: .16em;
-                text-transform: uppercase; }
-.fd-read b { font-weight: 600; }
-
-.fd-facts { display: flex; gap: 26px; flex-wrap: wrap; margin: 22px 0 0; }
-.fd-facts dt { font-family: 'IBM Plex Mono', monospace; font-size: .58rem;
-               letter-spacing: .18em; text-transform: uppercase; color: var(--fd-dim); }
-.fd-facts dd { margin: 4px 0 0; font-family: 'IBM Plex Mono', monospace;
-               font-variant-numeric: tabular-nums; font-size: .96rem; font-weight: 500; }
-
 .fd-cue { position: fixed; left: 50%; bottom: clamp(14px, 4vh, 36px); z-index: 890;
           transform: translateX(-50%); display: flex; flex-direction: column;
           align-items: center; gap: 7px; pointer-events: none;
@@ -424,7 +378,6 @@ body.fd-moved .fd-cue { opacity: 0; }
    quiet and monospaced. */
 
 .fd-station h2 { font-size: clamp(2.1rem, 4.6vw, 4.1rem); letter-spacing: -.022em; }
-.fd-say h1     { font-size: clamp(2.4rem, 6vw, 5rem);      letter-spacing: -.026em; }
 .fd-card h3    { font-size: clamp(1.4rem, 2.7vw, 2.1rem);  letter-spacing: -.016em; }
 
 .fd-station p { font-size: clamp(.94rem, 1.15vw, 1.06rem); max-width: 62ch; }
@@ -1020,6 +973,11 @@ body.fd-stuck #auth-corner .hud-slot { border-color: transparent !important; }
                           margin-top: 6px; }
 .sc-rail .rail-credit-who { font-size: .76rem !important; color: var(--fd-smoke) !important;
                             margin-top: 6px; }
+/* app.js has always hidden the upgrade button once a plan is unlimited, but
+   `.rail-btn` sets display:flex and an author rule beats the browser's own
+   [hidden] {display:none} whatever the specificity. So it was still offering
+   the plans to somebody already on one. */
+.sc-rail .rail-btn[hidden] { display: none; }
 .sc-rail .rail-btn { justify-content: center; width: 100%;
                      border: 1px solid var(--fd-hair-2) !important;
                      background: transparent !important; color: var(--fd-vellum) !important;
@@ -1071,6 +1029,12 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
 @media (max-width: 820px) {
 
     .fd-station { padding: 68px clamp(16px, 5vw, 26px) 22px; align-items: center; }
+
+    /* The cue is a fixed overlay, so on a short screen it lands on the last
+       line of whatever station is under it. It keeps its words and drops the
+       stroke below them, which is the half of it that took up the room. */
+    .fd-cue { bottom: 8px; }
+    .fd-cue span { display: none; }
     .fd-inner { max-height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch;
                 overscroll-behavior: contain; }
 
@@ -1091,8 +1055,27 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
     .fd-loop p { font-size: .82rem; }
 
     .fd-rules { font-size: .74rem !important; }
-    .fd-metrics { grid-template-columns: repeat(2, 1fr); }
-    #fd-curve { height: 92px; }
+
+    /* The example report was the one thing on the route that did not fit a
+       phone: two columns of figures over three rows, under a title that wrapped
+       and a curve sized for a desk, and the last row of it fell off the bottom
+       of the screen. Three columns over two rows is the same six figures in one
+       row less, and the rest is trimmed to match. */
+    .fd-report-top { padding: 10px 14px; gap: 10px; flex-wrap: nowrap; }
+    .fd-report-top h4 { font-size: .82rem; line-height: 1.3; }
+    .fd-report-top .ex { font-size: .5rem; letter-spacing: .14em; padding: 3px 6px;
+                         white-space: nowrap; }
+    .fd-metrics { grid-template-columns: repeat(3, 1fr); }
+    .fd-metrics > div { padding: 8px 10px; }
+    .fd-metrics dt { font-size: .52rem; letter-spacing: .1em; }
+    .fd-metrics dd { font-size: .92rem; }
+    #fd-curve { height: 78px; }
+
+    /* and the contact rows give back the height the fine print needs, which
+       is set at the size fine print is set at anyway */
+    .fd-map a, .fd-map .soon-cell { padding: 13px 18px 13px 0; }
+    .fd-station .fd-fine { margin-top: 12px !important; font-size: .72rem;
+                           line-height: 1.5; }
 
     /* the plans, as a swipe rather than a column that never ends */
     .fd-cycle { margin-top: 14px; }
@@ -1175,35 +1158,54 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
 
 
 /* ==========================================================================
-   STATION ZERO, ACT ONE - THE MACHINE, RUNNING
+   STATION ZERO - THE DESK READS YOUR SENTENCE
 
-   The first screen used to be a mood: a headline about a candle over a chart
-   that did nothing until you scrolled. It read as atmosphere, not as a
-   business. So the opening now performs the service instead of describing
-   it - a rule in the words a trader would use sweeps into the code the desk
-   would write from it, and that sweeps into the report that comes back.
+   Two openings failed here before this one. The first was a mood: a headline
+   about a candle over a chart that did nothing until you scrolled, which read
+   as atmosphere rather than as a business. The second ran the machine - a
+   sentence churning character by character into code - which was alive but
+   showed the wrong thing. Nobody buys the typing.
 
-   The sweep runs strictly left to right, which is why one line only ever
-   needs three spans: what has already turned into the next state, the few
-   characters churning at the head of the wave, and what has not been reached
-   yet. That last part still reads as the previous state, so you watch English
-   turn into code in place.
+   What is unusual on this desk is the reading. So the opening reads: a rule
+   in the words a trader would use is taken phrase by phrase, and every phrase
+   lands in the slot of the specification it fills. Six labelled gaps become a
+   spec while you watch, and the contrast does the explaining - what has been
+   read is bright, what has not is not.
 
-   Act one and act two share one grid cell and cross-fade on scroll, so the
-   handover to the market happens where you are already looking.
+   No figures are quoted here. The one set of numbers on this site lives at
+   station one, attached to the example report it came out of, and this screen
+   is careful not to imply a second one.
    ========================================================================== */
 
-.fd-stack { display: grid; }
-.fd-stack > * { grid-area: 1 / 1; align-self: center; }
+/* Words on the left, the thing itself on the right. A reader who does not
+   want to read a sentence still gets an object turning at them, and a reader
+   who does gets the explanation beside it.
 
-.fd-open, .fd-night { transition: opacity .25s linear; }
+   The headline and the reading are two separate blocks rather than one, so
+   that a phone can put the object between them instead of leaving it at the
+   bottom of a screen nobody scrolled to the end of. */
+.fd-open {
+    display: grid; align-items: start;
+    grid-template-columns: minmax(0, 1fr) clamp(230px, 27vw, 400px);
+    column-gap: clamp(20px, 3.6vw, 56px);
+}
+.fd-open-head { grid-column: 1; grid-row: 1; min-width: 0; }
+.fd-open-body { grid-column: 1; grid-row: 2; min-width: 0; }
+.fd-model     { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+/* The compass is fixed to the right edge of the window and its label reaches
+   about a hundred pixels in from it. Everywhere else on the route that strip
+   lands on a paragraph, which survives it; here it would land on the corner
+   of the object, so the opening keeps the strip clear. */
+@media (min-width: 721px) { .fd-open { padding-right: 104px; } }
 
-/* the running light */
+/* the running light. The word after the dot is swapped by front.js, so the
+   badge says which phase the reading is in rather than a fixed slogan. */
 .fd-live {
     display: inline-flex; align-items: center; gap: 10px;
     font-family: 'IBM Plex Mono', monospace; font-size: .62rem;
     letter-spacing: .22em; text-transform: uppercase; color: var(--fd-brass);
 }
+.fd-live b { font-weight: inherit; }
 .fd-live i {
     width: 6px; height: 6px; border-radius: 50%; background: var(--fd-brass);
     animation: fd-pulse 2.6s ease-out infinite;
@@ -1219,139 +1221,196 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
     color: var(--fd-vellum); text-shadow: 0 2px 34px rgba(6,5,14,.95);
 }
 
-/* three steps, which are also the whole explanation of the service */
-.fd-steps {
-    list-style: none; display: flex; flex-wrap: wrap; gap: 0;
-    margin: 28px 0 0; padding: 0; border-top: 1px solid var(--fd-hair);
+/* the sentence. Unread text sits at the dimmest colour on the page and read
+   text at the brightest, so the wave of attention moving through it is the
+   whole animation - no cursor, no typing, no glyphs pretending to be code. */
+.fd-sentence {
+    margin: 30px 0 0; max-width: 46ch; min-height: 5.6em;
+    font-size: clamp(1rem, 1.45vw, 1.17rem); line-height: 1.85;
+    color: var(--fd-dim); text-shadow: 0 1px 20px rgba(6,5,14,.96);
 }
-.fd-steps li {
-    display: flex; align-items: baseline; gap: 10px; padding: 11px 30px 11px 0;
-    font-family: 'IBM Plex Mono', monospace; font-size: .64rem;
-    letter-spacing: .18em; text-transform: uppercase; color: var(--fd-dim);
-    transition: color .4s ease;
+.fd-sentence mark {
+    -webkit-box-decoration-break: clone; box-decoration-break: clone;
+    padding: 2px 2px; border-radius: 2px;
+    color: var(--fd-smoke);
+    background-color: transparent;
+    background-image: linear-gradient(rgba(247,166,0,.17), rgba(247,166,0,.17));
+    background-repeat: no-repeat; background-size: 0% 100%;
+    transition: background-size .5s cubic-bezier(.3,.9,.3,1), color .5s ease;
 }
-.fd-steps li b { font-weight: 500; color: var(--fd-dim); transition: color .4s ease; }
-.fd-steps li.on { color: var(--fd-vellum); }
-.fd-steps li.on b { color: var(--fd-brass); }
+.fd-sentence mark.on { background-size: 100% 100%; color: var(--fd-vellum); }
 
-/* the line that turns into itself */
-.fd-morph {
-    margin-top: 16px; min-height: calc(3 * 1.9em);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: clamp(.76rem, 1.22vw, .95rem); line-height: 1.9;
-    white-space: pre-wrap; word-break: break-word;
+/* what the reading fills in. Every slot is labelled from the start, so the
+   shape of a finished specification is on screen before any of it is known,
+   and each rule turns brass as its own phrase is reached. */
+.fd-slots {
+    display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 16px clamp(13px, 2.1vw, 26px);
+    margin-top: 30px; max-width: 860px;
 }
-.fd-morph .ln { min-height: 1.9em; }
-.fd-morph s  { text-decoration: none; color: var(--fd-vellum); }
-.fd-morph em { font-style: normal; color: var(--fd-brass); }
-.fd-morph u  { text-decoration: none; color: var(--fd-smoke); }
-.fd-morph i  {
-    display: none; width: .55em; height: 1.05em; margin-left: 1px;
-    background: var(--fd-brass); vertical-align: -.17em;
+.fd-slot { position: relative; padding: 12px 0 0; border-top: 1px solid var(--fd-hair); }
+.fd-slot::before {
+    content: ''; position: absolute; left: 0; right: 0; top: -1px; height: 1px;
+    background: var(--fd-brass);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .45s cubic-bezier(.3,.9,.3,1);
 }
-.fd-morph.caret .ln:last-child i { display: inline-block; animation: fd-blink 1.05s steps(1) infinite; }
-@keyframes fd-blink { 50% { opacity: 0; } }
+.fd-slot.on::before { transform: scaleX(1); }
+.fd-slot .k {
+    display: block; font-family: 'IBM Plex Mono', monospace;
+    font-size: .55rem; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--fd-dim); transition: color .4s ease;
+}
+.fd-slot.on .k { color: var(--fd-brass); }
+.fd-slot .v {
+    display: block; margin-top: 7px;
+    font-family: 'IBM Plex Mono', monospace; font-size: .8rem; line-height: 1.45;
+    color: var(--fd-vellum);
+    opacity: 0; transform: translateY(7px);
+    transition: opacity .4s ease, transform .4s cubic-bezier(.3,.9,.3,1);
+}
+.fd-slot.on .v { opacity: 1; transform: none; }
 
-/* the report, drawing itself. The space is reserved whether or not it is
-   showing, so the block above it never moves. */
-.fd-sparkrow {
-    display: flex; align-items: center; gap: 16px; height: 46px; margin-top: 12px;
-    max-width: 640px;
-}
-.fd-sparkrow .cap {
-    flex: 0 0 auto; max-width: 40%; line-height: 1.5;
-    font-family: 'IBM Plex Mono', monospace; font-size: .56rem;
-    letter-spacing: .16em; text-transform: uppercase; color: var(--fd-dim);
-    opacity: 0; transition: opacity .5s ease;
-}
-.fd-spark { flex: 1 1 auto; height: 46px; opacity: 0; transition: opacity .5s ease; }
-.fd-spark .line { fill: none; stroke: var(--fd-brass); stroke-width: 2;
-                  vector-effect: non-scaling-stroke; }
-.fd-sparkrow.on .cap, .fd-sparkrow.on .fd-spark { opacity: 1; }
+/* one system hands over to the next. Only the sentence and the slots go -
+   the headline and the paragraph are the page, not the demonstration. */
+.fd-sentence, .fd-slots { transition: opacity .34s ease; }
+.fd-open.out .fd-sentence, .fd-open.out .fd-slots { opacity: 0; }
 
 .fd-openlede {
-    max-width: 52ch; margin: 22px 0 0;
+    max-width: 52ch; margin: 26px 0 0;
     font-size: clamp(.92rem, 1.4vw, 1.02rem);
     text-shadow: 0 1px 20px rgba(6,5,14,.96);
 }
-.fd-open .fd-actions { margin-top: 22px; }
+
+/* The report, as an object with three sides. The legend under it names the
+   face that is currently pointing at you, so the turning is legible instead
+   of being decoration that happens to rotate. */
+.fd-model { margin: 0; min-width: 0; }
+#fd-cube { display: block; width: 100%; height: clamp(230px, 27vw, 400px); }
+.fd-model figcaption {
+    display: flex; flex-direction: column; gap: 7px; margin-top: 10px;
+    font-family: 'IBM Plex Mono', monospace; font-size: .55rem;
+    letter-spacing: .18em; text-transform: uppercase;
+}
+.fd-model .ex { color: var(--fd-dim); }
+.fd-model .faces { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.fd-model .faces b { font-weight: 500; color: var(--fd-dim); transition: color .55s ease; }
+.fd-model .faces b.on { color: var(--fd-brass); }
 
 /* the opening arrives in order, once */
-.fd-open > * { animation: fd-rise .75s cubic-bezier(.16,.84,.3,1) both; }
-.fd-open > *:nth-child(1) { animation-delay: .10s; }
-.fd-open > *:nth-child(2) { animation-delay: .18s; }
-.fd-open > *:nth-child(3) { animation-delay: .30s; }
-.fd-open > *:nth-child(4) { animation-delay: .38s; }
-.fd-open > *:nth-child(5) { animation-delay: .46s; }
-.fd-open > *:nth-child(6) { animation-delay: .54s; }
-.fd-open > *:nth-child(7) { animation-delay: .62s; }
+.fd-open-head > *, .fd-open-body > *, .fd-model {
+    animation: fd-rise .8s cubic-bezier(.16,.84,.3,1) both;
+}
+.fd-open-head > *:nth-child(1) { animation-delay: .10s; }
+.fd-open-head > *:nth-child(2) { animation-delay: .20s; }
+.fd-model                      { animation-delay: .30s; }
+.fd-open-body > *:nth-child(1) { animation-delay: .40s; }
+.fd-open-body > *:nth-child(2) { animation-delay: .48s; }
+.fd-open-body > *:nth-child(3) { animation-delay: .56s; }
 @keyframes fd-rise { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-    .fd-open > * { animation: none !important; }
+    /* front.js paints one system fully read and stops, so nothing here needs
+       to move for the screen to make sense. */
+    .fd-open-head > *, .fd-open-body > *, .fd-model { animation: none !important; }
     .fd-live i { animation: none !important; }
-    /* Nothing drives the cross-fade when the camera is switched off, so the
-       two acts stop sharing a cell and become what they are: the machine,
-       then the night. */
-    .fd-stack { display: block; }
-    .fd-night { margin-top: 40px; padding-top: 34px; border-top: 1px solid var(--fd-hair); }
+    .fd-sentence mark, .fd-slot::before, .fd-slot .k, .fd-slot .v,
+    .fd-sentence, .fd-slots { transition: none !important; }
+}
+
+/* Six across needs the whole width of a wide desk. Anywhere narrower the
+   object is taking a third of the row, so the spec folds to two rows of three
+   rather than squeezing six columns until the values wrap inside them. */
+@media (max-width: 1440px) and (min-width: 721px) {
+    .fd-slots { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 580px; }
+}
+
+/* Between the phone and a wide desk the words share the row with the object,
+   so the headline is sized against the column it is actually in rather than
+   against the window - otherwise the second line breaks in the middle. */
+@media (min-width: 721px) and (max-width: 1560px) {
+    .fd-open h1 { font-size: clamp(1.85rem, 3.3vw, 3.4rem); }
 }
 
 @media (max-width: 720px) {
-    /* Act two is the taller of the two, and the two share one grid row: if it
-       does not fit the row, the row scrolls and act one inherits a scrollbar
-       it has no use for. So the night is tightened until both fit. */
-    .fd-night .fd-say p { margin-top: 11px; }
-    .fd-night .fd-note  { margin-top: 16px; }
-    .fd-night .fd-desk  { margin-top: 15px; }
-    .fd-night .fd-facts { margin-top: 16px; gap: 16px 22px; }
+    /* One column, and the object sits between the headline and the reading
+       rather than at the bottom - a phone screen is short enough that
+       anything under the paragraph is something nobody saw. */
+    .fd-open { grid-template-columns: 1fr; row-gap: 13px; padding-right: 0; }
+    .fd-open-head, .fd-open-body, .fd-model { grid-column: auto; grid-row: auto; }
+    #fd-cube { height: 148px; }
+    .fd-model figcaption { flex-direction: row; align-items: baseline;
+                           gap: 6px 14px; flex-wrap: wrap; margin-top: 7px; }
 
-    .fd-open h1 { font-size: clamp(1.9rem, 8.4vw, 2.6rem); max-width: none; }
-    .fd-steps li { padding: 9px 18px 9px 0; font-size: .56rem; letter-spacing: .14em; }
-    .fd-morph { font-size: .72rem; line-height: 1.8; min-height: calc(3 * 1.8em); margin-top: 12px; }
-    /* The label stays on a phone. An unlabelled rising curve reads as a
-       claim; labelled, it is an exhibit, and it is the same exhibit the
-       Machine station shows. */
-    .fd-sparkrow { display: block; height: 52px; margin-top: 10px; }
-    .fd-sparkrow .cap { display: block; max-width: none; margin-bottom: 3px; }
-    .fd-spark { display: block; width: 100%; height: 30px; }
-    .fd-openlede { margin-top: 16px; font-size: .9rem; }
-    .fd-open .fd-actions { margin-top: 16px; }
+    .fd-open h1 { font-size: clamp(1.8rem, 7.8vw, 2.4rem); max-width: none; }
+    .fd-sentence { margin-top: 0; max-width: none; min-height: 0;
+                   font-size: .9rem; line-height: 1.66; }
+    .fd-slots { grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px 18px; margin-top: 16px; }
+    .fd-slot { padding-top: 8px; }
+    .fd-slot .k { font-size: .52rem; letter-spacing: .16em; }
+    .fd-slot .v { margin-top: 4px; font-size: .74rem; }
+    .fd-openlede { margin-top: 16px; font-size: .88rem; }
 }
 
 
 /* ==========================================================================
    THE DOCK SAYS WHICH PLAN YOU ARE ON
 
-   Signed in, the dock carried a coin and a gem: how many free runs are left,
-   and a way to the plans. Two icons for one fact, and the wrong fact - the
-   plan is what decides the runs, and somebody who has paid does not want to
-   be told about free ones. So one slot, in words, and clicking it still
-   opens the plans. It is wider than an icon and says so.
+   A coin and a gem were two icons for one fact, so they became one word. But
+   the word sat in a hard box, which made it look like a button, and what the
+   button did was offer the plans to somebody who had already bought one.
+
+   So on a plan it is a readout: a live dot and the plan in words, no box, and
+   pressing it goes to the account page - where the renewal date and CHANGE
+   PLAN actually are. The one person who should be looking at a button is the
+   one without a plan, and for them the whole chip becomes it.
    ========================================================================== */
 
 #auth-corner .hud-slot.plan {
     width: auto !important; height: 42px;
-    padding: 0 13px !important;
-    border: 1px solid var(--fd-hair) !important;
+    padding: 0 12px !important;
+    border: 1px solid transparent !important;
 }
-#auth-corner .hud-slot.plan:hover { border-color: rgba(247,166,0,.5) !important; }
-#auth-corner .hud-slot.plan .hud-icon-box { font-size: inherit; }
+#auth-corner .hud-slot.plan .hud-icon-box {
+    display: flex; align-items: center; gap: 9px;
+    width: auto; font-size: inherit;
+}
+#auth-corner .plan-pip {
+    flex: 0 0 auto; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--fd-dim);
+    transition: background .2s ease, box-shadow .2s ease;
+}
 #auth-corner .plan-tag {
     font-family: 'IBM Plex Mono', monospace !important;
-    font-size: .58rem; font-weight: 500; letter-spacing: .18em;
+    font-size: .58rem; font-weight: 500; letter-spacing: .16em;
     text-transform: uppercase; white-space: nowrap;
-    color: var(--fd-smoke);
-    transition: color .18s;
+    color: var(--fd-smoke); transition: color .18s ease;
 }
-#auth-corner .hud-slot.plan:hover .plan-tag { color: var(--fd-brass); }
-#auth-corner .hud-slot.plan.is-paid { border-color: rgba(247,166,0,.34) !important; }
-#auth-corner .hud-slot.plan.is-paid .plan-tag { color: var(--fd-brass); }
-body.fd-stuck #auth-corner .hud-slot.plan { border-color: var(--fd-hair) !important; }
+
+/* on a plan - a status, not an offer */
+#auth-corner .hud-slot.plan.is-paid .plan-pip {
+    background: #35d07f; box-shadow: 0 0 0 3px rgba(53,208,127,.15);
+}
+#auth-corner .hud-slot.plan.is-paid .plan-tag { color: var(--fd-vellum); }
+#auth-corner .hud-slot.plan.is-paid:hover { border-color: var(--fd-hair) !important; }
+
+/* no plan - the one place on this dock a button belongs */
+#auth-corner .hud-slot.plan.is-free {
+    background: var(--fd-brass) !important;
+    border-color: var(--fd-brass) !important;
+    box-shadow: 0 0 18px rgba(247,166,0,.20);
+}
+#auth-corner .hud-slot.plan.is-free .plan-pip { display: none; }
+#auth-corner .hud-slot.plan.is-free .plan-tag { color: #1a1200; font-weight: 600; }
+#auth-corner .hud-slot.plan.is-free:hover { filter: brightness(1.08); }
+
+body.fd-stuck #auth-corner .hud-slot.plan.is-paid { border-color: transparent !important; }
 
 @media (max-width: 560px) {
-    /* On a phone the dock is four things wide already. The plan keeps its
+    /* On a phone the dock is three things wide already. The plan keeps its
        word but loses the tracking that made it long. */
     #auth-corner .hud-slot.plan { padding: 0 9px !important; }
+    #auth-corner .hud-slot.plan .hud-icon-box { gap: 7px; }
     #auth-corner .plan-tag { font-size: .54rem; letter-spacing: .1em; }
 }
