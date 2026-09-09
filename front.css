@@ -1194,12 +1194,12 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
    rather than at the bottom of a screen nobody scrolled to the end of. */
 .fd-open {
     display: grid; align-items: start;
-    grid-template-columns: minmax(300px, 1fr) clamp(400px, 40vw, 760px);
-    column-gap: clamp(20px, 3.2vw, 52px);
+    grid-template-columns: minmax(0, 0.86fr) minmax(0, 1fr);
+    column-gap: clamp(22px, 3.4vw, 56px); row-gap: clamp(14px, 2vh, 26px);
 }
-.fd-open-head { grid-column: 1 / -1; grid-row: 1; min-width: 0; }
-.fd-open-body { grid-column: 1; grid-row: 2; min-width: 0; }
-.fd-model     { grid-column: 2; grid-row: 2; align-self: center; }
+.fd-open-head { grid-column: 1; grid-row: 1; min-width: 0; align-self: center; }
+.fd-open-body { grid-column: 2; grid-row: 1; min-width: 0; align-self: center; }
+.fd-model     { grid-column: 1 / -1; grid-row: 2; min-width: 0; }
 /* The compass is fixed to the right edge of the window and its label reaches
    about a hundred pixels in from it. Everywhere else on the route that strip
    lands on a paragraph, which survives it; here it would land on the corner
@@ -1224,8 +1224,8 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
 }
 
 .fd-open h1 {
-    margin: 13px 0 26px; max-width: none;
-    font-size: clamp(2.1rem, 5vw, 4rem); line-height: .99; letter-spacing: -.026em;
+    margin: 13px 0 0; max-width: none;
+    font-size: clamp(1.9rem, 3.4vw, 3.1rem); line-height: 1.02; letter-spacing: -.026em;
     color: var(--fd-vellum); text-shadow: 0 2px 34px rgba(6,5,14,.95);
 }
 
@@ -1233,7 +1233,7 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
    text at the brightest, so the wave of attention moving through it is the
    whole animation - no cursor, no typing, no glyphs pretending to be code. */
 .fd-sentence {
-    margin: 30px 0 0; max-width: 46ch; min-height: 5.6em;
+    margin: 0; max-width: 62ch; min-height: 4.2em;
     font-size: clamp(1rem, 1.45vw, 1.17rem); line-height: 1.85;
     color: var(--fd-dim); text-shadow: 0 1px 20px rgba(6,5,14,.96);
 }
@@ -1252,9 +1252,9 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
    shape of a finished specification is on screen before any of it is known,
    and each rule turns brass as its own phrase is reached. */
 .fd-slots {
-    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px clamp(13px, 2.1vw, 26px);
-    margin-top: 30px; max-width: 620px;
+    display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 14px clamp(11px, 1.5vw, 20px);
+    margin-top: 20px; max-width: none;
 }
 .fd-slot { position: relative; padding: 12px 0 0; border-top: 1px solid var(--fd-hair); }
 .fd-slot::before {
@@ -1290,155 +1290,326 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
     text-shadow: 0 1px 20px rgba(6,5,14,.96);
 }
 
-/* The other product, running. A drawing of a terminal proves nothing, so
-   this is the terminal: the rail, the ticker, the chart with its own axes,
-   the transport, the order ticket and the dock, all of it the furniture
-   replay.html has, playing the loop Replay exists for. Pressing it goes to
-   the station that explains it. */
+/* ==========================================================================
+   THE TERMINAL, RUNNING
+
+   A drawing of a terminal proves nothing, and a simplified one proves less -
+   what makes a replay terminal legible at a glance is the furniture around
+   the chart. So this is the furniture: the top bar, the ticker with the
+   account on it, the drawing rail, the chart with its legend, watermark and
+   both axes, the order ticket down to the five figures it computes, and the
+   dock with all six tabs.
+
+   It plays the loop and then shows what the loop is for. Everything in it
+   comes off one fixed series in front.js, so it is the same session on every
+   load, and it says Example session underneath.
+   ========================================================================== */
+
 .fd-model { margin: 0; min-width: 0; }
 
 .fd-replay {
     display: block; width: 100%; padding: 0; text-align: left;
-    font: inherit; color: inherit; cursor: pointer;
-    background: #0b0b12;
-    border: 1px solid var(--fd-hair-2); border-radius: 5px;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif; color: var(--fd-smoke);
+    cursor: pointer; background: #0a0a0f;
+    border: 1px solid var(--fd-hair-2); border-radius: 6px;
     overflow: hidden; position: relative;
-    box-shadow: 0 18px 54px rgba(0,0,0,.5);
+    box-shadow: 0 20px 60px rgba(0,0,0,.55);
     transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
 .fd-replay:hover {
-    border-color: rgba(247,166,0,.42);
-    box-shadow: 0 22px 66px rgba(0,0,0,.6);
+    border-color: rgba(247,166,0,.4);
+    box-shadow: 0 26px 74px rgba(0,0,0,.65);
     transform: translateY(-2px);
 }
 .fd-replay b, .fd-replay em, .fd-replay i, .fd-replay u { font-style: normal; }
+.fd-replay .rt-vr { width: 1px; height: 15px; background: var(--fd-hair); flex: 0 0 auto; }
 
-/* ---------------------------------------------------------- the ticker */
-.fd-replay .rp-tick {
-    display: flex; align-items: center; gap: clamp(10px, 1.6vw, 22px);
+/* ------------------------------------------------------------- top bar */
+.fd-replay .rt-top {
+    display: flex; align-items: center; gap: 9px;
+    padding: 6px 10px; background: #12121a;
+    border-bottom: 1px solid var(--fd-hair);
+    font-size: .62rem; white-space: nowrap;
+}
+.fd-replay .rt-back { color: var(--fd-dim); font-size: .6rem; padding-right: 2px; }
+.fd-replay .rt-brandbox { display: flex; align-items: center; gap: 6px; }
+.fd-replay .rt-brand { color: var(--fd-vellum); font-weight: 600; letter-spacing: -.01em; }
+.fd-replay .rt-brand b { font-weight: 600; }
+.fd-replay .rt-brand em {
+    margin-left: 6px; padding: 2px 5px; border-radius: 3px;
+    background: rgba(247,166,0,.14); color: var(--fd-brass);
+    font-family: 'IBM Plex Mono', monospace; font-size: .48rem;
+    font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+}
+.fd-replay .rt-sec { display: flex; align-items: center; gap: 5px; color: var(--fd-vellum);
+                     font-weight: 500; }
+.fd-replay .rt-inst {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 8px; border: 1px solid var(--fd-hair); border-radius: 4px;
+    background: rgba(236,231,221,.03);
+}
+.fd-replay .rt-inst em {
+    padding: 1px 5px; border-radius: 3px; background: rgba(247,166,0,.16);
+    color: var(--fd-brass); font-family: 'IBM Plex Mono', monospace;
+    font-size: .46rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+}
+.fd-replay .rt-inst b { color: var(--fd-vellum); font-weight: 600; }
+.fd-replay .rt-inst i, .fd-replay .rt-field i { font-size: .48rem; color: var(--fd-dim); }
+.fd-replay .rt-field { display: flex; align-items: center; gap: 7px; }
+.fd-replay .rt-field em { font-family: 'IBM Plex Mono', monospace; font-size: .46rem;
+                          letter-spacing: .14em; text-transform: uppercase; color: var(--fd-dim); }
+.fd-replay .rt-field b {
+    display: flex; align-items: center; gap: 8px; padding: 4px 8px;
+    border: 1px solid var(--fd-hair); border-radius: 4px;
+    background: rgba(236,231,221,.03); color: var(--fd-vellum); font-weight: 500;
+}
+.fd-replay .rt-tool {
+    display: flex; align-items: center; gap: 5px; padding: 4px 7px;
+    border: 1px solid var(--fd-hair); border-radius: 4px; color: var(--fd-smoke);
+}
+.fd-replay .rt-tool i { font-size: .58rem; color: #5aa9f0; }
+.fd-replay .rt-tool:nth-of-type(2) i { color: var(--fd-brass); }
+.fd-replay .rt-tool:nth-of-type(5) i { color: #c58af0; }
+.fd-replay .rt-mode {
+    margin-left: auto; display: flex; align-items: center; gap: 6px;
+    font-family: 'IBM Plex Mono', monospace; font-size: .48rem;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--fd-brass);
+}
+.fd-replay .rt-mode::before {
+    content: ''; width: 5px; height: 5px; border-radius: 50%;
+    background: currentColor; animation: fd-pulse 2.6s ease-out infinite;
+}
+
+/* -------------------------------------------------------- ticker strip */
+.fd-replay .rt-tick {
+    display: flex; align-items: center; gap: clamp(10px, 1.5vw, 26px);
     padding: 7px 11px; border-bottom: 1px solid var(--fd-hair);
-    background: #0e0e17;
-    font-family: 'IBM Plex Mono', monospace; font-size: .55rem;
+    font-family: 'IBM Plex Mono', monospace; font-size: .55rem; white-space: nowrap;
 }
-.fd-replay .rp-pair { display: flex; align-items: baseline; gap: 7px; }
-.fd-replay .rp-live {
-    align-self: center; width: 5px; height: 5px; border-radius: 50%;
-    background: #35d07f; flex: 0 0 auto; animation: fd-pulse 2.6s ease-out infinite;
+.fd-replay .rt-sym { display: flex; align-items: center; gap: 7px; }
+.fd-replay .rt-coin {
+    width: 17px; height: 17px; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(247,166,0,.16); color: var(--fd-brass);
+    font-size: .55rem; font-weight: 700;
 }
-.fd-replay .rp-pair b { color: var(--fd-vellum); font-size: .74rem; font-weight: 600;
-                        letter-spacing: .04em; }
-.fd-replay .rp-pair em { color: var(--fd-dim); letter-spacing: .1em; text-transform: uppercase; }
-.fd-replay .rp-last { display: flex; align-items: baseline; gap: 7px; }
-.fd-replay .rp-last b { color: var(--fd-vellum); font-size: .78rem; font-weight: 600;
+.fd-replay .rt-names b { display: block; color: var(--fd-vellum); font-size: .68rem;
+                         font-weight: 600; letter-spacing: .02em; }
+.fd-replay .rt-names em { display: block; margin-top: 1px; font-size: .46rem;
+                          letter-spacing: .1em; text-transform: uppercase; color: var(--fd-dim); }
+.fd-replay .rt-last { display: flex; align-items: baseline; gap: 8px; }
+.fd-replay .rt-last b { color: #ef454a; font-size: .96rem; font-weight: 600;
                         font-variant-numeric: tabular-nums; }
-.fd-replay .rp-last u { text-decoration: none; color: var(--fd-smoke); }
-.fd-replay .rp-last u.up { color: #35d07f; }
-.fd-replay .rp-last u.down { color: #ef454a; }
-.fd-replay .rp-acct { display: flex; align-items: center; gap: clamp(9px, 1.4vw, 20px);
-                      margin-left: auto; }
-.fd-replay .rp-acct > span { display: block; white-space: nowrap; }
-.fd-replay .rp-acct i { display: block; font-size: .46rem; letter-spacing: .14em;
-                        text-transform: uppercase; color: var(--fd-dim); }
-.fd-replay .rp-acct b { display: block; margin-top: 2px; color: var(--fd-vellum);
-                        font-size: .68rem; font-variant-numeric: tabular-nums; }
-.fd-replay .rp-acct b.up { color: #35d07f; }
-.fd-replay .rp-acct b.down { color: #ef454a; }
+.fd-replay .rt-last b.up { color: #20b26c; }
+.fd-replay .rt-last u { text-decoration: none; color: #ef454a; font-size: .58rem; }
+.fd-replay .rt-last u.up { color: #20b26c; }
+.fd-replay .rt-stats, .fd-replay .rt-acct { display: flex; align-items: center;
+                                            gap: clamp(9px, 1.3vw, 22px); }
+.fd-replay .rt-acct { margin-left: auto; }
+.fd-replay .rt-stats i, .fd-replay .rt-acct i {
+    display: block; font-size: .44rem; letter-spacing: .13em;
+    text-transform: uppercase; color: var(--fd-dim);
+}
+.fd-replay .rt-stats b, .fd-replay .rt-acct b {
+    display: block; margin-top: 2px; color: var(--fd-vellum);
+    font-size: .64rem; font-variant-numeric: tabular-nums;
+}
+.fd-replay .rt-stats b.up, .fd-replay .rt-acct b.up { color: #20b26c; }
+.fd-replay .rt-stats b.down, .fd-replay .rt-acct b.down { color: #ef454a; }
 
-/* ------------------------------------------- rail, chart, order ticket */
-.fd-replay .rp-body { display: grid; grid-template-columns: 30px minmax(0, 1fr) 114px; }
+/* ---------------------------------------- rail, chart and order ticket */
+.fd-replay .rt-main {
+    display: grid; grid-template-columns: 30px minmax(0, 1fr) 186px;
+    min-height: clamp(230px, 34vh, 360px);
+}
 
-.fd-replay .rp-rail {
-    display: flex; flex-direction: column; align-items: center; gap: 2px;
-    padding: 6px 0; border-right: 1px solid var(--fd-hair); background: #0e0e17;
+.fd-replay .rt-rail {
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    padding: 5px 0; border-right: 1px solid var(--fd-hair); background: #0d0d14;
     font-size: .58rem; color: var(--fd-dim);
 }
-.fd-replay .rp-rail i { padding: 5px 0; width: 100%; text-align: center; }
-.fd-replay .rp-rail i.on { color: var(--fd-brass); background: rgba(247,166,0,.09); }
+.fd-replay .rt-rail i { width: 22px; height: 21px; display: grid; place-items: center;
+                        border-radius: 4px; }
+.fd-replay .rt-rail i.on { color: var(--fd-brass); background: rgba(247,166,0,.12); }
 
-.fd-replay .rp-stage { position: relative; display: block; min-width: 0; }
-#rp-chart { display: block; width: 100%; height: clamp(160px, 17vw, 300px); }
-
-.fd-replay .rp-transport {
-    position: absolute; left: 50%; top: 8px; transform: translateX(-50%);
+.fd-replay .rt-stage { position: relative; display: block; min-width: 0; }
+/* The chart takes whatever room the ticket beside it leaves, which is what a
+   chart does in a terminal - it is not a picture sitting in a box. */
+#rt-chart { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.fd-replay .rt-legend {
+    position: absolute; left: 8px; top: 6px; z-index: 2;
+    display: flex; align-items: center; gap: 7px;
+    font-family: 'IBM Plex Mono', monospace; font-size: .5rem; white-space: nowrap;
+}
+.fd-replay .rt-legend b { color: var(--fd-vellum); font-weight: 600; }
+.fd-replay .rt-legend em { padding: 1px 5px; border-radius: 3px;
+                           background: rgba(236,231,221,.06); color: var(--fd-smoke); }
+.fd-replay .rt-legend .up { color: #20b26c; }
+.fd-replay .rt-legend .down { color: #ef454a; }
+.fd-replay .rt-wm {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    font-family: 'Bodoni Moda', Didot, Georgia, serif; font-size: clamp(1.4rem, 3vw, 2.6rem);
+    color: rgba(236,231,221,.035); letter-spacing: .04em; pointer-events: none;
+}
+.fd-replay .rt-transport {
+    position: absolute; left: 50%; top: 26px; transform: translateX(-50%); z-index: 2;
     display: flex; align-items: center; gap: 9px;
-    padding: 5px 10px; border-radius: 20px;
-    background: rgba(14,14,23,.94); border: 1px solid var(--fd-hair);
+    padding: 4px 10px; border-radius: 20px;
+    background: rgba(18,18,26,.94); border: 1px solid var(--fd-hair);
     font-family: 'IBM Plex Mono', monospace; font-size: .5rem; color: var(--fd-smoke);
-    white-space: nowrap;
 }
-.fd-replay .rp-transport i:first-child { color: var(--fd-brass); }
-.fd-replay .rp-track { display: block; width: clamp(48px, 7vw, 100px); height: 2px;
+.fd-replay .rt-transport i:first-child { color: var(--fd-brass); }
+.fd-replay .rt-track { display: block; width: clamp(50px, 8vw, 120px); height: 2px;
                        background: rgba(236,231,221,.16); border-radius: 2px; }
-.fd-replay .rp-track b { display: block; height: 100%; width: 0;
+.fd-replay .rt-track b { display: block; height: 100%; width: 0;
                          background: var(--fd-brass); border-radius: 2px; }
-.fd-replay .rp-state {
-    position: absolute; left: 9px; top: 8px;
-    padding: 2px 7px; border-radius: 2px;
-    background: rgba(14,14,23,.9); border: 1px solid var(--fd-hair);
-    font-family: 'IBM Plex Mono', monospace; font-size: .5rem;
-    letter-spacing: .12em; text-transform: uppercase; color: var(--fd-smoke);
-}
-.fd-replay .rp-state.long { color: #35d07f; border-color: rgba(53,208,127,.42); }
-.fd-replay .rp-state.done { color: var(--fd-brass); border-color: rgba(247,166,0,.42); }
 
-.fd-replay .rp-ticket {
-    display: flex; flex-direction: column; gap: 6px; padding: 8px;
-    border-left: 1px solid var(--fd-hair); background: #0e0e17;
-    font-family: 'IBM Plex Mono', monospace; font-size: .5rem;
+.fd-replay .rt-trade {
+    display: flex; flex-direction: column; gap: 5px; padding: 7px;
+    border-left: 1px solid var(--fd-hair); background: #0d0d14;
+    font-size: .55rem;
 }
-.fd-replay .rp-t-h { font-size: .46rem; letter-spacing: .14em; text-transform: uppercase;
-                     color: var(--fd-dim); }
-.fd-replay .rp-t-row { display: flex; justify-content: space-between; align-items: baseline;
-                       padding: 4px 6px; border: 1px solid var(--fd-hair); border-radius: 3px; }
-.fd-replay .rp-t-row i { color: var(--fd-dim); }
-.fd-replay .rp-t-row b { color: var(--fd-vellum); font-variant-numeric: tabular-nums; }
-.fd-replay .rp-t-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
-.fd-replay .rp-t-btns b {
-    padding: 5px 0; text-align: center; border-radius: 3px; font-size: .54rem;
-    font-weight: 600; letter-spacing: .04em;
+.fd-replay .rt-tr-top { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.fd-replay .rt-tr-top b {
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    padding: 4px 7px; border: 1px solid var(--fd-hair); border-radius: 4px;
+    background: rgba(236,231,221,.03); color: var(--fd-vellum); font-weight: 500;
 }
-.fd-replay .rp-t-btns .buy  { color: #35d07f; border: 1px solid rgba(53,208,127,.4);
-                              background: rgba(53,208,127,.08); }
-.fd-replay .rp-t-btns .sell { color: #ef454a; border: 1px solid rgba(239,69,74,.4);
-                              background: rgba(239,69,74,.07); }
-.fd-replay .rp-t-pos { margin-top: auto; padding-top: 6px; font-size: .46rem;
-                       line-height: 1.5; overflow-wrap: anywhere;
-                       border-top: 1px solid var(--fd-hair); color: var(--fd-smoke); }
-.fd-replay .rp-t-pos.long { color: #35d07f; }
+.fd-replay .rt-tr-top i { font-size: .44rem; color: var(--fd-dim); }
+.fd-replay .rt-tr-tabs { display: flex; gap: 14px; border-bottom: 1px solid var(--fd-hair);
+                         padding-bottom: 5px; }
+.fd-replay .rt-tr-tabs b { color: var(--fd-dim); font-weight: 500; }
+.fd-replay .rt-tr-tabs b.on { color: var(--fd-vellum); }
+.fd-replay .rt-seg {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px;
+    border-radius: 4px; background: rgba(236,231,221,.05);
+}
+.fd-replay .rt-seg b { padding: 4px 0; text-align: center; border-radius: 3px;
+                       color: var(--fd-smoke); font-weight: 500; }
+.fd-replay .rt-seg b.on { background: rgba(236,231,221,.1); color: var(--fd-vellum); }
+.fd-replay .rt-seg.sm { font-size: .5rem; }
+.fd-replay .rt-inp {
+    display: flex; align-items: center; gap: 6px; padding: 5px 8px;
+    border: 1px solid var(--fd-hair); border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+}
+.fd-replay .rt-inp i { color: var(--fd-dim); }
+.fd-replay .rt-inp b { margin-left: auto; color: var(--fd-vellum); font-weight: 600;
+                       font-variant-numeric: tabular-nums; }
+.fd-replay .rt-inp b.ph { color: var(--fd-dim); font-weight: 400; }
+.fd-replay .rt-inp u { text-decoration: none; color: var(--fd-dim); }
+.fd-replay .rt-inp2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.fd-replay .rt-inp2 .rt-inp { padding: 5px 7px; }
+.fd-replay .rt-slider { display: block; padding: 2px 0 0; }
+.fd-replay .rt-slider .bar { display: block; height: 3px; border-radius: 3px;
+                             background: rgba(236,231,221,.12); position: relative; }
+.fd-replay .rt-slider .bar b { display: block; height: 100%; width: 0; border-radius: 3px;
+                               background: var(--fd-brass); position: relative; }
+.fd-replay .rt-slider .bar b::after {
+    content: ''; position: absolute; right: -4px; top: 50%; transform: translateY(-50%);
+    width: 8px; height: 8px; border-radius: 50%; background: var(--fd-brass);
+}
+.fd-replay .rt-slider .ticks { display: flex; justify-content: space-between; margin-top: 3px;
+                               font-family: 'IBM Plex Mono', monospace; font-size: .44rem;
+                               color: var(--fd-dim); }
+.fd-replay .rt-read { display: block; border-top: 1px solid var(--fd-hair); padding-top: 6px; }
+.fd-replay .rt-read > span { display: flex; justify-content: space-between; gap: 8px;
+                             padding: 2px 0; font-family: 'IBM Plex Mono', monospace;
+                             font-size: .5rem; }
+.fd-replay .rt-read i { color: var(--fd-dim); }
+.fd-replay .rt-read b { color: var(--fd-vellum); font-variant-numeric: tabular-nums; }
+.fd-replay .rt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 2px; }
+.fd-replay .rt-actions b {
+    display: block; padding: 6px 0; text-align: center; border-radius: 4px;
+    font-size: .58rem; font-weight: 600; line-height: 1.15;
+}
+.fd-replay .rt-actions em { display: block; font-size: .44rem; font-weight: 400; opacity: .8; }
+.fd-replay .rt-actions .buy  { background: #1f9d63; color: #04150c; }
+.fd-replay .rt-actions .sell { background: #d94046; color: #1a0407; }
+.fd-replay .rt-close {
+    display: block; padding: 5px 0; text-align: center; border-radius: 4px;
+    border: 1px solid var(--fd-hair); color: var(--fd-dim); font-size: .52rem;
+}
+.fd-replay .rt-hint { display: block; color: var(--fd-dim); font-size: .48rem; line-height: 1.45; }
 
-/* ------------------------------------------------------------- the dock */
-.fd-replay .rp-dock { display: block; border-top: 1px solid var(--fd-hair); }
-.fd-replay .rp-tabs {
-    display: flex; gap: 0; border-bottom: 1px solid var(--fd-hair); background: #0e0e17;
-    font-family: 'IBM Plex Mono', monospace; font-size: .5rem;
-    letter-spacing: .13em; text-transform: uppercase;
+/* ---------------------------------------------------------- the dock */
+.fd-replay .rt-dock { display: block; border-top: 1px solid var(--fd-hair); background: #0d0d14; }
+.fd-replay .rt-tabs {
+    display: flex; align-items: center; gap: 0;
+    border-bottom: 1px solid var(--fd-hair); font-size: .58rem; white-space: nowrap;
 }
-.fd-replay .rp-tabs b {
+.fd-replay .rt-tabs b {
     padding: 7px 11px; font-weight: 500; color: var(--fd-dim);
-    border-bottom: 1px solid transparent; margin-bottom: -1px;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
     transition: color .3s ease, border-color .3s ease;
 }
-.fd-replay .rp-tabs b.on { color: var(--fd-vellum); border-bottom-color: var(--fd-brass); }
-.fd-replay .rp-read {
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1px; background: var(--fd-hair);
+.fd-replay .rt-tabs b.on { color: var(--fd-vellum); border-bottom-color: var(--fd-brass); }
+.fd-replay .rt-tabs .sp { flex: 1; }
+.fd-replay .rt-tabs em { display: flex; align-items: center; gap: 5px; padding: 0 11px;
+                         color: var(--fd-dim); font-size: .54rem; }
+/* Positions and Performance are different heights, and a dock that grows
+   when the tab changes drags the paragraph under it down the page. The pane
+   is one height and keeps it. */
+.fd-replay .rt-pane { display: block; background: #0a0a0f; height: 116px; overflow: hidden; }
+
+/* positions and orders, as the table they are */
+.fd-replay .rt-tbl { width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: .52rem; }
+.fd-replay .rt-tbl .hd, .fd-replay .rt-tbl .rw {
+    display: grid; grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 6px; padding: 6px 11px;
 }
-.fd-replay .rp-read span { display: block; padding: 7px 11px; background: #0b0b12;
-                           font-family: 'IBM Plex Mono', monospace; }
-.fd-replay .rp-read i { display: block; font-size: .46rem; letter-spacing: .15em;
-                        text-transform: uppercase; color: var(--fd-dim); }
-.fd-replay .rp-read u { display: block; margin-top: 3px; text-decoration: none;
-                        font-size: .68rem; font-variant-numeric: tabular-nums;
-                        color: var(--fd-vellum); }
-.fd-replay .rp-read u.up { color: #35d07f; }
-.fd-replay .rp-read u.down { color: #ef454a; }
+.fd-replay .rt-tbl .hd { color: var(--fd-dim); font-size: .44rem; letter-spacing: .12em;
+                         text-transform: uppercase; border-bottom: 1px solid var(--fd-hair); }
+.fd-replay .rt-tbl .rw { color: var(--fd-vellum); font-variant-numeric: tabular-nums; }
+.fd-replay .rt-tbl .rw .long { color: #20b26c; }
+.fd-replay .rt-tbl .rw .up { color: #20b26c; }
+.fd-replay .rt-tbl .rw .down { color: #ef454a; }
+.fd-replay .rt-empty { display: block; padding: 22px 11px; color: var(--fd-dim);
+                       font-family: 'IBM Plex Mono', monospace; font-size: .54rem; }
+
+/* the performance page, which is what the replay was for */
+.fd-replay .rt-perf { display: block; padding: 9px 11px; }
+.fd-replay .rt-hero { display: flex; align-items: flex-end; justify-content: space-between;
+                      gap: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--fd-hair); }
+.fd-replay .rt-hero .lab { display: block; font-family: 'IBM Plex Mono', monospace;
+                           font-size: .44rem; letter-spacing: .14em; text-transform: uppercase;
+                           color: var(--fd-dim); }
+.fd-replay .rt-hero .val { display: block; margin-top: 2px; font-size: 1.15rem; font-weight: 600;
+                           font-variant-numeric: tabular-nums; color: #20b26c; }
+.fd-replay .rt-hero .sub { display: block; margin-top: 2px;
+                           font-family: 'IBM Plex Mono', monospace; font-size: .5rem;
+                           color: var(--fd-smoke); }
+.fd-replay .rt-hero .rt-hr { text-align: right; }
+.fd-replay .rt-hero .rt-hr span { display: block; font-family: 'IBM Plex Mono', monospace;
+                                  font-size: .5rem; color: var(--fd-dim); }
+.fd-replay .rt-hero .rt-hr b { display: block; margin-top: 3px; font-size: .68rem;
+                               color: #20b26c; }
+.fd-replay .rt-kpis { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+                      gap: 1px; margin-top: 8px; background: var(--fd-hair); }
+.fd-replay .rt-kpi { display: block; padding: 6px 8px; background: #0a0a0f; }
+.fd-replay .rt-kpi i { display: block; font-family: 'IBM Plex Mono', monospace;
+                       font-size: .42rem; letter-spacing: .1em; text-transform: uppercase;
+                       color: var(--fd-dim); }
+.fd-replay .rt-kpi b { display: block; margin-top: 3px; font-family: 'IBM Plex Mono', monospace;
+                       font-size: .68rem; font-variant-numeric: tabular-nums;
+                       color: var(--fd-vellum); }
+.fd-replay .rt-kpi b.up { color: #20b26c; }
+.fd-replay .rt-kpi b.down { color: #ef454a; }
+.fd-replay .rt-kpi u { display: block; margin-top: 2px; text-decoration: none;
+                       font-size: .42rem; color: var(--fd-dim); }
+
+/* A terminal has a fixed amount of furniture in it, so on a short screen the
+   answer is not to take the furniture out - it is to stand further back. The
+   whole thing scales, which keeps every proportion the terminal has. */
+@media (max-height: 900px) { .fd-replay { zoom: .88; } }
+@media (max-height: 820px) { .fd-replay { zoom: .78; } .fd-openlede { display: none; } }
+@media (max-height: 740px) { .fd-replay { zoom: .70; } }
 
 /* the affordance, which only has to be there once you are looking at it */
 .fd-replay .rp-go {
-    position: absolute; right: 9px; bottom: 9px;
-    padding: 5px 9px; border-radius: 2px;
+    position: absolute; right: 10px; bottom: 10px; z-index: 3;
+    padding: 6px 11px; border-radius: 3px;
     background: var(--fd-brass); color: #1a1200;
-    font-family: 'IBM Plex Mono', monospace; font-size: .5rem; font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace; font-size: .52rem; font-weight: 600;
     letter-spacing: .12em; text-transform: uppercase; white-space: nowrap;
     opacity: 0; transform: translateY(4px);
     transition: opacity .2s ease, transform .2s ease;
@@ -1446,13 +1617,12 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
 .fd-replay:hover .rp-go, .fd-replay:focus-visible .rp-go { opacity: 1; transform: none; }
 
 .fd-model figcaption {
-    display: flex; flex-direction: column; gap: 6px; margin-top: 10px;
+    display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-top: 9px;
     font-family: 'IBM Plex Mono', monospace; font-size: .55rem;
     letter-spacing: .16em; text-transform: uppercase; color: var(--fd-dim);
 }
 .fd-model .say { text-transform: none; letter-spacing: .02em; font-size: .74rem;
-                 font-family: 'IBM Plex Sans', system-ui, sans-serif;
-                 color: var(--fd-smoke); }
+                 font-family: 'IBM Plex Sans', system-ui, sans-serif; color: var(--fd-smoke); }
 
 /* the opening arrives in order, once */
 .fd-open-head > *, .fd-open-body > *, .fd-model {
@@ -1483,7 +1653,7 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
 /* The row is the full width now, but on a narrow desk that is still not
    twenty-four characters of a didone at five per cent of the window. */
 @media (min-width: 721px) and (max-width: 1180px) {
-    .fd-open h1 { font-size: clamp(1.9rem, 4.2vw, 3rem); margin-bottom: 20px; }
+    .fd-open h1 { font-size: clamp(1.8rem, 3.6vw, 2.5rem); }
 }
 
 @media (max-width: 720px) {
@@ -1492,18 +1662,37 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
        anything under the paragraph is something nobody saw. */
     .fd-open { grid-template-columns: 1fr; row-gap: 11px; padding-right: 0; }
     .fd-open-head, .fd-open-body, .fd-model { grid-column: auto; grid-row: auto; }
-    /* A phone gets the chart, the clock and the score. The tool rail, the
-       order ticket and the balances are furniture you cannot press at this
-       size, and the terminal reads better without them than squeezed. */
-    #rp-chart { height: 126px; }
-    .fd-replay .rp-body { grid-template-columns: 1fr; }
-    .fd-replay .rp-rail, .fd-replay .rp-ticket { display: none; }
-    .fd-replay .rp-tick { gap: 10px; padding: 6px 9px; }
-    .fd-replay .rp-pair em { display: none; }
-    .fd-replay .rp-acct > span:not(.clk) { display: none; }
-    .fd-replay .rp-read { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .fd-replay .rp-read span { padding: 6px 9px; }
-    .fd-replay .rp-tabs b { padding: 6px 9px; }
+    /* A phone keeps the chart, the clock and the score. The tool rail, the
+       order ticket, the balances and the toolbar are furniture you cannot
+       press at this size, and the terminal reads better without them than
+       squeezed into a third of a thumb. */
+    .fd-replay { zoom: 1; }
+    .fd-replay .rt-top { padding: 6px 9px; gap: 7px; }
+    .fd-replay .rt-top .rt-sec,
+    .fd-replay .rt-top .rt-field,
+    .fd-replay .rt-top .rt-tool,
+    .fd-replay .rt-top .rt-vr { display: none; }
+    .fd-replay .rt-tick { gap: 10px; padding: 6px 9px; }
+    .fd-replay .rt-stats { display: none; }
+    .fd-replay .rt-acct > span:not(.clk) { display: none; }
+    .fd-replay .rt-main { grid-template-columns: 1fr; min-height: 116px; }
+    .fd-replay .rt-pane { height: 118px; }
+    .fd-replay .rt-rail, .fd-replay .rt-trade { display: none; }
+    .fd-replay .rt-legend em:nth-of-type(2) { display: none; }
+    .fd-replay .rt-tabs .sp, .fd-replay .rt-tabs em,
+    .fd-replay .rt-tabs b:nth-of-type(n+5) { display: none; }
+    .fd-replay .rt-tabs b { padding: 6px 9px; font-size: .54rem; }
+    .fd-replay .rt-tbl .hd, .fd-replay .rt-tbl .rw {
+        grid-template-columns: repeat(6, minmax(0, 1fr)); padding: 6px 9px; }
+    .fd-replay .rt-tbl .hd > span:nth-child(n+5):nth-child(-n+8),
+    .fd-replay .rt-tbl .rw > span:nth-child(n+5):nth-child(-n+8) { display: none; }
+    .fd-replay .rt-hero { display: block; }
+    .fd-replay .rt-hero .rt-hr { text-align: left; margin-top: 5px; }
+    .fd-replay .rt-hero .val { font-size: .95rem; }
+    .fd-replay .rt-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .fd-replay .rt-kpi:nth-child(n+5) { display: none; }
+    .fd-replay .rt-kpi u { display: none; }
+    .fd-replay .rt-perf { padding: 7px 9px; }
 
     /* A hover badge floating over the dock has nothing to hover on a phone and
        lands on the third readout, so it becomes the bar along the bottom that
@@ -1524,8 +1713,8 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
     .fd-open h1 { font-size: clamp(1.8rem, 7.8vw, 2.4rem); max-width: none; }
     .fd-sentence { margin-top: 0; max-width: none; min-height: 0;
                    font-size: .9rem; line-height: 1.66; }
-    .fd-slots { grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 10px 18px; margin-top: 16px; }
+    .fd-slots { grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 10px 12px; margin-top: 14px; }
     .fd-slot { padding-top: 8px; }
     .fd-slot .k { font-size: .52rem; letter-spacing: .16em; }
     .fd-slot .v { margin-top: 4px; font-size: .74rem; }

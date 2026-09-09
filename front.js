@@ -386,37 +386,66 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
 
     // ============================================== the other desk, running
 
-    /* A picture of a terminal proves nothing, so this one runs. It plays the
-       loop BarTest Replay exists for, on a fixed series so it is the same
-       session every time: the tape moves forward one bar at a time, a trade
-       goes on at a bar that has not happened yet, and the dock keeps the
-       score. Pressing it goes to the Replay station rather than into the
-       terminal itself - somebody who has not read what it is should read that
-       first, and the station is where that is written.
+    /* A drawing of a terminal proves nothing and a simplified one proves less,
+       so this is the terminal: everything replay.html carries, at a size that
+       fits under a headline, playing the loop it exists for and then showing
+       what the loop was for.
 
-       The window holds every bar of the session and the price axis is taken
-       from all of them at once, so the chart does not rescale under itself
-       while it prints. */
+       One fixed series of gold, so it is the same session on every load. The
+       account is the terminal's own default - ten thousand dollars, one per
+       cent of risk, ten times leverage - and every figure on screen is worked
+       out from that and the series, which is why they all agree with each
+       other. */
 
     const TAPE = (() => {
-        let x = 20160624, p = 1.2684;
+        let x = 20240311, p = 4402.5;
         const rnd = () => (x = (x * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
         const out = [];
         for (let i = 0; i < 46; i++) {
             const o = p;
             // it turns where the trade goes on, which is the point of the demo
-            p += (i < 30 ? -0.00013 : 0.00046) + (rnd() - 0.5) * 0.00165;
-            out.push([o, Math.max(o, p) + rnd() * 0.0007,
-                         Math.min(o, p) - rnd() * 0.0007, p]);
+            p += (i < 30 ? -0.9 : 4.4) + (rnd() - 0.5) * 9;
+            out.push([o, Math.max(o, p) + rnd() * 3.4, Math.min(o, p) - rnd() * 3.4, p]);
         }
         return out;
     })();
 
     const RP_ENTRY_BAR = 30, RP_LAST_BAR = 45;
-    const RP_A = 3400, RP_B = 6500, RP_CYCLE = 9600, RP_STEP = 190;
-    const rpEntry = TAPE[RP_ENTRY_BAR][3], rpExit = TAPE[RP_LAST_BAR][3];
+    const RP_A = 3600, RP_B = 6900, RP_CYCLE = 11600, RP_STEP = 195;
 
-    const rchart = $('rp-chart');
+    /* replay.js THEME_DEFAULT, verbatim - the chart on this page has to be
+       the chart the terminal draws, not one that resembles it. */
+    const TH = { up: '#20b26c', down: '#ef454a', bg: '#2d292e',
+                 text: '#a9a3ad', grid: '#3a353c' };
+    const RP_BAL = 10000, RP_RISK_PC = 1, RP_LEV = 10, RP_FEE_BPS = 5;
+    const rpEntry = TAPE[RP_ENTRY_BAR][3];
+    const rpExit  = TAPE[RP_LAST_BAR][3];
+    const rpStop  = rpEntry - 25;
+    const rpTarget = rpEntry + 50;
+    const rpQty   = (RP_BAL * RP_RISK_PC / 100) / (rpEntry - rpStop);   // 4.000 XAU
+    const rpRiskAmt = (rpEntry - rpStop) * rpQty;
+    const rpMargin  = rpEntry * rpQty / RP_LEV;
+    const rpLiq     = rpEntry * (1 - 0.94 / RP_LEV);
+    /* Both sides pay the fee, at the terminal's own five basis points, so
+       nothing on this page is flattered either. */
+    const rpFees    = (rpEntry * rpQty + rpExit * rpQty) * RP_FEE_BPS / 10000;
+    const rpNet     = (rpExit - rpEntry) * rpQty - rpFees;
+
+    /* the worst it went against the trade while it was on, which is the only
+       drawdown a one-trade session can honestly report */
+    const rpMaxDD = (() => {
+        let worst = 0;
+        for (let i = RP_ENTRY_BAR; i <= RP_LAST_BAR; i++) {
+            const dd = (rpEntry - TAPE[i][2]) * rpQty;
+            if (dd > worst) worst = dd;
+        }
+        return worst / RP_BAL * 100;
+    })();
+
+    let hiAll = -Infinity, loAll = Infinity;
+    for (const b of TAPE) { if (b[1] > hiAll) hiAll = b[1]; if (b[2] < loAll) loAll = b[2]; }
+
+    const rchart = $('rt-chart');
     const rctx = rchart ? rchart.getContext('2d') : null;
     let rW = 0, rH = 0, rShown = -1, rPhase = -1;
 
@@ -429,23 +458,20 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
         rchart.width = Math.round(r.width * dpr);
         rchart.height = Math.round(r.height * dpr);
         rctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        rShown = -1;                       // force the dock to repaint too
+        rShown = -1;                       // force the chrome to repaint too
     }
 
     function rpAt(e) {
-        if (e < RP_A)  return { shown: 15 + Math.min(16, (e / RP_STEP) | 0), phase: 0 };
-        if (e < RP_B)  return { shown: 31 + Math.min(15, ((e - RP_A) / RP_STEP) | 0), phase: 1 };
+        if (e < RP_A) return { shown: 15 + Math.min(16, (e / RP_STEP) | 0), phase: 0 };
+        if (e < RP_B) return { shown: 31 + Math.min(15, ((e - RP_A) / RP_STEP) | 0), phase: 1 };
         return { shown: 46, phase: 2 };
     }
 
-    /* One lot of 0.10 on a dollar-quoted pair is a dollar a pip, which is why
-       the account can move in whole numbers without anybody having to be told
-       the contract size. */
-    const RP_BAL = 50000, RP_PER_PIP = 1;
-    const pips = (a, b) => (b - a) * 10000;
-    const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
-    const signed = v => (v >= 0 ? '+' : '\u2212') + plural(+Math.abs(v).toFixed(0), 'pip');
-    const money = v => (v >= 0 ? '+$' : '\u2212$') + Math.abs(v).toFixed(2);
+    const num = (v, d) => v.toLocaleString('en-US',
+        { minimumFractionDigits: d, maximumFractionDigits: d });
+    const money = v => (v < 0 ? '−$' : '$') + num(Math.abs(v), 2);
+    const smoney = v => (v >= 0 ? '+$' : '−$') + num(Math.abs(v), 2);
+    const pct = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2) + '%';
     const hhmm = bar => {
         const m = 9 * 60 + 15 + bar * 15;
         return String(((m / 60) | 0) % 24).padStart(2, '0') + ':' +
@@ -458,102 +484,112 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
         drawTape(st);
         if (st.shown !== rShown || st.phase !== rPhase) {
             rShown = st.shown; rPhase = st.phase;
-            drawDock(st);
+            drawChrome(st);
         }
     }
 
     function drawTape(st) {
-        const padL = 9, padR = 54, padT = 11, padB = 19;
+        const padL = 8, padR = 62, padT = 8, padB = 18;
         const w = rW - padL - padR, h = rH - padT - padB;
 
-        let hi = -Infinity, lo = Infinity;
-        for (const b of TAPE) { if (b[1] > hi) hi = b[1]; if (b[2] < lo) lo = b[2]; }
-        const pad = (hi - lo) * 0.08;
-        hi += pad; lo -= pad;
+        const pad = (hiAll - loAll) * 0.07;
+        const hi = hiAll + pad, lo = loAll - pad;
         const y = p => padT + (hi - p) / (hi - lo) * h;
 
         const slots = TAPE.length + 3;          // the gap on the right is the point
         const slot = w / slots;
-        const bw = Math.max(1.6, slot * 0.6);
+        const bw = Math.max(1.8, slot * 0.62);
         const x = i => padL + i * slot + slot / 2;
 
         rctx.clearRect(0, 0, rW, rH);
+        rctx.fillStyle = TH.bg;
+        rctx.fillRect(0, 0, rW, rH);
         rctx.font = '9px "IBM Plex Mono", monospace';
         rctx.textBaseline = 'middle';
-
-        /* the axes, which are most of what makes a chart read as a chart */
-        rctx.strokeStyle = 'rgba(236,231,221,.055)';
         rctx.lineWidth = 1;
-        for (let g = 0; g <= 4; g++) {
-            const yy = Math.round(padT + h * g / 4) + 0.5;
+
+        /* A price scale lands on round numbers or it is not a price scale.
+           Same ladder the charting library uses: 1, 2, 2.5, 5 of a decade. */
+        const raw = (hi - lo) / 5;
+        const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+        const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(v => v >= raw) || 10 * mag;
+
+        rctx.strokeStyle = TH.grid;
+        rctx.fillStyle = TH.text;
+        rctx.textAlign = 'left';
+        for (let p = Math.ceil(lo / step) * step; p <= hi; p += step) {
+            const yy = Math.round(y(p)) + 0.5;
             rctx.beginPath(); rctx.moveTo(padL, yy); rctx.lineTo(rW - padR, yy); rctx.stroke();
-            rctx.fillStyle = '#635e78';
-            rctx.textAlign = 'left';
-            rctx.fillText((hi - (hi - lo) * g / 4).toFixed(4), rW - padR + 7, yy);
+            rctx.fillText(num(p, 2), rW - padR + 7, yy);
         }
-        const axis = Math.round(rH - padB) + 0.5;
-        rctx.strokeStyle = 'rgba(236,231,221,.09)';
-        rctx.beginPath(); rctx.moveTo(padL, axis); rctx.lineTo(rW - padR, axis); rctx.stroke();
         rctx.textAlign = 'center';
-        rctx.fillStyle = '#635e78';
-        for (let i = 4; i < TAPE.length; i += 10) rctx.fillText(hhmm(i), x(i), rH - padB / 2 + 1);
+        for (let i = 3; i < TAPE.length; i += 8) {
+            const xx = Math.round(x(i)) + 0.5;
+            rctx.strokeStyle = TH.grid;
+            rctx.beginPath(); rctx.moveTo(xx, padT); rctx.lineTo(xx, rH - padB); rctx.stroke();
+            rctx.fillStyle = TH.text;
+            rctx.fillText(hhmm(i), xx, rH - padB / 2 + 1);
+        }
 
         for (let i = 0; i < st.shown; i++) {
             const b = TAPE[i], up = b[3] >= b[0];
-            rctx.strokeStyle = rctx.fillStyle = up ? '#20b26c' : '#ef454a';
+            rctx.strokeStyle = rctx.fillStyle = up ? TH.up : TH.down;
             rctx.lineWidth = Math.max(1, bw * 0.17);
             rctx.beginPath(); rctx.moveTo(x(i), y(b[1])); rctx.lineTo(x(i), y(b[2])); rctx.stroke();
             const top = y(Math.max(b[0], b[3])), bot = y(Math.min(b[0], b[3]));
             rctx.fillRect(x(i) - bw / 2, top, bw, Math.max(1, bot - top));
         }
 
-        const last = TAPE[st.shown - 1][3];
+        /* the trade, drawn the way the terminal draws it: entry, stop and
+           target as lines the whole width of what has printed */
+        if (st.phase >= 1) {
+            const line = (p, colour, dash) => {
+                rctx.strokeStyle = colour; rctx.lineWidth = 1;
+                rctx.setLineDash(dash);
+                rctx.beginPath();
+                rctx.moveTo(x(RP_ENTRY_BAR), y(p)); rctx.lineTo(rW - padR, y(p));
+                rctx.stroke(); rctx.setLineDash([]);
+            };
+            if (st.phase === 1) {
+                line(rpTarget, 'rgba(32,178,108,.32)', [2, 4]);
+                line(rpStop,   'rgba(239,69,74,.32)',  [2, 4]);
+            }
+            line(rpEntry, 'rgba(53,208,127,.6)', [4, 4]);
 
-        if (st.phase >= 1) {                       // the trade, once it is on
-            const ey = y(rpEntry);
-            rctx.strokeStyle = 'rgba(53,208,127,.5)';
-            rctx.lineWidth = 1;
-            rctx.setLineDash([3, 4]);
+            rctx.fillStyle = TH.up;
+            const mx = x(RP_ENTRY_BAR), my = y(TAPE[RP_ENTRY_BAR][2]) + 6;
             rctx.beginPath();
-            rctx.moveTo(x(RP_ENTRY_BAR), ey); rctx.lineTo(rW - padR, ey);
-            rctx.stroke();
-            rctx.setLineDash([]);
-
-            rctx.fillStyle = '#20b26c';
-            const mx = x(RP_ENTRY_BAR), my = y(TAPE[RP_ENTRY_BAR][2]) + 5;
-            rctx.beginPath();
-            rctx.moveTo(mx, my); rctx.lineTo(mx - 4.5, my + 7); rctx.lineTo(mx + 4.5, my + 7);
+            rctx.moveTo(mx, my); rctx.lineTo(mx - 5, my + 8); rctx.lineTo(mx + 5, my + 8);
             rctx.closePath(); rctx.fill();
         }
-        if (st.phase === 2) {                      // and once it is off
+        if (st.phase === 2) {
             rctx.fillStyle = '#f7a600';
-            const mx = x(RP_LAST_BAR), my = y(TAPE[RP_LAST_BAR][1]) - 5;
+            const mx = x(RP_LAST_BAR), my = y(TAPE[RP_LAST_BAR][1]) - 6;
             rctx.beginPath();
-            rctx.moveTo(mx, my); rctx.lineTo(mx - 4.5, my - 7); rctx.lineTo(mx + 4.5, my - 7);
+            rctx.moveTo(mx, my); rctx.lineTo(mx - 5, my - 8); rctx.lineTo(mx + 5, my - 8);
             rctx.closePath(); rctx.fill();
         }
 
-        const ly = y(last);
-        rctx.strokeStyle = 'rgba(236,231,221,.17)';
+        const last = TAPE[st.shown - 1][3], prev = TAPE[st.shown - 1][0];
+        const ly = y(last), up = last >= prev;
+        rctx.strokeStyle = 'rgba(236,231,221,.14)';
         rctx.setLineDash([2, 3]);
         rctx.beginPath(); rctx.moveTo(padL, ly); rctx.lineTo(rW - padR, ly); rctx.stroke();
         rctx.setLineDash([]);
-
-        const up = last >= TAPE[0][0];
-        rctx.fillStyle = up ? '#20b26c' : '#ef454a';
+        rctx.fillStyle = up ? TH.up : TH.down;
         rctx.fillRect(rW - padR + 3, ly - 8, padR - 6, 16);
         rctx.fillStyle = '#06050e';
         rctx.font = '600 9px "IBM Plex Mono", monospace';
         rctx.textAlign = 'center';
-        rctx.fillText(last.toFixed(4), rW - padR + 3 + (padR - 6) / 2, ly);
+        rctx.fillText(num(last, 2), rW - padR + 3 + (padR - 6) / 2, ly);
     }
 
-    function drawDock(st) {
-        const last = TAPE[st.shown - 1][3];
-        const open = TAPE[0][0];
+    function drawChrome(st) {
+        const bar = TAPE[st.shown - 1];
+        const last = bar[3];
         const held = st.shown - 1 - RP_ENTRY_BAR;
-        const live = st.phase === 1 ? pips(rpEntry, last) : 0;
-        const shut = pips(rpEntry, rpExit);
+        const paper = st.phase === 1 ? (last - rpEntry) * rpQty : 0;
+        const cash  = st.phase === 2 ? rpNet : 0;
 
         const set = (id, text, tone) => {
             const el = $(id);
@@ -561,62 +597,121 @@ const BREXIT = [[1.48773,1.48915,1.48647,1.48915],[1.48449,1.4915,1.48278,1.4915
             el.textContent = text;
             if (tone !== undefined) el.className = tone || '';
         };
+        const tone = v => v >= 0 ? 'up' : 'down';
 
-        set('rp-price', last.toFixed(4));
-        const chg = (last - open) / open * 100;
-        set('rp-chg', (chg >= 0 ? '+' : '\u2212') + Math.abs(chg).toFixed(2) + '%',
-            chg >= 0 ? 'up' : 'down');
-        set('rp-clock', hhmm(st.shown - 1));
+        // ---- the chart legend, which is the OHLC of the bar you are on
+        const ohlc = $('rt-ohlc');
+        if (ohlc) {
+            const d = last - bar[0], cls = d >= 0 ? 'up' : 'down';
+            ohlc.innerHTML =
+                '<i>O</i> <b class="' + cls + '">' + num(bar[0], 2) + '</b> ' +
+                '<i>H</i> <b class="' + cls + '">' + num(bar[1], 2) + '</b> ' +
+                '<i>L</i> <b class="' + cls + '">' + num(bar[2], 2) + '</b> ' +
+                '<i>C</i> <b class="' + cls + '">' + num(last, 2) + '</b> ' +
+                '<b class="' + cls + '">' + (d >= 0 ? '+' : '−') + num(Math.abs(d), 2) +
+                ' (' + pct(d / bar[0] * 100) + ')</b>';
+        }
 
-        const cash = st.phase === 2 ? shut * RP_PER_PIP : 0;
-        const paper = live * RP_PER_PIP;
-        set('rp-eq', '$' + (RP_BAL + cash + paper).toLocaleString('en-US',
-            { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-        set('rp-upl', st.phase === 1 ? money(paper) : '$0.00',
-            st.phase === 1 ? (paper >= 0 ? 'up' : 'down') : '');
+        // ---- the ticker
+        const chg = last - TAPE[0][0];
+        set('rt-price', num(last, 2), chg >= 0 ? 'up' : '');
+        set('rt-chg', pct(chg / TAPE[0][0] * 100), tone(chg));
+        set('rt-chgabs', (chg >= 0 ? '+' : '−') + num(Math.abs(chg), 2), tone(chg));
+        set('rt-hi', num(hiAll, 2));
+        set('rt-lo', num(loAll, 2));
+        set('rt-eq', money(RP_BAL + cash + paper));
+        set('rt-bal', money(RP_BAL + cash));
+        set('rt-upl', st.phase === 1 ? smoney(paper) : '—',
+            st.phase === 1 ? tone(paper) : '');
+        set('rt-clock', hhmm(st.shown - 1));
 
-        const prog = $('rp-prog');
+        // ---- the transport
+        const prog = $('rt-prog');
         if (prog) prog.style.width = (st.shown / TAPE.length * 100).toFixed(1) + '%';
+        set('rt-mode', st.phase === 2 ? 'Finished' : 'Replay');
 
-        const state = $('rp-state');
-        if (state) {
-            state.textContent = st.phase === 0 ? 'Playing'
-                              : st.phase === 1 ? 'Long 0.10' : 'Closed';
-            state.className = 'rp-state' + (st.phase === 1 ? ' long'
-                                          : st.phase === 2 ? ' done' : '');
-        }
-        const pos = $('rp-pos');
-        if (pos) {
-            pos.textContent = st.phase === 1 ? 'Long 0.10 @ ' + rpEntry.toFixed(4) : 'Flat';
-            pos.className = 'rp-t-pos' + (st.phase === 1 ? ' long' : '');
-        }
+        // ---- the order ticket, filled in the way drawing a position fills it
+        const armed = st.phase >= 1;
+        const slide = $('rt-slide');
+        if (slide) slide.style.width = armed ? '38%' : '0%';
+        set('rt-qty', armed ? num(rpQty, 3) : '0.000');
+        const stop = $('rt-stop'), targ = $('rt-target');
+        if (stop) { stop.textContent = armed ? num(rpStop, 2) : 'price';
+                    stop.className = armed ? '' : 'ph'; }
+        if (targ) { targ.textContent = armed ? num(rpTarget, 2) : 'price';
+                    targ.className = armed ? '' : 'ph'; }
+        set('rt-ov',  armed ? money(rpEntry * rpQty) : '—');
+        set('rt-mg',  armed ? money(rpMargin) : '—');
+        set('rt-ros', armed ? money(rpRiskAmt) : '—');
+        set('rt-rr',  armed ? money((rpTarget - rpEntry) * rpQty) + '  /  2.00R' : '—');
+        set('rt-liq', armed ? num(rpLiq, 2) : '—');
+        set('rt-hint', st.phase === 0 ? 'Set a stop, a quantity or drag the size slider.'
+                     : st.phase === 1 ? 'Long ' + num(rpQty, 3) + ' XAU from ' + num(rpEntry, 2) + '.'
+                     : 'Position closed at market. The session is on the Performance tab.');
 
-        const tabs = $('rp-tabs');
-        if (tabs) [].forEach.call(tabs.children,
-            (b, i) => b.classList.toggle('on', i === (st.phase === 2 ? 2 : 0)));
+        // ---- the dock
+        const tabs = $('rt-tabs');
+        if (tabs) [].forEach.call(tabs.querySelectorAll('b'),
+            (b, i) => b.classList.toggle('on', i === (st.phase === 2 ? 3 : 0)));
 
-        const read = $('rp-read');
-        if (!read) return;
-        const cell = (k, v, tone) =>
-            '<span><i>' + k + '</i><u' + (tone ? ' class="' + tone + '"' : '') + '>' +
-            v + '</u></span>';
+        const pane = $('rt-pane');
+        if (!pane) return;
 
+        if (st.phase === 2) { pane.innerHTML = perfHTML(); return; }
+
+        const head = ['Symbol', 'Side', 'Qty', 'Entry', 'Mark', 'Liq.',
+                      'Stop', 'Target', 'Unrealised', 'ROI'];
+        let html = '<span class="rt-tbl"><span class="hd">' +
+                   head.map(h => '<span>' + h + '</span>').join('') + '</span>';
         if (st.phase === 0) {
-            read.innerHTML = cell('Bars', st.shown + ' / ' + TAPE.length) +
-                             cell('Position', 'Flat') +
-                             cell('Step', '1 bar') +
-                             cell('Session', 'Example');
-        } else if (st.phase === 1) {
-            read.innerHTML = cell('Entry', rpEntry.toFixed(4)) +
-                             cell('Open P&amp;L', signed(live), live >= 0 ? 'up' : 'down') +
-                             cell('Unrealised', money(paper), paper >= 0 ? 'up' : 'down') +
-                             cell('Held', plural(held, 'bar'));
+            html += '</span><span class="rt-empty">Flat — no open position.</span>';
         } else {
-            read.innerHTML = cell('Trades', '1') +
-                             cell('Result', signed(shut), shut >= 0 ? 'up' : 'down') +
-                             cell('Realised', money(cash), cash >= 0 ? 'up' : 'down') +
-                             cell('Session', 'Example');
+            const roi = paper / rpMargin * 100;
+            html += '<span class="rw">' +
+                '<span>XAUUSD</span><span class="long">Long</span>' +
+                '<span>' + num(rpQty, 3) + '</span>' +
+                '<span>' + num(rpEntry, 2) + '</span>' +
+                '<span>' + num(last, 2) + '</span>' +
+                '<span>' + num(rpLiq, 2) + '</span>' +
+                '<span>' + num(rpStop, 2) + '</span>' +
+                '<span>' + num(rpTarget, 2) + '</span>' +
+                '<span class="' + tone(paper) + '">' + smoney(paper) + '</span>' +
+                '<span class="' + tone(roi) + '">' + pct(roi) + '</span>' +
+                '</span></span>';
+            html += '<span class="rt-empty" style="padding:6px 11px">Held ' + held +
+                    (held === 1 ? ' bar' : ' bars') + ' — stop and target are on the chart.</span>';
         }
+        pane.innerHTML = html;
+    }
+
+    /* The Performance tab, which is the reason anybody replays anything: the
+       same headline figure, the same seven measures and the same sub-labels
+       the terminal itself shows. */
+    function perfHTML() {
+        const end = RP_BAL + rpNet;
+        const kpi = (label, value, sub, cls) =>
+            '<span class="rt-kpi"><i>' + label + '</i>' +
+            '<b' + (cls ? ' class="' + cls + '"' : '') + '>' + value + '</b>' +
+            '<u>' + sub + '</u></span>';
+        return '<span class="rt-perf">' +
+            '<span class="rt-hero">' +
+              '<span><i class="lab">Net profit and loss</i>' +
+                '<b class="val">' + smoney(rpNet) + '</b>' +
+                '<i class="sub">' + money(RP_BAL) + ' → ' + money(end) +
+                  '  (' + pct(rpNet / RP_BAL * 100) + ')</i></span>' +
+              '<span class="rt-hr"><span>1 trade · XAUUSD 15m</span>' +
+                '<b>100.0% win rate</b></span>' +
+            '</span>' +
+            '<span class="rt-kpis">' +
+              kpi('Profit factor', '∞', 'gross win / gross loss', 'up') +
+              kpi('Max drawdown', rpMaxDD.toFixed(1) + '%', 'peak to trough', 'down') +
+              kpi('Expectancy', smoney(rpNet), 'per trade', 'up') +
+              kpi('Average R', '+' + (rpNet / rpRiskAmt).toFixed(2) + 'R', 'risk multiples', 'up') +
+              kpi('Sharpe', '—', 'needs 5+ trades', '') +
+              kpi('Avg win', money(rpNet), 'per winning trade', 'up') +
+              kpi('Fees paid', money(rpFees), RP_FEE_BPS + ' bps, both sides', '') +
+            '</span>' +
+        '</span>';
     }
 
     // ============================================================ the camera

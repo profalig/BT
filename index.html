@@ -355,73 +355,158 @@
                   <h1 class="fd-display">Say it in plain English.<br>Get it back as evidence.</h1>
                 </div>
 
-                <!-- The other half of the desk, running - the terminal
-                     itself, not a picture of it. Left rail, ticker, chart with
-                     its own axes, transport, order ticket, dock: the same
-                     furniture replay.html has, at a size that fits beside a
-                     paragraph, playing the loop it exists for. The tape steps
-                     forward a bar at a time, a trade goes on at a bar that has
-                     not happened yet, the account moves with it, and the dock
-                     keeps the score.
+                <!-- The terminal itself, not a drawing of one. Everything
+                     replay.html carries is here: the top bar, the ticker with
+                     the account on it, the drawing rail, the chart with its
+                     legend, watermark and both axes, the order ticket with
+                     margin mode, leverage, order types, risk sizing, the size
+                     slider, stop and target and the five figures it computes,
+                     and the dock with all six tabs.
 
-                     Everything inside is drawn by front.js from one fixed
-                     series, so it is the same session on every load and it
-                     says so underneath. Pressing it goes to the Replay
-                     station, not into the terminal - somebody who has not read
-                     what it is should read that first. -->
+                     It plays the loop Replay exists for and then shows what
+                     the loop is for: the tape steps forward a bar at a time, a
+                     trade goes on at a bar that has not happened yet, and when
+                     it closes the dock turns to Performance and stays there.
+                     One fixed series, so it is the same session every time,
+                     and it says Example session underneath.
+
+                     Pressing it goes to the Replay station rather than into
+                     the terminal - somebody who has not read what it is should
+                     read that first. -->
                 <figure class="fd-model">
                   <button type="button" class="fd-replay" id="fd-replay" data-st="2"
                           aria-label="BarTest Replay - see what it does">
 
-                    <span class="rp-tick">
-                      <span class="rp-pair"><i class="rp-live"></i><b>GBPUSD</b>
-                            <em>Dukascopy &middot; 15m</em></span>
-                      <span class="rp-last"><b id="rp-price">1.2655</b>
-                            <u id="rp-chg">&mdash;</u></span>
-                      <span class="rp-acct">
-                        <span><i>Balance</i><b>$50,000</b></span>
-                        <span><i>Equity</i><b id="rp-eq">$50,000</b></span>
-                        <span><i>Unrealised</i><b id="rp-upl">$0.00</b></span>
-                        <span class="clk"><i>Replay clock</i><b id="rp-clock">17:15</b></span>
+                    <!-- ================================= the top bar -->
+                    <span class="rt-top">
+                      <i class="fa-solid fa-chevron-left rt-back"></i>
+                      <span class="rt-brandbox">
+                        <svg viewBox="0 0 32 32" width="19" height="19" aria-hidden="true">
+                          <rect x="1" y="1" width="30" height="30" rx="9" fill="#f7a600" opacity=".12"/>
+                          <rect x="1.5" y="1.5" width="29" height="29" rx="8.5" fill="none"
+                                stroke="#f7a600" stroke-opacity=".36"/>
+                          <path d="M9 7.5v17M16 5v22M23 10.5v13" stroke="#f7a600" stroke-width="1.4"
+                                stroke-linecap="round" opacity=".7"/>
+                          <rect x="6.7" y="11" width="4.6" height="10" rx="1.4" fill="#20b26c"/>
+                          <rect x="13.7" y="8.5" width="4.6" height="13.5" rx="1.4" fill="#f7a600"/>
+                          <rect x="20.7" y="14" width="4.6" height="7" rx="1.4" fill="#ef454a"/>
+                        </svg>
+                        <span class="rt-brand"><b>Bar</b>Test<em>Replay</em></span>
+                      </span>
+                      <span class="rt-vr"></span>
+                      <span class="rt-sec">
+                        <svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true">
+                          <path d="M2 15.5 L6.5 9 L10.1 12.4 L17.5 3" fill="none" stroke="#5aa9f0"
+                                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <circle cx="6.5" cy="9" r="2" fill="#f7a600"/>
+                        </svg>Chart</span>
+                      <span class="rt-inst"><em>Gold</em><b>XAUUSD</b>
+                            <i class="fa-solid fa-chevron-down"></i></span>
+                      <span class="rt-field"><em>Timeframe</em>
+                            <b>15m <i class="fa-solid fa-chevron-down"></i></b></span>
+                      <span class="rt-vr"></span>
+                      <span class="rt-tool"><i class="fa-solid fa-chart-line"></i>Indicators</span>
+                      <span class="rt-tool"><i class="fa-solid fa-rotate-left"></i>Replay</span>
+                      <span class="rt-tool"><i class="fa-regular fa-floppy-disk"></i>Layouts</span>
+                      <span class="rt-tool"><i class="fa-regular fa-circle-question"></i>Guide</span>
+                      <span class="rt-tool"><i class="fa-solid fa-sliders"></i>Settings</span>
+                      <span class="rt-mode" id="rt-mode">Replay</span>
+                    </span>
+
+                    <!-- ============================== the ticker strip -->
+                    <span class="rt-tick">
+                      <span class="rt-sym"><i class="rt-coin">X</i>
+                        <span class="rt-names"><b>XAUUSD</b><em>Dukascopy &middot; 1-minute</em></span>
+                      </span>
+                      <span class="rt-last"><b id="rt-price">4,402.50</b>
+                            <u id="rt-chg">&mdash;</u></span>
+                      <span class="rt-stats">
+                        <span><i>24h change</i><b id="rt-chgabs">&mdash;</b></span>
+                        <span><i>24h high</i><b id="rt-hi">&mdash;</b></span>
+                        <span><i>24h low</i><b id="rt-lo">&mdash;</b></span>
+                      </span>
+                      <span class="rt-acct">
+                        <span><i>Balance</i><b id="rt-bal">$10,000.00</b></span>
+                        <span><i>Equity</i><b id="rt-eq">$10,000.00</b></span>
+                        <span><i>Unrealised</i><b id="rt-upl">&mdash;</b></span>
+                        <span class="clk"><i>Replay clock</i><b id="rt-clock">&mdash;</b></span>
                       </span>
                     </span>
 
-                    <span class="rp-body">
-                      <span class="rp-rail" aria-hidden="true">
-                        <i class="fa-solid fa-arrow-pointer on"></i>
-                        <i class="fa-solid fa-pen-nib"></i>
-                        <i class="fa-solid fa-ruler-horizontal"></i>
-                        <i class="fa-solid fa-draw-polygon"></i>
-                        <i class="fa-solid fa-wave-square"></i>
+                    <!-- ===================== rail, chart, order ticket -->
+                    <span class="rt-main">
+                      <span class="rt-rail" aria-hidden="true">
+                        <i class="fa-solid fa-crosshairs on"></i>
+                        <i class="fa-solid fa-arrow-trend-up"></i>
+                        <i class="fa-solid fa-bars"></i>
+                        <i class="fa-regular fa-square"></i>
                         <i class="fa-solid fa-font"></i>
-                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <i class="fa-solid fa-align-left"></i>
+                        <i class="fa-solid fa-wave-square"></i>
+                        <i class="fa-solid fa-u"></i>
+                        <i class="fa-solid fa-lock"></i>
+                        <i class="fa-regular fa-eye"></i>
+                        <i class="fa-regular fa-trash-can"></i>
                       </span>
 
-                      <span class="rp-stage">
-                        <canvas id="rp-chart" aria-hidden="true"></canvas>
-                        <span class="rp-transport">
+                      <span class="rt-stage">
+                        <span class="rt-legend">
+                          <b>XAUUSD</b><em>15m</em><em>Dukascopy</em>
+                          <span id="rt-ohlc"></span>
+                        </span>
+                        <canvas id="rt-chart" aria-hidden="true"></canvas>
+                        <span class="rt-wm" aria-hidden="true">BarTest</span>
+                        <span class="rt-transport">
                           <i class="fa-solid fa-play"></i>
                           <i class="fa-solid fa-backward-step"></i>
                           <i class="fa-solid fa-forward-step"></i>
-                          <span class="rp-track"><b id="rp-prog"></b></span>
+                          <span class="rt-track"><b id="rt-prog"></b></span>
                           <em>1&times;</em>
                         </span>
-                        <span class="rp-state" id="rp-state">Playing</span>
                       </span>
 
-                      <span class="rp-ticket">
-                        <span class="rp-t-h">Order ticket</span>
-                        <span class="rp-t-row"><i>Size</i><b>0.10</b></span>
-                        <span class="rp-t-btns"><b class="buy">Buy</b><b class="sell">Sell</b></span>
-                        <span class="rp-t-pos" id="rp-pos">Flat</span>
+                      <span class="rt-trade">
+                        <span class="rt-tr-top"><b>Cross <i class="fa-solid fa-chevron-down"></i></b>
+                              <b>10.00x <i class="fa-solid fa-chevron-down"></i></b></span>
+                        <span class="rt-tr-tabs"><b class="on">Market</b><b>Limit</b><b>Stop</b></span>
+                        <span class="rt-seg"><b class="on">Risk %</b><b>Quantity</b></span>
+                        <span class="rt-inp"><i>Risk</i><b>1</b><u>%</u></span>
+                        <span class="rt-inp"><i>Quantity</i><b id="rt-qty">0.000</b><u>XAU</u></span>
+                        <span class="rt-slider">
+                          <span class="bar"><b id="rt-slide"></b></span>
+                          <span class="ticks"><i>0</i><i>25%</i><i>50%</i><i>75%</i><i>100%</i></span>
+                        </span>
+                        <span class="rt-inp2">
+                          <span class="rt-inp"><i>Stop</i><b id="rt-stop" class="ph">price</b></span>
+                          <span class="rt-inp"><i>Target</i><b id="rt-target" class="ph">price</b></span>
+                        </span>
+                        <span class="rt-seg sm"><b class="on">By price</b><b>By points</b></span>
+                        <span class="rt-read">
+                          <span><i>Order value</i><b id="rt-ov">&mdash;</b></span>
+                          <span><i>Margin (cost)</i><b id="rt-mg">&mdash;</b></span>
+                          <span><i>Risk on stop</i><b id="rt-ros">&mdash;</b></span>
+                          <span><i>Reward / R:R</i><b id="rt-rr">&mdash;</b></span>
+                          <span><i>Est. liquidation</i><b id="rt-liq">&mdash;</b></span>
+                        </span>
+                        <span class="rt-actions">
+                          <b class="buy">Buy / Long<em>market</em></b>
+                          <b class="sell">Sell / Short<em>market</em></b>
+                        </span>
+                        <span class="rt-close">Close position at market</span>
+                        <span class="rt-hint" id="rt-hint">Set a stop, a quantity or drag the size slider.</span>
                       </span>
                     </span>
 
-                    <span class="rp-dock">
-                      <span class="rp-tabs" id="rp-tabs">
-                        <b class="on">Positions</b><b>Trade history</b><b>Performance</b>
+                    <!-- ==================================== the dock -->
+                    <span class="rt-dock">
+                      <span class="rt-tabs" id="rt-tabs">
+                        <b class="on">Positions</b><b>Open orders</b><b>Trade history</b>
+                        <b>Performance</b><b>Calendar</b><b>Journal</b>
+                        <span class="sp"></span>
+                        <em><i class="fa-regular fa-bookmark"></i>Save / load</em>
+                        <em><i class="fa-solid fa-file-export"></i>Export</em>
                       </span>
-                      <span class="rp-read" id="rp-read"></span>
+                      <span class="rt-pane" id="rt-pane"></span>
                     </span>
 
                     <span class="rp-go">Open BarTest Replay &rarr;</span>
