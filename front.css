@@ -1033,6 +1033,22 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
 
     .fd-station { padding: 68px clamp(16px, 5vw, 26px) 22px; align-items: center; }
 
+    /* Every station may scroll inside itself on a phone except this one. A
+       scrollable box under a thumb eats the swipe that was meant to move the
+       route, and the route is the whole page. So the hero is sized to fit and
+       then told it may not scroll - and on a screen too short for the spec,
+       the spec goes rather than the swipe. */
+    .fd-station:first-of-type .fd-inner { overflow: hidden; }
+
+    /* On a short phone the spec is what will not fit, and a spec you cannot
+       see all of is worse than one that waited for a bigger screen. The
+       sentence stays: it is the part that explains the machine. */
+    @media (max-height: 700px) {
+        .fd-slots { display: none; }
+        .fd-replay .rt-main { min-height: 104px; }
+        .fd-replay .rt-pane { height: 104px; }
+    }
+
     /* The cue is a fixed overlay, so on a short screen it lands on the last
        line of whatever station is under it. It keeps its words and drops the
        stroke below them, which is the half of it that took up the room. */
@@ -1196,7 +1212,7 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
    caption under a demonstration is a caption too many. */
 .fd-open {
     display: grid; align-items: center;
-    grid-template-columns: minmax(0, 0.58fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr);
     column-gap: clamp(20px, 2.6vw, 44px); row-gap: clamp(12px, 1.8vh, 22px);
 }
 .fd-open-head { grid-column: 1; grid-row: 1; min-width: 0; align-self: end; }
@@ -1207,6 +1223,10 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
    lands on a paragraph, which survives it; here it would land on the corner
    of the object, so the opening keeps the strip clear. */
 @media (min-width: 721px) { .fd-open { padding-right: 104px; } }
+/* Past a certain width the row stops growing - it is capped at 1400 - so the
+   compass drifts away from it on its own and the strip is no longer needed.
+   Giving it back is a hundred pixels of headline. */
+@media (min-width: 1680px) { .fd-open { padding-right: 0; } }
 
 /* the running light. The word after the dot is swapped by front.js, so the
    badge says which phase the reading is in rather than a fixed slogan. */
@@ -1227,7 +1247,7 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
 
 .fd-open h1 {
     margin: 12px 0 22px; max-width: none;
-    font-size: clamp(1.7rem, 2.5vw, 2.4rem); line-height: 1.05; letter-spacing: -.024em;
+    font-size: clamp(1.85rem, 2.7vw, 3rem); line-height: 1.04; letter-spacing: -.024em;
     color: var(--fd-vellum); text-shadow: 0 2px 34px rgba(6,5,14,.95);
 }
 
@@ -1652,7 +1672,7 @@ body.fd-console.landed #auth-corner { opacity: 0 !important; pointer-events: non
 /* The row is the full width now, but on a narrow desk that is still not
    twenty-four characters of a didone at five per cent of the window. */
 @media (min-width: 721px) and (max-width: 1180px) {
-    .fd-open h1 { font-size: clamp(1.75rem, 3vw, 2.2rem); margin-bottom: 16px; }
+    .fd-open h1 { font-size: clamp(1.75rem, 3.1vw, 2.3rem); margin-bottom: 16px; }
 }
 
 @media (max-width: 720px) {

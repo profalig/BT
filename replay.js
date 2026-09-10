@@ -867,6 +867,27 @@ const toBar = k => ({ time: k.t / 1000, open: k.o, high: k.h, low: k.l, close: k
 
 // -------------------------------------------------------------- browse mode
 
+/* Both scales, refitted - which is what double-clicking each of them does.
+
+   Stretching the price axis by hand is how a trader zooms it, and the library
+   switches autoScale off when they do. The range it freezes belongs to the
+   instrument and the timeframe that were on screen at the time, so arriving
+   from BTCUSDT at sixty thousand onto EURUSD at one-oh-eight left the candles
+   somewhere far above the top of the window, and the only way back was to
+   double-click the axis. A new instrument or a new timeframe is a new range;
+   it gets a new fit, on the main chart and on every indicator window under
+   it. */
+function refitScales() {
+    try { chart.priceScale('right').applyOptions({ autoScale: true }); } catch (e) {}
+    try { chart.timeScale().fitContent(); } catch (e) {}
+    try {
+        panes.forEach(p => {
+            try { p.chart.priceScale('right').applyOptions({ autoScale: true }); } catch (e) {}
+            try { p.chart.timeScale().fitContent(); } catch (e) {}
+        });
+    } catch (e) {}
+}
+
 async function loadChart() {
     const src = MARKETS[S.market];
     S.tfMin  = +$('rp-tf').value;
@@ -892,7 +913,7 @@ async function loadChart() {
            then corrected visibly jumps. */
         try { series.applyOptions({ priceFormat: priceFormat() }); } catch (e) {}
         paint();
-        chart.timeScale().fitContent();
+        refitScales();
         hideStatus();
         updateModeUI();
         syncTicker();        // a non-streaming feed has no tick to refresh it
