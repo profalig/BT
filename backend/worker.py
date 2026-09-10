@@ -283,7 +283,7 @@ class WebhookAndHealthHandler(BaseHTTPRequestHandler):
                 # and is written to user_profiles.plan when payment completes.
                 plan_key = clean_plan(data.get("planKey"))
 
-                origin = self.headers.get("Origin", "https://your-frontend-domain.com")
+                origin = self.headers.get("Origin", "https://bartest.me")
 
                 session = stripe.checkout.Session.create(
                     line_items=[{
